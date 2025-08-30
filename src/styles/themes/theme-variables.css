@@ -1,0 +1,168 @@
+/* 
+ * Design System de Cores - Inspirado em Vercel, Radix UI, e shadcn/ui
+ * Sistema de cores semânticas para dark/light mode
+ */
+
+:root {
+  /* Font Family */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  
+  /* Border radius tokens */
+  --radius-xs: 0.125rem;    /* 2px */
+  --radius-sm: 0.25rem;     /* 4px */
+  --radius-md: 0.375rem;    /* 6px */
+  --radius-lg: 0.5rem;      /* 8px */
+  --radius-xl: 0.75rem;     /* 12px */
+  --radius-2xl: 1rem;       /* 16px */
+  --radius-3xl: 1.5rem;     /* 24px */
+  --radius-full: 9999px;
+  
+  /* Z-index scale */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-toast: 1080;
+  
+  /* Animation timing */
+  --duration-150: 150ms;
+  --duration-200: 200ms;
+  --duration-300: 300ms;
+  --duration-500: 500ms;
+  --duration-700: 700ms;
+  
+  /* Easing curves */
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Light Theme Colors - Azul Petróleo como brand */
+:root {
+  /* Primary brand colors - Azul Petróleo */
+  --primary: 200 100% 14%;          /* #003049 - Azul petróleo (escuro, confiável) */
+  --primary-foreground: 0 0% 100%;  /* #ffffff - White */
+  
+  /* Secondary colors - Warm Orange */
+  --secondary: 142 72% 29%;           /* #00a651 - Deep green */
+  --secondary-foreground: 0 0% 100%; /* #ffffff - White */
+  
+  /* Muted colors - Light grays */
+  --muted: 210 20% 96%;             /* #f7f7f7 - Light gray */
+  --muted-foreground: 215 16% 47%;  /* #717171 - Medium gray */
+  
+  /* Accent colors - Tons de azul petróleo claros para realces sutis */
+  --accent: 200 40% 94%;            /* ~#e9f1f6 - Azul claro sutil */
+  --accent-foreground: 200 100% 20%;/* Azul petróleo mais legível para texto/acento */
+  
+  /* Destructive colors (mantém vermelho apenas para erros/alertas) */
+  --destructive: 0 84% 60%;         /* #ef4444 - Red 500 */
+  --destructive-foreground: 0 0% 100%; /* #ffffff - White */
+  
+  /* Success colors - Deep green */
+  --success: 142 72% 29%;           /* #00a651 - Deep green */
+  --success-foreground: 0 0% 100%;  /* #ffffff - White */
+  
+  /* Warning colors - Warm yellow */
+  --warning: 38 95% 56%;            /* #ffb000 - Warm yellow */
+  --warning-foreground: 0 0% 100%;  /* #ffffff - White */
+  
+  /* Info colors */
+  --info: 199 89% 48%;              /* #0ea5e9 - Sky 500 */
+  --info-foreground: 0 0% 100%;     /* #ffffff - White */
+  
+  /* Border colors */
+  --border: 214 31% 91%;            /* #dddddd - Light border */
+  --input: 214 31% 91%;             /* #dddddd - Input border */
+  --ring: 200 100% 14%;             /* #003049 - Ring combina com a brand */
+  
+  /* Background colors */
+  --background: 0 0% 100%;          /* #ffffff - Pure white */
+  --foreground: 217 33% 17%;        /* #222222 - Deep slate */
+  
+  /* Card colors */
+  --card: 0 0% 100%;                /* #ffffff - White */
+  --card-foreground: 217 33% 17%;   /* #222222 - Deep slate */
+  
+  /* Popover colors */
+  --popover: 0 0% 100%;             /* #ffffff - White */
+  --popover-foreground: 217 33% 17%; /* #222222 - Deep slate */
+  
+  /* Airbnb-specific colors for legacy support */
+  --coral: 352 100% 50%;            /* #ff385c - Airbnb coral */
+  --coral-light: 352 100% 96%;      /* #ffebef - Light coral */
+  --coral-dark: 352 100% 30%;       /* #cc1538 - Dark coral */
+  --warm-gray: 210 20% 96%;         /* #f7f7f7 - Warm gray */
+  --cool-gray: 215 16% 47%;         /* #717171 - Cool gray */
+  
+  /* Chart colors - Airbnb palette */
+  --chart-1: 352 100% 50%;          /* #ff385c - Airbnb coral */
+  --chart-2: 25 95% 53%;            /* #ff7849 - Warm orange */
+  --chart-3: 142 72% 29%;           /* #00a651 - Deep green */
+  --chart-4: 38 95% 56%;            /* #ffb000 - Warm yellow */
+  --chart-5: 199 89% 48%;           /* #0ea5e9 - Sky blue */
+}
+
+/* Dark Theme Colors - Elegante e Tecnológico */
+.dark {
+  /* Primary brand colors - Azul-água elegante para tecnologia */
+  --primary: 210 10% 78%;           /* ~#c9d1d9 - Prata fria e legível no dark */
+  --primary-foreground: 220 25% 8%; /* #0d1117 - Grafite escuro para contraste */
+
+  /* Secondary colors - Cinza grafite sofisticado */
+  --secondary: 220 25% 12%;         /* #181c25 - Grafite profundo */
+  --secondary-foreground: 210 20% 85%; /* #d1d9e0 - Prata clara */
+
+  /* Muted colors - Tons neutros elegantes */
+  --muted: 220 20% 18%;             /* #252a35 - Cinza escuro elegante */
+  --muted-foreground: 210 15% 65%;  /* #a1aab8 - Prata suave */
+
+  /* Accent colors - Prata fria e minimalista */
+  --accent: 220 20% 16%;            /* #20252c - Grafite/azul petróleo sutil */
+  --accent-foreground: 210 15% 82%; /* ~#d2d9e2 - Prata clara e elegante */
+
+  /* Destructive colors - Vermelho elegante */
+  --destructive: 0 75% 45%;         /* #cc2936 - Vermelho sofisticado */
+  --destructive-foreground: 0 0% 98%; /* #fafafa - Branco quase puro */
+
+  /* Success colors - Prata tecnológico (sem verde) */
+  --success: 210 8% 72%;            /* Prata médio para estado de sucesso no dark */
+  --success-foreground: 220 25% 8%; /* #0d1117 - Grafite escuro para contraste */
+
+  /* Warning colors - Dourado elegante */
+  --warning: 48 95% 65%;            /* #ffd23f - Dourado vibrante */
+  --warning-foreground: 220 25% 8%; /* #0d1117 - Grafite escuro */
+
+  /* Info colors - Azul tecnológico suavizado */
+  --info: 210 90% 62%;              /* Azul frio menos vibrante */
+  --info-foreground: 220 25% 8%;    /* #0d1117 - Grafite escuro */
+
+  /* Border colors - Bordas sutis em grafite */
+  --border: 220 20% 20%;            /* #2a3038 - Cinza grafite para bordas */
+  --input: 220 20% 18%;             /* #252a35 - Fundo input elegante */
+  --ring: 210 10% 72%;              /* Ring prata um pouco menos intenso para elegância */
+
+  /* Background colors - Azul petróleo profundo */
+  --background: 220 30% 6%;         /* #0a0d14 - Azul petróleo muito escuro */
+  --foreground: 0 0% 98%;           /* #fafafa - Branco quase puro */
+
+  /* Card colors - Cards em grafite elegante */
+  --card: 220 25% 8%;               /* #0d1117 - Grafite escuro */
+  --card-foreground: 0 0% 98%;      /* #fafafa - Branco quase puro */
+
+  /* Popover colors */
+  --popover: 220 25% 8%;            /* #0d1117 - Grafite escuro */
+  --popover-foreground: 0 0% 98%;   /* #fafafa - Branco quase puro */
+
+  /* Chart colors - Pratas frios, azuis e grafites (sem dourado) */
+  --chart-1: 210 10% 78%;           /* Prata principal */
+  --chart-2: 220 12% 62%;           /* Prata mais escura */
+  --chart-3: 220 20% 45%;           /* Grafite médio */
+  --chart-4: 200 70% 60%;           /* Azul tecnológico mais suave */
+  --chart-5: 220 25% 30%;           /* Grafite profundo */
+}

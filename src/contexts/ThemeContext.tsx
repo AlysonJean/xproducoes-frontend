@@ -1,0 +1,117 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { logger } from '../utils/logger';
+import type { ReactNode } from 'react';
+
+export type Theme = 'light' | 'dark' | 'system';
+
+interface ThemeContextType {
+  theme: Theme;
+  resolvedTheme: 'light' | 'dark';
+  toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
+  isDark: boolean;
+  isLight: boolean;
+  setSystem: () => void;
+}
+
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+};
+
+interface ThemeProviderProps {
+  children: ReactNode;
+}
+
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
+  const [theme, setThemeState] = useState<Theme>(() => {
+    const saved = localStorage.getItem('theme') as Theme;
+    if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
+    return 'system';
+  });
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
+    if (theme === 'light' || theme === 'dark') return theme;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  // Aplica classe dark no HTML e data-theme sempre que resolvedTheme mudar
+  useEffect(() => {
+    const root = document.documentElement;
+    
+    logger.debug('Applying theme', 'ThemeContext', { theme: resolvedTheme });
+    
+    // Remove classe existente
+    root.classList.remove('light', 'dark');
+    
+    // Adiciona nova classe
+    root.classList.add(resolvedTheme);
+    
+    // Adiciona data-theme para compatibilidade
+    root.setAttribute('data-theme', resolvedTheme);
+    
+    // Adiciona transição suave
+    root.style.setProperty('color-scheme', resolvedTheme);
+    
+    logger.debug('Theme applied successfully', 'ThemeContext', { htmlClasses: root.className });
+  }, [resolvedTheme]);
+
+  // Atualiza resolvedTheme quando theme ou sistema mudam
+  useEffect(() => {
+    if (theme === 'light' || theme === 'dark') {
+      setResolvedTheme(theme);
+      return;
+    } else {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      setResolvedTheme(mq.matches ? 'dark' : 'light');
+      const handler = (e: MediaQueryListEvent) => {
+        setResolvedTheme(e.matches ? 'dark' : 'light');
+      };
+      mq.addEventListener('change', handler);
+      return () => mq.removeEventListener('change', handler);
+    }
+  }, [theme]);
+
+  // Salva no localStorage e sincroniza entre abas
+  useEffect(() => {
+    localStorage.setItem('theme', theme);
+    const onStorage = (e: StorageEvent) => {
+      if (
+        e.key === 'theme' &&
+        (e.newValue === 'light' || e.newValue === 'dark' || e.newValue === 'system')
+      ) {
+        setThemeState(e.newValue as Theme);
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setThemeState(resolvedTheme === 'dark' ? 'light' : 'dark');
+  };
+
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme);
+  };
+
+  const setSystem = () => {
+    setThemeState('system');
+  };
+
+  const value: ThemeContextType = {
+    theme,
+    resolvedTheme,
+    toggleTheme,
+    setTheme,
+    isDark: resolvedTheme === 'dark',
+    isLight: resolvedTheme === 'light',
+    setSystem,
+  };
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+};

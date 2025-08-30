@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limpar LocalStorage - X Produções</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            background: #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Ferramenta de Debug - X Produções</h1>
+        <p>Esta página ajuda a limpar dados locais que podem estar causando problemas.</p>
+
+        <button onclick="clearLocalStorage()">Limpar LocalStorage</button>
+        <button onclick="clearSessionStorage()">Limpar SessionStorage</button>
+        <button onclick="clearAll()">Limpar Tudo</button>
+        <button onclick="showStorage()">Mostrar Dados</button>
+        <button onclick="goToApp()">Ir para App</button>
+
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        function showResult(message, type = 'info') {
+            const result = document.getElementById('result');
+            result.innerHTML = message;
+            result.style.background = type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#e9ecef';
+            result.style.color = type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#333';
+        }
+
+        function clearLocalStorage() {
+            try {
+                localStorage.clear();
+                showResult('✅ LocalStorage limpo com sucesso!', 'success');
+            } catch (error) {
+                showResult('❌ Erro ao limpar LocalStorage: ' + error.message, 'error');
+            }
+        }
+
+        function clearSessionStorage() {
+            try {
+                sessionStorage.clear();
+                showResult('✅ SessionStorage limpo com sucesso!', 'success');
+            } catch (error) {
+                showResult('❌ Erro ao limpar SessionStorage: ' + error.message, 'error');
+            }
+        }
+
+        function clearAll() {
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+                showResult('✅ Todos os dados locais foram limpos!', 'success');
+            } catch (error) {
+                showResult('❌ Erro ao limpar dados: ' + error.message, 'error');
+            }
+        }
+
+        function showStorage() {
+            try {
+                let message = '<h3>Dados no LocalStorage:</h3>';
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    const value = localStorage.getItem(key);
+                    message += `<strong>${key}:</strong> ${value}<br>`;
+                }
+
+                if (localStorage.length === 0) {
+                    message += 'Nenhum dado encontrado.<br>';
+                }
+
+                message += '<h3>Dados no SessionStorage:</h3>';
+                for (let i = 0; i < sessionStorage.length; i++) {
+                    const key = sessionStorage.key(i);
+                    const value = sessionStorage.getItem(key);
+                    message += `<strong>${key}:</strong> ${value}<br>`;
+                }
+
+                if (sessionStorage.length === 0) {
+                    message += 'Nenhum dado encontrado.';
+                }
+
+                showResult(message);
+            } catch (error) {
+                showResult('❌ Erro ao mostrar dados: ' + error.message, 'error');
+            }
+        }
+
+        function goToApp() {
+            window.location.href = 'http://localhost:3001';
+        }
+
+        // Mostrar dados automaticamente ao carregar
+        window.onload = function() {
+            showStorage();
+        };
+    </script>
+</body>
+</html>
