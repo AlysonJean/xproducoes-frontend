@@ -7,6 +7,8 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { Button } from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { useModal } from '@/components/modals/ModalContext';
+import { api } from '@/services/api';
 import type { CollaboratorDashboard } from '../../types/types';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Input } from '@/components/ui/Input';
@@ -76,6 +78,12 @@ export const AdminCollaboratorsPage: React.FC = () => {
   };
 
   const { addNotification } = useNotifications();
+  const { openModal } = useModal();
+
+  // State for invite modal input
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
 
   // Analytics calculation for dashboard
   const stats = {
@@ -201,9 +209,12 @@ export const AdminCollaboratorsPage: React.FC = () => {
             <p className="mt-1 text-sm text-muted-foreground">Gerencie sua equipe de colaboradores</p>
           </div>
           <div>
-            <a href="/admin/collaborators/new">
-              <Button variant="primary">Novo Colaborador</Button>
-            </a>
+            <div className="flex gap-2">
+              <a href="/admin/collaborators/new">
+                <Button variant="primary">Novo Colaborador</Button>
+              </a>
+              <Button variant="outline" onClick={() => setInviteDialogOpen(true)}>Enviar Convite</Button>
+            </div>
           </div>
         </div>
 
@@ -534,6 +545,52 @@ export const AdminCollaboratorsPage: React.FC = () => {
         confirmVariant="danger"
         isLoading={isDeleting}
       />
+
+      {/* Invite input dialog (simple inline modal) */}
+      {inviteDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/40" onClick={() => setInviteDialogOpen(false)} />
+          <div className="bg-card rounded-lg p-6 z-50 w-full max-w-md">
+            <h3 className="text-lg font-medium mb-2">Enviar Convite por E-mail</h3>
+            <p className="text-sm text-muted-foreground mb-4">Digite o e-mail do colaborador que receberá o convite.</p>
+            <input
+              type="email"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="email@exemplo.com"
+              className="w-full border rounded px-3 py-2 mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>Cancelar</Button>
+              <Button
+                onClick={async () => {
+                  setInviteLoading(true);
+                  try {
+                    const resp = await api.post('/admin/collaborators/invite', { email: inviteEmail });
+                    const data = resp.data || {};
+                    const inviteUrl = data.inviteUrl || data.registrationLink || '';
+                    if (inviteUrl) {
+                      // Open global InviteModal with returned inviteUrl
+                      openModal('invite', { inviteUrl, tempPassword: data.tempPassword });
+                    } else {
+                      addNotification({ type: 'success', title: 'Convite enviado', message: 'Convite criado e e-mail enviado. O link foi enviado por e-mail.' });
+                    }
+                    setInviteEmail('');
+                    setInviteDialogOpen(false);
+                  } catch (err) {
+                    addNotification({ type: 'error', title: 'Erro', message: 'Falha ao enviar convite' });
+                  } finally {
+                    setInviteLoading(false);
+                  }
+                }}
+                disabled={inviteLoading || !inviteEmail}
+              >
+                {inviteLoading ? 'Enviando...' : 'Enviar Convite'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Loading overlay for actions */}
       {(loading || isDeleting) && (

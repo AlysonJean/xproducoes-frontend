@@ -10,29 +10,20 @@ export type AnchorOptions = {
   objectUrl?: string;
 };
 
-function isSafeUrl(u: string): boolean {
+export function isSafeUrl(u: string): boolean {
   if (!u) return false;
-  const trimmed = u.trim();
-  // reject javascript: and data: (text/html or script) schemes which can lead to XSS
-  const lower = normalizeString(trimmed);
-  if (lower.startsWith('javascript:')) return false;
-  if (lower.startsWith('data:')) {
-    // allow data blobs for images only (data:image/...), but prefer blocking to be strict
-    // block all data: URLs to avoid injected HTML/JS via data URIs
-    return false;
-  }
-
+  const trimmed = String(u).trim();
   try {
-    // blob: and http(s): are allowed; URL constructor will throw for some blob forms in older browsers but OK in modern
     const parsed = new URL(trimmed, window.location.href);
-    const proto = parsed.protocol;
+    const proto = (parsed.protocol || '').toLowerCase();
+    // Only allow http(s) and blob protocols here; block data:, javascript:, file:, etc.
     return proto === 'http:' || proto === 'https:' || proto === 'blob:';
   } catch (e) {
     return false;
   }
 }
 
-function sanitizeFilename(name: string | undefined): string | undefined {
+export function sanitizeFilename(name: string | undefined): string | undefined {
   if (!name) return undefined;
   // keep only basename, remove path separators, control chars and newlines
   const base = name.split(/[\\/]/).pop() || name;

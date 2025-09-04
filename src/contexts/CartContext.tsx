@@ -1,6 +1,6 @@
 // Caminho do arquivo: frontend/src/contexts/CartContext.tsx
 
-import { useState, useEffect, createContext, useCallback, type ReactNode, useContext } from 'react';
+import { useState, useEffect, createContext, useCallback, type ReactNode, useContext, useRef } from 'react';
 import { normalizeString } from '../utils/string';
 import { apiFetch } from '../services/api';
 import type { Booking } from '../types/types';
@@ -28,6 +28,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cart, setCart] = useState<Cart | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { isAuthenticated } = useAuth();
+  // evita chamadas muito frequentes ao backend
+  const fetchingRef = useRef(false);
+  const lastFetchedAt = useRef<number | null>(null);
+  const MIN_FETCH_INTERVAL_MS = 5000; // 5s
 
   const fetchCart = useCallback(async () => {
     // Só tenta buscar o carrinho se o usuário estiver autenticado
@@ -37,21 +41,23 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // Evita múltiplas chamadas simultâneas
-    if (isLoading) {
-      return;
-    }
+    // Evita múltiplas chamadas simultâneas e polling muito frequente
+    if (fetchingRef.current) return;
+    if (lastFetchedAt.current && Date.now() - lastFetchedAt.current < MIN_FETCH_INTERVAL_MS) return;
 
+    fetchingRef.current = true;
     setIsLoading(true);
     try {
       const cartData = await apiFetch('/cart');
       setCart(cartData as Booking);
+      lastFetchedAt.current = Date.now();
     } catch (error) {
       console.error('Erro ao buscar carrinho:', error);
       // Em caso de erro, manter cart nulo
       setCart(null);
     } finally {
       setIsLoading(false);
+      fetchingRef.current = false;
     }
   }, [isAuthenticated, isLoading]);
 

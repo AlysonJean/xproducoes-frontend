@@ -3,7 +3,6 @@ import { logger } from '../utils/logger';
 import type { 
   ServiceWorkerState, 
   ServiceWorkerActions, 
-  BeforeInstallPromptEvent, 
   PerformanceMetrics 
 } from '../types/types';
 
@@ -172,42 +171,4 @@ export function useOfflineDetector(): boolean {
 }
 
 // Hook para PWA Install Prompt
-export function usePWAInstall() {
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
-
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setInstallPrompt(e as unknown as BeforeInstallPromptEvent);
-      setIsInstallable(true);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
-
-  const promptInstall = async () => {
-    if (installPrompt) {
-      installPrompt.prompt();
-      const choiceResult = await installPrompt.userChoice;
-
-      if (choiceResult.outcome === 'accepted') {
-        logger.info('PWA installed by user', 'PWAInstall');
-      } else {
-        logger.info('User cancelled PWA installation', 'PWAInstall');
-      }
-
-      setInstallPrompt(null);
-      setIsInstallable(false);
-    }
-  };
-
-  return {
-    isInstallable,
-    promptInstall,
-  };
-}
+// Removed usePWAInstall: PWA install prompt handling intentionally disabled.

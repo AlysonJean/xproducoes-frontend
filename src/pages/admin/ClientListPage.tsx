@@ -51,6 +51,8 @@ const ClientListPage: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const { addNotification } = useNotifications();
 
@@ -138,6 +140,11 @@ const ClientListPage: React.FC = () => {
     setDeleteDialogOpen(true);
   };
 
+  const openBulkDelete = () => {
+    if (selectedClients.size === 0) return;
+    setBulkDeleteDialogOpen(true);
+  };
+
   const confirmDelete = async () => {
     if (!clientToDelete) return;
     try {
@@ -151,6 +158,33 @@ const ClientListPage: React.FC = () => {
       setIsDeleting(false);
       setDeleteDialogOpen(false);
       setClientToDelete(null);
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    if (selectedClients.size === 0) return;
+    const ids = Array.from(selectedClients);
+    try {
+      setIsBulkDeleting(true);
+      const results = await Promise.allSettled(
+        ids.map((id) => apiFetch(`/admin/clients/${id}`, { method: 'DELETE' }))
+      );
+
+      const failed = results.filter((r) => r.status === 'rejected') as PromiseRejectedResult[];
+      if (failed.length > 0) {
+        addNotification({ type: 'error', title: 'Erro', message: `Falha ao excluir ${failed.length} de ${ids.length} clientes.` });
+      } else {
+        addNotification({ type: 'success', title: 'Clientes', message: `${ids.length} clientes excluídos com sucesso.` });
+      }
+
+      // Refresh list and clear selection
+      await fetchClients();
+      setSelectedClients(new Set());
+    } catch (e: any) {
+      addNotification({ type: 'error', title: 'Erro', message: e?.message || 'Falha ao excluir clientes' });
+    } finally {
+      setIsBulkDeleting(false);
+      setBulkDeleteDialogOpen(false);
     }
   };
 
@@ -217,6 +251,10 @@ const ClientListPage: React.FC = () => {
         </div>
   <div className="flex gap-2 flex-wrap justify-end">
           <Button onClick={handleExport} variant="outline"><Download className="h-4 w-4 mr-2" /> Exportar CSV</Button>
+          <Button onClick={openBulkDelete} variant="danger" disabled={selectedClients.size === 0}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            {selectedClients.size > 0 ? `Excluir (${selectedClients.size}) selecionados` : 'Excluir selecionados'}
+          </Button>
           <Link to="/admin/clients/new"><Button variant="primary"><Plus className="h-4 w-4 mr-2" /> Novo Cliente</Button></Link>
         </div>
       </div>
@@ -386,6 +424,8 @@ const ClientListPage: React.FC = () => {
       )}
 
       <ConfirmDialog isOpen={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} onConfirm={confirmDelete} title="Confirmar Exclusão" message="Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita." confirmText="Excluir" confirmVariant="danger" isLoading={isDeleting} />
+
+  <ConfirmDialog isOpen={bulkDeleteDialogOpen} onClose={() => setBulkDeleteDialogOpen(false)} onConfirm={confirmBulkDelete} title="Confirmar Exclusão em Massa" message={`Tem certeza que deseja excluir ${selectedClients.size} clientes selecionados? Esta ação não pode ser desfeita.`} confirmText="Excluir selecionados" confirmVariant="danger" isLoading={isBulkDeleting} />
 
       {(loading || isDeleting) && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">

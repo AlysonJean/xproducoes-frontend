@@ -201,6 +201,8 @@ export const collaboratorsAPI = {
   create: (data: Record<string, unknown>) => api.post('/admin/collaborators', data),
   update: (id: string, data: Record<string, unknown>) => api.put(`/admin/collaborators/${id}`, data),
   delete: (id: string) => api.delete(`/admin/collaborators/${id}`),
+  // Enviar convite por e-mail (admin)
+  invite: (email: string) => api.post('/admin/collaborators/invite', { email }),
   // Dashboard pessoal do colaborador
   getMyDashboard: () => api.get('/collaborators/me/dashboard'),
 };
@@ -208,6 +210,9 @@ export const collaboratorsAPI = {
 export const authAPI = {
   login: (email: string, password: string) => api.post('/auth/login', { email, password }),
   register: (userData: Record<string, unknown>) => api.post('/auth/register', userData),
+  // Registro público a partir de um convite (token)
+  registerFromInvite: (data: { token: string; email: string; name: string; password: string }) =>
+    api.post('/auth/register-from-invite', data),
   logout: () => api.post('/auth/logout'),
   refresh: (refreshToken: string) => api.post('/auth/refresh', { refreshToken }),
   getProfile: () => api.get('/auth/profile'),

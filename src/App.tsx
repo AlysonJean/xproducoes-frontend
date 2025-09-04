@@ -3,7 +3,7 @@ import React, { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // Service Worker and PWA hooks
-import { useServiceWorker, useOfflineDetector, usePWAInstall } from './hooks/useServiceWorker';
+import { useServiceWorker, useOfflineDetector } from './hooks/useServiceWorker';
 
 // Providers
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -55,6 +55,7 @@ const ContactPage = lazy(() =>
 );
 const FaqPage = lazy(() => import('./pages/FaqPage').then((m) => ({ default: m.FaqPage })));
 const CompleteRegistrationPage = lazy(() => import('./pages/auth/CompleteRegistrationPage').then((m) => ({ default: m.CompleteRegistrationPage })));
+const RegisterFromInvitePage = lazy(() => import('./pages/auth/RegisterFromInvitePage').then((m) => ({ default: m.RegisterFromInvitePage })));
 const ComparePage = lazy(() =>
   import('./pages/ComparePage').then((m) => ({ default: m.ComparePage }))
 );
@@ -276,27 +277,6 @@ function OfflineNotification() {
   );
 }
 
-// Component para PWA Install
-function PWAInstallPrompt() {
-  const { isInstallable, promptInstall } = usePWAInstall();
-
-  if (!isInstallable) return null;
-
-  return (
-    <div className="fixed bottom-4 right-4 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50">
-      <p className="text-sm mb-2">Instalar X-Produções como app?</p>
-      <div className="flex gap-2">
-        <button
-          onClick={promptInstall}
-          className="bg-card text-primary px-3 py-1 rounded text-sm font-medium"
-        >
-          Instalar
-        </button>
-        <button className="text-white/80 px-3 py-1 text-sm">Não agora</button>
-      </div>
-    </div>
-  );
-}
 
 // Scroll to top em mudanças de rota
 function ScrollToTop() {
@@ -387,6 +367,7 @@ const AppRoutes: React.FC = () => {
           </AuthRedirect>
         }
       />
+  <Route path="/register-from-invite" element={<RegisterFromInvitePage />} />
       <Route
         path="/complete-registration"
         element={
@@ -761,7 +742,7 @@ const AppWithMonitoring: React.FC = () => {
       )}
 
       {/* PWA Install prompt */}
-      <PWAInstallPrompt />
+      
 
       {/* ⚡ ROUTE PREFETCH - ETAPA 3 Performance */}
       <RoutePrefetch />

@@ -874,13 +874,6 @@ export interface ServiceWorkerActions {
   update: () => Promise<void>;
   sendMessage: (message: unknown) => void;
 }
-
-export interface BeforeInstallPromptEvent extends Event {
-  readonly platforms: string[];
-  readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed', platform: string }>;
-  prompt(): Promise<void>;
-}
-
 export interface PerformanceMetrics {
   type: 'PERFORMANCE_METRICS';
   metrics: {

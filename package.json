@@ -1,5 +1,5 @@
 {
-  "name": "x-producoes-frontend",
+  "name": "xproducoes-frontend",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -12,6 +12,7 @@
     "postbuild": "node esbuild.seed.js && node scripts/postbuild-run-seed.cjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "vitest",
+  "test:e2e": "playwright test",
     "snyk:test": "snyk test || true",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",

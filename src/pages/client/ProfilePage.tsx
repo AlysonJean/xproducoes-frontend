@@ -49,7 +49,8 @@ interface ClientProfile {
   createdAt: string;
   totalBookings: number;
   totalSpent: number;
-  averageRating: number;
+  averageRating?: number;
+  isVip?: boolean;
   memberSince: string;
 }
 
@@ -131,16 +132,34 @@ export const ProfilePage = () => {
             statsData = (statsResponse.value as any)?.data || statsData;
           }
 
+          // Determinar se o cliente é VIP (regra: >= 5 reservas)
+          const computedIsVip = (statsData.totalBookings || 0) >= 5 || Boolean(profileData.isVip);
+
           const fullProfile: ClientProfile = {
             ...profileData,
             totalBookings: statsData.totalBookings,
             totalSpent: statsData.totalSpent,
-            averageRating: 4.8, // Mock - implementar sistema de avaliações
+            // averageRating mantido opcionalmente para compatibilidade
             memberSince: new Date(profileData.createdAt).toLocaleDateString('pt-PT', {
               month: 'long',
               year: 'numeric'
-            })
+            }),
+            isVip: computedIsVip,
           };
+
+          // Se o backend ainda não marcou o cliente como VIP mas o critério local foi alcançado,
+          // tentamos notificar o backend via endpoint opcional. Falhas são silenciosas.
+          (async () => {
+            try {
+              if (!profileData.isVip && computedIsVip) {
+                await apiFetch('/user/promote-vip', { method: 'POST' });
+                setSuccess('Parabéns — você agora é cliente VIP!');
+                setTimeout(() => setSuccess(null), 4000);
+              }
+            } catch (e) {
+              // endpoint pode não existir — não bloquear a experiência
+            }
+          })();
 
           setProfile(fullProfile);
           setFormData({
@@ -379,11 +398,13 @@ export const ProfilePage = () => {
                         );
                       }
                       return (
-                        <img 
-                          // deepcode ignore DOMXSS: <please specify a reason of ignoring this>
+                        <img
                           src={profile.avatarUrl}
-                          alt={profile.name}
+                          alt={profile.name || 'Avatar'}
                           className="w-full h-full object-cover"
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => { (e.target as HTMLImageElement).src = '/vite.svg'; }}
                         />
                       );
                     })()
@@ -428,6 +449,12 @@ export const ProfilePage = () => {
                           Verificado
                         </Badge>
                       )}
+                      {profile.isVip && (
+                        <Badge variant="primary" size="sm">
+                          <Star className="h-3 w-3 mr-1 text-yellow-400" />
+                          VIP
+                        </Badge>
+                      )}
                     </div>
                     
                     {profile.jobTitle && profile.companyName && (
@@ -470,13 +497,7 @@ export const ProfilePage = () => {
                     <div className="text-xl font-bold text-foreground">{formatCurrency(profile.totalSpent)}</div>
                     <div className="text-sm text-muted-foreground">Total Gasto</div>
                   </div>
-                  <div className="text-center">
-                    <div className="flex items-center text-xl font-bold text-foreground">
-                      <Star className="h-4 w-4 text-yellow-500 mr-1" />
-                      {profile.averageRating.toFixed(1)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Avaliação</div>
-                  </div>
+                  {/* Avaliação removida por solicitação - mantemos dados no backend para compatibilidade */}
                 </div>
               </div>
             </div>

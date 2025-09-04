@@ -13,4 +13,4 @@ export type { HttpClient, HttpResponse, HttpRequestConfig, DiagnosticResult, Gem
 export type { PaymentModalProps, PaymentData, PaginationProps, PortfolioCardProps } from './types';
 export type { FavoriteButtonProps, GoogleAuthButtonProps, KitCardProps } from './types';
 export type { AdminDashboardStats, Activity, CalendarBooking, DashboardEvent } from './types';
-export type { ServiceWorkerState, ServiceWorkerActions, BeforeInstallPromptEvent, PerformanceMetrics, PWAInstallHook } from './types';
+export type { ServiceWorkerState, ServiceWorkerActions, PerformanceMetrics } from './types';

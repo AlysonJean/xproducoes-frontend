@@ -56,7 +56,8 @@
     <script>
         function showResult(message, type = 'info') {
             const result = document.getElementById('result');
-            result.innerHTML = message;
+            // sempre usar textContent para evitar injeção de HTML
+            result.textContent = String(message);
             result.style.background = type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#e9ecef';
             result.style.color = type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#333';
         }
@@ -91,29 +92,56 @@
 
         function showStorage() {
             try {
-                let message = '<h3>Dados no LocalStorage:</h3>';
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    const value = localStorage.getItem(key);
-                    message += `<strong>${key}:</strong> ${value}<br>`;
-                }
+                // Construir conteúdo de forma segura (sem innerHTML)
+                const result = document.getElementById('result');
+                // limpar conteúdo
+                while (result.firstChild) result.removeChild(result.firstChild);
 
+                const createHeading = (text) => {
+                    const h = document.createElement('h3');
+                    h.textContent = text;
+                    return h;
+                };
+
+                result.appendChild(createHeading('Dados no LocalStorage:'));
                 if (localStorage.length === 0) {
-                    message += 'Nenhum dado encontrado.<br>';
+                    const p = document.createElement('div');
+                    p.textContent = 'Nenhum dado encontrado.';
+                    result.appendChild(p);
+                } else {
+                    const ul = document.createElement('ul');
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        const value = localStorage.getItem(key);
+                        const li = document.createElement('li');
+                        const strong = document.createElement('strong');
+                        strong.textContent = key || '';
+                        li.appendChild(strong);
+                        li.appendChild(document.createTextNode(': ' + String(value)));
+                        ul.appendChild(li);
+                    }
+                    result.appendChild(ul);
                 }
 
-                message += '<h3>Dados no SessionStorage:</h3>';
-                for (let i = 0; i < sessionStorage.length; i++) {
-                    const key = sessionStorage.key(i);
-                    const value = sessionStorage.getItem(key);
-                    message += `<strong>${key}:</strong> ${value}<br>`;
-                }
-
+                result.appendChild(createHeading('Dados no SessionStorage:'));
                 if (sessionStorage.length === 0) {
-                    message += 'Nenhum dado encontrado.';
+                    const p2 = document.createElement('div');
+                    p2.textContent = 'Nenhum dado encontrado.';
+                    result.appendChild(p2);
+                } else {
+                    const ul2 = document.createElement('ul');
+                    for (let i = 0; i < sessionStorage.length; i++) {
+                        const key = sessionStorage.key(i);
+                        const value = sessionStorage.getItem(key);
+                        const li = document.createElement('li');
+                        const strong = document.createElement('strong');
+                        strong.textContent = key || '';
+                        li.appendChild(strong);
+                        li.appendChild(document.createTextNode(': ' + String(value)));
+                        ul2.appendChild(li);
+                    }
+                    result.appendChild(ul2);
                 }
-
-                showResult(message);
             } catch (error) {
                 showResult('❌ Erro ao mostrar dados: ' + error.message, 'error');
             }

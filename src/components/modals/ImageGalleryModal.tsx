@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { createAndClickAnchor } from '../../utils/dom';
+import { createAndClickAnchor, sanitizeFilename, isSafeUrl } from '../../utils/dom';
 import { normalizeString } from '../../utils/string';
 import { BaseModal } from './BaseModal';
 import { ImageGalleryModalProps } from '../../types/types';
@@ -47,6 +47,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
   };
 
   const isSafeImageUrl = (url: string) => {
+    if (!url) return false;
     try {
       const allowedDomains = [
         'res.cloudinary.com',
@@ -55,10 +56,21 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
         window.location.hostname,
       ];
       const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
-      const u = new URL(url);
-      const isDomainAllowed = allowedDomains.some((d) => u.hostname.endsWith(d));
-  const isExtAllowed = allowedExtensions.some((ext) => normalizeString(u.pathname).endsWith(ext));
-      return isDomainAllowed && isExtAllowed;
+      const u = new URL(url, window.location.href);
+
+      // Only allow http(s) and blob protocols for images
+      const proto = u.protocol.toLowerCase();
+      if (!(proto === 'http:' || proto === 'https:' || proto === 'blob:')) return false;
+
+      // Hostname must be present and match allowed list
+      const host = (u.hostname || '').toLowerCase();
+      const isDomainAllowed = allowedDomains.some((d) => host === d || host.endsWith('.' + d));
+      if (!isDomainAllowed) return false;
+
+      // Path extension check (case-insensitive)
+      const path = (u.pathname || '').toLowerCase();
+      const isExtAllowed = allowedExtensions.some((ext) => path.endsWith(ext));
+      return isExtAllowed;
     } catch {
       return false;
     }
@@ -82,10 +94,51 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
         alert('Download bloqueado: o recurso remoto não é uma imagem.');
         return;
       }
-  const blob = await response.blob();
-  const objectUrl = window.URL.createObjectURL(blob);
-  // use helper to create and click transient anchor; the helper will remove the node
-  createAndClickAnchor({ href: objectUrl, download: `image-${currentImage.id}.jpg`, revokeObjectUrl: true, objectUrl });
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      // Suggested filename
+      const suggestedName = `image-${String(currentImage.id || 'img')}.jpg`;
+
+      // Explicit safety checks before triggering a download
+      const isBlobUrl = typeof objectUrl === 'string' && objectUrl.startsWith('blob:');
+      if (!isBlobUrl) {
+        console.warn('Download blocked: generated object URL is not a blob URL', objectUrl);
+        return;
+      }
+
+      if (!contentType.startsWith('image/')) {
+        console.warn('Download blocked: server content-type is not an image', contentType);
+        return;
+      }
+
+      if (isSafeUrl(objectUrl)) {
+        // Prefer using a pre-existing anchor element to avoid appending nodes with external hrefs.
+        const existing = document.getElementById('download-anchor') as HTMLAnchorElement | null;
+        const safeName = sanitizeFilename(suggestedName);
+        if (existing) {
+          try {
+            existing.href = objectUrl;
+            if (safeName) existing.download = safeName;
+            existing.target = '_blank';
+            existing.rel = 'noopener noreferrer';
+            existing.click();
+          } finally {
+            // Revoke objectUrl shortly after to free memory
+            setTimeout(() => { try { window.URL.revokeObjectURL(objectUrl); } catch {} }, 2000);
+          }
+        } else {
+          // Fallback: open in new tab (user can save image). Avoid appending to DOM.
+          const win = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+          if (!win) {
+            // If popup blocked, as last resort use the safe helper which validates href
+            createAndClickAnchor({ href: objectUrl, download: safeName, revokeObjectUrl: true, objectUrl });
+          } else {
+            setTimeout(() => { try { window.URL.revokeObjectURL(objectUrl); } catch {} }, 5000);
+          }
+        }
+      } else {
+        console.warn('Download blocked: unsafe object URL', objectUrl);
+      }
     } catch (err) {
       // Log minimally and keep UX silent for users
       console.warn('Erro no download de imagem:', err instanceof Error ? err.message : err);
