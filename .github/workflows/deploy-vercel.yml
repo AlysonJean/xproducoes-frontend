@@ -1,0 +1,42 @@
+name: Build and Deploy Frontend to Vercel
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: |
+          npm ci --silent
+
+      - name: Build
+        working-directory: frontend
+        run: |
+          npm run build
+
+      - name: Prepare deploy directory
+        run: |
+          cp -R frontend tmp-frontend-deploy
+          rm -rf tmp-frontend-deploy/.git || true
+
+      - name: Deploy to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          cd tmp-frontend-deploy
+          npx --yes vercel --prod --token "$VERCEL_TOKEN" --scope alyson-jeans-projects --local-config vercel.json --confirm

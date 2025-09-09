@@ -33,3 +33,4 @@ dist-ssr
 # PWA
 sw.js
 workbox-*.js
+.vercel
