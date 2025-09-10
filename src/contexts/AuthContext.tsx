@@ -157,7 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithCredentials = async (data: { email: string; password: string }) => {
     setIsLoading(true);
     try {
-      console.log('🔐 Tentando login com:', { email: data.email, passwordLength: data.password.length });
+  // console.log('🔐 Tentando login com:', { email: data.email, passwordLength: data.password.length });
 
       const response = await fetch('http://localhost:4000/api/auth/login', {
         method: 'POST',
@@ -167,7 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify(data),
       });
 
-      console.log('📡 Resposta do servidor:', { status: response.status, ok: response.ok });
+  // console.log('📡 Resposta do servidor:', { status: response.status, ok: response.ok });
 
       if (!response.ok) {
         let errorData;
@@ -182,7 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const responseData = await response.json();
-      console.log('✅ Login bem-sucedido:', { hasToken: !!responseData.token, hasUser: !!responseData.user });
+  // console.log('✅ Login bem-sucedido:', { hasToken: !!responseData.token, hasUser: !!responseData.user });
 
       const { token, user: userData, redirectTo } = responseData;
 

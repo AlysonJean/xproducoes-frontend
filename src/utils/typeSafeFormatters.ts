@@ -50,8 +50,27 @@ export const formatCurrency = (value: number | string | null | undefined): strin
 export const toNumber = (value: number | string | null | undefined): number => {
   if (typeof value === 'number') return value;
   if (typeof value === 'string') {
-    const n = Number(value.replace(/[^0-9.,-]/g, '').replace(',', '.'));
-    return isNaN(n) ? 0 : n;
+    const cleaned = value.replace(/[^0-9.,-]/g, '').trim();
+    if (cleaned === '' || cleaned === '-' || cleaned === ',' || cleaned === '.') return 0;
+
+    const lastDot = cleaned.lastIndexOf('.');
+    const lastComma = cleaned.lastIndexOf(',');
+
+    let normalized = cleaned;
+
+    if (lastComma > lastDot) {
+      // Treat comma as decimal separator, remove dots (thousands)
+      normalized = cleaned.replace(/\./g, '').replace(',', '.');
+    } else if (lastDot > lastComma) {
+      // Treat dot as decimal separator, remove commas (thousands)
+      normalized = cleaned.replace(/,/g, '');
+    } else {
+      // Only one type or none: default to dot as decimal after converting comma
+      normalized = cleaned.replace(',', '.');
+    }
+
+    const n = Number(normalized);
+    return Number.isFinite(n) ? n : 0;
   }
   return 0;
 };
@@ -246,7 +265,7 @@ export const formatDateTime = (date: Date | string | null | undefined): string =
   const d = typeof date === 'string' ? new Date(date) : date;
   if (isNaN(d.getTime())) return '';
   
-  return d.toLocaleDateString('pt-BR', {
+  return d.toLocaleString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
