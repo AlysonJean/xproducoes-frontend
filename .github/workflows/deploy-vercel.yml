@@ -20,18 +20,16 @@ jobs:
           node-version: '18'
 
       - name: Install dependencies
-        working-directory: frontend
         run: |
           npm ci --silent
 
       - name: Build
-        working-directory: frontend
         run: |
           npm run build
 
       - name: Prepare deploy directory
         run: |
-          cp -R frontend tmp-frontend-deploy
+          cp -R . tmp-frontend-deploy
           rm -rf tmp-frontend-deploy/.git || true
 
       - name: Deploy to Vercel
