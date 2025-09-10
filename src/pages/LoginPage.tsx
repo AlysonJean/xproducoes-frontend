@@ -58,7 +58,8 @@ export const LoginPage = () => {
     const token = localStorage.getItem('authToken');
     if (token) {
       try {
-        const response = await fetch('http://localhost:4000/api/auth/me', {
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  const response = await fetch(`${API_BASE_URL}/auth/me`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',

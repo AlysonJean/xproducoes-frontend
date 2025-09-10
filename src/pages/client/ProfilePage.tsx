@@ -207,8 +207,8 @@ export const ProfilePage = () => {
       const formData = new FormData();
       formData.append('avatar', file);
 
-      const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
-      const response = await fetch(`${API_BASE_URL}/user/profile`, {
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  const response = await fetch(`${API_BASE_URL}/user/profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`

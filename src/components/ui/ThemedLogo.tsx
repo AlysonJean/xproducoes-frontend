@@ -83,7 +83,7 @@ export const ThemedLogo: React.FC<ThemedLogoProps> = ({ src, className = '', tit
       
       // Para Cloudinary, usar proxy para checar Content-Type e inline SVG
       if (isCloudinary) {
-        const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
+  const apiBase = import.meta.env.VITE_API_BASE_URL;
         const query = new URLSearchParams({ url: src });
         return `${apiBase}/logo/svg-proxy?${query.toString()}`;
       }
