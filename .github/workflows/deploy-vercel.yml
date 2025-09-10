@@ -29,7 +29,10 @@ jobs:
 
       - name: Prepare deploy directory
         run: |
-          cp -R . tmp-frontend-deploy
+          rm -rf tmp-frontend-deploy || true
+          mkdir -p tmp-frontend-deploy
+          if [ -d dist ]; then cp -R dist tmp-frontend-deploy/; fi
+          if [ -f vercel.json ]; then cp vercel.json tmp-frontend-deploy/; fi
           rm -rf tmp-frontend-deploy/.git || true
 
       - name: Deploy to Vercel
