@@ -5,11 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-  "check-inflight": "node scripts/check-inflight.cjs",
-  "prebuild": "node ci/prebuild-wrapper.cjs",
-  "postinstall": "node ci/install-wrapper.cjs || true",
+  
     "build": "tsc && vite build",
-  "postbuild": "node ci/postbuild-wrapper.cjs",
+  
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "vitest",
     "test:e2e": "playwright test",
