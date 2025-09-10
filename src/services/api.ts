@@ -3,9 +3,25 @@ import { logDebug } from '../utils/logger.js';
 import { secureStorage } from '../utils/secureStorage.js';
 import { normalizeString } from '../utils/string';
 
-// Configuração da URL da API
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
-const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:4000';
+
+// Centralização robusta da configuração da URL da API
+function getApiUrl(envVar: string, fallback: string) {
+  // Em produção, nunca permita fallback para localhost
+  if (import.meta.env.MODE === 'production') {
+    const value = import.meta.env[envVar];
+    if (!value || value.includes('localhost')) {
+      throw new Error(
+        `Variável de ambiente ${envVar} não definida corretamente em produção. Corrija no painel do Vercel.`
+      );
+    }
+    return value;
+  }
+  // Em desenvolvimento, permite fallback
+  return import.meta.env[envVar] || fallback;
+}
+
+const API_BASE_URL = getApiUrl('VITE_API_BASE_URL', 'http://localhost:4000/api/v1');
+const API_URL = getApiUrl('VITE_API_URL', 'http://localhost:4000');
 
 // ✅ PRODUCTION-SAFE LOGGING
 logDebug('API Configuration', {
