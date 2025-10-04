@@ -1,14 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { apiFetch } from '../services/api';
 import { asArray } from '../utils/normalize';
-import type { PortfolioItem } from '../types/types';
+import type { PortfolioItem, PortfolioFilters } from '@/types';
 import { PageLayout, PageLoading, PageError, PageEmpty } from '../components/layouts/PageLayout';
 import { normalizeString } from '../utils/string';
 import { SearchAndFilters, Grid } from '../components/ui/StandardComponents';
-
-interface PortfolioFilters {
-  searchQuery?: string;
-}
 
 export const PortfolioPage: React.FC = () => {
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
@@ -22,7 +18,7 @@ export const PortfolioPage: React.FC = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-  const portfolioData = await apiFetch('/portfolio');
+  const portfolioData = await apiFetch('/api/portfolio');
   setPortfolio(asArray<PortfolioItem>(portfolioData));
       } catch (err) {
         console.error('Erro ao carregar portfolio:', err);

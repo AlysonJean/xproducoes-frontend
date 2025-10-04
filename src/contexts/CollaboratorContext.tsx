@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
-import { ICollaborator, Event } from '../types/types';
+import { ICollaborator } from '../types/types';
+import type { Event } from '../types/domains/dashboard';
 import { apiFetch } from '../services/api';
 
 export interface CollaboratorContextType {

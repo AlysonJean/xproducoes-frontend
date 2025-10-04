@@ -314,7 +314,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                 <span>📞</span> <strong>Telefone:</strong> +351 123 456 789
               </p>
               <p className="flex items-center gap-2">
-                <span>📧</span> <strong>Email:</strong> contato@xproducoes.com
+                <span>📧</span> <strong>Email:</strong> <span>suporte@xproducoeseventos.com.br</span>
               </p>
             </div>
             <div className="space-y-2">

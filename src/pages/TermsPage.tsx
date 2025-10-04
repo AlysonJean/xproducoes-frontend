@@ -11,7 +11,7 @@ export const TermsPage = () => {
           <section>
             <h2 className="text-2xl font-semibold text-foreground mb-4">1. Aceite dos Termos</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Ao acessar e usar os serviços da X Produções, você concorda em cumprir e estar vinculado 
+              Ao acessar e usar os serviços da X Produçoes e Eventos, você concorda em cumprir e estar vinculado 
               aos seguintes termos e condições de uso.
             </p>
           </section>
@@ -42,7 +42,7 @@ export const TermsPage = () => {
           <section>
             <h2 className="text-2xl font-semibold text-foreground mb-4">4. Limitação de Responsabilidade</h2>
             <p className="text-muted-foreground leading-relaxed">
-              A X Produções não se responsabiliza por danos indiretos, incidentais ou consequenciais 
+              A X Produçoes e Eventos não se responsabiliza por danos indiretos, incidentais ou consequenciais 
               resultantes do uso de nossos equipamentos, exceto quando expressamente previsto em contrato.
             </p>
           </section>
@@ -51,8 +51,8 @@ export const TermsPage = () => {
             <h2 className="text-2xl font-semibold text-foreground mb-4">5. Contato</h2>
             <p className="text-muted-foreground leading-relaxed">
               Para dúvidas sobre estes termos, entre em contato conosco através do e-mail 
-              <span className="text-primary"> legal@xproducoes.com</span> ou telefone 
-              <span className="text-primary"> (11) 99999-9999</span>.
+              <span className="text-primary"> suporte@xproducoeseeventos.com.br</span> ou telefone 
+              <span className="text-primary"> (31) 98925-2272</span>.
             </p>
           </section>
         </div>

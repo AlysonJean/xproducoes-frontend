@@ -18,7 +18,7 @@ export const ContactSubmissionsListPage = () => {
     const fetchSubmissions = async () => {
       try {
         setLoading(true);
-  const data = await apiFetch('/admin/contacts');
+  const data = await apiFetch('/api/admin/contacts');
   setSubmissions(asArray<ContactSubmission>(data));
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Erro ao carregar mensagens.');

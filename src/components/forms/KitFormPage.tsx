@@ -56,7 +56,7 @@ export const KitFormPage = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const equipData = await apiFetch('/equipments');
+  const equipData = await apiFetch('/api/equipments');
         setAllEquipments(equipData as Equipment[]);
         if (isEditing) {
           const kitData: Kit = await apiFetch(`/kits/${id}`);
@@ -97,7 +97,7 @@ export const KitFormPage = () => {
       if (isEditing) {
         await apiFetch(`/kits/${id}`, { method: 'PUT', body: formData });
       } else {
-        await apiFetch('/kits', { method: 'POST', body: formData });
+  await apiFetch('/api/kits', { method: 'POST', body: formData });
       }
       navigate('/admin/kits');
     } catch (err: unknown) {

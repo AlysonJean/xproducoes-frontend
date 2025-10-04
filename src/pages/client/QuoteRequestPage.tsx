@@ -9,26 +9,7 @@ import { api } from '../../services/api';
 import { Button } from '../../components/ui/Button';
 import type { Booking } from '../../types/types';
 
-type CustomQuoteFormData = {
-  venue: string;
-  eventDate: string;
-  startTime?: string;
-  duration: number | string;
-  zipCode: string;
-  street: string;
-  addressNumber: string;
-  addressComplement?: string;
-  neighborhood: string;
-  city: string;
-  state: string;
-  requiresStairs: 'yes' | 'no';
-  isCovered: 'yes' | 'no';
-  hasParking: 'yes' | 'no';
-  notes?: string;
-  name?: string;
-  phone?: string;
-  email?: string;
-};
+import { CustomQuoteFormData } from '@/types/types';
 
 export const QuoteRequestPage: React.FC = () => {
   const { cart, clearCart } = useCart();

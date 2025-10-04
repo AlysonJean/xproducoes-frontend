@@ -5,7 +5,7 @@ export const HelpPage: React.FC = () => (
   <PageLayout title="Central de Ajuda" description="Perguntas frequentes e guias">
     <div className="max-w-4xl mx-auto bg-card rounded-xl p-8 border border-border">
       <h1 className="text-2xl font-bold mb-4">Central de Ajuda</h1>
-      <p className="text-muted-foreground mb-4">Encontre respostas rápidas sobre reservas, pagamentos, cancelamentos e suporte técnico. Se não encontrar o que precisa, entre em contato pelo chat ou email <strong>suporte@xproducoes.com</strong>.</p>
+      <p className="text-muted-foreground mb-4">Encontre respostas rápidas sobre reservas, pagamentos, cancelamentos e suporte técnico. Se não encontrar o que precisa, entre em contato pelo chat ou email <strong>suporte@xproducoeseventos.com.br</strong>.</p>
 
       <h2 className="text-lg font-semibold mt-6">Guias Rápidos</h2>
       <ul className="list-disc list-inside text-muted-foreground">

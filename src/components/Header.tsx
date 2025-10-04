@@ -76,14 +76,14 @@ export const Header = () => {
               <ThemedLogo
                 src={logoUrl}
                 title={companyName || 'Logo'}
-                       className="h-8 lg:h-10 w-auto transition-all duration-300 group-hover:brightness-110 text-foreground"
+                className="h-8 w-auto sm:h-9 lg:h-10 transition-all duration-300 group-hover:brightness-110 text-foreground"
               />
             ) : (
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:rotate-6 group-hover:scale-110">
-                  <span className="text-primary-foreground font-bold text-lg lg:text-xl">X</span>
+                <div className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:rotate-6 group-hover:scale-110">
+                  <span className="text-primary-foreground font-bold text-lg sm:text-xl lg:text-2xl">X</span>
                 </div>
-                <span className="text-xl lg:text-2xl font-bold heading-elegant">
+                <span className="text-lg sm:text-xl lg:text-2xl font-bold heading-elegant">
                   {companyName}
                 </span>
               </div>

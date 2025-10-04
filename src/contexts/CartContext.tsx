@@ -1,6 +1,6 @@
 // Caminho do arquivo: frontend/src/contexts/CartContext.tsx
 
-import { useState, useEffect, createContext, useCallback, type ReactNode, useContext, useRef } from 'react';
+import React, { useState, useEffect, createContext, useCallback, type ReactNode, useContext, useRef, useMemo } from 'react';
 import { normalizeString } from '../utils/string';
 import { apiFetch } from '../services/api';
 import type { Booking } from '../types/types';
@@ -48,7 +48,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     fetchingRef.current = true;
     setIsLoading(true);
     try {
-      const cartData = await apiFetch('/cart');
+  const cartData = await apiFetch('/api/cart');
       setCart(cartData as Booking);
       lastFetchedAt.current = Date.now();
     } catch (error) {
@@ -86,7 +86,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setCart((prev) => prev); // força re-render
       if (type === 'kit') {
         const kitItem = item as Kit;
-        const updatedCart = await apiFetch('/cart/add-kit', {
+  const updatedCart = await apiFetch('/api/cart/add-kit', {
           method: 'POST',
           body: JSON.stringify({ kitId: kitItem.id }),
         });
@@ -95,7 +95,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       // equipment
-      const updatedCart = await apiFetch('/cart/add', {
+  const updatedCart = await apiFetch('/api/cart/add', {
         method: 'POST',
         body: JSON.stringify({ equipmentId: item.id }),
       });
@@ -153,7 +153,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     try {
       // optimistic clear
       setCart(null);
-      const updatedCart = await apiFetch('/cart/clear', { method: 'POST' });
+  const updatedCart = await apiFetch('/api/cart/clear', { method: 'POST' });
       setCart(updatedCart as Booking);
       addNotification({ type: 'success', title: 'Carrinho limpo', message: 'O carrinho foi limpo.' });
     } catch (e: any) {
@@ -165,13 +165,27 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const itemCount = (
-    (cart?.equipments?.length || 0) +
-    (cart?.kit ? 1 : 0) +
-    ((cart as any)?.items?.length || 0)
-  ) as number;
+  const itemCount = useMemo(() =>
+    (
+      (cart?.equipments?.length || 0) +
+      (cart?.kit ? 1 : 0) +
+      ((cart as any)?.items?.length || 0)
+    ) as number,
+    [cart]
+  );
 
-  const value = { cart, itemCount, isLoading, fetchCart, addItem, removeItem, clearCart };
+  const value = useMemo(() => ({
+    cart,
+    itemCount,
+    isLoading,
+    fetchCart,
+    addItem,
+    removeItem,
+    clearCart
+  }), [cart, itemCount, isLoading, fetchCart, addItem, removeItem, clearCart]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
+
+// Memoizar o provider para evitar re-renders desnecessários
+export const MemoizedCartProvider = React.memo(CartProvider);

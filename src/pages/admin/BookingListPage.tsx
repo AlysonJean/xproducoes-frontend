@@ -30,7 +30,7 @@ export const BookingListPage = () => {
     const fetchBookings = async () => {
       try {
         setLoading(true);
-  const response = await apiFetch('/admin/bookings');
+  const response = await apiFetch('/api/admin/bookings');
   // Garante que bookings seja sempre um array
   setBookings(asArray(response));
       } catch (err: unknown) {
@@ -53,9 +53,9 @@ export const BookingListPage = () => {
   ) => {
     try {
       const endpoint =
-        field === 'status'
-          ? `/admin/bookings/${bookingId}/status`
-          : `/admin/bookings/${bookingId}/delivery-status`;
+          field === 'status'
+            ? `/api/admin/bookings/${bookingId}/status`
+            : `/api/admin/bookings/${bookingId}/delivery-status`;
 
   const requestBody = { status: value };
 

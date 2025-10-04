@@ -38,7 +38,7 @@ export const PortfolioFormPage = () => {
       formData.append('eventDate', new Date(eventDate).toISOString());
       formData.append('image', image);
 
-      await apiFetch('/portfolio', {
+  await apiFetch('/api/portfolio', {
         method: 'POST',
         body: formData,
         // Remove ALL headers for FormData - let browser set them

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { logger } from '../utils/logger';
 import type { ReactNode } from 'react';
 
@@ -91,19 +91,19 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     return () => window.removeEventListener('storage', onStorage);
   }, [theme]);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setThemeState(resolvedTheme === 'dark' ? 'light' : 'dark');
-  };
+  }, [resolvedTheme]);
 
-  const setTheme = (newTheme: Theme) => {
+  const setTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme);
-  };
+  }, []);
 
-  const setSystem = () => {
+  const setSystem = useCallback(() => {
     setThemeState('system');
-  };
+  }, []);
 
-  const value: ThemeContextType = {
+  const value: ThemeContextType = useMemo(() => ({
     theme,
     resolvedTheme,
     toggleTheme,
@@ -111,7 +111,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     isDark: resolvedTheme === 'dark',
     isLight: resolvedTheme === 'light',
     setSystem,
-  };
+  }), [theme, resolvedTheme, toggleTheme, setTheme, setSystem]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
+
+// Memoizar o provider para evitar re-renders desnecessários
+export const MemoizedThemeProvider = React.memo(ThemeProvider);

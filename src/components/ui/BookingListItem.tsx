@@ -4,6 +4,7 @@ import { formatPrice } from '../../utils/formatPrice';
 interface BookingListItemProps {
   booking: SafeBooking;
   onReviewClick?: (bookingId: string) => void;
+  onViewDetails?: (bookingId: string) => void;
 }
 
 // Função para formatar data simples
@@ -30,7 +31,7 @@ const getStatusChip = (status: BookingStatus) => {
   );
 };
 
-export const BookingListItem = ({ booking, onReviewClick }: BookingListItemProps) => {
+export const BookingListItem = ({ booking, onReviewClick, onViewDetails }: BookingListItemProps) => {
   return (
     <div className="bg-card border border-border p-4 rounded-lg shadow-md hover:bg-card/80 transition-colors duration-200">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
@@ -89,18 +90,30 @@ export const BookingListItem = ({ booking, onReviewClick }: BookingListItemProps
           </p>
         </div>
       )}
-      <div className="mt-4 pt-4 border-t border-border flex justify-end">
-        {booking.status === 'COMPLETED' && onReviewClick && !booking.review && (
-          <button
-            onClick={() => onReviewClick(booking.id)}
-            className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded-lg transition-colors"
-          >
-            Deixar Avaliação
-          </button>
-        )}
-        {booking.status === 'COMPLETED' && booking.review && (
-          <span className="text-sm text-muted-foreground">Avaliação enviada</span>
-        )}
+      <div className="mt-4 pt-4 border-t border-border flex justify-between items-center">
+        <div className="flex gap-2">
+          {onViewDetails && (
+            <button
+              onClick={() => onViewDetails(booking.id)}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2 px-4 rounded-lg transition-colors"
+            >
+              Ver Detalhes
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          {booking.status === 'COMPLETED' && onReviewClick && !booking.review && (
+            <button
+              onClick={() => onReviewClick(booking.id)}
+              className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded-lg transition-colors"
+            >
+              Deixar Avaliação
+            </button>
+          )}
+          {booking.status === 'COMPLETED' && booking.review && (
+            <span className="text-sm text-muted-foreground">Avaliação enviada</span>
+          )}
+        </div>
       </div>
     </div>
   );

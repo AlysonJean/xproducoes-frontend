@@ -1,59 +1,80 @@
 // src/contexts/SettingsContext.tsx
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { useAppSettings } from '../hooks/useAppSettings';
 
 interface SettingsContextType {
   logoUrl: string | null;
   setLogoUrl: (url: string | null) => void;
   companyName: string;
   setCompanyName: (name: string) => void;
+  loading: boolean;
+  error: string | null;
+  saveSettings: (updates: { logoUrl?: string | null; companyName?: string }) => Promise<any>;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
-// Um URL de logo padrão para que a aplicação não comece sem um
-const DEFAULT_LOGO_URL = null; // Removido para evitar erro de CORS
-const DEFAULT_COMPANY_NAME = 'X Produções';
-
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
-  const [logoUrl, setLogoUrlState] = useState<string | null>(() => {
-    const stored = localStorage.getItem('logoUrl');
-    // Se a URL armazenada for a antiga do tailwindui, ignorar
-    if (stored && stored.includes('tailwindui.com')) {
-      localStorage.removeItem('logoUrl');
-      return DEFAULT_LOGO_URL;
-    }
-    return stored || DEFAULT_LOGO_URL;
-  });
-  const [companyName, setCompanyNameState] = useState<string>(() => {
-    return localStorage.getItem('companyName') || DEFAULT_COMPANY_NAME;
-  });
+  const {
+    logoUrl,
+    companyName,
+    loading,
+    error,
+    saveSettings: saveAppSettings
+  } = useAppSettings();
 
-  useEffect(() => {
-    if (logoUrl) {
-      localStorage.setItem('logoUrl', logoUrl);
-    } else {
-      localStorage.removeItem('logoUrl');
-    }
-  }, [logoUrl]);
+  const [localLogoUrl, setLocalLogoUrl] = useState<string | null>(logoUrl);
+  const [localCompanyName, setLocalCompanyName] = useState<string>(companyName);
 
+  // Sincronizar com as configurações carregadas
   useEffect(() => {
+    if (logoUrl !== undefined) {
+      setLocalLogoUrl(logoUrl);
+    }
     if (companyName) {
-      localStorage.setItem('companyName', companyName);
-    } else {
-      localStorage.removeItem('companyName');
+      setLocalCompanyName(companyName);
     }
-  }, [companyName]);
+  }, [logoUrl, companyName]);
 
-  const setLogoUrl = (url: string | null) => {
-    setLogoUrlState(url);
+  const setLogoUrl = async (url: string | null) => {
+    setLocalLogoUrl(url);
+    try {
+      await saveAppSettings({ logoUrl: url });
+    } catch (err) {
+      console.error('Erro ao salvar logo:', err);
+      // Reverter em caso de erro
+      setLocalLogoUrl(logoUrl);
+    }
   };
-  const setCompanyName = (name: string) => {
-    setCompanyNameState(name);
+
+  const setCompanyName = async (name: string) => {
+    setLocalCompanyName(name);
+    try {
+      await saveAppSettings({ companyName: name });
+    } catch (err) {
+      console.error('Erro ao salvar nome da empresa:', err);
+      // Reverter em caso de erro
+      setLocalCompanyName(companyName);
+    }
+  };
+
+  const saveSettings = async (updates: { logoUrl?: string | null; companyName?: string }) => {
+    return await saveAppSettings(updates);
   };
 
   return (
-    <SettingsContext.Provider value={{ logoUrl, setLogoUrl, companyName, setCompanyName }}>{children}</SettingsContext.Provider>
+    <SettingsContext.Provider value={{
+      logoUrl: localLogoUrl,
+      setLogoUrl,
+      companyName: localCompanyName,
+      setCompanyName,
+      loading,
+      error,
+      saveSettings
+    }}>
+      {children}
+    </SettingsContext.Provider>
   );
 };
 

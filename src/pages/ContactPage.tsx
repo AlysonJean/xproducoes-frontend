@@ -67,7 +67,7 @@ export const ContactPage = () => {
     setIsSubmitting(true);
 
     try {
-      await apiFetch('/contact', {
+  await apiFetch('/api/contact', {
         method: 'POST',
         body: JSON.stringify(formState),
       });
@@ -133,7 +133,7 @@ export const ContactPage = () => {
                 </div>
                 <div>
                   <h3 className="text-foreground font-semibold mb-1">Email</h3>
-                  <p className="text-muted-foreground">contato@xproducoes.com</p>
+                  <p className="text-muted-foreground">suporte@xproducoeseventos.com.br</p>
                   <p className="text-sm text-muted-foreground">
                     Respondemos em até 24h
                   </p>
@@ -159,7 +159,7 @@ export const ContactPage = () => {
                 </div>
                 <div>
                   <h3 className="text-foreground font-semibold mb-1">Telefone</h3>
-                  <p className="text-muted-foreground">(11) 99999-9999</p>
+                  <p className="text-muted-foreground">(31) 98925-2272</p>
                   <p className="text-sm text-muted-foreground">Seg-Sex, 9h às 18h</p>
                 </div>
               </div>
@@ -177,7 +177,7 @@ export const ContactPage = () => {
                 </div>
                 <div>
                   <h3 className="text-foreground font-semibold mb-1">WhatsApp</h3>
-                  <p className="text-muted-foreground">(11) 99999-9999</p>
+                  <p className="text-muted-foreground">(31) 98925-2272</p>
                   <p className="text-sm text-muted-foreground">Disponível 24/7</p>
                 </div>
               </div>
@@ -207,7 +207,7 @@ export const ContactPage = () => {
                 </div>
                 <div>
                   <h3 className="text-foreground font-semibold mb-1">Localização</h3>
-                  <p className="text-muted-foreground">São Paulo, SP</p>
+                  <p className="text-muted-foreground">Rua flor d'agua 407 Jardim Alvorada Belo Horizonte MG</p>
                   <p className="text-sm text-muted-foreground">
                     Atendemos toda a região
                   </p>
@@ -288,7 +288,7 @@ export const ContactPage = () => {
                     value={formState.phone}
                     onChange={handleChange}
                     className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary hover:border-border/80 transition-all duration-200"
-                    placeholder="(11) 99999-9999"
+                    placeholder="(31) 98925-2272"
                   />
                 </div>
 

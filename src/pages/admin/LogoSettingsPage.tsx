@@ -1,6 +1,7 @@
 // src/pages/admin/LogoSettingsPage.tsx
 
 import React, { useState } from 'react';
+import { ThemedLogo } from '@/components/ui/ThemedLogo';
 import { useSettings } from '../../contexts/SettingsContext';
 import { apiFetch } from '../../services/api';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -18,6 +19,30 @@ export const LogoSettingsPage = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log('File selected:', {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        lastModified: file.lastModified
+      });
+      
+      // Validação melhorada para incluir SVGs
+      const isValidImage = file.type.startsWith('image/') || 
+                          file.name.toLowerCase().endsWith('.svg') ||
+                          file.type === 'text/xml' ||
+                          file.type === 'application/xml';
+      
+      if (!isValidImage) {
+        setStatusMessage('Erro: Por favor, selecione um arquivo de imagem válido (PNG, JPEG, SVG).');
+        return;
+      }
+      
+      // Limite de tamanho (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setStatusMessage('Erro: O arquivo deve ter no máximo 5MB.');
+        return;
+      }
+      
       // Revoga o preview anterior, se era blob
       setNewLogoFile(file);
       setPreviewUrl((prev) => {
@@ -35,9 +60,19 @@ export const LogoSettingsPage = () => {
     setIsSaving(true);
     try {
       if (newLogoFile) {
+        console.log('Uploading file:', {
+          name: newLogoFile.name,
+          type: newLogoFile.type,
+          size: newLogoFile.size
+        });
+        
         const formData = new FormData();
         formData.append('logo', newLogoFile);
-        const response = await apiFetch('/logo', { method: 'POST', body: formData });
+        
+  console.log('Sending request to /api/logo...');
+  const response = await apiFetch('/api/logo', { method: 'POST', body: formData });
+        console.log('Response received:', response);
+        
         if ((response as any).logoUrl) {
           setLogoUrl((response as any).logoUrl);
           setPreviewUrl((prev) => {
@@ -54,6 +89,7 @@ export const LogoSettingsPage = () => {
       setStatusMessage('Logo e nome atualizados com sucesso!');
       setTimeout(() => setStatusMessage(null), 3000);
     } catch (err: any) {
+      console.error('Upload error:', err);
       const msg = (err?.message as string) || 'Erro ao salvar logo.';
       setStatusMessage(`Erro ao salvar logo: ${msg}`);
     } finally {
@@ -74,7 +110,7 @@ export const LogoSettingsPage = () => {
           <h2 className="text-xl font-semibold mb-2 text-foreground">Logo Atual</h2>
           <div className="p-4 bg-muted rounded-lg flex justify-center items-center h-24">
             {previewUrl ? (
-              <img src={previewUrl} alt="Preview do Logo" className="h-12 w-auto" />
+              <ThemedLogo src={previewUrl} className="h-12 w-auto" title="Preview do Logo" />
             ) : (
               <p className="text-muted-foreground">Nenhum logo definido.</p>
             )}
@@ -101,10 +137,14 @@ export const LogoSettingsPage = () => {
           <input
             id="logo-upload"
             type="file"
-            accept="image/png, image/svg+xml, image/jpeg"
+            accept="image/*,.svg"
             onChange={handleFileChange}
             className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border file:border-border file:bg-card file:text-foreground hover:file:bg-muted"
           />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Para alternância automática de cor, use SVG com <code>fill="currentColor"</code> ou sem atributo <code>fill</code>.<br/>
+            O preview já mostra como ficará no tema atual. Suporte completo para PNG, JPEG e SVG.
+          </p>
         </div>
 
         <Button onClick={handleSave} disabled={isSaving || (!newLogoFile && nameInput.trim() === companyName)} variant="primary">

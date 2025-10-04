@@ -30,26 +30,7 @@ import {
   Star
 } from 'lucide-react';
 
-interface DashboardStats {
-  totalBookings: number;
-  activeBookings: number;
-  completedBookings: number;
-  totalSpent: number;
-  averageBookingValue: number;
-  lastBookingDate?: string;
-  nextBookingDate?: string;
-  favoriteEquipments: number;
-}
-
-interface QuickAction {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  href: string;
-  color: 'primary' | 'success' | 'warning' | 'info';
-  badge?: string;
-}
+import { DashboardStats, QuickAction } from '../../types/domains/dashboard';
 
 export const ClientDashboardPage = () => {
   const { user } = useAuth();

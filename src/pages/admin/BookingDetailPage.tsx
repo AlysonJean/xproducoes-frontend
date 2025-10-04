@@ -52,6 +52,11 @@ export const BookingDetailPage = () => {
   const [wppContact, setWppContact] = useState('');
   const [actionToConfirm, setActionToConfirm] = useState<(() => Promise<void>) | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  // Estados para o modal de confirmação
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmPrice, setConfirmPrice] = useState('');
+  const [confirmCollaboratorId, setConfirmCollaboratorId] = useState('');
+  const [confirmRole, setConfirmRole] = useState('ASSISTANT');
   // EventManagement modal
   const [isEventModalOpen, setEventModalOpen] = useState(false);
   const [availableCollaborators, setAvailableCollaborators] = useState<any[]>([]);
@@ -203,6 +208,32 @@ export const BookingDetailPage = () => {
     setActionToConfirm(null);
   };
 
+  const handleConfirmWithDetails = async () => {
+    if (!booking?.id) return;
+    try {
+      setActionLoading(true);
+      const payload: any = {};
+      if (confirmPrice) payload.totalPrice = Number(confirmPrice);
+      if (confirmCollaboratorId) {
+        payload.collaborators = [
+          {
+            collaboratorId: confirmCollaboratorId,
+            role: confirmRole || 'ASSISTANT',
+          },
+        ];
+      }
+      await bookingAPI.confirmWithDetails(booking.id, payload);
+      const updatedResp = await bookingAPI.getById(booking.id);
+      setBooking((updatedResp.data && (updatedResp.data as any).data) as BookingDetails);
+      setConfirmOpen(false);
+      addNotification({ type: 'success', title: 'Confirmado', message: 'Reserva confirmada com sucesso.' });
+    } catch (err: unknown) {
+      addNotification({ type: 'error', title: 'Erro', message: err instanceof Error ? err.message : 'Erro ao confirmar reserva' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-card flex items-center justify-center">
@@ -273,6 +304,17 @@ export const BookingDetailPage = () => {
       <div className="bg-card p-6 rounded-xl shadow-sm border border-border">
         <h2 className="text-xl font-semibold mb-4 text-primary">Gerir Reserva</h2>
         <div className="flex flex-wrap gap-4">
+          {booking.status !== 'CONFIRMED' && (
+            <button
+              onClick={() => {
+                setConfirmPrice(String(booking.serviceValue || booking.totalPrice || ''));
+                setConfirmOpen(true);
+              }}
+              className="bg-primary hover:bg-primary text-primary-foreground p-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+            >
+              Confirmar Reserva
+            </button>
+          )}
           <button
             onClick={() => prepareWhatsAppMessage('confirm')}
             className="bg-success hover:bg-success text-success-foreground p-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
@@ -490,7 +532,65 @@ export const BookingDetailPage = () => {
         contactNumber={wppContact}
         isSending={actionLoading}
       />
-  {isEventModalOpen && (
+      {confirmOpen && (
+        <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50 p-4">
+          <div className="bg-card border rounded-xl p-6 shadow-2xl w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-foreground">Confirmar reserva</h2>
+              <button className="text-2xl text-muted-foreground hover:text-foreground" onClick={() => setConfirmOpen(false)} aria-label="Fechar">&times;</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label htmlFor="confirm-price" className="block text-sm text-muted-foreground mb-1">Valor do serviço (R$)</label>
+                <input
+                  id="confirm-price"
+                  type="number"
+                  step="0.01"
+                  className="w-full px-3 py-2 rounded border bg-background text-foreground"
+                  value={confirmPrice}
+                  onChange={(e) => setConfirmPrice(e.target.value)}
+                  placeholder="Ex.: 500.00"
+                />
+              </div>
+              <div>
+                <label htmlFor="confirm-collaborator" className="block text-sm text-muted-foreground mb-1">Atribuir colaborador</label>
+                <select
+                  id="confirm-collaborator"
+                  className="w-full px-3 py-2 rounded border bg-background text-foreground"
+                  value={confirmCollaboratorId}
+                  onChange={(e) => setConfirmCollaboratorId(e.target.value)}
+                >
+                  <option value="">(Opcional) Selecionar colaborador</option>
+                  {availableCollaborators.map((c: any) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              {confirmCollaboratorId && (
+                <div>
+                  <label htmlFor="confirm-role" className="block text-sm text-muted-foreground mb-1">Função</label>
+                  <select
+                    id="confirm-role"
+                    className="w-full px-3 py-2 rounded border bg-background text-foreground"
+                    value={confirmRole}
+                    onChange={(e) => setConfirmRole(e.target.value)}
+                  >
+                    <option value="PHOTOGRAPHER">Fotógrafo</option>
+                    <option value="ASSISTANT">Assistente</option>
+                    <option value="PRODUCER">Produtor</option>
+                    <option value="OTHER">Outro</option>
+                  </select>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button className="toolbar-btn" onClick={() => setConfirmOpen(false)}>Cancelar</button>
+              <button className="toolbar-btn today" onClick={handleConfirmWithDetails} disabled={!!actionLoading}>Confirmar</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {isEventModalOpen && (
         <EventManagement
           event={{
             id: booking.id,

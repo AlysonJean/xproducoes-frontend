@@ -2,6 +2,7 @@
 // - Centraliza normalização de telefone, construção de mensagens e abertura do WhatsApp
 
 import { createAndClickAnchor } from './dom';
+import type { QuoteMessageParams } from '@/types/forms';
 
 export const normalizePhone = (phone: string): string => phone.replace(/\D/g, '');
 
@@ -43,31 +44,6 @@ export const openWhatsApp = (phone: string, message: string): void => {
         console.warn('Não foi possível abrir o WhatsApp automaticamente.');
       }
   }
-};
-
-type QuoteMessageParams = {
-  bookingId?: string;
-  user?: { name?: string; phone?: string } | null;
-  venue: string;
-  eventDate: Date;
-  durationHours: number;
-  address: {
-    street?: string;
-    number?: string;
-    neighborhood?: string;
-    city?: string;
-    state?: string;
-    zipCode?: string;
-  complement?: string;
-  };
-  items: Array<{ name?: string } | { equipment?: { name?: string } }>;
-  notes?: string;
-  logistics: {
-    requiresStairs?: boolean;
-    isCovered?: boolean;
-    hasParking?: boolean;
-  };
-  locale?: string; // Ex.: 'pt-BR' | 'pt-PT'
 };
 
 export const buildQuoteMessage = (p: QuoteMessageParams): string => {

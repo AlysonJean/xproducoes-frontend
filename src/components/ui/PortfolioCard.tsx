@@ -19,21 +19,17 @@ function safeImage(urls?: string[], title?: string): string {
 
 export const PortfolioCard: React.FC<PortfolioCardProps> = ({ item, ...rest }) => {
   return (
-    <div {...rest} className="bg-card border border-border rounded-lg overflow-hidden shadow-lg group hover:shadow-xl transition-shadow">
-      <div className="overflow-hidden h-64">
+    <div {...rest} className="bg-card border border-border rounded-lg overflow-hidden shadow-lg group hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 cursor-pointer">
+      <div className="overflow-hidden h-64 sm:h-72 md:h-80 relative">
         <img
           src={safeImage(item.images, item.title)}
           alt={item.title || 'Evento do portfólio'}
           className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
         />
-      </div>
-      <div className="p-4">
-        <h3 className="font-bold text-lg text-foreground truncate">{item.title}</h3>
-        <p className="text-muted-foreground text-sm h-10">{item.description}</p>
-        <div className="mt-4 flex justify-end">
-          <button className="text-sm text-primary hover:underline" disabled>
-            Ver comentários
-          </button>
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-end">
+          <div className="p-4 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+            <h3 className="font-bold text-lg truncate">{item.title}</h3>
+          </div>
         </div>
       </div>
     </div>

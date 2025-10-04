@@ -6,7 +6,7 @@ export const PressPage: React.FC = () => {
     <PageLayout title="Imprensa" description="Materiais e contato para a imprensa">
       <div className="max-w-4xl mx-auto bg-card rounded-xl p-8 border border-border">
         <h1 className="text-2xl font-bold mb-4">Imprensa</h1>
-        <p className="text-muted-foreground mb-4">Solicitações de imprensa, kits de mídia e imagens. Entre em contato: <strong>press@xproducoes.com</strong></p>
+        <p className="text-muted-foreground mb-4">Solicitações de imprensa, kits de mídia e imagens. Entre em contato: <strong>suporte@xproducoeseventos.com.br</strong></p>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Recursos</h2>
         <ul className="list-disc list-inside text-muted-foreground">

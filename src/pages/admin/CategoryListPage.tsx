@@ -18,7 +18,7 @@ export const CategoryListPage = () => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-  const data = await apiFetch('/categories');
+  const data = await apiFetch('/api/categories');
   setCategories(asArray<Category>(data));
     } catch (err: unknown) {
       setError(

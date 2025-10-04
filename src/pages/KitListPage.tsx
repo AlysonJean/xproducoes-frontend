@@ -2,17 +2,10 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { apiFetch } from '../services/api';
 import { asArray } from '../utils/normalize';
 import { normalizeString } from '../utils/string';
-import type { Kit } from '../types/types';
+import type { Kit, KitFilters } from '@/types/types';
 import { KitCard } from '../components/ui/KitCard';
 import { PageLayout, PageLoading, PageError, PageEmpty } from '../components/layouts/PageLayout';
 import { SearchAndFilters, FilterSelect, Grid } from '../components/ui/StandardComponents';
-
-interface KitFilters {
-  priceRange?: [number, number];
-  searchQuery?: string;
-  sortBy?: 'name' | 'price';
-  sortOrder?: 'asc' | 'desc';
-}
 
 export const KitListPage = () => {
   const [kits, setKits] = useState<Kit[]>([]);
@@ -28,7 +21,7 @@ export const KitListPage = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-  const kitsData = await apiFetch('/kits');
+  const kitsData = await apiFetch('/api/kits');
   setKits(asArray<Kit>(kitsData));
       } catch (err) {
         console.error('Erro ao carregar dados:', err);

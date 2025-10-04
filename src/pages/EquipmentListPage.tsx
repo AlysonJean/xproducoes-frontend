@@ -3,17 +3,9 @@ import { EquipmentCard } from '../components/ui/EquipmentCard';
 import { apiFetch } from '../services/api';
 import { asArray } from '../utils/normalize';
 import { normalizeString } from '../utils/string';
-import type { Equipment, Category } from '../types/types';
+import type { Equipment, Category, EquipmentFilters } from '@/types/types';
 import { PageLayout, PageLoading, PageError, PageEmpty } from '../components/layouts/PageLayout';
 import { SearchAndFilters, FilterSelect, Grid } from '../components/ui/StandardComponents';
-
-interface EquipmentFilters {
-  category?: string;
-  priceRange?: [number, number];
-  availability?: boolean;
-  tags?: string[];
-  searchQuery?: string;
-}
 
 export const EquipmentListPage: React.FC = () => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
@@ -30,8 +22,8 @@ export const EquipmentListPage: React.FC = () => {
       try {
         setLoading(true);
   const [equipmentsData, categoriesData] = await Promise.all([
-          apiFetch('/equipments'),
-          apiFetch('/categories')
+          apiFetch('/api/equipments'),
+          apiFetch('/api/categories')
         ]);
         
   setEquipments(asArray<Equipment>(equipmentsData));

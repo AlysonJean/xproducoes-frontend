@@ -26,7 +26,7 @@ export function ReceitaMensalChart({ year }: ReceitaMensalChartProps) {
 
   // Buscar anos disponíveis ao montar
   useEffect(() => {
-    apiFetch<number[]>(`/dashboard/available-years`)
+  apiFetch<number[]>(`/api/dashboard/available-years`)
       .then((res) => {
         // Garante que é array de números
         let anos = Array.isArray(res) ? res.map(Number) : [];
@@ -48,7 +48,7 @@ export function ReceitaMensalChart({ year }: ReceitaMensalChartProps) {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    apiFetch<MonthlyRevenue[]>(`/dashboard/monthly-revenue?year=${selectedYear}`)
+  apiFetch<MonthlyRevenue[]>(`/api/dashboard/monthly-revenue?year=${selectedYear}`)
       .then((res) => {
         setData(res);
       })

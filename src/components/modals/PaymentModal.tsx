@@ -271,7 +271,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 <strong>IBAN:</strong> PT50 0000 0000 0000 0000 0000 0
               </p>
               <p>
-                <strong>Titular:</strong> X Produções
+                <strong>Titular:</strong> X Produçoes e Eventos
               </p>
               <p>
                 <strong>Referência:</strong> {bookingId ? `BOOKING-${bookingId}` : 'A definir'}

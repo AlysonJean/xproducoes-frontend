@@ -1,4 +1,4 @@
-import type { Equipment } from '../types/types';
+import type { Equipment } from '@/types/domains/equipment';
 
 function sanitizeImageUrl(url?: string): string {
   if (!url) return '';

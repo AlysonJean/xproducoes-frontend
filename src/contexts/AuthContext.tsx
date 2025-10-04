@@ -1,7 +1,9 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { secureStorage } from '../utils/secureStorage';
+import { logger } from '../utils/logger';
+import { sentry } from '../main';
 
 export interface AuthUser {
   id: string;
@@ -14,13 +16,21 @@ export interface AuthUser {
   location?: string;
 }
 
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+}
+
 export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   user: AuthUser | null;
   logout: () => void;
-  loginWithCredentials?: (data: { email: string; password: string }) => Promise<void>;
-  handleOAuthToken?: (token: string) => Promise<void>;
+  loginWithCredentials?: (data: { email: string; password: string }) => Promise<string>;
+  handleOAuthToken?: (token: string) => Promise<string>;
+  refreshToken: () => Promise<boolean>;
+  isTokenExpired: () => boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,120 +44,325 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [tokens, setTokens] = useState<AuthTokens | null>(null);
   const navigate = useNavigate();
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isRefreshingRef = useRef(false);
 
-  // Verificar se há token salvo ao carregar a aplicação
+  // Verificar se o token está expirado
+  const isTokenExpired = useCallback(() => {
+    if (!tokens) return true;
+    return Date.now() >= tokens.expiresAt;
+  }, [tokens]);
+
+  // Salvar tokens de forma segura
+  const saveTokens = useCallback((newTokens: AuthTokens) => {
+    setTokens(newTokens);
+    secureStorage.set('accessToken', newTokens.accessToken);
+    secureStorage.set('refreshToken', newTokens.refreshToken);
+    secureStorage.set('tokenExpiresAt', newTokens.expiresAt.toString());
+  }, []);
+
+  // Limpar tokens
+  const clearTokens = useCallback(() => {
+    setTokens(null);
+    secureStorage.remove('accessToken');
+    secureStorage.remove('refreshToken');
+    secureStorage.remove('tokenExpiresAt');
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+      refreshTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Backoff para refresh
+  const refreshBackoffRef = useRef<number>(1000); // Começa com 1s
+
+  // Agendar refresh automático do token
+  const scheduleTokenRefresh = useCallback((): void => {
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+
+    if (tokens) {
+      const timeUntilExpiry = tokens.expiresAt - Date.now();
+      const refreshTime = Math.max(timeUntilExpiry - (5 * 60 * 1000), 0); // 5 minutos antes
+
+      refreshTimeoutRef.current = setTimeout(() => {
+        // Para evitar dependência circular, chama refreshToken via ref
+        if (typeof window !== 'undefined' && (window as any).refreshTokenGlobal) {
+          (window as any).refreshTokenGlobal();
+        }
+      }, refreshTime);
+    }
+  }, [tokens]);
+
+  // Refresh token automático com proteção e backoff
+  // Expor refreshToken globalmente para scheduleTokenRefresh
+  const refreshToken = useCallback(async (): Promise<boolean> => {
+    if (isRefreshingRef.current || !tokens?.refreshToken) {
+      return false;
+    }
+
+    isRefreshingRef.current = true;
+
+    try {
+      logger.info('Refreshing access token', 'AuthContext');
+
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken: tokens.refreshToken }),
+      });
+
+      if (response.status === 429) {
+        // Too Many Requests: aplica backoff exponencial
+        logger.warn('Received 429 Too Many Requests on refresh, applying backoff', 'AuthContext');
+        refreshBackoffRef.current = Math.min(refreshBackoffRef.current * 2, 60000); // até 60s
+        setTimeout(() => {
+          isRefreshingRef.current = false;
+          refreshToken();
+        }, refreshBackoffRef.current);
+        return false;
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to refresh token');
+      }
+
+      // Reset backoff ao sucesso
+      refreshBackoffRef.current = 1000;
+
+      const data = await response.json();
+      const newTokens: AuthTokens = {
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken || tokens.refreshToken,
+        expiresAt: Date.now() + (15 * 60 * 1000), // 15 minutos
+      };
+
+      saveTokens(newTokens);
+      logger.info('Access token refreshed successfully', 'AuthContext');
+
+      // Agendar próximo refresh
+  scheduleTokenRefresh();
+
+      return true;
+    } catch (error) {
+      logger.error('Failed to refresh token', 'AuthContext', error);
+      clearTokens();
+      setUser(null);
+      return false;
+    } finally {
+      // Só libera se não estiver em backoff
+      if (refreshBackoffRef.current === 1000) {
+        isRefreshingRef.current = false;
+      }
+    }
+  }, [tokens, saveTokens, clearTokens, scheduleTokenRefresh]);
+
+  // Expor refreshToken globalmente para evitar dependência circular
+  if (typeof window !== 'undefined') {
+    (window as any).refreshTokenGlobal = refreshToken;
+  }
+
+  // Agendar refresh automático do token
+
+  // Carregar tokens do storage
+  const loadTokens = useCallback((): AuthTokens | null => {
+    const accessToken = secureStorage.get('accessToken');
+    const refreshToken = secureStorage.get('refreshToken');
+    const expiresAt = secureStorage.get('tokenExpiresAt');
+
+    if (accessToken && refreshToken && expiresAt) {
+      return {
+        accessToken,
+        refreshToken,
+        expiresAt: parseInt(expiresAt),
+      };
+    }
+    return null;
+  }, []);
+
+  // Verificar autenticação ao carregar
   useEffect(() => {
     let isMounted = true;
-    
-    const checkAuth = async () => {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        // Verificar se o token é válido
-        const isValid = await validateToken(token, isMounted);
-        if (!isValid && isMounted) {
-          // Se o token não é válido, redirecionar para login apenas se estiver na página protegida
-          const currentPath = window.location.pathname;
-          const isProtectedRoute = currentPath.startsWith('/admin') || 
-                                   currentPath.startsWith('/client') || 
-                                   currentPath.startsWith('/collaborator') ||
-                                   currentPath.startsWith('/freelancer') ||
-                                   currentPath === '/dashboard' ||
-                                   currentPath === '/cart';
-          
-          if (isProtectedRoute) {
-            window.location.href = '/login';
+    const initializeAuth = async () => {
+      try {
+        const savedTokens = loadTokens();
+
+        if (savedTokens && isMounted) {
+          // Atualiza o estado local imediatamente para refletir que já temos tokens
+          setTokens(savedTokens);
+
+          const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+          // Determinar se o token está expirado usando os savedTokens (evita depender do state que atualiza assincronamente)
+          const expired = Date.now() >= savedTokens.expiresAt;
+
+          // Função local para tentar refresh usando um refresh token conhecido
+          const tryRefreshWith = async (refreshTok: string | undefined) => {
+            if (!refreshTok) return false;
+            try {
+              const refreshResponse = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refreshToken: refreshTok }),
+              });
+
+              if (!refreshResponse.ok) return false;
+              const data = await refreshResponse.json();
+
+              const newTokens: AuthTokens = {
+                accessToken: data.accessToken,
+                refreshToken: data.refreshToken || refreshTok,
+                expiresAt: Date.now() + (15 * 60 * 1000),
+              };
+
+              // Persistir e aplicar novos tokens
+              saveTokens(newTokens);
+              setTokens(newTokens);
+
+              // Buscar perfil do usuário com o novo token
+              const meResp = await fetch(`${API_BASE_URL}/api/auth/me`, {
+                headers: { Authorization: `Bearer ${newTokens.accessToken}`, 'Content-Type': 'application/json' },
+              });
+              if (meResp.ok) {
+                const userData = await meResp.json();
+                setUser(userData);
+                // Agendar próximo refresh
+                scheduleTokenRefresh();
+                return true;
+              }
+              return false;
+            } catch (e) {
+              logger.error('Refresh attempt failed during init', 'AuthContext', e);
+              return false;
+            }
+          };
+
+          if (!expired) {
+            // Validar access token diretamente usando savedTokens
+            try {
+              const resp = await fetch(`${API_BASE_URL}/api/auth/me`, {
+                headers: { Authorization: `Bearer ${savedTokens.accessToken}`, 'Content-Type': 'application/json' },
+              });
+
+              if (resp.ok) {
+                const userData = await resp.json();
+                setUser(userData);
+                // Garantir que agendamos o refresh com base nos tokens carregados
+                scheduleTokenRefresh();
+              } else if (resp.status === 401) {
+                // Access token inválido -> tentar refresh com saved refresh token
+                const refreshed = await tryRefreshWith(savedTokens.refreshToken);
+                if (!refreshed) {
+                  clearTokens();
+                  setUser(null);
+                }
+              } else {
+                // Outros códigos -> limpar
+                clearTokens();
+                setUser(null);
+              }
+            } catch (e) {
+              logger.error('Auth validation failed during init', 'AuthContext', e);
+              clearTokens();
+              setUser(null);
+            }
+          } else {
+            // Token expirado -> tentar refresh
+            const refreshed = await tryRefreshWith(savedTokens.refreshToken);
+            if (!refreshed) {
+              clearTokens();
+              setUser(null);
+            }
           }
         }
-      } else {
+      } catch (error) {
+        logger.error('Auth initialization failed', 'AuthContext', error);
+        if (isMounted) {
+          clearTokens();
+          setUser(null);
+        }
+      } finally {
         if (isMounted) {
           setIsLoading(false);
         }
       }
     };
 
-    checkAuth();
-    
+    initializeAuth();
+
     return () => {
       isMounted = false;
     };
-  }, []); // Removido dependências para evitar loops
+  }, []); // Remover dependências problemáticas
 
-  const validateToken = async (token: string, isMounted = true) => {
+  // Agendar refresh quando tokens mudam
+  useEffect(() => {
+    if (tokens && !isTokenExpired()) {
+      scheduleTokenRefresh();
+    }
+
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, [tokens, isTokenExpired, scheduleTokenRefresh]);
+
+  const handleOAuthToken = async (token: string): Promise<string> => {
+    setIsLoading(true);
     try {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      // Para OAuth, assumimos que o token é válido e contém user info
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
 
-      if (response.ok && isMounted) {
-        const userData = await response.json();
-        setUser(userData);
-        return true; // Token válido
-      } else if (isMounted) {
-        // Token inválido ou expirado
-        localStorage.removeItem('authToken');
-        secureStorage.remove('token');
-        setUser(null);
-        return false; // Token inválido
+      if (!response.ok) {
+        throw new Error('Invalid OAuth token');
       }
-    } catch (error) {
-      console.error('Erro ao validar token:', error);
-      if (isMounted) {
-        localStorage.removeItem('authToken');
-        secureStorage.remove('token');
-        setUser(null);
-        return false; // Erro na validação
+
+      const userData = await response.json();
+
+      // Criar tokens com expiração
+      const newTokens: AuthTokens = {
+        accessToken: token,
+        refreshToken: token, // Para OAuth, refresh token pode ser o mesmo
+        expiresAt: Date.now() + (60 * 60 * 1000), // 1 hora para OAuth
+      };
+
+      saveTokens(newTokens);
+      setUser(userData);
+
+      // Agendar refresh
+      scheduleTokenRefresh();
+
+      // Retornar rota baseada no role
+      switch (userData.role) {
+        case 'ADMIN':
+          return '/admin/dashboard';
+        case 'COLLABORATOR':
+          return '/collaborator/dashboard';
+        case 'FREELANCER':
+          return '/freelancer/dashboard';
+        case 'CLIENT':
+          return '/client/dashboard';
+        default:
+          return '/dashboard';
       }
-    } finally {
-      if (isMounted) {
-        setIsLoading(false);
-      }
-    }
-    return false;
-  };
 
-  const handleOAuthToken = async (token: string) => {
-    setIsLoading(true);
-    try {
-      // Persist token
-      localStorage.setItem('authToken', token);
-      secureStorage.set('token', token);
-
-      // Validate and set user
-      await validateToken(token, true);
-
-      // Wait a bit for user state to update, then navigate
-      setTimeout(() => {
-        if (user) {
-          switch (user.role) {
-            case 'ADMIN':
-              navigate('/admin/dashboard', { replace: true });
-              break;
-            case 'COLLABORATOR':
-              navigate('/collaborator/dashboard', { replace: true });
-              break;
-            case 'FREELANCER':
-              navigate('/freelancer/dashboard', { replace: true });
-              break;
-            case 'CLIENT':
-              navigate('/client/dashboard', { replace: true });
-              break;
-            default:
-              navigate('/dashboard', { replace: true });
-          }
-        } else {
-          // Fallback if user is still not set
-          navigate('/dashboard', { replace: true });
-        }
-      }, 100);
+      logger.info('OAuth login successful', 'AuthContext', { userId: userData.id });
     } catch (err) {
-      console.error('Falha ao processar token OAuth:', err);
-      localStorage.removeItem('authToken');
-      secureStorage.remove('token');
+      logger.error('OAuth token processing failed', 'AuthContext', err);
+      clearTokens();
       setUser(null);
       throw err;
     } finally {
@@ -155,13 +370,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginWithCredentials = async (data: { email: string; password: string }) => {
+  const loginWithCredentials = async (data: { email: string; password: string }): Promise<string> => {
     setIsLoading(true);
     try {
-  // console.log('🔐 Tentando login com:', { email: data.email, passwordLength: data.password.length });
+      logger.info('Attempting credential login', 'AuthContext', { email: data.email });
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -169,74 +384,82 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify(data),
       });
 
-  // console.log('📡 Resposta do servidor:', { status: response.status, ok: response.ok });
-
       if (!response.ok) {
         let errorData;
         try {
           errorData = await response.json();
-          console.error('❌ Erro do servidor:', errorData);
-        } catch (parseError) {
-          console.error('❌ Erro ao fazer parse da resposta:', parseError);
-          errorData = { message: `Erro HTTP ${response.status}` };
+        } catch {
+          errorData = { message: `HTTP ${response.status} error` };
         }
-        throw new Error(errorData.message || 'Erro ao fazer login');
+        throw new Error(errorData.message || 'Login failed');
       }
 
       const responseData = await response.json();
-  // console.log('✅ Login bem-sucedido:', { hasToken: !!responseData.token, hasUser: !!responseData.user });
+      const { token, refreshToken, user: userData, redirectTo } = responseData;
 
-      const { token, user: userData, redirectTo } = responseData;
+      // Criar estrutura de tokens
+      const newTokens: AuthTokens = {
+        accessToken: token,
+        refreshToken: refreshToken || token,
+        expiresAt: Date.now() + (15 * 60 * 1000), // 15 minutos
+      };
 
-      // Salvar token nas duas chaves para compatibilidade
-      localStorage.setItem('authToken', token);
-      secureStorage.set('token', token);
+      saveTokens(newTokens);
       setUser(userData);
 
-      // Redirecionar automaticamente
+      // Agendar refresh automático
+      scheduleTokenRefresh();
+
+      // Retornar rota de redirecionamento
       if (redirectTo) {
-        navigate(redirectTo, { replace: true });
+        return redirectTo;
       } else {
-        // fallback: dashboard padrão por role
         switch (userData.role) {
           case 'ADMIN':
-            navigate('/admin/dashboard', { replace: true });
-            break;
+            return '/admin/dashboard';
           case 'COLLABORATOR':
-            navigate('/collaborator/dashboard', { replace: true });
-            break;
+            return '/collaborator/dashboard';
           case 'FREELANCER':
-            navigate('/freelancer/dashboard', { replace: true });
-            break;
+            return '/freelancer/dashboard';
           case 'CLIENT':
-            navigate('/client/dashboard', { replace: true });
-            break;
+            return '/client/dashboard';
           default:
-            navigate('/dashboard', { replace: true });
+            return '/dashboard';
         }
       }
+
+      logger.info('Credential login successful', 'AuthContext', { userId: userData.id });
     } catch (error) {
-      console.error('💥 Erro no login:', error);
+      logger.error('Credential login failed', 'AuthContext', error);
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('authToken');
+  const logout = useCallback(() => {
+    logger.info('User logout initiated', 'AuthContext', { userId: user?.id });
+
+    // Clear user context in Sentry
+    if (sentry?.setUserContext) {
+      sentry.setUserContext(null);
+    }
+
+    clearTokens();
     setUser(null);
     navigate('/login');
-  };
+  }, [clearTokens, user, navigate]);
 
-  const value: AuthContextType = {
+  const value: AuthContextType = useMemo(() => ({
     isAuthenticated: !!user,
     isLoading,
     user,
     logout,
     loginWithCredentials,
-  handleOAuthToken,
-  };
+    handleOAuthToken,
+    refreshToken,
+    isTokenExpired,
+  }), [user, isLoading, logout, loginWithCredentials, handleOAuthToken, refreshToken, isTokenExpired]);
 
   return (
     <AuthContext.Provider value={value}>

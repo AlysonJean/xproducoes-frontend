@@ -1,13 +1,6 @@
 // ✅ PRODUCTION-SAFE LOGGING SYSTEM
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-
-interface LogEntry {
-  level: LogLevel;
-  message: string;
-  context?: string;
-  data?: unknown;
-  timestamp: string;
-}
+import type { LogLevel, LogEntry } from '@/types';
+import { sentry } from '../main';
 
 class Logger {
   private isDevelopment = (import.meta as any).env?.MODE === 'development';
@@ -30,7 +23,7 @@ class Logger {
     if (!this.shouldLog(level)) return;
 
     const formattedMessage = this.formatMessage(level, message, context);
-    
+
     switch (level) {
       case 'debug':
         console.debug(formattedMessage, data || '');
@@ -40,21 +33,45 @@ class Logger {
         break;
       case 'warn':
         console.warn(formattedMessage, data || '');
+        // Send to Sentry as breadcrumb
+        if (sentry?.addBreadcrumb) {
+          sentry.addBreadcrumb({
+            message: formattedMessage,
+            level: 'warning',
+            data: data ? { data } : undefined,
+            category: context || 'logger',
+          });
+        }
         break;
       case 'error':
         console.error(formattedMessage, data || '');
+        // Send to Sentry as exception
+        if (sentry?.captureException && data instanceof Error) {
+          sentry.captureException(data, {
+            tags: { context },
+            extra: { message, formattedMessage },
+          });
+        } else if (sentry?.captureMessage) {
+          sentry.captureMessage(formattedMessage, 'error');
+        }
         break;
     }
 
-    // Em produção, enviar para serviço de monitoramento
+    // Em produção, enviar para serviço de monitoramento adicional
     if (!this.isDevelopment && (level === 'warn' || level === 'error')) {
-      this.sendToMonitoringService({ level, message, context, data, timestamp: new Date().toISOString() });
+      this.sendToMonitoringService({
+        level,
+        message,
+        timestamp: new Date().toISOString(),
+        context: context ? { category: context } : undefined,
+        data
+      });
     }
   }
 
   private sendToMonitoringService(_entry: LogEntry): void {
-    // TODO: Integrar com serviço de monitoramento (Sentry, LogRocket, etc.)
-    // Example: sentry.captureMessage(entry.message, entry.level);
+    // TODO: Integrar com serviço de monitoramento adicional (DataDog, etc.)
+    // Example: datadog.captureLog(entry);
   }
 
   debug(message: string, context?: string, data?: unknown): void {

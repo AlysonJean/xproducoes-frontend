@@ -123,10 +123,10 @@ const menuGroups: MenuGroup[] = [
         description: 'Visão geral e métricas',
       },
       {
-        name: 'Performance',
-        href: '/admin/performance',
+        name: 'Monitoramento',
+        href: '/admin/monitoring',
         icon: AnalyticsIcon,
-        description: 'Métricas e relatórios',
+        description: 'Monitoramento Enterprise',
       },
     ],
   },
@@ -164,7 +164,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       {
         name: 'Clientes',
-        href: '/admin/clients',
+  href: '/admin/clients',
         icon: UsersIcon,
         description: 'Base de clientes',
       },

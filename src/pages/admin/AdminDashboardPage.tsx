@@ -6,7 +6,9 @@ import { apiFetch } from '../../services/api';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { StatsCard, SimpleCard } from '../../components/ui/Cards';
-import type { AdminDashboardStats, Activity, BookingListItem } from '../../types/types';
+import { QuickActionCard } from '../../components/ui/QuickActionCard';
+import type { AdminDashboardStats, Activity } from '../../types/domains/dashboard';
+import type { BookingListItem } from '../../types/types';
 
 // Função utilitária para formatar valores monetários
 const formatCurrency = (value: number) => {
@@ -27,96 +29,83 @@ const formatRelativeTime = (date: Date) => {
   return `há ${Math.floor(diffInSeconds / 86400)} dias`;
 };
 
-// Ícones
-
+// Ícones otimizados para cards
 const UsersIcon = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
-      strokeWidth={2}
-      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
+      d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
     />
   </svg>
 );
 
 const CalendarIcon = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
-      strokeWidth={2}
-      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
     />
   </svg>
 );
 
 const CurrencyIcon = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
-      strokeWidth={2}
-      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+      d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
     />
   </svg>
 );
 
 const CameraIcon = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
-      strokeWidth={2}
-      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+      d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"
     />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
   </svg>
 );
 
 const PlusIcon = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
   </svg>
 );
 
-// StarIcon removido: não exibimos avaliações de colaboradores
-
 const AnalyticsIcon = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
-      strokeWidth={2}
-      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+      d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
     />
   </svg>
 );
 
 const EquipmentIcon = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
-      strokeWidth={2}
-      d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+      d="M21.75 6.75a4.5 4.5 0 01-4.884 4.484c-1.076-.091-2.264.071-2.95.904l-7.152 8.684a2.548 2.548 0 11-3.586-3.586l8.684-7.152c.833-.686.995-1.874.904-2.95a4.5 4.5 0 016.336-4.486L21.75 6.75z"
     />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 15.75L3 12l5.25-5.25" />
   </svg>
 );
 
 const SettingsIcon = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
-      strokeWidth={2}
-      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+      d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"
     />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-    />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
   </svg>
 );
 
@@ -290,15 +279,15 @@ export const AdminDashboardPage = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await apiFetch('/dashboard/stats') as AdminDashboardStats;
+  const response = await apiFetch('/api/dashboard/stats') as AdminDashboardStats;
         setStats(response);
         // Buscar atividades recentes
-        const acts = await apiFetch('/dashboard/recent-activities') as Activity[];
+  const acts = await apiFetch('/api/dashboard/recent-activities') as Activity[];
         setActivities(acts);
         // Buscar reservas para próximos eventos
         try {
           setLoadingNext(true);
-          const resp: any = await apiFetch('/admin/bookings');
+          const resp: any = await apiFetch('/api/admin/bookings');
           const all = Array.isArray(resp) ? resp : Array.isArray(resp?.data) ? resp.data : [];
           const now = new Date();
           const upcoming = all
@@ -317,12 +306,12 @@ export const AdminDashboardPage = () => {
         }
         // Live stats do dia
         try {
-          const ls = await apiFetch('/dashboard/live-stats') as { todayBookings: number; todayRevenue: number; activeUsers: number };
+          const ls = await apiFetch('/api/dashboard/live-stats') as { todayBookings: number; todayRevenue: number; activeUsers: number };
           setLiveStats(ls);
         } catch {}
         // Notificações (para possível badge futuro)
         try {
-          const notifs = await apiFetch('/dashboard/notifications') as Array<{ id: string; read?: boolean }>;
+          const notifs = await apiFetch('/api/dashboard/notifications') as Array<{ id: string; read?: boolean }>;
           setUnreadNotifications((notifs || []).filter(n => !n.read).length);
         } catch {}
       } catch (error) {
@@ -399,7 +388,6 @@ export const AdminDashboardPage = () => {
             value={formatCurrency(stats?.totalRevenue || 0)}
             icon={<CurrencyIcon />}
             description="Receita acumulada"
-            onClick={() => navigate('/admin/performance')}
             {...(typeof stats?.revenueGrowth === 'number'
               ? {
                   trend: {
@@ -444,123 +432,90 @@ export const AdminDashboardPage = () => {
         </div>
 
         {/* Ações rápidas */}
-  <SimpleCard title="Ações Rápidas">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <button
+        <SimpleCard title="Ações Rápidas" description="Acesso rápido às principais funcionalidades do sistema">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            <QuickActionCard
+              title="Clientes"
+              description="Gerenciar clientes cadastrados"
+              icon={<UsersIcon />}
               onClick={() => navigate('/admin/clients')}
-              className="relative p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-lg hover:shadow-md transition-all duration-200 text-left group border border-primary/20"
-            >
-              <UsersIcon />
-              <h4 className="font-semibold text-primary mt-2 group-hover:text-primary/80">
-                Clientes
-              </h4>
-              <p className="text-xs text-muted-foreground mt-1">
-                Gerenciar clientes
-              </p>
-            </button>
+              color="primary"
+            />
 
-            <button
+            <QuickActionCard
+              title="Reservas"
+              description="Gerenciar reservas e agendamentos"
+              icon={<CalendarIcon />}
               onClick={() => navigate('/admin/bookings')}
-              className="relative p-4 bg-gradient-to-br from-success/10 to-success/20 rounded-lg hover:shadow-md transition-all duration-200 text-left group border border-success/20"
-            >
-              <CalendarIcon />
-              <h4 className="font-semibold text-success mt-2 group-hover:text-success/80">
-                Reservas
-              </h4>
-              <p className="text-xs text-muted-foreground mt-1">
-                Gerenciar reservas
-              </p>
-              {/* Badge de pendências/hoje */}
-              {((stats?.pendingBookings || 0) > 0 || (liveStats?.todayBookings || 0) > 0) && (
-                <span className="absolute top-2 right-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-success/20 text-success border border-success/30">
-                  {(stats?.pendingBookings || 0) > 0 ? stats?.pendingBookings : liveStats?.todayBookings}
-                </span>
-              )}
-              {/* Indicador de notificações não lidas */}
-              {unreadNotifications > 0 && (
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full border border-card" aria-label={`${unreadNotifications} notificações não lidas`}></span>
-              )}
-            </button>
+              color="info"
+              badge={
+                ((stats?.pendingBookings || 0) > 0 || (liveStats?.todayBookings || 0) > 0)
+                  ? {
+                      content: (stats?.pendingBookings || 0) > 0 ? stats?.pendingBookings || 0 : liveStats?.todayBookings || 0,
+                      variant: 'info'
+                    }
+                  : undefined
+              }
+              hasNotification={unreadNotifications > 0}
+            />
 
-            <button
+            <QuickActionCard
+              title="Equipamentos"
+              description="Catálogo de equipamentos disponíveis"
+              icon={<EquipmentIcon />}
               onClick={() => navigate('/admin/equipment')}
-              className="relative p-4 bg-gradient-to-br from-secondary/10 to-secondary/20 rounded-lg hover:shadow-md transition-all duration-200 text-left group border border-secondary/20"
-            >
-              <EquipmentIcon />
-              <h4 className="font-semibold text-secondary mt-2 group-hover:text-secondary/80">
-                Equipamentos
-              </h4>
-              <p className="text-xs text-muted-foreground mt-1">
-                Catálogo de equipamentos
-              </p>
-            </button>
+              color="success"
+            />
 
-            <button
-              onClick={() => navigate('/admin/performance')}
-              className="relative p-4 bg-gradient-to-br from-warning/10 to-warning/20 rounded-lg hover:shadow-md transition-all duration-200 text-left group border border-warning/20"
-            >
-              <AnalyticsIcon />
-              <h4 className="font-semibold text-warning mt-2 group-hover:text-warning/80">
-                Performance
-              </h4>
-              <p className="text-xs text-muted-foreground mt-1">
-                Relatórios e métricas
-              </p>
-              {/* Badge receita do dia */}
-              {typeof liveStats?.todayRevenue === 'number' && liveStats.todayRevenue > 0 && (
-                <span className="absolute top-2 right-2 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-warning/20 text-warning border border-warning/30">
-                  {formatCurrency(liveStats.todayRevenue)}
-                </span>
-              )}
-            </button>
+            <QuickActionCard
+              title="Monitoramento"
+              description="Monitoramento Enterprise em tempo real"
+              icon={<AnalyticsIcon />}
+              onClick={() => navigate('/admin/monitoring')}
+              color="warning"
+              badge={
+                (typeof liveStats?.todayRevenue === 'number' && liveStats.todayRevenue > 0)
+                  ? {
+                      content: formatCurrency(liveStats.todayRevenue),
+                      variant: 'warning'
+                    }
+                  : undefined
+              }
+            />
 
-            <button
+            <QuickActionCard
+              title="Colaboradores"
+              description="Equipe e parceiros cadastrados"
+              icon={<UsersIcon />}
               onClick={() => navigate('/admin/collaborators')}
-              className="p-4 bg-gradient-to-br from-info/10 to-info/20 rounded-lg hover:shadow-md transition-all duration-200 text-left group border border-info/20"
-            >
-              <UsersIcon />
-              <h4 className="font-semibold text-info mt-2 group-hover:text-info/80">
-                Colaboradores
-              </h4>
-              <p className="text-xs text-muted-foreground mt-1">
-                Equipe e parceiros
-              </p>
-            </button>
+              color="secondary"
+            />
 
-            <button
-              onClick={() => navigate('/admin/settings/logo')}
-              className="p-4 bg-gradient-to-br from-muted/50 to-muted/80 rounded-lg hover:shadow-md transition-all duration-200 text-left group border border-border"
-            >
-              <SettingsIcon />
-              <h4 className="font-semibold text-muted-foreground mt-2 group-hover:text-foreground">Logo e Marca</h4>
-              <p className="text-xs text-muted-foreground mt-1">Identidade visual</p>
-            </button>
-
-            {/* Nova Reserva */}
-            <button
+            <QuickActionCard
+              title="Nova Reserva"
+              description="Criar novo agendamento"
+              icon={<PlusIcon />}
               onClick={() => navigate('/admin/bookings/new')}
-              className="p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-lg hover:shadow-md transition-all duration-200 text-left group border border-primary/20"
-            >
-              <PlusIcon />
-              <h4 className="font-semibold text-primary mt-2 group-hover:text-primary/80">
-                Nova Reserva
-              </h4>
-              <p className="text-xs text-muted-foreground mt-1">Criar agendamento</p>
-            </button>
+              color="primary"
+            />
 
-            {/* Calendário de Reservas */}
-            <button
+            <QuickActionCard
+              title="Calendário"
+              description="Visualizar agenda de reservas"
+              icon={<CalendarIcon />}
               onClick={() => navigate('/admin/bookings/calendar')}
-              className="p-4 bg-gradient-to-br from-secondary/10 to-secondary/20 rounded-lg hover:shadow-md transition-all duration-200 text-left group border border-secondary/20"
-            >
-              <CalendarIcon />
-              <h4 className="font-semibold text-secondary mt-2 group-hover:text-secondary/80">
-                Calendário
-              </h4>
-              <p className="text-xs text-muted-foreground mt-1">Agenda de reservas</p>
-            </button>
+              color="info"
+            />
+
+            <QuickActionCard
+              title="Configurações"
+              description="Logo, marca e configurações"
+              icon={<SettingsIcon />}
+              onClick={() => navigate('/admin/settings/logo')}
+              color="muted"
+            />
           </div>
-  </SimpleCard>
+        </SimpleCard>
 
         {/* Próximos eventos */}
         <SimpleCard

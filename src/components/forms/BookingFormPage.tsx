@@ -112,7 +112,7 @@ export default function BookingFormPage() {
       try {
         setLoading(true);
         // clientes
-        const clientsRes = await apiFetch<any>('/admin/clients');
+  const clientsRes = await apiFetch<any>('/api/admin/clients');
         const list = Array.isArray(clientsRes?.data) ? clientsRes.data : (Array.isArray(clientsRes) ? clientsRes : []);
         const mapped: ClientForSelect[] = list.map((c: any) => ({
           id: c.id || c.user?.id,
@@ -124,14 +124,14 @@ export default function BookingFormPage() {
 
         // kits e equipamentos
         const [kitsData, eqData] = await Promise.all([
-          apiFetch<Kit[]>('/kits'),
-          apiFetch<Equipment[]>('/equipments'),
+          apiFetch<Kit[]>('/api/kits'),
+          apiFetch<Equipment[]>('/api/equipments'),
         ]);
         setKits(Array.isArray(kitsData) ? kitsData : []);
         setEquipments(Array.isArray(eqData) ? eqData : []);
 
         if (isEditing && id) {
-          const booking = await apiFetch<Booking>(`/bookings/${id}`);
+          const booking = await apiFetch<Booking>(`/api/bookings/${id}`);
           const manualClient = !(booking as any).userId;
           const eventDate = (booking.eventDate as string) || '';
           const eventEndDate = (booking.eventEndDate as string) || eventDate;
@@ -191,7 +191,7 @@ export default function BookingFormPage() {
           formData.append('image', (data.paymentProof as FileList)[0]);
           formData.append('folder', 'payment-proofs');
           
-          const uploadResponse = await apiFetch('/upload/image', {
+          const uploadResponse = await apiFetch('/api/upload/image', {
             method: 'POST',
             body: formData,
           });
@@ -240,7 +240,7 @@ export default function BookingFormPage() {
       }
       
       if (isEditing && id) {
-        await apiFetch(`/bookings/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+  await apiFetch(`/api/bookings/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
         addNotification({ type: 'success', title: 'Reserva atualizada', message: 'As alterações foram salvas.' });
         navigate(`/admin/bookings/${id}`);
       } else {

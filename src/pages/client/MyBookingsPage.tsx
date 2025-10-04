@@ -1,6 +1,7 @@
 // src/pages/MyBookingsPage.tsx
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/services/api';
 import { asArray } from '@/utils/normalize';
 import type { SafeBooking } from '@/types/types';
@@ -15,11 +16,12 @@ export const MyBookingsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [reviewBookingId, setReviewBookingId] = useState<string | null>(null);
   const { addNotification } = useNotifications();
+  const navigate = useNavigate();
 
   const fetchMyBookings = async () => {
     try {
       setLoading(true);
-  const data = await apiFetch('/bookings/user');
+  const data = await apiFetch('/api/bookings/user');
   setBookings(asArray<SafeBooking>(data));
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -66,6 +68,9 @@ export const MyBookingsPage = () => {
                 <BookingListItem
                   booking={booking}
                   onReviewClick={(id) => setReviewBookingId(id)}
+                  onViewDetails={(id) => {
+                    navigate(`/client/bookings/${id}`);
+                  }}
                 />
               </div>
             ))}

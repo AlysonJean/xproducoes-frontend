@@ -97,17 +97,41 @@ const ClientDashboardPage = lazy(() =>
 const CollaboratorDashboardPage = lazy(() =>
   import('./pages/collaborator/CollaboratorDashboard').then((m) => ({ default: m.default }))
 );
+const CollaboratorWorkSchedule = lazy(() =>
+  import('./pages/collaborator/CollaboratorWorkSchedule').then((m) => ({ default: m.default }))
+);
 const FreelancerDashboardPage = lazy(() =>
   import('./pages/freelancer/FreelancerDashboardPage').then((m) => ({ default: m.FreelancerDashboardPage }))
 );
 const MyBookingsPage = lazy(() =>
   import('./pages/client/MyBookingsPage').then((m) => ({ default: m.MyBookingsPage }))
 );
+const BookingDetailsPage = lazy(() =>
+  import('./pages/client/BookingDetailsPage').then((m) => ({ default: m.BookingDetailsPage }))
+);
 const FavoritesPage = lazy(() =>
   import('./pages/client/FavoritesPage').then((m) => ({ default: m.FavoritesPage }))
 );
 const ProfilePage = lazy(() =>
   import('./pages/client/ProfilePage').then((m) => ({ default: m.ProfilePage }))
+);
+const CollaboratorProfilePage = lazy(() =>
+  import('./pages/collaborator/CollaboratorProfilePage').then((m) => ({ default: m.default }))
+);
+const CollaboratorEarningsPage = lazy(() =>
+  import('./pages/collaborator/CollaboratorEarningsPage').then((m) => ({ default: m.default }))
+);
+const CollaboratorReportsPage = lazy(() =>
+  import('./pages/collaborator/CollaboratorReportsPage').then((m) => ({ default: m.default }))
+);
+const CollaboratorAvailabilityPage = lazy(() =>
+  import('./pages/collaborator/CollaboratorAvailabilityPage').then((m) => ({ default: m.default }))
+);
+const CollaboratorNotificationsPage = lazy(() =>
+  import('./pages/collaborator/CollaboratorNotificationsPage').then((m) => ({ default: m.default }))
+);
+const CollaboratorSettingsPage = lazy(() =>
+  import('./pages/collaborator/CollaboratorSettingsPage').then((m) => ({ default: m.default }))
 );
 
 // Admin Pages - Lazy Loading (Heavy components)
@@ -135,6 +159,7 @@ const BookingFormPage = lazy(() =>
 const BookingCalendarPage = lazy(() =>
   import('./pages/admin/BookingCalendarPage').then((m) => ({ default: m.BookingCalendarPage }))
 );
+// Calendários alternativos removidos (CalendarTest e CalendarEnterprisePage)
 
 // More Admin Pages - Lazy Loading (Heavy admin components)
 const ClientListPage = lazy(() =>
@@ -184,7 +209,7 @@ const CollaboratorFormPage = lazy(() =>
 const LogoSettingsPage = lazy(() =>
   import('./pages/admin/LogoSettingsPage').then((m) => ({ default: m.LogoSettingsPage }))
 );
-const PerformanceMonitoringPage = lazy(() => import('./pages/admin/PerformanceMonitoringPage'));
+const MonitoringPage = lazy(() => import('./pages/admin/MonitoringPage'));
 // ===== LOADING COMPONENT FOR SUSPENSE =====
 const PageLoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen bg-surface">
@@ -402,6 +427,62 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
+        path="/collaborator/schedule"
+        element={
+          <ProtectedRoute role="COLLABORATOR">
+            <CollaboratorWorkSchedule />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/collaborator/profile"
+        element={
+          <ProtectedRoute role="COLLABORATOR">
+            <CollaboratorProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/collaborator/earnings"
+        element={
+          <ProtectedRoute role="COLLABORATOR">
+            <CollaboratorEarningsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/collaborator/reports"
+        element={
+          <ProtectedRoute role="COLLABORATOR">
+            <CollaboratorReportsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/collaborator/availability"
+        element={
+          <ProtectedRoute role="COLLABORATOR">
+            <CollaboratorAvailabilityPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/collaborator/notifications"
+        element={
+          <ProtectedRoute role="COLLABORATOR">
+            <CollaboratorNotificationsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/collaborator/settings"
+        element={
+          <ProtectedRoute role="COLLABORATOR">
+            <CollaboratorSettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/freelancer/dashboard"
         element={
           <ProtectedRoute role="FREELANCER">
@@ -414,6 +495,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <MyBookingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/client/bookings/:id"
+        element={
+          <ProtectedRoute>
+            <BookingDetailsPage />
           </ProtectedRoute>
         }
       />
@@ -525,7 +614,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/clients"
+  path="/admin/clients"
         element={
           <ProtectedRoute adminOnly>
             <ClientListPage />
@@ -533,7 +622,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/clients/:id/edit"
+  path="/admin/clients/:id/edit"
         element={
           <ProtectedRoute adminOnly>
             <ClientEditPage />
@@ -541,7 +630,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/clients/new"
+  path="/admin/clients/new"
         element={
           <ProtectedRoute adminOnly>
             <ClientFormPage />
@@ -695,10 +784,10 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/performance"
+        path="/admin/monitoring"
         element={
           <ProtectedRoute adminOnly>
-            <PerformanceMonitoringPage />
+            <MonitoringPage />
           </ProtectedRoute>
         }
       />

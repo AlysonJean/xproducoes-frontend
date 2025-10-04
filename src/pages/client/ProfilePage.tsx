@@ -33,38 +33,7 @@ import {
   Globe
 } from 'lucide-react';
 
-interface ClientProfile {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  avatarUrl?: string;
-  bio?: string;
-  location?: string;
-  website?: string;
-  companyName?: string;
-  jobTitle?: string;
-  industry?: string;
-  verified: boolean;
-  createdAt: string;
-  totalBookings: number;
-  totalSpent: number;
-  averageRating?: number;
-  isVip?: boolean;
-  memberSince: string;
-}
-
-interface ProfileFormData {
-  name: string;
-  email: string;
-  phone: string;
-  bio: string;
-  location: string;
-  website: string;
-  companyName: string;
-  jobTitle: string;
-  industry: string;
-}
+import { ClientProfile, ProfileFormData } from '@/types/types';
 
 import { isSafeWebsite, openWebsite } from '../../utils/url';
 
@@ -120,8 +89,8 @@ export const ProfilePage = () => {
         setError(null);
         
         const [profileResponse, statsResponse] = await Promise.allSettled([
-          apiFetch('/user/profile'),
-          apiFetch('/user/stats')
+          apiFetch('/api/user/profile'),
+          apiFetch('/api/user/stats')
         ]);
 
         if (profileResponse.status === 'fulfilled') {
@@ -152,12 +121,15 @@ export const ProfilePage = () => {
           (async () => {
             try {
               if (!profileData.isVip && computedIsVip) {
-                await apiFetch('/user/promote-vip', { method: 'POST' });
+                // ✅ Mostrar loading durante promoção VIP
+                await apiFetch('/api/user/promote-vip', { method: 'POST' });
                 setSuccess('Parabéns — você agora é cliente VIP!');
                 setTimeout(() => setSuccess(null), 4000);
               }
             } catch (e) {
-              // endpoint pode não existir — não bloquear a experiência
+              // Endpoint pode não existir — não bloquear a experiência
+              // Mas logar para debug
+              console.warn('VIP promotion endpoint not available or failed', e);
             }
           })();
 
@@ -238,7 +210,7 @@ export const ProfilePage = () => {
       setSaving(true);
       setError(null);
 
-      await apiFetch('/user/profile', {
+  await apiFetch('/api/user/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -274,7 +246,7 @@ export const ProfilePage = () => {
       setSaving(true);
       setError(null);
 
-      await apiFetch('/user/change-password', {
+  await apiFetch('/api/user/change-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

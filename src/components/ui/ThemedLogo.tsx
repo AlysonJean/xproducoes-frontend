@@ -78,14 +78,14 @@ export const ThemedLogo: React.FC<ThemedLogoProps> = ({ src, className = '', tit
   const proxiedSrc = useMemo(() => {
     try {
       const url = new URL(src);
-      const isCloudinary = /(^|\.)cloudinary\.com$/i.test(url.hostname) || 
+      const isCloudinary = /(^|\.)cloudinary\.com$/i.test(url.hostname) ||
                           /(^|\.)res\.cloudinary\.com$/i.test(url.hostname);
-      
+
       // Para Cloudinary, usar proxy para checar Content-Type e inline SVG
       if (isCloudinary) {
-  const apiBase = import.meta.env.VITE_API_BASE_URL;
+        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
         const query = new URLSearchParams({ url: src });
-        return `${apiBase}/logo/svg-proxy?${query.toString()}`;
+  return `${apiBase}/api/logo/svg-proxy?${query.toString()}`;
       }
       return src;
     } catch {
@@ -100,7 +100,14 @@ export const ThemedLogo: React.FC<ThemedLogoProps> = ({ src, className = '', tit
     setInlineSvg(null);
 
     // Tentar buscar e detectar se é SVG pelo Content-Type ou conteúdo
-    fetch(proxiedSrc)
+    // Adicionar header x-svg-proxy-token se for proxy Cloudinary
+    const fetchOptions: RequestInit = {};
+  if (proxiedSrc.includes('/api/logo/svg-proxy?')) {
+      fetchOptions.headers = {
+        'x-svg-proxy-token': import.meta.env.VITE_SVG_PROXY_TOKEN || 'svg-proxy-dev-token',
+      };
+    }
+    fetch(proxiedSrc, fetchOptions)
       .then(async (response) => {
         if (!isActive) return;
         
@@ -157,16 +164,16 @@ export const ThemedLogo: React.FC<ThemedLogoProps> = ({ src, className = '', tit
 
   if (isLoading) {
     return (
-      <div className={`animate-pulse bg-gray-300 rounded ${className}`}>
-        <div className="h-8 w-16 bg-gray-300 rounded"></div>
+      <div className={`bg-muted rounded animate-pulse ${className}`}>
+        <div className="h-8 w-16 bg-muted-foreground/20 rounded"></div>
       </div>
     );
   }
 
   if (hasError) {
     return (
-      <span className={`font-semibold text-white ${className}`}>
-        {title || 'X Produções'}
+      <span className={`font-semibold text-foreground ${className}`}>
+        {title || 'X Produçoes e Eventos'}
       </span>
     );
   }
@@ -174,14 +181,19 @@ export const ThemedLogo: React.FC<ThemedLogoProps> = ({ src, className = '', tit
   if (!inlineSvg) {
     // Fallback para <img> quando não for SVG ou falhar o fetch
     return (
-      <img 
-        src={src} 
-        alt={title || 'Logo'} 
-        className={`w-auto ${className}`}
+      <img
+        src={src}
+        alt={title || 'Logo'}
+        className={`h-8 lg:h-10 w-auto object-contain ${className}`}
         onError={(e) => {
           console.error('Erro ao carregar imagem da logo:', src);
           // Esconder a imagem quebrada e mostrar fallback de texto
           e.currentTarget.style.display = 'none';
+          // Criar fallback de texto após esconder a imagem
+          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+          if (fallback) {
+            fallback.style.display = 'block';
+          }
         }}
       />
     );
@@ -189,11 +201,11 @@ export const ThemedLogo: React.FC<ThemedLogoProps> = ({ src, className = '', tit
 
   return (
     <span
-      className={`inline-flex items-center leading-none text-current ${className}`}
+      className={`inline-flex items-center leading-none text-current min-h-8 ${className}`}
       role="img"
       aria-label={title || 'Logo'}
     >
-  {inlineSvgNode || <span aria-hidden />}
+      {inlineSvgNode || <span className="h-8 w-16 bg-muted rounded" aria-hidden />}
     </span>
   );
 };

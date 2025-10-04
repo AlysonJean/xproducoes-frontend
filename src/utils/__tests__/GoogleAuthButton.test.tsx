@@ -7,7 +7,7 @@ import { GoogleAuthButton } from '../../pages/auth/GoogleAuthButton';
 
 describe('GoogleAuthButton', () => {
   it('renders the Google auth button', () => {
-    const handleOAuthToken = vi.fn(() => Promise.resolve());
+    const handleOAuthToken = vi.fn(() => Promise.resolve('mock-token'));
     const addNotification = vi.fn();
 
     const { container } = render(
@@ -17,7 +17,9 @@ describe('GoogleAuthButton', () => {
           isLoading: false,
           user: null,
           logout: vi.fn(),
-          handleOAuthToken
+          handleOAuthToken,
+          refreshToken: vi.fn(() => Promise.resolve(true)),
+          isTokenExpired: vi.fn(() => false)
         }}
       >
         <NotificationContext.Provider
@@ -39,7 +41,7 @@ describe('GoogleAuthButton', () => {
   });
 
   it('button is clickable and has proper attributes', () => {
-    const handleOAuthToken = vi.fn(() => Promise.resolve());
+    const handleOAuthToken = vi.fn(() => Promise.resolve('mock-token'));
     const addNotification = vi.fn();
 
     const { container } = render(
@@ -49,7 +51,9 @@ describe('GoogleAuthButton', () => {
           isLoading: false,
           user: null,
           logout: vi.fn(),
-          handleOAuthToken
+          handleOAuthToken,
+          refreshToken: vi.fn(() => Promise.resolve(true)),
+          isTokenExpired: vi.fn(() => false)
         }}
       >
         <NotificationContext.Provider

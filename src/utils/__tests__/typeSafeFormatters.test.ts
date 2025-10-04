@@ -12,7 +12,7 @@ import {
   validateKit,
   daysDifference,
 } from '../typeSafeFormatters';
-import { BookingStatus, EquipmentStatus, type Equipment, type Kit } from '../../types/types';
+import { BookingStatus, EquipmentStatus, type Equipment, type Kit } from '@/types';
 
 describe('typeSafeFormatters utilities', () => {
   describe('toNumber', () => {

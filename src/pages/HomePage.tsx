@@ -75,7 +75,7 @@ export const HomePage = () => {
       queryParams.append('page', page.toString());
       queryParams.append('limit', '12');
 
-      const response = await apiFetch(`/equipments/search?${queryParams.toString()}`);
+  const response = await apiFetch(`/api/equipments/search?${queryParams.toString()}`);
       
       // Verificar se a resposta tem o formato esperado { data, pagination } ou é um array direto
       let equipmentsData: Equipment[];
@@ -133,9 +133,9 @@ export const HomePage = () => {
     setError(null);
     try {
   const [catsData, kitsData, portfolioData] = await Promise.all([
-        apiFetch('/categories'),
-        apiFetch('/kits?limit=4'),
-        apiFetch('/portfolio?limit=3'),
+  apiFetch('/api/categories'),
+  apiFetch('/api/kits?limit=4'),
+  apiFetch('/api/portfolio?limit=3'),
       ]);
 
   setCategories(catsData as Category[]);
@@ -155,10 +155,10 @@ export const HomePage = () => {
       // Preferir endpoint recente para limitar quantidade, caindo para /reviews/public
       let data: any[] | null = null;
       try {
-        data = await apiFetch('/reviews/recent?limit=8');
+  data = await apiFetch('/api/reviews/recent?limit=8');
       } catch {
         // fallback
-        data = await apiFetch('/reviews/public');
+  data = await apiFetch('/api/reviews/public');
       }
       // Normalizar campos esperados pelo TestimonialCard
       const normalized = (data || []).map((r: any) => ({
@@ -207,32 +207,32 @@ export const HomePage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       {/* Hero Section */}
-      <div className="relative py-20 mb-20 overflow-hidden">
+      <div className="relative py-16 sm:py-20 lg:py-24 xl:py-28 2xl:py-32 mb-16 sm:mb-20 lg:mb-24 xl:mb-28 2xl:mb-32 overflow-hidden">
         <div className="absolute inset-0 -z-10 pointer-events-none bg-gradient-to-r from-primary/10 via-primary/5 to-transparent"></div>
-        <div className="relative text-center max-w-4xl mx-auto px-4 z-10">
-          <h1 ref={heroTitleRef} className="text-5xl lg:text-6xl font-bold mb-6 heading-elegant">
+        <div className="relative text-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+          <h1 ref={heroTitleRef} className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold mb-6 heading-elegant">
             Equipamentos Profissionais
           </h1>
-          <p className="text-xl lg:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto">
+          <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl text-muted-foreground mb-8 max-w-5xl mx-auto">
             Transforme seus eventos em experiências inesquecíveis com nossa tecnologia de ponta
           </p>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 space-y-24">
+      <div className="container mx-auto px-4 space-y-16 sm:space-y-20 lg:space-y-24 xl:space-y-28 2xl:space-y-32">
         {/* Kits em Destaque */}
         {kits && kits.length > 0 && (
           <section className="relative">
-            <div className="text-center mb-16">
+            <div className="text-center mb-12 sm:mb-14 lg:mb-16 xl:mb-18 2xl:mb-20">
               <div className="inline-flex items-center px-4 py-2 bg-primary/10 rounded-full text-primary font-medium text-sm mb-4">
                 ⭐ Soluções Completas
               </div>
               <h2 ref={kitsTitleRef} className="text-4xl font-bold text-foreground mb-4 heading-elegant">Kits em Destaque</h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl text-muted-foreground max-w-3xl mx-auto">
                 Pacotes completos que combinam os melhores equipamentos para diferentes tipos de eventos
               </p>
             </div>
-            <Grid columns={{ sm: 1, md: 2, lg: 4 }} gap={8}>
+            <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 4, '2xl': 4, '3xl': 5, '4xl': 6 }} gap={8}>
               {kits.map((kit) => (
                 <div key={kit.id} className="group">
                   <KitCard kit={kit} />
@@ -244,27 +244,27 @@ export const HomePage = () => {
 
         {/* Equipamentos */}
         <section className="relative">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12 sm:mb-14 lg:mb-16 xl:mb-18 2xl:mb-20">
             <div className="inline-flex items-center px-4 py-2 bg-primary/10 rounded-full text-primary font-medium text-sm mb-4">
               🎯 Catálogo Completo
             </div>
             <h2 ref={equipmentsTitleRef} className="text-4xl font-bold text-foreground mb-4 heading-elegant">Nossos Equipamentos</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl text-muted-foreground max-w-3xl mx-auto">
               Equipamentos profissionais de alta qualidade para todos os tipos de eventos e produções
             </p>
           </div>
 
-          <div className="mb-12">
+          <div className="mb-10 sm:mb-12 lg:mb-14 xl:mb-16 2xl:mb-18">
             <SearchFilters categories={categories} onFiltersChange={handleFiltersChange} />
           </div>
 
           {equipmentLoading ? (
-            <div className="flex justify-center items-center py-20">
+            <div className="flex justify-center items-center py-16 sm:py-18 lg:py-20 xl:py-22 2xl:py-24">
               <LoadingSpinner size="lg" label="Carregando equipamentos..." />
             </div>
           ) : equipments && equipments.length > 0 ? (
             <>
-              <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={8}>
+              <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 4, '2xl': 4, '3xl': 5, '4xl': 6, '5xl': 6 }} gap={8}>
                 {equipments.map((eq) => (
                   <div key={eq.id} className="group">
                     <EquipmentCard equipment={eq} />
@@ -273,7 +273,7 @@ export const HomePage = () => {
               </Grid>
 
               {pagination.totalPages > 1 && (
-                <div className="mt-12 flex justify-center">
+                <div className="mt-10 sm:mt-12 lg:mt-14 xl:mt-16 2xl:mt-18 flex justify-center">
                   <Pagination
                     currentPage={pagination.currentPage}
                     totalPages={pagination.totalPages}
@@ -285,17 +285,17 @@ export const HomePage = () => {
               )}
             </>
           ) : (
-            <div className="text-center py-20">
-              <div className="bg-gradient-to-r from-muted/30 to-muted/20 rounded-2xl border border-border/50 p-12 max-w-md mx-auto">
-                <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-muted to-muted/80 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="text-center py-16 sm:py-18 lg:py-20 xl:py-22 2xl:py-24">
+              <div className="bg-gradient-to-r from-muted/30 to-muted/20 rounded-2xl border border-border/50 p-12 sm:p-14 lg:p-16 xl:p-18 2xl:p-20 max-w-lg mx-auto">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 lg:w-18 lg:h-18 xl:w-20 xl:h-20 mx-auto mb-6 bg-gradient-to-br from-muted to-muted/80 rounded-full flex items-center justify-center">
+                  <svg className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 xl:w-10 xl:h-10 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold text-foreground mb-3">
+                <h3 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-semibold text-foreground mb-3">
                   Nenhum equipamento encontrado
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-base sm:text-lg lg:text-xl xl:text-2xl text-muted-foreground">
                   Tente ajustar sua pesquisa ou filtros para encontrar mais equipamentos.
                 </p>
               </div>
@@ -306,16 +306,16 @@ export const HomePage = () => {
         {/* Portfólio */}
         {portfolio && portfolio.length > 0 && (
           <section className="relative">
-            <div className="text-center mb-16">
+            <div className="text-center mb-12 sm:mb-14 lg:mb-16 xl:mb-18 2xl:mb-20">
               <div className="inline-flex items-center px-4 py-2 bg-success/10 rounded-full text-success font-medium text-sm mb-4">
-                🎨 Nosso Trabalho
+                📸 Galeria de Eventos
               </div>
-              <h2 ref={portfolioTitleRef} className="text-4xl font-bold text-foreground mb-4 heading-elegant">Eventos Realizados</h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Confira alguns dos eventos incríveis que tivemos o prazer de realizar com nossos equipamentos
+              <h2 ref={portfolioTitleRef} className="text-4xl font-bold text-foreground mb-4 heading-elegant">Galeria de Eventos</h2>
+              <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl text-muted-foreground max-w-3xl mx-auto">
+                Confira algumas imagens dos eventos incríveis que tivemos o prazer de realizar com nossos equipamentos
               </p>
             </div>
-            <Grid columns={{ sm: 1, md: 2, lg: 3 }} gap={10}>
+            <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 3, '2xl': 4, '3xl': 4, '4xl': 5 }} gap={8}>
               {portfolio.map((item) => (
                 <div key={item.id} className="group">
                   <PortfolioCard item={item} />
@@ -328,16 +328,16 @@ export const HomePage = () => {
         {/* Depoimentos (Avaliações aprovadas) */}
         {(!reviewsLoading && reviews && reviews.length > 0) && (
           <section className="relative">
-            <div className="text-center mb-16">
+            <div className="text-center mb-12 sm:mb-14 lg:mb-16 xl:mb-18 2xl:mb-20">
               <div className="inline-flex items-center px-4 py-2 bg-amber-500/10 rounded-full text-amber-600 font-medium text-sm mb-4">
                 💬 Clientes Satisfeitos
               </div>
               <h2 className="text-4xl font-bold text-foreground mb-4 heading-elegant">O que dizem sobre nós</h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl text-muted-foreground max-w-3xl mx-auto">
                 Depoimentos reais de clientes que alugaram nossos equipamentos e aprovaram a experiência
               </p>
             </div>
-            <Grid columns={{ sm: 1, md: 2, lg: 3 }} gap={8}>
+            <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 3, '2xl': 3, '3xl': 4, '4xl': 5 }} gap={8}>
               {reviews.map((review) => (
                 <TestimonialCard key={review.id} review={review} />
               ))}
@@ -345,19 +345,19 @@ export const HomePage = () => {
           </section>
         )}
         {reviewsLoading && (
-          <div className="flex justify-center items-center py-8">
+          <div className="flex justify-center items-center py-6 sm:py-7 lg:py-8 xl:py-9 2xl:py-10">
             <LoadingSpinner label="Carregando depoimentos..." />
           </div>
         )}
 
         {/* Gemini Event Suggester */}
         <section className="relative">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12 sm:mb-14 lg:mb-16 xl:mb-18 2xl:mb-20">
             <div className="inline-flex items-center px-4 py-2 bg-purple-500/10 rounded-full text-purple-600 font-medium text-sm mb-4">
               🤖 IA Personalizada
             </div>
             <h2 ref={aiTitleRef} className="text-4xl font-bold text-foreground mb-4 heading-elegant">Sugestões Inteligentes</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl text-muted-foreground max-w-3xl mx-auto">
               Nossa IA analisa suas necessidades e sugere os equipamentos ideais para seu evento
             </p>
           </div>

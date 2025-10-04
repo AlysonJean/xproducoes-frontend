@@ -1,7 +1,5 @@
 // frontend/src/pages/DiagnosticsPage.tsx
 
-import { DiagnosticTool } from '../components/DiagnosticTool';
-
 export const DiagnosticsPage = () => {
   return (
     <div className="container mx-auto px-4 py-8">
@@ -15,7 +13,12 @@ export const DiagnosticsPage = () => {
         </p>
       </div>
 
-      <DiagnosticTool />
+      <div className="bg-card p-6 rounded-lg shadow-lg border border-border mb-8">
+        <h2 className="text-xl font-bold mb-4 text-foreground">Ferramentas de Diagnóstico</h2>
+        <p className="text-muted-foreground">
+          Ferramentas de diagnóstico foram temporariamente desabilitadas durante manutenção do sistema.
+        </p>
+      </div>
 
       <div className="mt-12 bg-card p-6 rounded-lg shadow-lg border border-border">
         <h2 className="text-2xl font-bold mb-4 text-foreground">Problemas Comuns</h2>

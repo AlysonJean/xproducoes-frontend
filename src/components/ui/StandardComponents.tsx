@@ -794,6 +794,10 @@ interface GridProps {
     md?: number;
     lg?: number;
     xl?: number;
+    '2xl'?: number;
+    '3xl'?: number;
+    '4xl'?: number;
+    '5xl'?: number;
   };
   gap?: number;
   className?: string;
@@ -801,7 +805,7 @@ interface GridProps {
 
 export const Grid: React.FC<GridProps> = ({
   children,
-  columns = { sm: 1, md: 2, lg: 3, xl: 4 },
+  columns = { sm: 1, md: 2, lg: 3, xl: 4, '2xl': 4, '3xl': 5, '4xl': 6, '5xl': 6 },
   gap = 6,
   className = ''
 }) => {
@@ -811,6 +815,10 @@ export const Grid: React.FC<GridProps> = ({
     columns.md && `md:grid-cols-${columns.md}`,
     columns.lg && `lg:grid-cols-${columns.lg}`,
     columns.xl && `xl:grid-cols-${columns.xl}`,
+    columns['2xl'] && `2xl:grid-cols-${columns['2xl']}`,
+    columns['3xl'] && `3xl:grid-cols-${columns['3xl']}`,
+    columns['4xl'] && `4xl:grid-cols-${columns['4xl']}`,
+    columns['5xl'] && `5xl:grid-cols-${columns['5xl']}`,
     `gap-${gap}`,
     className
   ].filter(Boolean).join(' ');

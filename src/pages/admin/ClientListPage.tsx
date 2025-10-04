@@ -73,7 +73,7 @@ const ClientListPage: React.FC = () => {
       if (sortBy) params.set('sortBy', String(sortBy));
       if (sortOrder) params.set('sortOrder', sortOrder);
 
-      const response = await apiFetch<ClientResponse>(`/admin/clients?${params.toString()}`);
+  const response = await apiFetch<ClientResponse>(`/api/admin/clients?${params.toString()}`);
 
       const mappedRaw = (response?.data || []).map((c: any) => ({
         id: c.id,
@@ -149,7 +149,7 @@ const ClientListPage: React.FC = () => {
     if (!clientToDelete) return;
     try {
       setIsDeleting(true);
-      await apiFetch(`/admin/clients/${clientToDelete}`, { method: 'DELETE' });
+  await apiFetch(`/api/admin/clients/${clientToDelete}`, { method: 'DELETE' });
       await fetchClients();
       addNotification({ type: 'success', title: 'Cliente', message: 'Cliente excluído com sucesso' });
     } catch (e: any) {
@@ -167,7 +167,7 @@ const ClientListPage: React.FC = () => {
     try {
       setIsBulkDeleting(true);
       const results = await Promise.allSettled(
-        ids.map((id) => apiFetch(`/admin/clients/${id}`, { method: 'DELETE' }))
+  ids.map((id) => apiFetch(`/api/admin/clients/${id}`, { method: 'DELETE' }))
       );
 
       const failed = results.filter((r) => r.status === 'rejected') as PromiseRejectedResult[];

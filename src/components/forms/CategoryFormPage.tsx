@@ -51,7 +51,7 @@ export const CategoryFormPage = () => {
           body: JSON.stringify(payload),
         });
       } else {
-        await apiFetch('/categories', {
+  await apiFetch('/api/categories', {
           method: 'POST',
           body: JSON.stringify(payload),
         });

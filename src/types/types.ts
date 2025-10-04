@@ -230,87 +230,11 @@ export interface CollaboratorDashboard {
 }
 
 // ================================
-// INTERFACES PARA DASHBOARD
+// INTERFACES PARA DASHBOARD (MOVIDAS PARA domains/dashboard.ts)
 // ================================
 
-export interface DashboardStats {
-  totalEvents?: number;
-  totalProjects?: number;
-  totalBookings?: number;
-  totalRevenue?: number;
-  totalEarnings?: number;
-  averageRating?: number;
-  completionRate?: number;
-  activeUsers?: number;
-  pendingPayments?: number;
-}
-
-export interface AdminDashboardStats {
-  totalRevenue: number;
-  revenueGrowth: number;
-  newBookingsThisMonth: number;
-  bookingsGrowth: number;
-  totalClients: number;
-  pendingBookings: number;
-  completedBookings: number;
-  conversionRate: number;
-  // Propriedades opcionais para compatibilidade
-  totalBookings?: number;
-  activeCollaborators?: number;
-  confirmedBookings?: number;
-  totalEquipments?: number;
-  topCollaborators?: Array<{
-    collaborator: {
-      id: string;
-      name: string;
-      role?: string;
-    };
-    rating: number;
-    eventCount: number;
-  }>;
-}
-
-export interface Event {
-  id: string;
-  title: string;
-  startTime: string | Date;
-  endTime?: string | Date;
-  startDate?: string;
-  endDate?: string;
-  location?: string;
-  totalPayment?: number;
-  status?: 'CONFIRMED' | 'ASSIGNED' | 'PENDING' | 'CANCELLED';
-  description?: string;
-}
-
-export interface DashboardEvent extends Event {
-  // Extensão específica para dashboard
-}
-
-export interface Project {
-  id?: string;
-  title?: string;
-  deadline: string | Date;
-  payment?: number;
-  status?: 'IN_PROGRESS' | 'COMPLETED' | 'PENDING' | 'CANCELLED';
-  description?: string;
-  clientName?: string;
-}
-
-export interface Activity {
-  id: string;
-  type: string;
-  title?: string;
-  description: string;
-  amount?: number;
-  status?: string;
-  timestamp: Date | string;
-  createdAt?: string;
-  user?: {
-    id: string;
-    name: string;
-  };
-}
+// DashboardStats, AdminDashboardStats, Event, DashboardEvent, Project, Activity,
+// QuickAction, CalendarDay, WorkStats movidos para domains/dashboard.ts
 
 // ================================
 // INTERFACES PARA MODAIS
@@ -652,6 +576,8 @@ export interface CalendarBooking {
     role?: string;
   }>;
   internalNotes?: string;
+  serviceValue?: number;
+  totalPrice?: number;
 }
 
 export interface BookingDetails {
@@ -970,4 +896,384 @@ export interface DiagnosticResult {
     auth: { status: string; message: string };
     system: { status: string; message: string };
   };
+}
+
+// ================================
+// TIPOS PARA VALIDATORS (ZOD SCHEMAS)
+// ================================
+
+export interface KitFormData {
+  name: string;
+  description: string;
+  price: number;
+  equipmentIds: string[];
+  image?: File | null;
+}
+
+export interface KitCreateData {
+  name: string;
+  description: string;
+  price: number;
+  equipmentIds: string[];
+}
+
+// ================================
+// TIPOS PARA UTILS
+// ================================
+
+export interface FormatOptions {
+  showCurrency?: boolean;
+  decimals?: number;
+}
+
+export interface Address {
+  street: string;
+  city: string;
+  postalCode: string;
+  country: string;
+}
+
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+export interface LogEntry {
+  level: LogLevel;
+  message: string;
+  context?: string;
+  data?: unknown;
+  timestamp: string;
+}
+
+export type AnchorOptions = {
+  href: string;
+  download?: string;
+  target?: string;
+  rel?: string;
+  revokeObjectUrl?: boolean;
+  objectUrl?: string;
+};
+
+export type ScriptOptions = {
+  src: string;
+  async?: boolean;
+  defer?: boolean;
+  crossOrigin?: string | null;
+};
+
+export type QuoteMessageParams = {
+  bookingId?: string;
+  user?: { name?: string; phone?: string } | null;
+  venue: string;
+  eventDate: Date;
+  durationHours: number;
+  address: {
+    street?: string;
+    number?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    complement?: string;
+  };
+  items: Array<{ name?: string } | { equipment?: { name?: string } }>;
+  notes?: string;
+  logistics: {
+    requiresStairs?: boolean;
+    isCovered?: boolean;
+    hasParking?: boolean;
+  };
+  locale?: string;
+};
+
+// ================================
+// TIPOS PARA FILTROS DE PÁGINAS
+// ================================
+
+export interface PortfolioFilters {
+  searchQuery?: string;
+}
+
+export interface KitFilters {
+  priceRange?: [number, number];
+  searchQuery?: string;
+  sortBy?: 'name' | 'price';
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface EquipmentFilters {
+  category?: string;
+  priceRange?: [number, number];
+  availability?: boolean;
+  tags?: string[];
+  searchQuery?: string;
+}
+
+// ================================
+// TIPOS PARA PERFIS E CONFIGURAÇÕES
+// ================================
+
+export interface ClientProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  avatarUrl?: string;
+  bio?: string;
+  location?: string;
+  website?: string;
+  companyName?: string;
+  jobTitle?: string;
+  industry?: string;
+  verified: boolean;
+  createdAt: string;
+  totalBookings: number;
+  totalSpent: number;
+  averageRating?: number;
+  isVip?: boolean;
+  memberSince: string;
+}
+
+export interface ProfileFormData {
+  name: string;
+  email: string;
+  phone: string;
+  bio: string;
+  location: string;
+  website: string;
+  companyName: string;
+  jobTitle: string;
+  industry: string;
+}
+
+export interface ProfileSettings {
+  name: string;
+  email: string;
+  phone: string;
+  bio: string;
+  specialties: string[];
+  profileImage: string;
+  location: string;
+  website: string;
+}
+
+export interface SecuritySettings {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+  twoFactorEnabled: boolean;
+  loginNotifications: boolean;
+}
+
+export interface PrivacySettings {
+  profileVisibility: 'public' | 'private' | 'clients_only';
+  showEmail: boolean;
+  showPhone: boolean;
+  allowReviews: boolean;
+  allowMessages: boolean;
+}
+
+export interface PaymentSettings {
+  pixKey: string;
+  bankAccount: {
+    bank: string;
+    agency: string;
+    account: string;
+    accountType: 'corrente' | 'poupanca';
+  };
+  preferredMethod: 'pix' | 'bank_transfer' | 'both';
+}
+
+// ================================
+// TIPOS PARA DASHBOARD E FORMULÁRIOS
+// ================================
+
+export interface QuickAction {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  href: string;
+  color: 'primary' | 'success' | 'warning' | 'info';
+  badge?: string;
+}
+
+export interface CustomQuoteFormData {
+  venue: string;
+  eventDate: string;
+  startTime?: string;
+  duration: number | string;
+  zipCode: string;
+  street: string;
+  addressNumber: string;
+  addressComplement?: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  requiresStairs: 'yes' | 'no';
+  isCovered: 'yes' | 'no';
+  hasParking: 'yes' | 'no';
+  notes?: string;
+  name?: string;
+  phone?: string;
+  email?: string;
+}
+
+// ================================
+// TIPOS PARA CALENDÁRIO E AGENDA
+// ================================
+
+export interface CalendarDay {
+  date: Date;
+  bookings: Booking[];
+  isCurrentMonth: boolean;
+  hasWork: boolean;
+  isToday: boolean;
+}
+
+export interface WorkStats {
+  totalBookings: number;
+  upcomingBookings: number;
+  completedBookings: number;
+  workingDays: number;
+  totalRevenue: number;
+  averageRating: number;
+}
+
+// ================================
+// TIPOS PARA NOTIFICAÇÕES
+// ================================
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  read: boolean;
+  createdAt: string;
+  actionUrl?: string;
+}
+
+export interface NotificationSettings {
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  bookingReminders: boolean;
+  paymentNotifications: boolean;
+  marketingEmails: boolean;
+}
+
+// ================================
+// TIPOS PARA RELATÓRIOS
+// ================================
+
+export interface ReportData {
+  // Propriedades específicas para relatórios de colaboradores
+  performance?: {
+    eventsCompleted: number;
+    completionRate: number;
+    averageRating: number;
+    onTimeDelivery: number;
+  };
+  monthly?: Array<{
+    month: string;
+    events: number;
+    rating: number;
+    earnings: number;
+  }>;
+  eventTypes?: Array<{
+    type: string;
+    count: number;
+    percentage: number;
+    color: string;
+  }>;
+  timeAnalysis?: {
+    mostProductiveHour: string;
+    averageEventDuration: string;
+    workingDaysPerMonth: number;
+  };
+}
+
+// ================================
+// TIPOS PARA DISPONIBILIDADE
+// ================================
+
+export interface TimeSlot {
+  id: string;
+  startTime: string;
+  endTime: string;
+  isAvailable: boolean;
+  bookingId?: string;
+}
+
+export interface SpecialDate {
+  id: string;
+  date: string;
+  type: 'holiday' | 'vacation' | 'unavailable' | 'special';
+  title: string;
+  description?: string;
+}
+
+export interface AvailabilityData {
+  collaboratorId: string;
+  weeklySchedule: {
+    monday: TimeSlot[];
+    tuesday: TimeSlot[];
+    wednesday: TimeSlot[];
+    thursday: TimeSlot[];
+    friday: TimeSlot[];
+    saturday: TimeSlot[];
+    sunday: TimeSlot[];
+  };
+  specialDates: SpecialDate[];
+  timezone: string;
+}
+
+// ================================
+// TIPOS PARA GANHOS
+// ================================
+
+export interface EarningsData {
+  totalEarnings: number;
+  monthlyEarnings: Array<{
+    month: string;
+    earnings: number;
+    events: number;
+  }>;
+  pendingPayments: number;
+  averageHourlyRate: number;
+  totalHoursWorked: number;
+  paymentHistory: Array<{
+    id: string;
+    amount: number;
+    date: string;
+    eventTitle: string;
+    status: 'paid' | 'pending' | 'cancelled';
+  }>;
+}
+
+// ================================
+// TIPOS DIVERSOS
+// ================================
+
+export interface AdminReview {
+  id: string;
+  bookingId: string;
+  clientId: string;
+  clientName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  reported: boolean;
+  reportReason?: string;
+}
+
+export interface CalendarEvent extends Event {
+  bookingId?: string;
+  clientName?: string;
+  equipmentCount?: number;
+  totalValue?: number;
+}
+
+export interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requiredRole?: UserRole[];
+  redirectTo?: string;
 }

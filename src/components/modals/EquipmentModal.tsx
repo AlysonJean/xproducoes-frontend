@@ -67,7 +67,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
     let mounted = true;
     const fetchCategories = async () => {
       try {
-        const res = await apiFetch('/categories');
+  const res = await apiFetch('/api/categories');
         if (!mounted) return;
         if (Array.isArray(res)) {
           setCategories(res as Category[]);

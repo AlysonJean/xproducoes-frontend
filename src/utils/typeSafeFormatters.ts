@@ -1,17 +1,7 @@
-import type { Equipment, Kit, Booking, User } from '../types/types';
-import { EquipmentStatus, BookingStatus, UserRole } from '../types/types';
-
-export interface FormatOptions {
-  showCurrency?: boolean;
-  decimals?: number;
-}
-
-export interface Address {
-  street: string;
-  city: string;
-  postalCode: string;
-  country: string;
-}
+import type { Equipment, Kit } from '@/types/domains/equipment';
+import type { Booking } from '@/types/domains/booking';
+import type { User } from '@/types/domains/user';
+import { EquipmentStatus, BookingStatus, UserRole } from '@/types/enums';
 
 // ================================
 // FORMATADORES DE PREÇO

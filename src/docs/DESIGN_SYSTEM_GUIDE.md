@@ -254,4 +254,4 @@ Veja `StandardComponentsShowcase.tsx` para um exemplo completo demonstrando todo
 
 ---
 
-**Desenvolvido para X Produções** - Sistema de design enterprise unificado
+**Desenvolvido para X Produçoes e Eventos** - Sistema de design enterprise unificado

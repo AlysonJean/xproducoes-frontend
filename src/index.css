@@ -26,8 +26,19 @@
 @layer components {
   /* Logo SVG herda cor do tema, sem CSS inline local */
   .themed-logo-svg {
-    @apply block h-full w-auto;
+    @apply block h-full w-auto max-w-full;
     color: inherit;
+    /* Garantir que o SVG não quebre em mobile */
+    min-width: 32px;
+    max-height: 40px;
+  }
+
+  /* Melhorar compatibilidade da logo em mobile */
+  @media (max-width: 640px) {
+    .themed-logo-svg {
+      max-height: 32px;
+      min-width: 28px;
+    }
   }
 
   /* Recolor do conteúdo do SVG baseado em currentColor, respeitando 'none' */

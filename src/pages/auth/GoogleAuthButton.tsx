@@ -1,9 +1,7 @@
 import React, { useRef, useContext } from 'react';
 // removed GoogleLogin one-tap to centralize popup-based OAuth
-import { openOAuthPopup } from '../../utils/oauthPopup';
 import api from '../../services/api';
 import { AuthContext } from '../../contexts/AuthContext';
-import { secureStorage } from '../../utils/secureStorage';
 import { NotificationContext } from '../../contexts/NotificationContext';
 
 interface GoogleAuthButtonProps {
@@ -12,7 +10,6 @@ interface GoogleAuthButtonProps {
 }
 
 export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
-  onSuccess,
   disabled = false,
 }) => {
   // Read contexts directly with useContext (no custom hooks) to avoid throws
@@ -22,25 +19,6 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
   const notifContext = useContext(NotificationContext) as any | undefined;
   const authRef = useRef<any>(authContext);
   const notifRef = useRef<any>(notifContext);
-
-  const handleMessage = async (event: MessageEvent) => {
-    if (event.origin !== window.location.origin) return;
-    const data = event.data as any;
-    if (data?.type === 'oauth_token' && data?.token) {
-      const auth = authRef.current;
-      if (auth?.handleOAuthToken) {
-        try {
-          await auth.handleOAuthToken(data.token);
-        } catch (err) {
-          console.error('Erro ao processar token OAuth (Google):', err);
-        }
-      } else {
-        localStorage.setItem('authToken', data.token);
-        secureStorage.set('token', data.token);
-      }
-      onSuccess?.();
-    }
-  };
 
   // Popup flow will handle success/error via postMessage and AuthContext
 
@@ -61,21 +39,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
             if (disabled) return;
             try {
               const res = await api.get('/auth/oauth/google/authorize');
-              const popup = openOAuthPopup(res.data.url, 'google_oauth');
-              const listener = (ev: MessageEvent) => handleMessage(ev);
-              window.addEventListener('message', listener);
-              // cleanup if popup closed or after some timeout
-              const monitor = setInterval(() => {
-                try {
-                  if (!popup || popup.closed) {
-                    window.removeEventListener('message', listener);
-                    clearInterval(monitor);
-                  }
-                } catch (e) {
-                  window.removeEventListener('message', listener);
-                  clearInterval(monitor);
-                }
-              }, 500);
+              window.location.href = res.data.url;
             } catch (e) {
               console.error('Falha ao iniciar fluxo OAuth (Google):', e);
               addNotification?.({ type: 'error', title: 'Erro no login', message: 'Falha ao iniciar login com Google' });

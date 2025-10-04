@@ -1,4 +1,4 @@
-import type { ICollaborator } from '../types/types';
+import type { ICollaborator } from '@/types/types';
 import { useState } from 'react';
 // importação removida: tipos devem ser importados de '../types'
 import { api } from '../services/api';

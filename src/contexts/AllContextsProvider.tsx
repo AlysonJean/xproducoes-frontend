@@ -1,6 +1,6 @@
 import React from 'react';
-import { ThemeProvider } from './ThemeContext';
-import { CartProvider } from './CartContext';
+import { MemoizedThemeProvider } from './ThemeContext';
+import { MemoizedCartProvider } from './CartContext';
 import { NotificationProvider } from './NotificationContext';
 import { CompareProvider } from './CompareContext';
 import { SettingsProvider } from './SettingsContext';
@@ -10,18 +10,18 @@ import { AuthProvider } from './AuthContext';
 
 export const AllContextsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <AuthProvider>
-    <ThemeProvider>
+    <MemoizedThemeProvider>
       <CompareProvider>
         <SettingsProvider>
           <FavoritesProvider>
             <CollaboratorProvider>
               <NotificationProvider>
-                <CartProvider>{children}</CartProvider>
+                <MemoizedCartProvider>{children}</MemoizedCartProvider>
               </NotificationProvider>
             </CollaboratorProvider>
           </FavoritesProvider>
         </SettingsProvider>
       </CompareProvider>
-    </ThemeProvider>
+    </MemoizedThemeProvider>
   </AuthProvider>
 );

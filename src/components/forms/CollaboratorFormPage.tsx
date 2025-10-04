@@ -44,7 +44,7 @@ export const CollaboratorFormPage: React.FC = () => {
     if (!validate()) return;
     try {
       setIsSubmitting(true);
-      await apiFetch('/collaborators', {
+  await apiFetch('/api/collaborators', {
         method: 'POST',
         body: JSON.stringify({
           name: name.trim(),

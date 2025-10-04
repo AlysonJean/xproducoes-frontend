@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { PageLayout } from '../../components/layouts/PageLayout';
-import { DashboardStats } from '../../types/types';
+import type { DashboardStats } from '../../types/domains/dashboard';
 
 // Componente de Estatísticas
 const StatsCards: React.FC<{ stats: DashboardStats | null }> = ({ stats }) => {

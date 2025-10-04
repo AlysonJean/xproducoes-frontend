@@ -72,9 +72,9 @@ export const PrivacyPage = () => {
               Para exercer seus direitos ou esclarecer dúvidas, entre em contato:
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4 mt-2">
-              <li>E-mail: <span className="text-primary">privacidade@xproducoes.com</span></li>
-              <li>Telefone: <span className="text-primary">(11) 99999-9999</span></li>
-              <li>Endereço: Rua Exemplo, 123 - São Paulo/SP</li>
+              <li>E-mail: <span className="text-primary">suporte@xproducoeseeventos.com.br</span></li>
+              <li>Telefone: <span className="text-primary">(31) 98925-2272</span></li>
+              <li>Endereço: Rua flor d'agua 407 Jardim Alvorada Belo Horizonte MG</li>
             </ul>
           </section>
         </div>

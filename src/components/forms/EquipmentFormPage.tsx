@@ -64,7 +64,7 @@ export const EquipmentFormPage: React.FC = () => {
       try {
         setLoading(true);
         // Buscar categorias — o backend retorna um array puro, porém manter compatibilidade com { data: [...] }
-        const categoriesResponse = await apiFetch('/categories');
+  const categoriesResponse = await apiFetch('/api/categories');
         if (Array.isArray(categoriesResponse)) {
           setCategories(categoriesResponse as Category[]);
         } else if ((categoriesResponse as any)?.data && Array.isArray((categoriesResponse as any).data)) {

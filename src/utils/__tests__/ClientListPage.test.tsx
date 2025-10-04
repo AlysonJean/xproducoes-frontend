@@ -32,7 +32,7 @@ describe('ClientListPage bulk delete', () => {
   it('allows selecting multiple clients and deleting them', async () => {
     // mock list fetch
     (apiFetch as any).mockImplementation((endpoint: string) => {
-      if (endpoint.startsWith('/admin/clients?')) {
+  if (endpoint.startsWith('/api/admin/clients?')) {
         return Promise.resolve({ data: mockClients, meta: { totalItems: 2, totalPages: 1 } });
       }
       return Promise.resolve({});
@@ -71,8 +71,8 @@ describe('ClientListPage bulk delete', () => {
 
     // Expect delete calls for each client
     await waitFor(() => {
-      expect((apiFetch as any)).toHaveBeenCalledWith('/admin/clients/c1', { method: 'DELETE' });
-      expect((apiFetch as any)).toHaveBeenCalledWith('/admin/clients/c2', { method: 'DELETE' });
+  expect((apiFetch as any)).toHaveBeenCalledWith('/api/admin/clients/c1', { method: 'DELETE' });
+  expect((apiFetch as any)).toHaveBeenCalledWith('/api/admin/clients/c2', { method: 'DELETE' });
     });
   });
 });

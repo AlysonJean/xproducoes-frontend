@@ -39,7 +39,7 @@ export const ClientFormPage: React.FC = () => {
           return;
         }
         try {
-          await apiFetch(`/admin/clients/${data.clientId}/resend-invite`, { method: 'POST' });
+          await apiFetch(`/api/admin/clients/${data.clientId}/resend-invite`, { method: 'POST' });
           addNotification({ type: 'success', title: 'Sucesso', message: 'Convite reenviado' });
         } catch (e) {
           addNotification({ type: 'error', title: 'Erro', message: 'Falha ao reenviar convite' });
@@ -62,9 +62,9 @@ export const ClientFormPage: React.FC = () => {
         fd.append('phone', phone.trim() || '');
         fd.append('status', 'ACTIVE');
         fd.append('avatar', avatarFile);
-        responseData = await apiFetch<any>('/admin/clients', { method: 'POST', body: fd });
+  responseData = await apiFetch<any>('/api/admin/clients', { method: 'POST', body: fd });
       } else {
-        responseData = await apiFetch<any>('/admin/clients', {
+  responseData = await apiFetch<any>('/api/admin/clients', {
           method: 'POST',
           body: JSON.stringify({
             name: name.trim(),
@@ -84,7 +84,7 @@ export const ClientFormPage: React.FC = () => {
       if (tempPassword || inviteUrl) {
         openInviteModal({ tempPassword, inviteUrl, clientId });
       } else {
-        navigate('/admin/clients');
+  navigate('/admin/clients');
       }
     } catch (err) {
       const message = (err as any)?.message || 'Falha ao criar cliente';
@@ -95,7 +95,7 @@ export const ClientFormPage: React.FC = () => {
   };
 
   return (
-    <AdminLayout title="Novo Cliente" breadcrumbs={[{ name: 'Admin' }, { name: 'Clientes', href: '/admin/clients' }, { name: 'Novo' }]}>
+  <AdminLayout title="Novo Cliente" breadcrumbs={[{ name: 'Admin' }, { name: 'Clientes', href: '/admin/clients' }, { name: 'Novo' }]}>
       <form onSubmit={onSubmit} className="max-w-xl space-y-6">
         <div className="bg-card border rounded-xl p-6">
           <div className="space-y-4">

@@ -8,14 +8,17 @@ import { Link } from 'react-router-dom';
 import ThemedLogo from './ui/ThemedLogo';
 import { getWhatsAppPhone, openWhatsApp } from '../utils/whatsapp';
 
+
 export const Footer = () => {
   const { logoUrl, companyName } = useSettings();
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
 
-  // Ocultar footer nas páginas admin
-  const isAdminPage = window.location.pathname.startsWith('/admin');
-  if (isAdminPage) return null;
+  // Ocultar footer nas páginas admin ou colaborador
+  const path = window.location.pathname;
+  const isAdminPage = path.startsWith('/admin');
+  const isCollaboratorPage = path.startsWith('/collaborator');
+  if (isAdminPage || isCollaboratorPage) return null;
 
   const handleNewsletterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,16 +193,20 @@ export const Footer = () => {
             <div className="space-y-3 text-sm">
               <div className="flex items-center space-x-3 text-muted-foreground">
         <MapPinIcon className="w-5 h-5 text-primary" aria-hidden="true" />
-                <span>São Paulo, SP - Brasil</span>
+                <span>Rua flor d'agua 407 Jardim Alvorada Belo Horizonte MG</span>
               </div>
               <div className="flex items-center space-x-3 text-muted-foreground">
         <PhoneIcon className="w-5 h-5 text-primary" aria-hidden="true" />
-                <span>(11) 99999-9999</span>
+                <span>(31) 98925-2272</span>
               </div>
               <div className="flex items-center space-x-3 text-muted-foreground">
         <EnvelopeIcon className="w-5 h-5 text-primary" aria-hidden="true" />
-                <span>contato@xproducoes.com</span>
+                <span>suporte@xproducoeseventos.com.br</span>
               </div>
+            </div>
+
+            <div className="mt-6 text-sm text-muted-foreground">
+              <p className="mt-4">© {new Date().getFullYear()} X Produçoes e Eventos. Todos os direitos reservados.</p>
             </div>
           </div>
 
@@ -234,7 +241,7 @@ export const Footer = () => {
             {/* Copyright */}
             <div className="text-center lg:text-left">
               <p className="text-sm text-muted-foreground">
-                © {new Date().getFullYear()} X Produções e Eventos. Todos os direitos reservados.
+                © {new Date().getFullYear()} X Produçoes e Eventos. Todos os direitos reservados.
               </p>
               <p className="text-xs text-muted-foreground/70 mt-1">
                 Desenvolvido com ❤️ por nossa equipe interna

@@ -1,14 +1,6 @@
 // Utilities for safe transient DOM operations (anchors, script injection)
 import { normalizeString } from './string';
-
-export type AnchorOptions = {
-  href: string;
-  download?: string;
-  target?: string;
-  rel?: string;
-  revokeObjectUrl?: boolean; // if true and objectUrl provided, will revoke after click
-  objectUrl?: string;
-};
+import type { AnchorOptions, ScriptOptions } from '@/types';
 
 export function isSafeUrl(u: string): boolean {
   if (!u) return false;
@@ -62,13 +54,6 @@ export function createAndClickAnchor(opts: AnchorOptions): void {
     }
   }
 }
-
-export type ScriptOptions = {
-  src: string;
-  async?: boolean;
-  defer?: boolean;
-  crossOrigin?: string | null;
-};
 
 export function appendScriptIfNotExists(opts: ScriptOptions): HTMLScriptElement | null {
   try {

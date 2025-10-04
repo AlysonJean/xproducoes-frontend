@@ -101,8 +101,8 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
       const loadData = async () => {
         try {
           const [equipData, kitData] = await Promise.all([
-            apiFetch('/equipments'),
-            apiFetch('/kits'),
+            apiFetch('/api/equipments'),
+            apiFetch('/api/kits'),
           ]);
           setEquipments(equipData as Equipment[]);
           setKits(kitData as Kit[]);
@@ -132,7 +132,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
         kitId: selectedKit || undefined,
         equipmentIds: selectedEquipments.length > 0 ? selectedEquipments : undefined,
       };
-      await apiFetch('/bookings', {
+  await apiFetch('/api/bookings', {
         method: 'POST',
         body: JSON.stringify(payload),
       });

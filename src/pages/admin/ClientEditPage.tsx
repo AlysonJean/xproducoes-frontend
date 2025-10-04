@@ -26,7 +26,7 @@ export const ClientEditPage = () => {
     const fetchClient = async () => {
       try {
         setLoading(true);
-        const clientData: User = await apiFetch(`/admin/clients/${id}`);
+  const clientData: User = await apiFetch(`/api/admin/clients/${id}`);
         setClient({
           name: clientData.name || '',
           email: clientData.email || '',
@@ -55,13 +55,13 @@ export const ClientEditPage = () => {
       return;
     }
     try {
-      await apiFetch(`/admin/clients/${id}`, {
+  await apiFetch(`/api/admin/clients/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(client),
       });
       setSuccess('Dados do cliente atualizados com sucesso!');
-      setTimeout(() => navigate('/admin/clients'), 1500);
+  setTimeout(() => navigate('/admin/clients'), 1500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Falha ao atualizar os dados.');
     }

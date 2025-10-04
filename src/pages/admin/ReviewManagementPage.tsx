@@ -3,7 +3,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { apiFetch } from '../../services/api';
 import { normalizeString } from '../../utils/string';
 import { Button, Input, Select, Badge } from '../../components/ui/StandardComponents';
-import type { HttpResponse } from '../../types/types';
+import type { ApiResponse } from '../../types/api';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { Pagination } from '../../components/ui/Pagination';
 
@@ -34,8 +34,8 @@ export default function ReviewManagementPage() {
   const load = async () => {
     try {
       setLoading(true);
-  const res = await apiFetch(`/reviews${minRating ? `?rating=${minRating}` : ''}`);
-  const data = Array.isArray(res) ? res : ((res as HttpResponse<AdminReview[]>)?.data ?? []);
+  const res = await apiFetch(`/api/reviews${minRating ? `?rating=${minRating}` : ''}`);
+  const data = Array.isArray(res) ? res : ((res as ApiResponse<AdminReview[]>)?.data ?? []);
       setItems(data);
       setError(null);
     } catch (e: any) {
@@ -92,7 +92,7 @@ export default function ReviewManagementPage() {
   const handleApprove = async (id: string) => {
     try {
       setActionId(id);
-      await apiFetch(`/reviews/${id}/approve`, { method: 'POST' });
+  await apiFetch(`/api/reviews/${id}/approve`, { method: 'POST' });
       addNotification({ type: 'success', title: 'Aprovada', message: 'Avaliação aprovada e publicada.' });
       await load();
     } catch (e: any) {
@@ -104,7 +104,7 @@ export default function ReviewManagementPage() {
   const handleReject = async (id: string) => {
     try {
       setActionId(id);
-      await apiFetch(`/reviews/${id}/reject`, { method: 'POST' });
+  await apiFetch(`/api/reviews/${id}/reject`, { method: 'POST' });
       addNotification({ type: 'info', title: 'Rejeitada', message: 'Avaliação marcada como rejeitada.' });
       await load();
     } catch (e: any) {
@@ -117,7 +117,7 @@ export default function ReviewManagementPage() {
     try {
       if (!window.confirm('Tem certeza que deseja apagar esta avaliação?')) return;
       setActionId(id);
-      await apiFetch(`/reviews/${id}`, { method: 'DELETE' });
+  await apiFetch(`/api/reviews/${id}`, { method: 'DELETE' });
       addNotification({ type: 'success', title: 'Excluída', message: 'Avaliação apagada com sucesso.' });
       await load();
     } catch (e: any) {
@@ -130,7 +130,7 @@ export default function ReviewManagementPage() {
   const handleUpdate = async (id: string, data: { rating: number; comment?: string }) => {
     try {
       setActionId(id);
-      await apiFetch(`/reviews/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  await apiFetch(`/api/reviews/${id}`, { method: 'PUT', body: JSON.stringify(data) });
       addNotification({ type: 'success', title: 'Atualizada', message: 'Avaliação atualizada com sucesso.' });
       setEditing(null);
       await load();

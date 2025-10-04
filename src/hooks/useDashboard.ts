@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Booking, Equipment } from '../types/types';
+import { Booking, Equipment } from '@/types/types';
 import { logger } from '../utils/logger';
 
 export interface DashboardStats {

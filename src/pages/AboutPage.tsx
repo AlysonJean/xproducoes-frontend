@@ -12,7 +12,7 @@ export const AboutPage: React.FC = () => {
           <section>
             <h2 className="text-2xl font-bold text-foreground mb-3">Nossa História</h2>
             <p className="text-muted-foreground">
-              A X Produções é especialista em aluguel de equipamentos audiovisuais e produção de eventos.
+              A X Produçoes e Eventos é especialista em aluguel de equipamentos audiovisuais e produção de eventos.
               Com anos de experiência no mercado, oferecemos soluções completas para eventos corporativos,
               sociais e artísticos, sempre com foco em qualidade e excelência.
             </p>

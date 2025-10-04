@@ -1,9 +1,6 @@
 import React from 'react';
 import { appendScriptIfNotExists } from '../../utils/dom';
-import { openOAuthPopup } from '../../utils/oauthPopup';
 import api from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
-import { secureStorage } from '../../utils/secureStorage';
 import { useNotifications } from '../../contexts/NotificationContext';
 
 interface FacebookAuthButtonProps {
@@ -36,11 +33,9 @@ declare global {
 }
 
 export const FacebookAuthButton: React.FC<FacebookAuthButtonProps> = ({
-  onSuccess,
   onError,
   disabled = false,
 }) => {
-  const auth = useAuth();
   const { addNotification } = useNotifications();
 
   React.useEffect(() => {
@@ -67,28 +62,9 @@ export const FacebookAuthButton: React.FC<FacebookAuthButtonProps> = ({
 
   const handleFacebookLogin = async () => {
     try {
+      // Simplificar login do Facebook - redirecionar diretamente
       const res = await api.get('/auth/oauth/facebook/authorize');
-      const popup = openOAuthPopup(res.data.url, 'facebook_oauth');
-      const listener = async (ev: MessageEvent) => {
-        if (ev.origin !== window.location.origin) return;
-        const data = ev.data as any;
-        if (data?.type === 'oauth_token' && data?.token) {
-          if (auth?.handleOAuthToken) {
-            try {
-              await auth.handleOAuthToken(data.token);
-            } catch (err) {
-              console.error('Erro ao processar token OAuth (Facebook):', err);
-            }
-          } else {
-            localStorage.setItem('authToken', data.token);
-            secureStorage.set('token', data.token);
-          }
-          window.removeEventListener('message', listener);
-          try { popup?.close(); } catch {}
-          onSuccess?.();
-        }
-      };
-      window.addEventListener('message', listener);
+      window.location.href = res.data.url;
     } catch (err) {
       addNotification({ type: 'error', title: 'Erro no login', message: 'Falha ao iniciar login com Facebook' });
       onError?.('Falha ao iniciar login com Facebook');

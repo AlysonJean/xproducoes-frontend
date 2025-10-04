@@ -19,7 +19,7 @@ export const EquipmentListPage = () => {
   const fetchEquipments = async () => {
     try {
       setLoading(true);
-  const data = await apiFetch('/equipments');
+  const data = await apiFetch('/api/equipments');
   setEquipments(asArray<Equipment>(data));
     } catch (err: unknown) {
       setError(

@@ -132,7 +132,7 @@ export const BookingForm = ({ onSubmit, isSubmitting, serverError }: BookingForm
           type="tel"
           {...register('clientPhone')}
           error={errors.clientPhone?.message}
-          placeholder="(11) 99999-9999"
+          placeholder="(31) 98925-2272"
           description="Incluir DDD para contato mais rápido"
         />
       </FormSection>

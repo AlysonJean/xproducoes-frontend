@@ -51,7 +51,7 @@ export const FaqFormPage = () => {
       if (isEditing) {
         await apiFetch(`/faq/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
       } else {
-        await apiFetch('/faq', { method: 'POST', body: JSON.stringify(payload) });
+  await apiFetch('/api/faq', { method: 'POST', body: JSON.stringify(payload) });
       }
       navigate('/admin/faq');
     } catch (err: unknown) {
