@@ -55,6 +55,7 @@
     "terser": "^5.44.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.0.2",
+  "vite-tsconfig-paths": "^4.2.0",
     "uuid": "^9.0.0",
     "vite-plugin-pwa": "^1.0.3",
     "vitest": "^3.2.4",

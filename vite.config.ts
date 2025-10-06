@@ -1,11 +1,20 @@
 import { defineConfig } from 'vite'
+import tsconfigPaths from 'vite-tsconfig-paths'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { visualizer } from 'rollup-plugin-visualizer'
 
+// Compat: em ESM não existe __dirname por padrão
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
+    // Resolve paths defined in tsconfig.json (ensures aliases like @/services resolve in CI)
+    tsconfigPaths(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -131,16 +140,16 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': '/src',
-      '@/components': '/src/components',
-      '@/pages': '/src/pages',
-      '@/hooks': '/src/hooks',
-      '@/contexts': '/src/contexts',
-      '@/services': '/src/services',
-      '@/utils': '/src/utils',
-      '@/types': '/src/types',
-      '@/styles': '/src/styles',
-      '@/validators': '/src/validators'
+      '@': resolve(__dirname, 'src'),
+      '@/components': resolve(__dirname, 'src/components'),
+      '@/pages': resolve(__dirname, 'src/pages'),
+      '@/hooks': resolve(__dirname, 'src/hooks'),
+      '@/contexts': resolve(__dirname, 'src/contexts'),
+      '@/services': resolve(__dirname, 'src/services'),
+      '@/utils': resolve(__dirname, 'src/utils'),
+      '@/types': resolve(__dirname, 'src/types'),
+      '@/styles': resolve(__dirname, 'src/styles'),
+      '@/validators': resolve(__dirname, 'src/validators')
     }
   },
   // Otimizações adicionais
