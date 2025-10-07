@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
 import { resolve, dirname } from 'path'
+import alias from '@rollup/plugin-alias'
 import { fileURLToPath } from 'url'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -13,6 +14,18 @@ const __dirname = dirname(__filename);
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
+    // Rollup alias fallback (adds resilience for some CI environments)
+    alias({
+      entries: [
+        { find: '@', replacement: resolve(__dirname, 'src') },
+        { find: '@/services', replacement: resolve(__dirname, 'src/services') },
+        { find: '@/utils', replacement: resolve(__dirname, 'src/utils') },
+        { find: '@/components', replacement: resolve(__dirname, 'src/components') },
+        { find: '@/pages', replacement: resolve(__dirname, 'src/pages') }
+      ],
+      // Ensure we resolve TypeScript/JS extensions
+      resolve: ['.ts', '.tsx', '.js', '.jsx', '.json']
+    }),
     // Resolve paths defined in tsconfig.json (ensures aliases like @/services resolve in CI)
     tsconfigPaths(),
     react(),
