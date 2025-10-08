@@ -70,15 +70,17 @@ export const Header = () => {
           {/* Logo com micro-animação */}
           <Link
             to="/"
-            className="group flex items-center space-x-3 transition-transform duration-300 hover:scale-105"
+            className="group flex items-center transition-transform duration-300 hover:scale-105"
           >
             {logoUrl ? (
+              /* Quando há logo carregado, mostra APENAS o logo */
               <ThemedLogo
                 src={logoUrl}
                 title={companyName || 'Logo'}
-                className="h-8 w-auto sm:h-9 lg:h-10 transition-all duration-300 group-hover:brightness-110 text-foreground"
+                className="h-10 w-auto sm:h-12 lg:h-14 max-w-[200px] sm:max-w-[250px] lg:max-w-[300px] transition-all duration-300 group-hover:brightness-110 text-foreground"
               />
             ) : (
+              /* Fallback: mostra ícone + nome quando não há logo */
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:rotate-6 group-hover:scale-110">
                   <span className="text-primary-foreground font-bold text-lg sm:text-xl lg:text-2xl">X</span>
