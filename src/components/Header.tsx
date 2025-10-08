@@ -213,25 +213,134 @@ export const Header = () => {
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-40 bg-background/95 backdrop-blur-xl">
-          <div className="flex flex-col h-full pt-20 pb-6 px-6 space-y-6">
-            {navItems.map((item, index) => (
-              <NavLink
-                key={item.href}
-                to={item.href}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center space-x-4 p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 ${
-                    isActive ? 'text-primary bg-primary/10' : 'text-foreground/80'
-                  }`
-                }
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <item.Icon className="w-6 h-6" strokeWidth={1.75} aria-hidden="true" />
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
+          <div className="flex flex-col h-full pt-20 pb-6 px-6 space-y-4 overflow-y-auto">
+            {/* Links de Navegação */}
+            <div className="space-y-2">
+              {navItems.map((item, index) => (
+                <NavLink
+                  key={item.href}
+                  to={item.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center space-x-4 p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 ${
+                      isActive ? 'text-primary bg-primary/10' : 'text-foreground/80'
+                    }`
+                  }
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <item.Icon className="w-6 h-6" strokeWidth={1.75} aria-hidden="true" />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
 
-            <div className="pt-6 border-t border-border/50">
+            {/* Separador */}
+            <div className="border-t border-border/50" />
+
+            {/* Links de Ação Mobile */}
+            <div className="space-y-2">
+              {/* Favoritos */}
+              <Link
+                to="/favorites"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center space-x-4 p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
+              >
+                <HeartIcon className="w-6 h-6" strokeWidth={1.75} />
+                <span>Favoritos</span>
+              </Link>
+
+              {/* Comparar */}
+              <Link
+                to="/compare"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center justify-between p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
+              >
+                <div className="flex items-center space-x-4">
+                  <ChartBarSquareIcon className="w-6 h-6" strokeWidth={1.75} />
+                  <span>Comparar</span>
+                </div>
+                {compareItems.length > 0 && (
+                  <span className="bg-primary text-primary-foreground text-xs font-bold px-2.5 py-1 rounded-full">
+                    {formatCount(compareItems.length)}
+                  </span>
+                )}
+              </Link>
+
+              {/* Carrinho */}
+              <Link
+                to="/cart"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center justify-between p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
+              >
+                <div className="flex items-center space-x-4">
+                  <ShoppingCartIcon className="w-6 h-6" strokeWidth={1.75} />
+                  <span>Carrinho</span>
+                </div>
+                {itemCount > 0 && (
+                  <span className="bg-primary text-primary-foreground text-xs font-bold px-2.5 py-1 rounded-full">
+                    {formatCount(itemCount)}
+                  </span>
+                )}
+              </Link>
+            </div>
+
+            {/* Separador */}
+            <div className="border-t border-border/50" />
+
+            {/* Autenticação Mobile */}
+            {isAuthenticated ? (
+              <div className="space-y-2">
+                {/* Dashboard/Conta */}
+                <Link
+                  to="/dashboard"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center space-x-4 p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
+                >
+                  <span className="text-2xl">
+                    {user?.role === 'ADMIN'
+                      ? '🎛️'
+                      : user?.role === 'COLLABORATOR'
+                      ? '👥'
+                      : user?.role === 'FREELANCER'
+                      ? '💼'
+                      : '👤'}
+                  </span>
+                  <span>
+                    {user?.role === 'ADMIN'
+                      ? 'Painel Admin'
+                      : user?.role === 'COLLABORATOR'
+                      ? 'Painel Colaborador'
+                      : user?.role === 'FREELANCER'
+                      ? 'Painel Freelancer'
+                      : 'Minha Conta'}
+                  </span>
+                </Link>
+
+                {/* Logout */}
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center space-x-4 p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-destructive/10 text-destructive"
+                >
+                  <span className="text-2xl">🚪</span>
+                  <span>Sair</span>
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center justify-center space-x-2 p-4 rounded-2xl text-lg font-medium transition-all duration-300 bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <span>🔐</span>
+                <span>Entrar</span>
+              </Link>
+            )}
+
+            {/* Theme Toggle */}
+            <div className="pt-4 border-t border-border/50">
               <ThemeToggle showLabel={true} className="justify-start" />
             </div>
           </div>
