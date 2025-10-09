@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRevealOnView } from '../hooks/useRevealOnView';
 import { useParams } from 'react-router-dom';
 import { apiFetch } from '../services/api';
-import { useCart } from '../contexts/useCart';
+import { useCart } from '@/hooks/useCart';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import type { Equipment } from '../types/types';
 import { formatPrice } from '../utils/formatPrice';

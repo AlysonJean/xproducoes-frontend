@@ -6,7 +6,7 @@
 import { forwardRef } from 'react';
 import { clsx } from 'clsx';
 import { Loader2 } from 'lucide-react';
-import type { IButtonProps } from '../../types/types';
+import type { IButtonProps } from '@/types/ui';
 
 const buttonVariants: Record<NonNullable<IButtonProps['variant']>, string> = {
   primary:

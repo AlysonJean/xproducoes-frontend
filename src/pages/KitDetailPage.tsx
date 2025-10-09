@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiFetch } from '../services/api';
-import { useCart } from '../contexts/useCart';
+import { useCart } from '@/hooks/useCart';
 import { useNotifications } from '../contexts/NotificationContext';
-import LoadingSpinner from '../components/LoadingSpinner';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { FavoriteButton } from '../components/ui/FavoriteButton';
 import { formatPrice } from '../utils/typeSafeFormatters';
 import { toNumber, calculateSavingsAmount } from '../utils/typeSafeFormatters';

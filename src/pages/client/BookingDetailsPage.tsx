@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/services/api';
 import type { BookingDetails } from '@/types/types';
 import { formatPrice } from '@/utils/formatPrice';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 export const BookingDetailsPage = () => {
   const { id } = useParams<{ id: string }>();

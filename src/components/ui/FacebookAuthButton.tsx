@@ -1,5 +1,5 @@
 import React from 'react';
-import { FacebookAuthButtonProps } from '../../types/types';
+import { FacebookAuthButtonProps } from '@/types/ui';
 
 const FacebookAuthButton: React.FC<FacebookAuthButtonProps> = ({ onSuccess }) => {
   // Implemente a lógica de autenticação Facebook conforme necessário

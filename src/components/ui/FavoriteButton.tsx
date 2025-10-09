@@ -1,7 +1,7 @@
 import { useFavorites } from '../../contexts/FavoritesContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 
-import type { FavoriteButtonProps } from '../../types/types';
+import type { FavoriteButtonProps } from '@/types/ui';
 
 export const FavoriteButton = ({
   equipmentId,

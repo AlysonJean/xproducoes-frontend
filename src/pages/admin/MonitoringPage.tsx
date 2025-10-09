@@ -3,6 +3,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { Button } from '../../components/ui/Button';
 import { SimpleCard, StatsCard } from '@/components/ui/Cards';
 import { useAuth } from '../../contexts/AuthContext';
+import { SentryTestButton } from '../../components/SentryTestButton';
 import { 
   MonitoringService, 
   IntegrationHealth, 
@@ -109,7 +110,8 @@ export const MonitoringPage: React.FC = () => {
     { id: 'dashboard', label: '📊 Dashboard' },
     { id: 'integrations', label: '🔗 Integrações' },
     { id: 'system', label: '🖥️ Sistema' },
-    { id: 'alerts', label: '🚨 Alertas' }
+    { id: 'alerts', label: '🚨 Alertas' },
+    { id: 'sentry', label: '🧪 Teste Sentry' }
   ];
 
   if (!user || user.role !== 'ADMIN') {
@@ -419,6 +421,149 @@ export const MonitoringPage: React.FC = () => {
                   </div>
                 )}
               </SimpleCard>
+            )}
+
+            {/* Teste Sentry */}
+            {activeTab === 'sentry' && (
+              <div className="space-y-6">
+                <SimpleCard title="🧪 Teste de Monitoramento de Erros (Sentry)">
+                  <div className="space-y-4">
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">⚠️</span>
+                        <div>
+                          <h4 className="font-medium text-yellow-900 dark:text-yellow-100 mb-1">
+                            Atenção: Área de Testes
+                          </h4>
+                          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                            Esta seção permite testar a integração com o Sentry, nosso sistema de monitoramento de erros.
+                            Os erros gerados aqui são intencionais e serão capturados pelo Sentry.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="prose dark:prose-invert max-w-none">
+                      <h3 className="text-lg font-semibold mb-3">Como funciona?</h3>
+                      <ul className="space-y-2 text-sm text-muted-foreground">
+                        <li>
+                          <strong>💥 Lançar Erro:</strong> Simula um erro não tratado que será capturado pelo Error Boundary
+                        </li>
+                        <li>
+                          <strong>⚠️ Capturar Exceção:</strong> Simula um erro tratado manualmente com try/catch
+                        </li>
+                        <li>
+                          <strong>📝 Enviar Mensagem:</strong> Envia uma mensagem informativa para o Sentry
+                        </li>
+                      </ul>
+
+                      <h3 className="text-lg font-semibold mb-3 mt-6">Verificando os Resultados</h3>
+                      <ol className="space-y-2 text-sm text-muted-foreground">
+                        <li>1. Clique em um dos botões de teste abaixo</li>
+                        <li>2. Em desenvolvimento: veja o log no console do navegador</li>
+                        <li>3. Em produção: acesse o <a href="https://sentry.io" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">dashboard do Sentry</a></li>
+                        <li>4. Verifique os eventos capturados na seção "Issues"</li>
+                      </ol>
+                    </div>
+
+                    <div className="border-t border-border pt-6 mt-6">
+                      <h3 className="text-lg font-semibold mb-4">Painel de Testes</h3>
+                      <div className="flex justify-center">
+                        <SentryTestButton position="inline" />
+                      </div>
+                    </div>
+
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-6">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">ℹ️</span>
+                        <div>
+                          <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-1">
+                            Informação
+                          </h4>
+                          <p className="text-sm text-blue-800 dark:text-blue-200">
+                            Em ambiente de desenvolvimento, os erros são apenas registrados no console.
+                            Em produção, todos os erros são enviados para o Sentry para monitoramento em tempo real.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </SimpleCard>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <SimpleCard title="📊 Configuração Atual">
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between py-2 border-b border-border">
+                        <span className="text-muted-foreground">Ambiente:</span>
+                        <span className="font-medium">
+                          {import.meta.env.MODE === 'production' ? '🟢 Produção' : '🟡 Desenvolvimento'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b border-border">
+                        <span className="text-muted-foreground">Sentry DSN:</span>
+                        <span className="font-medium">
+                          {import.meta.env.VITE_SENTRY_DSN ? '✅ Configurado' : '❌ Não configurado'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b border-border">
+                        <span className="text-muted-foreground">Error Boundary:</span>
+                        <span className="font-medium">✅ Ativo</span>
+                      </div>
+                      <div className="flex justify-between py-2">
+                        <span className="text-muted-foreground">Performance Monitoring:</span>
+                        <span className="font-medium">✅ Ativo</span>
+                      </div>
+                    </div>
+                  </SimpleCard>
+
+                  <SimpleCard title="🔗 Links Úteis">
+                    <div className="space-y-3">
+                      <a
+                        href="https://sentry.io"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-3 bg-muted/50 hover:bg-muted rounded-lg transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">🌐</span>
+                          <div>
+                            <p className="font-medium text-sm">Dashboard Sentry</p>
+                            <p className="text-xs text-muted-foreground">Visualizar erros capturados</p>
+                          </div>
+                        </div>
+                        <span className="text-muted-foreground">→</span>
+                      </a>
+
+                      <a
+                        href="/docs/SENTRY_CONFIGURATION.md"
+                        className="flex items-center justify-between p-3 bg-muted/50 hover:bg-muted rounded-lg transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">📚</span>
+                          <div>
+                            <p className="font-medium text-sm">Documentação</p>
+                            <p className="text-xs text-muted-foreground">Guia de configuração</p>
+                          </div>
+                        </div>
+                        <span className="text-muted-foreground">→</span>
+                      </a>
+
+                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">👤</span>
+                          <div>
+                            <p className="font-medium text-sm">Usuário Atual</p>
+                            <p className="text-xs text-muted-foreground">{user?.email || 'Não autenticado'}</p>
+                          </div>
+                        </div>
+                        <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100">
+                          Admin
+                        </span>
+                      </div>
+                    </div>
+                  </SimpleCard>
+                </div>
+              </div>
             )}
           </>
         )}

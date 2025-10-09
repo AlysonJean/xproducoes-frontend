@@ -14,10 +14,10 @@ import {
   PhoneIcon,
   QuestionMarkCircleIcon,
 } from '@heroicons/react/24/outline';
-import { useAuth } from '../contexts/AuthContext';
-import { useCart } from '../hooks/useCart';
-import { useCompare } from '../contexts/CompareContext';
-import { useSettings } from '../contexts/SettingsContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/hooks/useCart';
+import { useCompare } from '@/contexts/CompareContext';
+import { useSettings } from '@/contexts/SettingsContext';
 import { ThemeToggle } from './ui/ThemeToggle';
 import ThemedLogo from './ui/ThemedLogo';
 

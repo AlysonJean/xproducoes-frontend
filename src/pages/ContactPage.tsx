@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useRevealOnView } from '../hooks/useRevealOnView';
 import { apiFetch } from '../services/api';
 import { useNotifications } from '../contexts/NotificationContext';
-import LoadingSpinner from '../components/LoadingSpinner';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { PageLayout } from '../components/layouts/PageLayout';
 import { Button } from '../components/ui/StandardComponents';
 
