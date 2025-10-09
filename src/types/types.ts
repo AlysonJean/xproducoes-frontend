@@ -448,54 +448,8 @@ export interface ImageGalleryModalProps extends BaseModalProps {
 // ================================
 // INTERFACES PARA COMPONENTES UI
 // ================================
-
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
-
-export interface IButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-  size?: 'sm' | 'md' | 'lg';
-  isLoading?: boolean;
-  leftIcon?: ReactNode;
-  rightIcon?: ReactNode;
-  fullWidth?: boolean;
-}
-
-export interface LoadingSpinnerProps {
-  className?: string;
-  label?: string;
-  size?: 'sm' | 'md' | 'lg';
-}
-
-export interface PaginationProps {
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-  itemsPerPage?: number;
-  totalItems?: number;
-}
-
-export interface ThemeToggleProps {
-  size?: 'sm' | 'md' | 'lg';
-  showLabel?: boolean;
-  className?: string;
-}
-
-export interface FavoriteButtonProps {
-  equipmentId: string;
-  equipmentName: string;
-  className?: string;
-  size?: 'sm' | 'md' | 'lg';
-}
-
-export interface GoogleAuthButtonProps {
-  onSuccess?: (response: unknown) => void;
-  onFailure?: (error: unknown) => void;
-}
-
-export interface FacebookAuthButtonProps {
-  onSuccess?: (response: unknown) => void;
-  onFailure?: (error: unknown) => void;
-}
+// NOTA: Tipos de UI foram movidos para src/types/ui/index.ts
+// Importar de lá: import { IButtonProps, LoadingSpinnerProps } from '@/types/ui'
 
 // ================================
 // INTERFACES PARA LAYOUT

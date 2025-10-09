@@ -2,7 +2,7 @@
 
 
 import { Link, useNavigate } from 'react-router-dom';
-import { useCart } from '../../contexts/useCart';
+import { useCart } from '@/hooks/useCart';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { formatPrice } from '../../utils/formatPrice';
 import { apiFetch } from '../../services/api';

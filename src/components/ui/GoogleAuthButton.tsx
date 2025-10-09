@@ -1,5 +1,5 @@
 import React from 'react';
-import type { GoogleAuthButtonProps } from '../../types/types';
+import type { GoogleAuthButtonProps } from '@/types/ui';
 
 const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
   // Implemente a lógica de autenticação Google conforme necessário

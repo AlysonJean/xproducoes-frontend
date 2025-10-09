@@ -6,7 +6,7 @@ import { useNotifications } from '../contexts/NotificationContext';
 import { Link, useNavigate } from 'react-router-dom';
 import GoogleAuthButton from '../components/ui/GoogleAuthButton';
 import FacebookAuthButton from '../components/ui/FacebookAuthButton';
-import LoadingSpinner from '../components/LoadingSpinner';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { getDashboardRoute } from '../utils/authUtils';
 
 export const LoginPage = () => {

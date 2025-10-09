@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 import { apiFetch } from '../../services/api';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import type { GeminiSuggestionResponse } from '../../types/types';
 
 export const GeminiEventSuggester = () => {

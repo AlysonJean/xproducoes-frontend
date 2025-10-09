@@ -1,5 +1,5 @@
 import React from 'react';
-import { LoadingSpinnerProps } from '../../types/types';
+import { LoadingSpinnerProps } from '@/types/ui';
 
 const sizeMap = {
   sm: 'h-6 w-6',

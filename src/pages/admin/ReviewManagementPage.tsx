@@ -235,7 +235,7 @@ export default function ReviewManagementPage() {
                 totalPages={totalPages}
                 totalItems={totalItems}
                 itemsPerPage={perPage}
-                onPageChange={(p) => setPage(p)}
+                onPageChange={(p: number) => setPage(p)}
               />
             </div>
           )}

@@ -1,4 +1,4 @@
-import type { PaginationProps } from '../../types/types';
+import type { PaginationProps } from '@/types/ui';
 
 export const Pagination = ({
   currentPage,
