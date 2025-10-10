@@ -21,9 +21,16 @@ export const useAppSettings = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${API_BASE_URL}/api/settings`);
+      const response = await fetch(`${API_BASE_URL}/api/settings`, {
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      
       if (!response.ok) {
-        throw new Error('Erro ao carregar configurações');
+        // Se for 404 ou 500, usar fallback local sem mostrar erro
+        console.warn(`Backend settings unavailable (${response.status}), using local defaults`);
+        throw new Error('Backend unavailable');
       }
 
       const data = await response.json();
@@ -43,8 +50,8 @@ export const useAppSettings = () => {
         localStorage.setItem('companyName', data.companyName);
       }
     } catch (err) {
-      console.error('Erro ao carregar configurações:', err);
-      setError(err instanceof Error ? err.message : 'Erro desconhecido');
+      // Não mostrar erro ao usuário, apenas usar fallback
+      console.info('Using local fallback settings');
 
       // Fallback para localStorage se o backend falhar
       const logoUrl = localStorage.getItem('logoUrl') || '/xproducoes-logo.svg';
@@ -71,12 +78,32 @@ export const useAppSettings = () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify(updates),
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao salvar configurações');
+        // Se backend não disponível, salvar apenas no localStorage
+        console.warn(`Backend unavailable (${response.status}), saving to localStorage only`);
+        
+        if (updates.logoUrl !== undefined) {
+          localStorage.setItem('logoUrl', updates.logoUrl || '/xproducoes-logo.svg');
+        }
+        if (updates.companyName !== undefined) {
+          localStorage.setItem('companyName', updates.companyName || 'X Produçoes e Eventos');
+        }
+        
+        // Atualizar estado local
+        setSettings(prev => prev ? { ...prev, ...updates } : {
+          id: 'fallback',
+          logoUrl: updates.logoUrl || '/xproducoes-logo.svg',
+          companyName: updates.companyName || 'X Produçoes e Eventos',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        
+        return { success: true, source: 'localStorage' };
       }
 
       const updatedSettings = await response.json();
@@ -92,9 +119,26 @@ export const useAppSettings = () => {
 
       return updatedSettings;
     } catch (err) {
-      console.error('Erro ao salvar configurações:', err);
-      setError(err instanceof Error ? err.message : 'Erro desconhecido');
-      throw err;
+      console.warn('Failed to save to backend, using localStorage:', err);
+      
+      // Fallback: salvar no localStorage
+      if (updates.logoUrl !== undefined) {
+        localStorage.setItem('logoUrl', updates.logoUrl || '/xproducoes-logo.svg');
+      }
+      if (updates.companyName !== undefined) {
+        localStorage.setItem('companyName', updates.companyName || 'X Produçoes e Eventos');
+      }
+      
+      // Atualizar estado local
+      setSettings(prev => prev ? { ...prev, ...updates } : {
+        id: 'fallback',
+        logoUrl: updates.logoUrl || '/xproducoes-logo.svg',
+        companyName: updates.companyName || 'X Produçoes e Eventos',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      
+      return { success: true, source: 'localStorage' };
     }
   };
 
