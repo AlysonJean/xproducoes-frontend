@@ -51,11 +51,16 @@ export const useAppSettings = () => {
       }
     } catch (err) {
       // Não mostrar erro ao usuário, apenas usar fallback
-      console.info('Using local fallback settings');
+      console.info('Using fallback settings (backend unavailable)');
 
-      // Fallback para localStorage se o backend falhar
-      const logoUrl = localStorage.getItem('logoUrl') || '/xproducoes-logo.svg';
-      const companyName = localStorage.getItem('companyName') || 'X Produçoes e Eventos';
+      // Tentar pegar do localStorage (pode ter URL do Cloudinary salva)
+      const savedLogoUrl = localStorage.getItem('logoUrl');
+      const savedCompanyName = localStorage.getItem('companyName');
+      
+      // Se houver logo salva no localStorage (pode ser do Cloudinary), usar ela
+      // Caso contrário, usar logo local como último recurso
+      const logoUrl = savedLogoUrl || '/xproducoes-logo.svg';
+      const companyName = savedCompanyName || 'X Produçoes e Eventos';
 
       setSettings({
         id: 'fallback',
