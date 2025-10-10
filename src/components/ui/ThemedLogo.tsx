@@ -98,11 +98,20 @@ export const ThemedLogo: React.FC<ThemedLogoProps> = ({ src, className = '', tit
     }
   }, [src]);
 
-  // Para SVGs locais, renderizar direto sem fetch
-  const isLocalPath = useMemo(() => src.startsWith('/'), [src]);
+  // Verificar se é um caminho local (não Cloudinary, não URL externa)
+  const isLocalPath = useMemo(() => {
+    if (!src.startsWith('/')) return false;
+    // Verificar se não é uma URL absoluta disfarçada
+    try {
+      new URL(src);
+      return false; // É uma URL válida
+    } catch {
+      return true; // É um caminho relativo local
+    }
+  }, [src]);
 
   useEffect(() => {
-    // SVGs locais não precisam de fetch/sanitização
+    // SVGs locais (public/) não precisam de fetch/sanitização
     if (isLocalPath) {
       setIsLoading(false);
       setHasError(false);
@@ -197,29 +206,50 @@ export const ThemedLogo: React.FC<ThemedLogoProps> = ({ src, className = '', tit
   }
 
   if (hasError) {
+    // Tentar usar logo local como fallback final
     return (
-      <span className={`font-semibold text-foreground ${className}`}>
-        {title || 'X Produçoes e Eventos'}
-      </span>
+      <img
+        src="/xproducoes-logo.svg"
+        alt={title || 'Logo'}
+        className={`h-8 lg:h-10 w-auto object-contain ${className}`}
+        onError={(e) => {
+          // Se até a logo local falhar, mostrar texto
+          e.currentTarget.style.display = 'none';
+          const parent = e.currentTarget.parentElement;
+          if (parent) {
+            const textFallback = document.createElement('span');
+            textFallback.className = `font-semibold text-foreground ${className}`;
+            textFallback.textContent = title || 'X Produçoes e Eventos';
+            parent.appendChild(textFallback);
+          }
+        }}
+      />
     );
   }
 
   if (!inlineSvg) {
     // Fallback para <img> quando não for SVG ou falhar o fetch
+    // Usar SafeImage para ter fallback automático
     return (
       <img
         src={src}
         alt={title || 'Logo'}
         className={`h-8 lg:h-10 w-auto object-contain ${className}`}
         onError={(e) => {
-          console.error('Erro ao carregar imagem da logo:', src);
-          // Esconder a imagem quebrada e mostrar fallback de texto
-          e.currentTarget.style.display = 'none';
-          // Criar fallback de texto após esconder a imagem
-          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-          if (fallback) {
-            fallback.style.display = 'block';
-          }
+          console.warn('Failed to load logo from:', src, '- trying local fallback');
+          // Tentar logo local como fallback
+          e.currentTarget.src = '/xproducoes-logo.svg';
+          e.currentTarget.onerror = () => {
+            // Se até a logo local falhar, esconder
+            e.currentTarget.style.display = 'none';
+            const parent = e.currentTarget.parentElement;
+            if (parent) {
+              const textFallback = document.createElement('span');
+              textFallback.className = `font-semibold text-foreground ${className}`;
+              textFallback.textContent = title || 'X Produçoes e Eventos';
+              parent.appendChild(textFallback);
+            }
+          };
         }}
       />
     );
