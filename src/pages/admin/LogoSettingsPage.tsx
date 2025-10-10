@@ -15,6 +15,10 @@ export const LogoSettingsPage = () => {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState<string>(companyName);
   const [isSaving, setIsSaving] = useState(false);
+  const [lastSaveTime, setLastSaveTime] = useState<number>(0);
+
+  // Rate limiting: mínimo 3 segundos entre uploads
+  const MIN_SAVE_INTERVAL = 3000;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,6 +60,14 @@ export const LogoSettingsPage = () => {
 
   const handleSave = async () => {
     if (!newLogoFile && nameInput.trim() === companyName) return;
+    
+    // Rate limiting: previne múltiplos uploads em sequência
+    const now = Date.now();
+    if (now - lastSaveTime < MIN_SAVE_INTERVAL) {
+      setStatusMessage(`⏱️ Aguarde ${Math.ceil((MIN_SAVE_INTERVAL - (now - lastSaveTime)) / 1000)}s antes de salvar novamente.`);
+      return;
+    }
+    
     setStatusMessage(null);
     setIsSaving(true);
     try {
@@ -86,12 +98,19 @@ export const LogoSettingsPage = () => {
       if (nameInput.trim() && nameInput.trim() !== companyName) {
         setCompanyName(nameInput.trim());
       }
+      setLastSaveTime(Date.now());
       setStatusMessage('Logo e nome atualizados com sucesso!');
       setTimeout(() => setStatusMessage(null), 3000);
     } catch (err: any) {
       console.error('Upload error:', err);
-      const msg = (err?.message as string) || 'Erro ao salvar logo.';
-      setStatusMessage(`Erro ao salvar logo: ${msg}`);
+      
+      // Tratamento específico para rate limiting
+      if (err?.message?.includes('429') || err?.message?.includes('Too Many Requests')) {
+        setStatusMessage('⚠️ Muitas requisições. Aguarde alguns segundos e tente novamente.');
+      } else {
+        const msg = (err?.message as string) || 'Erro ao salvar logo.';
+        setStatusMessage(`Erro ao salvar logo: ${msg}`);
+      }
     } finally {
       setIsSaving(false);
     }

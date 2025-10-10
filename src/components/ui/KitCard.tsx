@@ -3,10 +3,14 @@
 import { Link } from 'react-router-dom';
 import type { KitCardProps } from '../../types/types';
 import { formatPrice } from '../../utils/typeSafeFormatters';
+import { normalizeImageUrl, getPlaceholderUrl } from '../../utils/imageUtils';
 import { FavoriteButton } from './FavoriteButton';
 import CompareButton from './CompareButton';
 
 export const KitCard: React.FC<KitCardProps> = ({ kit, showCompare = true, showFavorite = true, ...rest }) => {
+  // Normaliza URL do Cloudinary (converte "demo" cloud para local)
+  const imageUrl = normalizeImageUrl(kit.imageUrl) || getPlaceholderUrl(kit.name);
+
   return (
     <Link
       {...rest}
@@ -15,14 +19,11 @@ export const KitCard: React.FC<KitCardProps> = ({ kit, showCompare = true, showF
     >
   <div className="relative">
         <img
-          src={
-            kit.imageUrl ||
-            `https://placehold.co/600x400/1a202c/ffffff?text=${kit.name.replace(/\s/g, '+')}`
-          }
+          src={imageUrl}
           alt={`Imagem de ${kit.name}`}
           className="w-full h-48 object-cover"
           onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-            e.currentTarget.src = `https://placehold.co/600x400/1a202c/ffffff?text=Imagem+Indisponível`;
+            e.currentTarget.src = getPlaceholderUrl('Imagem Indisponível');
           }}
         />
         
