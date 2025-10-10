@@ -58,7 +58,7 @@ export function ThemeToggle({ showLabel = false, className = '' }: ThemeTogglePr
       
       {showLabel && (
         <span className="text-xs text-muted-foreground">
-          {isDark ? 'Claro' : 'Escuro'}
+          {isDark ? 'Escuro' : 'Claro'}
         </span>
       )}
     </div>

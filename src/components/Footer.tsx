@@ -169,19 +169,23 @@ export const Footer = () => {
           <div className="lg:col-span-2">
             <div className="flex items-center space-x-3 mb-6">
               {logoUrl ? (
+                // Quando há logo carregado, mostrar apenas o logo (persistente do Cloudinary)
                 <ThemedLogo
                   src={logoUrl}
                   title={companyName || 'Logo'}
                   className="h-12 w-auto text-foreground"
                 />
               ) : (
-                <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold text-xl">X</span>
-                </div>
+                // Fallback: ícone + nome quando não há logo
+                <>
+                  <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center">
+                    <span className="text-primary-foreground font-bold text-xl">X</span>
+                  </div>
+                  <span className="text-2xl font-bold heading-elegant">
+                    {companyName}
+                  </span>
+                </>
               )}
-              <span className="text-2xl font-bold heading-elegant">
-                {companyName}
-              </span>
             </div>
             
             <p className="text-muted-foreground mb-6 leading-relaxed">
