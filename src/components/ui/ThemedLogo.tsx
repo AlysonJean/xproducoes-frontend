@@ -76,6 +76,11 @@ export const ThemedLogo: React.FC<ThemedLogoProps> = ({ src, className = '', tit
   const [hasError, setHasError] = useState(false);
 
   const proxiedSrc = useMemo(() => {
+    // Se for um caminho local (começando com /), usar diretamente
+    if (src.startsWith('/')) {
+      return src;
+    }
+    
     try {
       const url = new URL(src);
       const isCloudinary = /(^|\.)cloudinary\.com$/i.test(url.hostname) ||
@@ -85,15 +90,13 @@ export const ThemedLogo: React.FC<ThemedLogoProps> = ({ src, className = '', tit
       if (isCloudinary) {
         const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
         const query = new URLSearchParams({ url: src });
-  return `${apiBase}/api/logo/svg-proxy?${query.toString()}`;
+        return `${apiBase}/api/logo/svg-proxy?${query.toString()}`;
       }
       return src;
     } catch {
       return src;
     }
-  }, [src]);
-
-  useEffect(() => {
+  }, [src]);  useEffect(() => {
     let isActive = true;
     setIsLoading(true);
     setHasError(false);

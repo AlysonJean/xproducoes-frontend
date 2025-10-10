@@ -27,6 +27,12 @@ export const useAppSettings = () => {
       }
 
       const data = await response.json();
+      
+      // Se não houver logo no backend, usar a logo local
+      if (!data.logoUrl) {
+        data.logoUrl = '/xproducoes-logo.svg';
+      }
+      
       setSettings(data);
 
       // Sincronizar com localStorage para compatibilidade
@@ -41,7 +47,7 @@ export const useAppSettings = () => {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
 
       // Fallback para localStorage se o backend falhar
-      const logoUrl = localStorage.getItem('logoUrl');
+      const logoUrl = localStorage.getItem('logoUrl') || '/xproducoes-logo.svg';
       const companyName = localStorage.getItem('companyName') || 'X Produçoes e Eventos';
 
       setSettings({
@@ -103,7 +109,7 @@ export const useAppSettings = () => {
     error,
     loadSettings,
     saveSettings,
-    logoUrl: settings?.logoUrl || null,
+    logoUrl: settings?.logoUrl || '/xproducoes-logo.svg',
     companyName: settings?.companyName || 'X Produçoes e Eventos'
   };
 };
