@@ -2,6 +2,7 @@
 
 import { Link } from 'react-router-dom';
 import { formatPrice } from '../../utils/typeSafeFormatters'; // Caminho correto
+import { normalizeImageUrl, getPlaceholderUrl } from '../../utils/imageUtils';
 import type { Equipment } from '../../types/types';
 import { FavoriteButton } from '../../components/ui/FavoriteButton';
 import CompareButton from '../../components/ui/CompareButton';
@@ -37,13 +38,15 @@ const EquipmentImage = memo(
       setImageError(true);
     }, []);
 
-    const fallbackUrl = `https://placehold.co/600x400/1f2937/ffffff?text=${encodeURIComponent(name)}`;
-    const errorUrl = 'https://placehold.co/600x400/1f2937/ffffff?text=Imagem+Indispon%C3%ADvel';
+    // Normaliza URLs do Cloudinary (converte "demo" para local)
+    const normalizedUrl = normalizeImageUrl(imageUrl);
+    const fallbackUrl = getPlaceholderUrl(name);
+    const errorUrl = getPlaceholderUrl('Imagem Indisponível');
 
     return (
       <div className="relative">
         <img
-          src={imageError ? errorUrl : imageUrl || fallbackUrl}
+          src={imageError ? errorUrl : normalizedUrl || fallbackUrl}
           alt={`Equipamento ${name}`}
           className="w-full h-48 object-cover"
           onError={handleImageError}
