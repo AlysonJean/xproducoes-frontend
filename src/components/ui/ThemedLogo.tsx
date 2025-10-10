@@ -96,7 +96,19 @@ export const ThemedLogo: React.FC<ThemedLogoProps> = ({ src, className = '', tit
     } catch {
       return src;
     }
-  }, [src]);  useEffect(() => {
+  }, [src]);
+
+  // Para SVGs locais, renderizar direto sem fetch
+  const isLocalPath = useMemo(() => src.startsWith('/'), [src]);
+
+  useEffect(() => {
+    // SVGs locais não precisam de fetch/sanitização
+    if (isLocalPath) {
+      setIsLoading(false);
+      setHasError(false);
+      return;
+    }
+    
     let isActive = true;
     setIsLoading(true);
     setHasError(false);
@@ -163,7 +175,18 @@ export const ThemedLogo: React.FC<ThemedLogoProps> = ({ src, className = '', tit
     return () => {
       isActive = false;
     };
-  }, [proxiedSrc]);
+  }, [proxiedSrc, isLocalPath]);
+
+  // Para caminhos locais, usar img diretamente
+  if (isLocalPath) {
+    return (
+      <img
+        src={src}
+        alt={title || 'Logo'}
+        className={`h-8 lg:h-10 w-auto object-contain ${className}`}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
