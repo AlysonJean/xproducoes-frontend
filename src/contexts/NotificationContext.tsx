@@ -1,4 +1,4 @@
-import { useState, useContext, createContext } from 'react';
+import { useState, useContext, createContext, useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
 
 export interface Notification {
@@ -34,7 +34,11 @@ interface NotificationProviderProps {
 export const NotificationProvider = ({ children }: NotificationProviderProps) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const addNotification = (notification: Omit<Notification, 'id'>) => {
+  const removeNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  const addNotification = useCallback((notification: Omit<Notification, 'id'>) => {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     const newNotification = { ...notification, id };
 
@@ -45,24 +49,22 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     setTimeout(() => {
       removeNotification(id);
     }, duration);
-  };
+  }, [removeNotification]);
 
-  const removeNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
-
-  const clearAll = () => {
+  const clearAll = useCallback(() => {
     setNotifications([]);
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    notifications,
+    addNotification,
+    removeNotification,
+    clearAll,
+  }), [notifications, addNotification, removeNotification, clearAll]);
 
   return (
     <NotificationContext.Provider
-      value={{
-        notifications,
-        addNotification,
-        removeNotification,
-        clearAll,
-      }}
+      value={value}
     >
       {children}
     </NotificationContext.Provider>

@@ -20,8 +20,8 @@ function getApiUrl(envVar: string, fallback: string) {
   return import.meta.env[envVar] || fallback;
 }
 
-const API_BASE_URL = getApiUrl('VITE_API_BASE_URL', 'http://localhost:4000/api/v1');
-const API_URL = getApiUrl('VITE_API_URL', 'http://localhost:4000');
+export const API_BASE_URL = getApiUrl('VITE_API_BASE_URL', 'http://localhost:4000/api/v1');
+export const API_URL = getApiUrl('VITE_API_URL', 'http://localhost:4000');
 
 // ✅ PRODUCTION-SAFE LOGGING
 logDebug('API Configuration', {
@@ -106,7 +106,6 @@ api.interceptors.response.use(
         // Try to refresh token
         const refreshToken = secureStorage.get('refreshToken');
         if (refreshToken) {
-          const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
           const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -165,7 +164,6 @@ export const apiFetch = async <T = unknown>(
       try {
         const refreshToken = secureStorage.get('refreshToken');
         if (refreshToken) {
-          const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
           const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -274,23 +272,23 @@ export const apiFetch = async <T = unknown>(
 // ===== 🔗 API ENDPOINTS =====
 
 export const equipmentAPI = {
-  getAll: () => api.get('/api/equipment'),
-  getById: (id: string) => api.get(`/api/equipment/${id}`),
-  create: (data: Record<string, unknown>) => api.post('/api/equipment', data),
-  update: (id: string, data: Record<string, unknown>) => api.put(`/api/equipment/${id}`, data),
-  delete: (id: string) => api.delete(`/api/equipment/${id}`),
-  search: (query: string) => api.get(`/api/equipment/search?q=${encodeURIComponent(query)}`),
-  getByCategory: (categoryId: string) => api.get(`/api/equipment/category/${categoryId}`),
+  getAll: () => api.get('/equipment'),
+  getById: (id: string) => api.get(`/equipment/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/equipment', data),
+  update: (id: string, data: Record<string, unknown>) => api.put(`/equipment/${id}`, data),
+  delete: (id: string) => api.delete(`/equipment/${id}`),
+  search: (query: string) => api.get(`/equipment/search?q=${encodeURIComponent(query)}`),
+  getByCategory: (categoryId: string) => api.get(`/equipment/category/${categoryId}`),
 };
 
 export const kitAPI = {
-  getAll: () => api.get('/api/kits'),
-  getById: (id: string) => api.get(`/api/kits/${id}`),
-  create: (data: Record<string, unknown>) => api.post('/api/kits', data),
-  update: (id: string, data: Record<string, unknown>) => api.put(`/api/kits/${id}`, data),
-  delete: (id: string) => api.delete(`/api/kits/${id}`),
-  getRecommended: () => api.get('/api/kits/recommended'),
-  getPopular: () => api.get('/api/kits/popular'),
+  getAll: () => api.get('/kits'),
+  getById: (id: string) => api.get(`/kits/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/kits', data),
+  update: (id: string, data: Record<string, unknown>) => api.put(`/kits/${id}`, data),
+  delete: (id: string) => api.delete(`/kits/${id}`),
+  getRecommended: () => api.get('/kits/recommended'),
+  getPopular: () => api.get('/kits/popular'),
 };
 
 export const categoryAPI = {
@@ -304,23 +302,23 @@ export const categoryAPI = {
 };
 
 export const bookingAPI = {
-  getAll: (filters?: Record<string, unknown>) => api.get('/api/bookings', { params: filters }),
-  getById: (id: string) => api.get(`/api/bookings/${id}`),
-  create: (data: Record<string, unknown>) => api.post('/api/bookings', data),
-  update: (id: string, data: Record<string, unknown>) => api.put(`/api/bookings/${id}`, data),
-  delete: (id: string) => api.delete(`/api/bookings/${id}`),
-  updateStatus: (id: string, status: string) => api.patch(`/api/bookings/${id}/status`, { status }),
-  confirm: (id: string) => api.post(`/api/bookings/${id}/confirm`),
+  getAll: (filters?: Record<string, unknown>) => api.get('/bookings', { params: filters }),
+  getById: (id: string) => api.get(`/bookings/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/bookings', data),
+  update: (id: string, data: Record<string, unknown>) => api.put(`/bookings/${id}`, data),
+  delete: (id: string) => api.delete(`/bookings/${id}`),
+  updateStatus: (id: string, status: string) => api.patch(`/bookings/${id}/status`, { status }),
+  confirm: (id: string) => api.post(`/bookings/${id}/confirm`),
   // Confirma a reserva com preço e colaboradores (admin)
   confirmWithDetails: (id: string, data: Record<string, unknown>) =>
-    api.put(`/api/bookings/${id}/confirm-details`, data),
-  cancel: (id: string, reason?: string) => api.post(`/api/bookings/${id}/cancel`, { reason }),
-  getMyBookings: () => api.get('/api/bookings/me'),
-  getUpcoming: () => api.get('/api/bookings/upcoming'),
-  getHistory: () => api.get('/api/bookings/history'),
-  getDashboardStats: () => api.get('/api/bookings/stats'),
+    api.put(`/bookings/${id}/confirm-details`, data),
+  cancel: (id: string, reason?: string) => api.post(`/bookings/${id}/cancel`, { reason }),
+  getMyBookings: () => api.get('/bookings/me'),
+  getUpcoming: () => api.get('/bookings/upcoming'),
+  getHistory: () => api.get('/bookings/history'),
+  getDashboardStats: () => api.get('/bookings/stats'),
   getCalendar: (month: string, year: string) =>
-    api.get(`/api/bookings/calendar?month=${month}&year=${year}`),
+    api.get(`/bookings/calendar?month=${month}&year=${year}`),
 };
 
 export const collaboratorsAPI = {
@@ -332,41 +330,44 @@ export const collaboratorsAPI = {
   // Enviar convite por e-mail (admin)
   invite: (email: string) => api.post('/admin/collaborators/invite', { email }),
   // Dashboard pessoal do colaborador
-  getMyDashboard: () => api.get('/api/collaborators/me/dashboard'),
+  getMyDashboard: () => api.get('/collaborators/me/dashboard'),
+  
+  // Meus pagamentos
+  getMyPayments: () => api.get('/collaborators/me/payments'),
 };
 
 export const authAPI = {
-  login: (email: string, password: string) => api.post('/api/auth/login', { email, password }),
-  register: (userData: Record<string, unknown>) => api.post('/api/auth/register', userData),
+  login: (email: string, password: string) => api.post('/auth/login', { email, password }),
+  register: (userData: Record<string, unknown>) => api.post('/auth/register', userData),
   // Registro público a partir de um convite (token)
   registerFromInvite: (data: { token: string; email: string; name: string; password: string }) =>
-    api.post('/api/auth/register-from-invite', data),
-  logout: () => api.post('/api/auth/logout'),
-  refresh: (refreshToken: string) => api.post('/api/auth/refresh', { refreshToken }),
-  getProfile: () => api.get('/api/auth/profile'),
-  getStats: () => api.get('/api/user/stats'),
-  getFavorites: () => api.get('/api/user/favorites'),
-  updateProfile: (data: Record<string, unknown>) => api.put('/api/auth/profile', data),
+    api.post('/auth/register-from-invite', data),
+  logout: () => api.post('/auth/logout'),
+  refresh: (refreshToken: string) => api.post('/auth/refresh', { refreshToken }),
+  getProfile: () => api.get('/auth/profile'),
+  getStats: () => api.get('/user/stats'),
+  getFavorites: () => api.get('/user/favorites'),
+  updateProfile: (data: Record<string, unknown>) => api.put('/auth/profile', data),
   changePassword: (currentPassword: string, newPassword: string) =>
-    api.post('/api/auth/change-password', { currentPassword, newPassword }),
-  requestPasswordReset: (email: string) => api.post('/api/auth/request-reset', { email }),
+    api.post('/auth/change-password', { currentPassword, newPassword }),
+  requestPasswordReset: (email: string) => api.post('/auth/request-reset', { email }),
   resetPassword: (token: string, newPassword: string) =>
-    api.post('/api/auth/reset-password', { token, newPassword }),
-  googleLogin: (token: string) => api.post('/api/auth/google', { token }),
-  facebookLogin: (token: string) => api.post('/api/auth/facebook', { token }),
+    api.post('/auth/reset-password', { token, newPassword }),
+  googleLogin: (token: string) => api.post('/auth/google', { token }),
+  facebookLogin: (token: string) => api.post('/auth/facebook', { token }),
 };
 
 export const reviewAPI = {
-  getAll: (filters?: Record<string, unknown>) => api.get('/api/reviews', { params: filters }),
-  getByEquipment: (equipmentId: string) => api.get(`/api/reviews/equipment/${equipmentId}`),
-  getByUser: (userId?: string) => api.get(`/api/reviews/user/${userId || 'me'}`),
-  create: (data: Record<string, unknown>) => api.post('/api/reviews', data),
-  update: (id: string, data: Record<string, unknown>) => api.put(`/api/reviews/${id}`, data),
-  delete: (id: string) => api.delete(`/api/reviews/${id}`),
-  approve: (id: string) => api.post(`/api/reviews/${id}/approve`),
-  reject: (id: string) => api.post(`/api/reviews/${id}/reject`),
-  getStats: () => api.get('/api/reviews/stats'),
-  getRecent: (limit: number = 5) => api.get(`/api/reviews/recent?limit=${limit}`),
+  getAll: (filters?: Record<string, unknown>) => api.get('/reviews', { params: filters }),
+  getByEquipment: (equipmentId: string) => api.get(`/reviews/equipment/${equipmentId}`),
+  getByUser: (userId?: string) => api.get(`/reviews/user/${userId || 'me'}`),
+  create: (data: Record<string, unknown>) => api.post('/reviews', data),
+  update: (id: string, data: Record<string, unknown>) => api.put(`/reviews/${id}`, data),
+  delete: (id: string) => api.delete(`/reviews/${id}`),
+  approve: (id: string) => api.post(`/reviews/${id}/approve`),
+  reject: (id: string) => api.post(`/reviews/${id}/reject`),
+  getStats: () => api.get('/reviews/stats'),
+  getRecent: (limit: number = 5) => api.get(`/reviews/recent?limit=${limit}`),
 };
 
 export const portfolioAPI = {
@@ -430,57 +431,63 @@ export default api;
 
 export const collaboratorProfileAPI = {
   // Obter perfil do colaborador atual
-  getMyProfile: () => api.get('/api/collaborators/me/profile'),
+  getMyProfile: () => api.get('/collaborators/me/profile'),
   
   // Atualizar perfil do colaborador
-  updateProfile: (data: Record<string, unknown>) => api.put('/api/collaborators/me/profile', data),
+  updateProfile: (data: Record<string, unknown>) => api.put('/collaborators/me/profile', data),
   
   // Upload de avatar
-  uploadAvatar: (formData: FormData) => api.post('/api/collaborators/me/avatar', formData, {
+  uploadAvatar: (formData: FormData) => api.post('/upload/avatar', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
   
   // Obter portfólio do colaborador
-  getPortfolio: () => api.get('/api/collaborators/me/portfolio'),
+  getPortfolio: () => api.get('/collaborators/me/portfolio'),
   
   // Adicionar item ao portfólio
-  addPortfolioItem: (data: Record<string, unknown>) => api.post('/api/collaborators/me/portfolio', data),
+  addPortfolioItem: (data: Record<string, unknown>) => api.post('/collaborators/me/portfolio', data),
   
   // Atualizar item do portfólio
   updatePortfolioItem: (id: string, data: Record<string, unknown>) => 
-    api.put(`/api/collaborators/me/portfolio/${id}`, data),
+    api.put(`/collaborators/me/portfolio/${id}`, data),
   
   // Remover item do portfólio
-  deletePortfolioItem: (id: string) => api.delete(`/api/collaborators/me/portfolio/${id}`),
+  deletePortfolioItem: (id: string) => api.delete(`/collaborators/me/portfolio/${id}`),
   
   // Upload de imagem do portfólio
   uploadPortfolioImage: (id: string, formData: FormData) => 
-    api.post(`/api/collaborators/me/portfolio/${id}/images`, formData, {
+    api.post(`/collaborators/me/portfolio/${id}/images`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
   
   // Obter configurações do colaborador
-  getSettings: () => api.get('/api/collaborators/me/settings'),
+  getSettings: () => api.get('/collaborators/me/settings'),
   
   // Atualizar configurações
-  updateSettings: (data: Record<string, unknown>) => api.put('/api/collaborators/me/settings', data),
+  updateSettings: (data: Record<string, unknown>) => api.put('/collaborators/me/settings', data),
   
   // Obter estatísticas do colaborador
-  getStats: () => api.get('/api/collaborators/me/stats'),
+  getStats: () => api.get('/collaborators/me/stats'),
+
+  // Obter todos os eventos do colaborador
+  getMyEvents: () => api.get('/collaborators/me/events'),
+
+  // Obter notificações do colaborador
+  getMyNotifications: () => api.get('/collaborators/me/notifications'),
   
   // Obter disponibilidade
-  getAvailability: () => api.get('/api/collaborators/me/availability'),
+  getAvailability: () => api.get('/collaborators/me/availability'),
   
   // Atualizar disponibilidade
-  updateAvailability: (data: Record<string, unknown>) => api.put('/api/collaborators/me/availability', data),
+  updateAvailability: (data: Record<string, unknown>) => api.put('/collaborators/me/availability', data),
   
   // Obter avaliações recebidas
   getReviews: (page?: number, limit?: number) => 
-    api.get(`/api/collaborators/me/reviews?page=${page || 1}&limit=${limit || 10}`),
+    api.get(`/collaborators/me/reviews?page=${page || 1}&limit=${limit || 10}`),
   
   // Responder a uma avaliação
   respondToReview: (reviewId: string, response: string) => 
-    api.post(`/api/collaborators/me/reviews/${reviewId}/respond`, { response }),
+    api.post(`/collaborators/me/reviews/${reviewId}/respond`, { response }),
 };
 
 // ✅ API DE MENSAGENS PARA COLABORADORES

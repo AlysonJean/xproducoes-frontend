@@ -98,7 +98,7 @@ export interface ResourceUsage {
 export const monitoringAPI = {
   // Dashboard executivo
   getDashboard: (): Promise<DashboardData> => 
-  api.get('/api/monitoring/dashboard').then(res => res.data),
+  api.get('/monitoring/dashboard').then(res => res.data),
 
   // Health checks
   getHealthSummary: (): Promise<HealthSummary> => 

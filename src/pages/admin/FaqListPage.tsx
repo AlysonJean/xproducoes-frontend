@@ -16,7 +16,7 @@ export const FaqListPage = () => {
   const fetchFaqs = async () => {
     try {
       setLoading(true);
-  const data = await apiFetch('/api/faq');
+  const data = await apiFetch('/faq');
   setFaqs(asArray<FaqItem>(data));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar FAQ');

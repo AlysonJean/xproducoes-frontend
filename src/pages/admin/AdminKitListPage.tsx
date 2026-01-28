@@ -19,7 +19,7 @@ export const AdminKitListPage = () => {
   const fetchKits = async () => {
     try {
       setLoading(true);
-  const data = await apiFetch('/api/kits');
+  const data = await apiFetch('/kits');
   setKits(asArray<Kit>(data));
     } catch (err) {
       setError('Erro ao carregar kits.');

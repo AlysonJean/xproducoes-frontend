@@ -23,7 +23,7 @@ export const PortfolioListPage = () => {
     try {
       setLoading(true);
       setError(null);
-  const data = await apiFetch('/api/portfolio');
+  const data = await apiFetch('/portfolio');
   setItems(asArray<PortfolioItem>(data));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar itens do portfólio');

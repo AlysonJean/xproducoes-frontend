@@ -78,10 +78,19 @@ const CollaboratorProfilePage: React.FC = () => {
     }
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      alert('Upload de avatar será implementado em breve!');
+      try {
+        const formData = new FormData();
+        formData.append('avatar', file);
+        
+        await collaboratorProfileAPI.uploadAvatar(formData);
+        await loadProfile(); // Recarrega o perfil para mostrar a nova foto
+      } catch (error) {
+        console.error('Erro no upload:', error);
+        alert('Erro ao atualizar avatar.');
+      }
     }
   };
 
@@ -182,24 +191,27 @@ const CollaboratorProfilePage: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{profile.totalEvents ?? 0}</div>
-                <div className="text-sm text-gray-600">Eventos Totais</div>
+              <div className="bg-white rounded-lg p-6 border shadow-sm space-y-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-4 text-center">Estatísticas</h3>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">{profile.totalEvents ?? 0}</div>
+                    <div className="text-sm font-medium text-gray-600 mt-1">Eventos Totais</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">{profile.completedEvents ?? 0}</div>
+                    <div className="text-sm font-medium text-gray-600 mt-1">Concluídos</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <div className="text-2xl font-bold text-purple-600">R$ {(Number(profile.totalEarnings) || 0).toFixed(2)}</div>
+                    <div className="text-sm font-medium text-gray-600 mt-1">Total Ganho</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <div className="text-2xl font-bold text-orange-600">R$ {(Number(profile.hourlyRate) || 0).toFixed(2)}/h</div>
+                    <div className="text-sm font-medium text-gray-600 mt-1">Valor/Hora</div>
+                  </div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{profile.completedEvents ?? 0}</div>
-                <div className="text-sm text-gray-600">Eventos Concluídos</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">R$ {(profile.totalEarnings ?? 0).toFixed(2)}</div>
-                <div className="text-sm text-gray-600">Total Ganho</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">R$ {(profile.hourlyRate ?? 0).toFixed(2)}/h</div>
-                <div className="text-sm text-gray-600">Valor/Hora</div>
-              </div>
-            </div>
 
             {profile.user?.bio && <p className="text-gray-700">{profile.user.bio}</p>}
           </div>

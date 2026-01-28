@@ -75,7 +75,7 @@ export const HomePage = () => {
       queryParams.append('page', page.toString());
       queryParams.append('limit', '12');
 
-  const response = await apiFetch(`/api/equipments/search?${queryParams.toString()}`);
+      const response = await apiFetch(`/equipments/search?${queryParams.toString()}`);
       
       // Verificar se a resposta tem o formato esperado { data, pagination } ou é um array direto
       let equipmentsData: Equipment[];
@@ -133,9 +133,9 @@ export const HomePage = () => {
     setError(null);
     try {
   const [catsData, kitsData, portfolioData] = await Promise.all([
-  apiFetch('/api/categories'),
-  apiFetch('/api/kits?limit=4'),
-  apiFetch('/api/portfolio?limit=3'),
+  apiFetch('/categories'),
+  apiFetch('/kits?limit=4'),
+  apiFetch('/portfolio?limit=3'),
       ]);
 
   setCategories(catsData as Category[]);
@@ -155,10 +155,10 @@ export const HomePage = () => {
       // Preferir endpoint recente para limitar quantidade, caindo para /reviews/public
       let data: any[] | null = null;
       try {
-  data = await apiFetch('/api/reviews/recent?limit=8');
+  data = await apiFetch('/reviews/recent?limit=8');
       } catch {
         // fallback
-  data = await apiFetch('/api/reviews/public');
+  data = await apiFetch('/reviews/public');
       }
       // Normalizar campos esperados pelo TestimonialCard
       const normalized = (data || []).map((r: any) => ({

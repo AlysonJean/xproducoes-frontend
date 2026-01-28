@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { normalizeString } from '../../utils/string';
+import { API_BASE_URL } from '../../services/api';
 
 interface ThemedLogoProps {
   src: string;
@@ -88,9 +89,8 @@ export const ThemedLogo: React.FC<ThemedLogoProps> = ({ src, className = '', tit
 
       // Para Cloudinary, usar proxy para checar Content-Type e inline SVG
       if (isCloudinary) {
-        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
         const query = new URLSearchParams({ url: src });
-        return `${apiBase}/api/logo/svg-proxy?${query.toString()}`;
+        return `${API_BASE_URL}/logo/svg-proxy?${query.toString()}`;
       }
       return src;
     } catch {
@@ -126,7 +126,7 @@ export const ThemedLogo: React.FC<ThemedLogoProps> = ({ src, className = '', tit
     // Tentar buscar e detectar se é SVG pelo Content-Type ou conteúdo
     // Adicionar header x-svg-proxy-token se for proxy Cloudinary
     const fetchOptions: RequestInit = {};
-  if (proxiedSrc.includes('/api/logo/svg-proxy?')) {
+    if (proxiedSrc.includes('/logo/svg-proxy')) {
       fetchOptions.headers = {
         'x-svg-proxy-token': import.meta.env.VITE_SVG_PROXY_TOKEN || 'svg-proxy-dev-token',
       };

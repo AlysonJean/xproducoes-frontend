@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiFetch } from '../services/api';
 
 interface AppSettings {
   id: string;
@@ -7,8 +8,6 @@ interface AppSettings {
   createdAt: string;
   updatedAt: string;
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 export const useAppSettings = () => {
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -21,19 +20,7 @@ export const useAppSettings = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${API_BASE_URL}/api/settings`, {
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        // Se for 404 ou 500, usar fallback local sem mostrar erro
-        console.warn(`Backend settings unavailable (${response.status}), using local defaults`);
-        throw new Error('Backend unavailable');
-      }
-
-      const data = await response.json();
+      const data = await apiFetch<AppSettings>('/settings');
       
       // Se não houver logo no backend, usar a logo local
       if (!data.logoUrl) {
@@ -60,7 +47,7 @@ export const useAppSettings = () => {
       // Se houver logo salva no localStorage (pode ser do Cloudinary), usar ela
       // Caso contrário, usar logo local como último recurso
       const logoUrl = savedLogoUrl || '/xproducoes-logo.svg';
-      const companyName = savedCompanyName || 'X Produçoes e Eventos';
+      const companyName = savedCompanyName || 'X Produções e Eventos';
 
       setSettings({
         id: 'fallback',
@@ -79,73 +66,46 @@ export const useAppSettings = () => {
     try {
       setError(null);
 
-      const response = await fetch(`${API_BASE_URL}/api/settings`, {
+      const data = await apiFetch<AppSettings>('/settings', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
         body: JSON.stringify(updates),
       });
 
-      if (!response.ok) {
-        // Se backend não disponível, salvar apenas no localStorage
-        console.warn(`Backend unavailable (${response.status}), saving to localStorage only`);
-        
-        if (updates.logoUrl !== undefined) {
-          localStorage.setItem('logoUrl', updates.logoUrl || '/xproducoes-logo.svg');
-        }
-        if (updates.companyName !== undefined) {
-          localStorage.setItem('companyName', updates.companyName || 'X Produçoes e Eventos');
-        }
-        
-        // Atualizar estado local
-        setSettings(prev => prev ? { ...prev, ...updates } : {
-          id: 'fallback',
-          logoUrl: updates.logoUrl || '/xproducoes-logo.svg',
-          companyName: updates.companyName || 'X Produçoes e Eventos',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-        
-        return { success: true, source: 'localStorage' };
-      }
-
-      const updatedSettings = await response.json();
-      setSettings(updatedSettings);
-
-      // Sincronizar com localStorage
-      if (updatedSettings.logoUrl) {
-        localStorage.setItem('logoUrl', updatedSettings.logoUrl);
-      }
-      if (updatedSettings.companyName) {
-        localStorage.setItem('companyName', updatedSettings.companyName);
-      }
-
-      return updatedSettings;
-    } catch (err) {
-      console.warn('Failed to save to backend, using localStorage:', err);
+      // Atualizar estado local
+      setSettings(data);
       
-      // Fallback: salvar no localStorage
+      // Sincronizar com localStorage
+      if (data.logoUrl) {
+        localStorage.setItem('logoUrl', data.logoUrl);
+      }
+      if (data.companyName) {
+        localStorage.setItem('companyName', data.companyName);
+      }
+      
+      return data;
+    } catch (err: any) {
+      console.warn(`Backend unavailable (${err.message}), saving to localStorage only`);
+      
+      // Salvar localmente como fallback
       if (updates.logoUrl !== undefined) {
         localStorage.setItem('logoUrl', updates.logoUrl || '/xproducoes-logo.svg');
       }
       if (updates.companyName !== undefined) {
-        localStorage.setItem('companyName', updates.companyName || 'X Produçoes e Eventos');
+        localStorage.setItem('companyName', updates.companyName || 'X Produções e Eventos');
       }
-      
-      // Atualizar estado local
-      setSettings(prev => prev ? { ...prev, ...updates } : {
-        id: 'fallback',
-        logoUrl: updates.logoUrl || '/xproducoes-logo.svg',
-        companyName: updates.companyName || 'X Produçoes e Eventos',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+
+      // Atualizar estado local com valores salvos
+      setSettings((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          ...updates,
+          updatedAt: new Date().toISOString()
+        } as AppSettings;
       });
-      
-      return { success: true, source: 'localStorage' };
     }
   };
+
 
   // Carregar configurações na inicialização
   useEffect(() => {

@@ -77,7 +77,7 @@ export const Header = () => {
               <ThemedLogo
                 src={logoUrl}
                 title={companyName || 'Logo'}
-                className="h-10 w-auto sm:h-12 lg:h-14 max-w-[200px] sm:max-w-[250px] lg:max-w-[300px] transition-all duration-300 group-hover:brightness-110 text-foreground"
+                className="h-12 w-auto sm:h-14 lg:h-16 max-w-[220px] sm:max-w-[280px] lg:max-w-[350px] transition-all duration-300 group-hover:brightness-110 text-foreground"
               />
             ) : (
               /* Fallback: mostra ícone + nome quando não há logo */

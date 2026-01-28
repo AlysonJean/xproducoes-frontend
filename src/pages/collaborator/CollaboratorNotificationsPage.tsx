@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
 import { SimpleCard } from '../../components/ui/Cards';
+import { collaboratorProfileAPI } from '../../services/api';
 
 interface Notification {
   id: string;
@@ -64,49 +65,31 @@ const CollaboratorNotificationsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'notifications' | 'settings'>('notifications');
 
   useEffect(() => {
-    // Simular carregamento de dados
-    const timer = setTimeout(() => {
-      setNotifications([
-        {
-          id: '1',
-          type: 'booking',
-          title: 'Novo Agendamento',
-          message: 'Maria Silva agendou um casamento para 15/03/2024 às 14:00h.',
-          timestamp: '2024-03-10T10:30:00Z',
-          isRead: false,
-          priority: 'high',
-          actionUrl: '/collaborator/bookings/123'
-        },
-        {
-          id: '2',
-          type: 'payment',
-          title: 'Pagamento Recebido',
-          message: 'Pagamento de R$ 2.500,00 referente ao evento de João Santos foi confirmado.',
-          timestamp: '2024-03-10T09:15:00Z',
-          isRead: false,
-          priority: 'medium'
-        },
-        {
-          id: '3',
-          type: 'message',
-          title: 'Nova Mensagem',
-          message: 'Ana Costa enviou uma mensagem sobre o evento de formatura.',
-          timestamp: '2024-03-09T16:45:00Z',
-          isRead: true,
-          priority: 'medium',
-          actionUrl: '/collaborator/messages/456'
-        },
-        {
-          id: '4',
-          type: 'system',
-          title: 'Atualização do Sistema',
-          message: 'Nova versão disponível com melhorias na agenda.',
-          timestamp: '2024-03-09T08:00:00Z',
-          isRead: true,
-          priority: 'low'
-        },
-      ]);
+    loadNotifications();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  const loadNotifications = async () => {
+    try {
+      setLoading(true);
+      const response = await collaboratorProfileAPI.getMyNotifications();
+      // Ajuste conforme a estrutura real da resposta do backend
+      const loadedNotifications = response.data?.data ?? response.data ?? [];
+      
+      const mapped = Array.isArray(loadedNotifications) ? loadedNotifications.map((n: any) => ({
+        id: n.id,
+        type: (n.type || 'system').toLowerCase() as any,
+        title: n.title,
+        message: n.message,
+        timestamp: n.createdAt,
+        isRead: n.read,
+        priority: (n.important ? 'high' : 'medium') as 'high' | 'medium' | 'low',
+        actionUrl: n.actionUrl
+      })) : [];
+      
+      setNotifications(mapped);
+
+      // Mocks para settings (idealmente viria do backend também)
       setSettings({
         email: {
           newBookings: true,
@@ -133,12 +116,12 @@ const CollaboratorNotificationsPage: React.FC = () => {
           frequency: 'immediate'
         }
       });
-
+    } catch (error) {
+      console.error('Erro ao carregar notificações:', error);
+    } finally {
       setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -508,6 +491,7 @@ const CollaboratorNotificationsPage: React.FC = () => {
                       checked={settings.email.messageReceived}
                       onChange={(e) => handleSettingsChange('email', 'messageReceived', e.target.checked)}
                       className="sr-only peer"
+                      aria-label="Ativar notificações de novas mensagens por e-mail"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
@@ -534,6 +518,7 @@ const CollaboratorNotificationsPage: React.FC = () => {
                         checked={settings.push.newBookings}
                         onChange={(e) => handleSettingsChange('push', 'newBookings', e.target.checked)}
                         className="sr-only peer"
+                        aria-label="Ativar notificações push para novos agendamentos"
                       />
                       <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                     </label>
@@ -547,6 +532,7 @@ const CollaboratorNotificationsPage: React.FC = () => {
                         checked={settings.push.paymentReceived}
                         onChange={(e) => handleSettingsChange('push', 'paymentReceived', e.target.checked)}
                         className="sr-only peer"
+                        aria-label="Ativar notificações push para pagamentos"
                       />
                       <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                     </label>
@@ -560,6 +546,7 @@ const CollaboratorNotificationsPage: React.FC = () => {
                         checked={settings.push.messageReceived}
                         onChange={(e) => handleSettingsChange('push', 'messageReceived', e.target.checked)}
                         className="sr-only peer"
+                        aria-label="Ativar notificações push para mensagens"
                       />
                       <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                     </label>
@@ -573,6 +560,7 @@ const CollaboratorNotificationsPage: React.FC = () => {
                         checked={settings.push.systemUpdates}
                         onChange={(e) => handleSettingsChange('push', 'systemUpdates', e.target.checked)}
                         className="sr-only peer"
+                        aria-label="Ativar notificações push para sistema"
                       />
                       <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                     </label>
@@ -601,6 +589,7 @@ const CollaboratorNotificationsPage: React.FC = () => {
                         enabled: e.target.checked
                       })}
                       className="sr-only peer"
+                      aria-label="Ativar horário silencioso"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
@@ -612,6 +601,7 @@ const CollaboratorNotificationsPage: React.FC = () => {
                       <label className="block text-sm font-medium mb-1">Início</label>
                       <input
                         type="time"
+                        aria-label="Horário de início"
                         value={settings.preferences.quietHours.start}
                         onChange={(e) => handleSettingsChange('preferences', 'quietHours', {
                           ...settings.preferences.quietHours,
@@ -624,6 +614,7 @@ const CollaboratorNotificationsPage: React.FC = () => {
                       <label className="block text-sm font-medium mb-1">Fim</label>
                       <input
                         type="time"
+                        aria-label="Horário de fim"
                         value={settings.preferences.quietHours.end}
                         onChange={(e) => handleSettingsChange('preferences', 'quietHours', {
                           ...settings.preferences.quietHours,

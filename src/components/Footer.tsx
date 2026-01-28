@@ -190,7 +190,7 @@ export const Footer = () => {
             
             <p className="text-muted-foreground mb-6 leading-relaxed">
               Transformamos suas ideias em eventos inesquecíveis. 
-              Equipamentos de qualidade profissional e atendimento excepcional desde 2020.
+              Equipamentos de qualidade profissional e atendimento excepcional desde 2015.
             </p>
             
       {/* Contact Info */}
@@ -248,7 +248,7 @@ export const Footer = () => {
                 © {new Date().getFullYear()} X Produçoes e Eventos. Todos os direitos reservados.
               </p>
               <p className="text-xs text-muted-foreground/70 mt-1">
-                Desenvolvido com ❤️ por nossa equipe interna
+                Desenvolvido com ❤️ por Alyson Jean (31) 97580-8477 
               </p>
             </div>
 

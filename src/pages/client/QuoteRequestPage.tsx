@@ -102,10 +102,19 @@ export const QuoteRequestPage: React.FC = () => {
       const createdBooking: Booking | null = resp?.data?.data ?? resp?.data ?? null;
       try { await clearCart(); } catch (e) { console.warn('Erro ao limpar carrinho', e); }
       addNotification({ type: 'success', title: 'Pedido salvo', message: 'O pedido foi salvo como pendente.' });
+      
+      const statePayload = { 
+        booking: createdBooking, 
+        formData: data,
+        // Passar itens do carrinho explicitamente para garantir que o WhatsApp tenha os nomes corretos
+        // pois o retorno da API pode não trazer as relações carregadas
+        cartItems: kitId ? [{ name: (cart as any)?.kit?.name ? `Kit: ${(cart as any)?.kit?.name}` : 'Kit Selecionado' }] : items
+      };
+
       if (createdBooking?.id) {
-        navigate(`/booking-success/${createdBooking.id}`, { state: { booking: createdBooking, formData: data } });
+        navigate(`/booking-success/${createdBooking.id}`, { state: statePayload });
       } else {
-        navigate('/booking-success', { state: { booking: createdBooking, formData: data } });
+        navigate('/booking-success', { state: statePayload });
       }
     } catch (err: any) {
       console.error('Erro ao criar booking', err);

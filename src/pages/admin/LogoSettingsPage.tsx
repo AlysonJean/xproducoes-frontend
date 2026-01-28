@@ -81,8 +81,8 @@ export const LogoSettingsPage = () => {
         const formData = new FormData();
         formData.append('logo', newLogoFile);
         
-  console.log('Sending request to /api/logo...');
-  const response = await apiFetch('/api/logo', { method: 'POST', body: formData });
+  console.log('Sending request to /logo...');
+  const response = await apiFetch('/logo', { method: 'POST', body: formData });
         console.log('Response received:', response);
         
         if ((response as any).logoUrl) {

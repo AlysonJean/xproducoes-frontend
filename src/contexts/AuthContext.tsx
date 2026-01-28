@@ -5,6 +5,17 @@ import { secureStorage } from '../utils/secureStorage';
 import { logger } from '../utils/logger';
 import { sentry } from '../main';
 
+// Helper para garantir URL consistente
+const getApiBaseUrl = () => {
+  // Se definido no ambiente, usa (removendo slash final se existir)
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl) {
+    return envUrl.endsWith('/') ? envUrl.slice(0, -1) : envUrl;
+  }
+  // Fallback padrão alinhado com api.ts
+  return 'http://localhost:4000/api/v1';
+};
+
 export interface AuthUser {
   id: string;
   role: string;
@@ -109,8 +120,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       logger.info('Refreshing access token', 'AuthContext');
 
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+      const API_BASE_URL = getApiBaseUrl();
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -197,7 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Atualiza o estado local imediatamente para refletir que já temos tokens
           setTokens(savedTokens);
 
-          const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+          const API_BASE_URL = getApiBaseUrl();
 
           // Determinar se o token está expirado usando os savedTokens (evita depender do state que atualiza assincronamente)
           const expired = Date.now() >= savedTokens.expiresAt;
@@ -206,7 +217,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const tryRefreshWith = async (refreshTok: string | undefined) => {
             if (!refreshTok) return false;
             try {
-              const refreshResponse = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+              const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refreshToken: refreshTok }),
@@ -226,7 +237,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setTokens(newTokens);
 
               // Buscar perfil do usuário com o novo token
-              const meResp = await fetch(`${API_BASE_URL}/api/auth/me`, {
+              const meResp = await fetch(`${API_BASE_URL}/auth/me`, {
                 headers: { Authorization: `Bearer ${newTokens.accessToken}`, 'Content-Type': 'application/json' },
               });
               if (meResp.ok) {
@@ -246,7 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (!expired) {
             // Validar access token diretamente usando savedTokens
             try {
-              const resp = await fetch(`${API_BASE_URL}/api/auth/me`, {
+              const resp = await fetch(`${API_BASE_URL}/auth/me`, {
                 headers: { Authorization: `Bearer ${savedTokens.accessToken}`, 'Content-Type': 'application/json' },
               });
 
@@ -318,8 +329,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       // Para OAuth, assumimos que o token é válido e contém user info
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      const API_BASE_URL = getApiBaseUrl();
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -373,15 +384,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithCredentials = async (data: { email: string; password: string }): Promise<string> => {
     setIsLoading(true);
     try {
-      logger.info('Attempting credential login', 'AuthContext', { email: data.email });
+      const formattedEmail = data.email.toLowerCase().trim();
+      logger.info('Attempting credential login', 'AuthContext', { email: formattedEmail });
 
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      // Use the api service instead of raw fetch to ensure consistency
+      // This handles base URL, interceptors, etc.
+      /* 
+         NOTE: We are using direct fetch here to avoid circular dependencies or 
+         interceptor issues during login, but we must respect the correct API_BASE_URL.
+      */
+      
+      const baseUrl = getApiBaseUrl();
+      
+      // Let's log the attempt for debugging
+      const loginUrl = `${baseUrl}/auth/login`;
+      console.log('Login URL:', loginUrl); 
+
+      const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, email: formattedEmail }),
       });
 
       if (!response.ok) {

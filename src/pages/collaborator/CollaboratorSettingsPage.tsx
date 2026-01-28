@@ -4,95 +4,138 @@ import {
   Lock, 
   CreditCard, 
   Shield, 
-  Eye,
-  EyeOff,
   Save,
   Camera,
   Upload,
-  Trash2
+  Eye,
+  EyeOff,
+  Trash2,
 } from 'lucide-react';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
 import { SimpleCard } from '../../components/ui/Cards';
+import { collaboratorProfileAPI, authAPI } from '../../services/api';
 
 import { ProfileSettings, SecuritySettings, PrivacySettings, PaymentSettings } from '@/types/types';
 
 const CollaboratorSettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'privacy' | 'payment'>('profile');
   const [profileSettings, setProfileSettings] = useState<ProfileSettings | null>(null);
-  const [securitySettings, setSecuritySettings] = useState<SecuritySettings | null>(null);
+  const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+    twoFactorEnabled: false,
+    loginNotifications: true
+  });
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings | null>(null);
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    // Simular carregamento de dados
-    const timer = setTimeout(() => {
-      setProfileSettings({
-        name: 'João Silva',
-        email: 'joao.silva@email.com',
-        phone: '(11) 98765-4321',
-        bio: 'Fotógrafo especializado em eventos sociais e corporativos. Mais de 10 anos de experiência.',
-        specialties: ['Casamentos', 'Formaturas', 'Aniversários', 'Eventos Corporativos'],
-        profileImage: '/uploads/profile.jpg',
-        location: 'São Paulo, SP',
-        website: 'www.joaosilva.com.br'
-      });
-
-      setSecuritySettings({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-        twoFactorEnabled: false,
-        loginNotifications: true
-      });
-
-      setPrivacySettings({
-        profileVisibility: 'public',
-        showEmail: false,
-        showPhone: true,
-        allowReviews: true,
-        allowMessages: true
-      });
-
-      setPaymentSettings({
-        pixKey: 'joao.silva@email.com',
-        bankAccount: {
-          bank: 'Banco do Brasil',
-          agency: '1234-5',
-          account: '12345678-9',
-          accountType: 'corrente'
-        },
-        preferredMethod: 'pix'
-      });
-
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    loadSettings();
   }, []);
 
-  const handleSave = async () => {
-    setSaving(true);
-    // Simular salvamento
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setSaving(false);
-    // Aqui seria feita a chamada para a API
-  };
+  const loadSettings = async () => {
+    try {
+      setLoading(true);
+      const response = await collaboratorProfileAPI.getMyProfile();
+      const data = response?.data?.data ?? response?.data; // Tenta extrair data.data, ou usa data direto
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && profileSettings) {
-      // Simular upload de imagem
-      const imageUrl = URL.createObjectURL(file);
-      setProfileSettings({
-        ...profileSettings,
-        profileImage: imageUrl
-      });
+      if (data) {
+        setProfileSettings({
+            name: data.user?.name || data.name || '',
+            email: data.user?.email || data.email || '',
+            phone: data.phone || '',
+            bio: data.user?.bio || '',
+            specialties: data.specialties || [],
+            profileImage: data.user?.avatarUrl || '',
+            location: data.user?.location || '',
+            website: data.user?.website || ''
+        });
+
+        // Configurações armazenadas em profileSettings (JSON) ou defaults
+        const userSettings = data.user?.profileSettings || {};
+        
+        setPrivacySettings({
+            profileVisibility: userSettings.privacy?.profileVisibility || 'public',
+            showEmail: userSettings.privacy?.showEmail ?? false,
+            showPhone: userSettings.privacy?.showPhone ?? true,
+            allowReviews: userSettings.privacy?.allowReviews ?? true,
+            allowMessages: userSettings.privacy?.allowMessages ?? true
+        });
+
+        setPaymentSettings({
+            pixKey: userSettings.payment?.pixKey || '',
+            bankAccount: userSettings.payment?.bankAccount || {
+                bank: '', agency: '', account: '', accountType: 'corrente'
+            },
+            preferredMethod: userSettings.payment?.preferredMethod || 'pix'
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações:', error);
+      // toast.error('Erro ao carregar configurações');
+      alert('Erro ao carregar configurações.');
+    } finally {
+      setLoading(false);
     }
   };
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      
+      if (activeTab === 'profile') {
+         await collaboratorProfileAPI.updateProfile({
+             phone: profileSettings?.phone,
+             specialties: profileSettings?.specialties,
+             // Outros campos devem ser adicionados ao endpoint updateProfile se necessário
+         });
+         // Para bio/location que estão em user, talvez precise de outro endpoint ou updateProfile manipular User
+      } else if (activeTab === 'security') {
+         if (securitySettings.newPassword) {
+             await authAPI.changePassword(securitySettings.currentPassword, securitySettings.newPassword);
+         }
+      } else {
+         // Salvar privacy/payment em User.profileSettings
+         // Assumindo endpoint genérico ou updateProfile manipulando user settings
+         // Mock temporário para esta parte específica se o backend não suportar JSON update direto ainda
+         await collaboratorProfileAPI.updateSettings({
+             privacy: privacySettings,
+             payment: paymentSettings
+         });
+      }
+
+      alert('Alterações salvas com sucesso!');
+    } catch (error) {
+      console.error('Erro ao salvar:', error);
+      alert('Erro ao salvar alterações');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ... handleImageUpload (usar uploadAvatar) ...
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file) {
+          try {
+              const formData = new FormData();
+              formData.append('avatar', file);
+              await collaboratorProfileAPI.uploadAvatar(formData);
+              loadSettings(); // Recarrega para mostrar nova foto
+          } catch (error) {
+              console.error('Erro upload:', error);
+              alert('Erro ao atualizar foto');
+          }
+      }
+  };
+
+  // ... (manter resto do render, tabs, inputs mapeados para states locais)
+
 
   const tabs = [
     { id: 'profile', label: 'Perfil', icon: User },

@@ -22,8 +22,8 @@ export const EquipmentListPage: React.FC = () => {
       try {
         setLoading(true);
   const [equipmentsData, categoriesData] = await Promise.all([
-          apiFetch('/api/equipments'),
-          apiFetch('/api/categories')
+          apiFetch('/equipments'),
+          apiFetch('/categories')
         ]);
         
   setEquipments(asArray<Equipment>(equipmentsData));

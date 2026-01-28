@@ -19,7 +19,7 @@ export const CollaboratorLayout: React.FC<CollaboratorLayoutProps> = ({
       <div className="flex-1 md:ml-0 min-h-screen">
         {/* Header */}
         {(title || breadcrumbs) && (
-          <div className="bg-muted border-b px-6 py-4 mt-16">
+          <div className="bg-muted border-b px-6 py-4">
             {breadcrumbs && (
               <nav className="flex mb-2" aria-label="Breadcrumb">
                 <ol className="flex items-center space-x-2 text-sm">
@@ -57,7 +57,7 @@ export const CollaboratorLayout: React.FC<CollaboratorLayoutProps> = ({
         )}
 
         {/* Main content */}
-        <main className={`flex-1 p-6 bg-background ${!title && !breadcrumbs ? 'mt-16' : ''}`}>
+        <main className={`flex-1 p-6 bg-background`}>
           {children}
         </main>
       </div>

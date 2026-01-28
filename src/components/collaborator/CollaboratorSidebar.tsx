@@ -184,8 +184,8 @@ export const CollaboratorSidebar: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
 
-  // Don't show sidebar if not collaborator
-  if (!user || user.role !== 'COLLABORATOR') {
+  // Don't show sidebar if not authenticated
+  if (!user) {
     return null;
   }
 
@@ -238,9 +238,9 @@ export const CollaboratorSidebar: React.FC = () => {
 
       {/* Sidebar - estilizado com design system e alternância */}
       <div
-        className={`fixed left-0 top-0 md:top-16 h-full md:h-[calc(100vh-4rem)] w-72 bg-card border-r border-border z-40 transform transition-all duration-300 ease-in-out overflow-hidden flex flex-col ${
+        className={`fixed left-0 top-0 h-full w-72 bg-card border-r border-border z-40 transform transition-all duration-300 ease-in-out overflow-hidden flex flex-col ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0`}
+        } md:translate-x-0 md:top-16 md:h-[calc(100vh-4rem)] pt-0`}
         role="navigation"
         aria-label="Collaborator Sidebar"
       >
@@ -257,16 +257,25 @@ export const CollaboratorSidebar: React.FC = () => {
           </div>
 
           {/* Search Bar - estilizado com design system */}
-          <div className="relative">
+          <form className="relative" onSubmit={(e) => e.preventDefault()} role="search">
             <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            
+            {/* Fake inputs to trap browser autofill */}
+            <input type="text" className="hidden" aria-hidden="true" autoComplete="off" />
+            <input type="password" className="hidden" aria-hidden="true" autoComplete="off" />
+
             <input
               type="text"
+              name="search_query_sidebar_collaborator_unique" 
+              id="search_query_sidebar_collaborator_unique"
+              autoComplete="off"
               placeholder="Buscar páginas..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-muted border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors duration-200"
+              data-form-type="other"
             />
-          </div>
+          </form>
         </div>
 
         {/* Navigation - com alternância de cores */}
@@ -373,8 +382,8 @@ export const CollaboratorSidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Main content offset for desktop (largura da sidebar e topo do header) */}
-      <div className="hidden md:block w-72 flex-shrink-0 md:mt-16" />
+      {/* Main content offset for desktop (largura da sidebar) */}
+      <div className="hidden md:block w-72 flex-shrink-0" />
     </>
   );
 };
