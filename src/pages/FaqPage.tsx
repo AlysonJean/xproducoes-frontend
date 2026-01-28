@@ -41,7 +41,7 @@ export const FaqPage = () => {
   useEffect(() => {
     const fetchFaqs = async () => {
       try {
-  const data = await apiFetch('/api/faq');
+  const data = await apiFetch('/faq');
   setFaqs(asArray<FaqItem>(data));
       } catch (err) {
         setError('Erro ao carregar perguntas frequentes. Tente novamente mais tarde.');

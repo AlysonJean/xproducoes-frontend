@@ -11,6 +11,7 @@ import {
   PiggyBank
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { collaboratorsAPI, collaboratorProfileAPI } from '../../services/api';
 
 interface EarningsData {
   totalEarnings: number;
@@ -30,7 +31,7 @@ interface EarningsData {
     eventTitle: string;
     amount: number;
     date: string;
-    status: 'PAID' | 'PENDING' | 'PROCESSING';
+    status: 'PAID' | 'PENDING' | 'ABERTO' | 'ATRASADO' | 'CANCELADO';
   }>;
 }
 
@@ -43,48 +44,58 @@ const CollaboratorEarningsPage: React.FC = () => {
     const fetchEarnings = async () => {
       try {
         setLoading(true);
-        // Simular dados até implementar API real
-        const mockData: EarningsData = {
-          totalEarnings: 12450.00,
-          monthlyEarnings: 3200.00,
-          yearlyEarnings: 28900.00,
-          pendingPayments: 850.00,
-          averagePerEvent: 275.00,
-          eventsCompleted: 45,
-          earningsGrowth: 15.5,
-          monthlyData: [
-            { month: 'Jan', earnings: 2800, events: 12 },
-            { month: 'Fev', earnings: 3100, events: 14 },
-            { month: 'Mar', earnings: 2900, events: 13 },
-            { month: 'Abr', earnings: 3400, events: 16 },
-            { month: 'Mai', earnings: 3200, events: 15 },
-            { month: 'Jun', earnings: 3600, events: 18 },
-          ],
-          recentPayments: [
-            {
-              id: '1',
-              eventTitle: 'Casamento Silva & Costa',
-              amount: 450.00,
-              date: '2025-09-10',
-              status: 'PAID'
-            },
-            {
-              id: '2',
-              eventTitle: 'Aniversário 15 anos Maria',
-              amount: 320.00,
-              date: '2025-09-08',
-              status: 'PAID'
-            },
-            {
-              id: '3',
-              eventTitle: 'Formatura Medicina UFPE',
-              amount: 380.00,
-              date: '2025-09-05',
-              status: 'PROCESSING'
-            }
-          ]
+        
+        // Buscar estatísticas e pagamentos reais
+        const [statsResponse, paymentsResponse] = await Promise.all([
+          collaboratorProfileAPI.getStats(),
+          collaboratorsAPI.getMyPayments() // Mapeado para /me/payments
+        ]);
+
+        const stats = statsResponse.data?.data ?? statsResponse.data;
+        const payments = paymentsResponse.data?.data ?? paymentsResponse.data;
+
+        // Processar dados mensais para o gráfico
+        // O backend retorna month no formato "YYYY-MM"
+        const monthlyData = stats.monthlyEarnings?.map((item: any) => ({
+          month: item.month, // ex: "2024-01"
+          earnings: Number(item.earnings),
+          events: Number(item.events)
+        })) || [];
+
+        // Calcular ganhos anuais (soma dos últimos 12 meses)
+        const yearlyEarnings = monthlyData.reduce((acc: number, item: any) => acc + item.earnings, 0);
+        
+        // Calcular ganho do mês atual
+        const currentMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+        const currentMonthData = monthlyData.find((d: any) => d.month === currentMonth);
+
+        // Mapear pagamentos recentes
+        const recentPayments = Array.isArray(payments) ? payments.slice(0, 10).map((p: any) => ({
+          id: p.id,
+          eventTitle: p.description || 'Pagamento',
+          amount: Number(p.amount),
+          date: p.dueDate || p.paymentDate,
+          status: p.status
+        })) : [];
+
+        // Calcular pendentes
+        const pendingTotal = Array.isArray(payments) 
+          ? payments.filter((p: any) => p.status === 'PENDING').reduce((acc: number, p: any) => acc + Number(p.amount), 0)
+          : 0;
+
+        const data: EarningsData = {
+          totalEarnings: Number(stats.totalEarnings || 0),
+          monthlyEarnings: currentMonthData ? currentMonthData.earnings : 0,
+          yearlyEarnings: yearlyEarnings,
+          pendingPayments: pendingTotal,
+          averagePerEvent: stats.totalEvents > 0 ? Number(stats.totalEarnings) / Number(stats.totalEvents) : 0,
+          eventsCompleted: Number(stats.totalEvents || 0),
+          earningsGrowth: 0, // Backend não fornece ainda comparativo com mês anterior
+          monthlyData: monthlyData, // Dados reais do gráfico
+          recentPayments: recentPayments
         };
-        setEarnings(mockData);
+
+        setEarnings(data);
       } catch (error) {
         console.error('Erro ao buscar dados de ganhos:', error);
       } finally {
@@ -93,7 +104,7 @@ const CollaboratorEarningsPage: React.FC = () => {
     };
 
     fetchEarnings();
-  }, []);
+  }, [selectedPeriod]);
 
   const getStatusColor = (status: string) => {
     switch (status) {

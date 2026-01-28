@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Booking } from '../../types/types';
-import { collaboratorsAPI } from '../../services/api';
+import { collaboratorsAPI, collaboratorProfileAPI } from '../../services/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
 
@@ -122,7 +122,6 @@ const MonthlyEarningsChart: React.FC<{ monthlyData: Array<{ month: string; earni
 };
 
 const CollaboratorWorkSchedule: React.FC = () => {
-  // Removendo o hook não utilizado
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
   const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
@@ -136,50 +135,45 @@ const CollaboratorWorkSchedule: React.FC = () => {
     averageRating: 0,
   });
   const [monthlyEarnings, setMonthlyEarnings] = useState<Array<{ month: string; earnings: number; events: number }>>([]);
+  // const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchMonthlyEarnings = async () => {
+    const fetchData = async () => {
       try {
-        // Buscar dados reais de ganhos mensais
+        // setLoading(true);
+        // Buscar dados do dashboard (ganhos)
         const dashboardResponse = await collaboratorsAPI.getMyDashboard();
         const dashboardData = dashboardResponse.data?.data ?? dashboardResponse.data;
 
-        // Usar dados de ganhos mensais se disponíveis, senão gerar dados mock
-        if (dashboardData?.monthlyEarnings && dashboardData.monthlyEarnings.length > 0) {
+        if (dashboardData?.monthlyEarnings) {
           setMonthlyEarnings(dashboardData.monthlyEarnings);
-        } else {
-          // Dados mock para desenvolvimento
-          const mockData = [
-            { month: '2024-09', earnings: 2500, events: 3 },
-            { month: '2024-08', earnings: 3200, events: 4 },
-            { month: '2024-07', earnings: 2800, events: 3 },
-            { month: '2024-06', earnings: 3500, events: 5 },
-            { month: '2024-05', earnings: 2900, events: 4 },
-            { month: '2024-04', earnings: 3100, events: 4 },
-          ];
-          setMonthlyEarnings(mockData);
         }
 
-        // Buscar bookings do colaborador se disponíveis
-        if (dashboardData?.bookings) {
-          setCollaboratorBookings(dashboardData.bookings);
+        // Buscar todos os eventos (agenda) via endpoint específico
+        const eventsResponse = await collaboratorProfileAPI.getMyEvents(); // Usando a nova função adicionada
+        const eventsData = eventsResponse.data?.data ?? eventsResponse.data;
+        
+        if (Array.isArray(eventsData)) {
+            // O backend retorna EventCollaborator[], precisamos extrair o booking
+            // e garantir que o objeto resultante tenha o formato Booking esperado
+            const bookings = eventsData.map((item: any) => {
+                // Se item já for booking (caso endpoint mude), usa item.
+                // Se for EventCollaborator, usa item.booking
+                const booking = item.booking || item; 
+                // Adiciona id do assignment se necessário, mas Booking geralmente tem ID próprio
+                return booking; 
+            });
+            setCollaboratorBookings(bookings);
         }
+
       } catch (error) {
-        console.error('Erro ao buscar dados do dashboard:', error);
-        // Fallback para dados mock em caso de erro
-        const mockData = [
-          { month: '2024-09', earnings: 2500, events: 3 },
-          { month: '2024-08', earnings: 3200, events: 4 },
-          { month: '2024-07', earnings: 2800, events: 3 },
-          { month: '2024-06', earnings: 3500, events: 5 },
-          { month: '2024-05', earnings: 2900, events: 4 },
-          { month: '2024-04', earnings: 3100, events: 4 },
-        ];
-        setMonthlyEarnings(mockData);
+        console.error('Erro ao buscar dados da agenda:', error);
+      } finally {
+        // setLoading(false);
       }
     };
 
-    fetchMonthlyEarnings();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -228,17 +222,16 @@ const CollaboratorWorkSchedule: React.FC = () => {
             if (bookingDate.getMonth() === currentDate.getMonth() &&
                 bookingDate.getFullYear() === currentDate.getFullYear()) {
               workingDays.add(bookingDate.toDateString());
+              
+               if (booking.status === 'COMPLETED') {
+                acc.completedBookings++;
+               }
             }
           }
-
-          if (booking.status === 'COMPLETED') {
-            acc.completedBookings++;
-          }
-
           return acc;
         },
         {
-          totalBookings: collaboratorBookings.length,
+          totalBookings: 0, 
           upcomingBookings: 0,
           completedBookings: 0,
           workingDays: 0,
@@ -246,8 +239,17 @@ const CollaboratorWorkSchedule: React.FC = () => {
           averageRating: 0,
         }
       );
+      
+      const monthBookings = collaboratorBookings.filter(b => {
+          if (!b.eventDate) return false;
+          const d = new Date(b.eventDate);
+          return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
+      });
 
+      stats.totalBookings = monthBookings.length;
+      stats.upcomingBookings = monthBookings.filter(b => b.status && ['CONFIRMED', 'ASSIGNED'].includes(b.status)).length;
       stats.workingDays = workingDays.size;
+
       setMonthlyStats(stats);
     };
 

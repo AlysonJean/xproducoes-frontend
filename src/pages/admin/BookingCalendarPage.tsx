@@ -370,7 +370,7 @@ export const BookingCalendarPage = () => {
 
     try {
       // Removido parâmetros month e year para buscar todas as reservas
-  const data = await apiFetch('/api/bookings/calendar');
+  const data = await apiFetch('/bookings/calendar');
       const bookings: CalendarBooking[] = asArray<CalendarBooking>(data);
   const calendarEvents: CalendarEvent[] = bookings
         .filter((b) => safeDate(b.eventDate))
@@ -422,8 +422,8 @@ export const BookingCalendarPage = () => {
     // Carregar colaboradores para filtro
     (async () => {
       try {
-  const list = await apiFetch('/api/collaborators');
-        if (Array.isArray(list)) setCollaborators(list as ICollaborator[]);
+  const list = await apiFetch('/collaborators');
+        setCollaborators(asArray<ICollaborator>(list));
       } catch {}
     })();
   }, []);

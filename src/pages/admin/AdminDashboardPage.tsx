@@ -279,15 +279,15 @@ export const AdminDashboardPage = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-  const response = await apiFetch('/api/dashboard/stats') as AdminDashboardStats;
+  const response = await apiFetch('/dashboard/stats') as AdminDashboardStats;
         setStats(response);
         // Buscar atividades recentes
-  const acts = await apiFetch('/api/dashboard/recent-activities') as Activity[];
+  const acts = await apiFetch('/dashboard/recent-activities') as Activity[];
         setActivities(acts);
         // Buscar reservas para próximos eventos
         try {
           setLoadingNext(true);
-          const resp: any = await apiFetch('/api/admin/bookings');
+          const resp: any = await apiFetch('/admin/bookings');
           const all = Array.isArray(resp) ? resp : Array.isArray(resp?.data) ? resp.data : [];
           const now = new Date();
           const upcoming = all

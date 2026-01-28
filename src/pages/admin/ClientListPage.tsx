@@ -73,7 +73,7 @@ const ClientListPage: React.FC = () => {
       if (sortBy) params.set('sortBy', String(sortBy));
       if (sortOrder) params.set('sortOrder', sortOrder);
 
-  const response = await apiFetch<ClientResponse>(`/api/admin/clients?${params.toString()}`);
+  const response = await apiFetch<ClientResponse>(`/admin/clients?${params.toString()}`);
 
       const mappedRaw = (response?.data || []).map((c: any) => ({
         id: c.id,

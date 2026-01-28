@@ -30,7 +30,7 @@ export const BookingListPage = () => {
     const fetchBookings = async () => {
       try {
         setLoading(true);
-  const response = await apiFetch('/api/admin/bookings');
+  const response = await apiFetch('/admin/bookings');
   // Garante que bookings seja sempre um array
   setBookings(asArray(response));
       } catch (err: unknown) {

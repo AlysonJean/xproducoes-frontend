@@ -18,7 +18,7 @@ export const PortfolioPage: React.FC = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-  const portfolioData = await apiFetch('/api/portfolio');
+  const portfolioData = await apiFetch('/portfolio');
   setPortfolio(asArray<PortfolioItem>(portfolioData));
       } catch (err) {
         console.error('Erro ao carregar portfolio:', err);

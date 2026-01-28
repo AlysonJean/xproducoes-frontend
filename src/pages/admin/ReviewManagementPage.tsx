@@ -34,7 +34,7 @@ export default function ReviewManagementPage() {
   const load = async () => {
     try {
       setLoading(true);
-  const res = await apiFetch(`/api/reviews${minRating ? `?rating=${minRating}` : ''}`);
+  const res = await apiFetch(`/reviews${minRating ? `?rating=${minRating}` : ''}`);
   const data = Array.isArray(res) ? res : ((res as ApiResponse<AdminReview[]>)?.data ?? []);
       setItems(data);
       setError(null);
@@ -92,7 +92,7 @@ export default function ReviewManagementPage() {
   const handleApprove = async (id: string) => {
     try {
       setActionId(id);
-  await apiFetch(`/api/reviews/${id}/approve`, { method: 'POST' });
+  await apiFetch(`/reviews/${id}/approve`, { method: 'POST' });
       addNotification({ type: 'success', title: 'Aprovada', message: 'Avaliação aprovada e publicada.' });
       await load();
     } catch (e: any) {

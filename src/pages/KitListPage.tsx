@@ -21,7 +21,7 @@ export const KitListPage = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-  const kitsData = await apiFetch('/api/kits');
+  const kitsData = await apiFetch('/kits');
   setKits(asArray<Kit>(kitsData));
       } catch (err) {
         console.error('Erro ao carregar dados:', err);

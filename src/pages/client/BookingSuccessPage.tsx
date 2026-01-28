@@ -1,7 +1,6 @@
 // src/pages/BookingSuccessPage.tsx
 
 import { Link, useParams, useLocation } from 'react-router-dom';
-import { useEffect, useRef, useState } from 'react';
 import { buildQuoteMessage, getWhatsAppPhone, openWhatsApp } from '../../utils/whatsapp';
 
 export const BookingSuccessPage = () => {
@@ -9,74 +8,10 @@ export const BookingSuccessPage = () => {
   const location = useLocation();
   const booking = location.state?.booking;
   const formData = location.state?.formData;
-  const openedRef = useRef(false);
-  const [whatsFailed, setWhatsFailed] = useState(false);
+  const cartItems = location.state?.cartItems; // Itens vindos diretamente do carrinho
 
-  useEffect(() => {
-    let canceled = false;
-    if (booking || formData) {
-      if (openedRef.current) return;
-      openedRef.current = true;
-      try {
-        const items = booking?.kit ? [booking.kit] : booking?.equipments || [];
-        const userInfo = {
-          name: booking?.client?.name || formData?.name || '-',
-          phone: (booking?.client && (booking.client as any).phone) || formData?.phone || '-',
-        };
-        const eventDate = booking?.eventDate ? new Date(booking.eventDate) : (formData?.eventDate ? new Date(formData.eventDate) : new Date());
-        const address = typeof booking?.venue === 'object' && booking?.venue !== null
-          ? {
-              street: booking.venue.street || formData?.street || '',
-              number: formData?.addressNumber || '',
-              neighborhood: booking.venue.city || formData?.neighborhood || '',
-              city: booking.venue.city || formData?.city || '',
-              state: booking.venue.state || formData?.state || '',
-              zipCode: booking.venue.zipCode || formData?.zipCode || '',
-              complement: formData?.addressComplement || '',
-            }
-          : {
-              street: formData?.street || '',
-              number: formData?.addressNumber || '',
-              neighborhood: formData?.neighborhood || '',
-              city: formData?.city || '',
-              state: formData?.state || '',
-              zipCode: formData?.zipCode || '',
-              complement: formData?.addressComplement || '',
-            };
-        const mensagem = buildQuoteMessage({
-          bookingId: booking?.id,
-          user: userInfo,
-          venue: (typeof booking?.venue === 'string' ? booking.venue : '') || formData?.venue || '',
-          eventDate,
-          durationHours: booking?.duration || formData?.duration || 1,
-          address,
-          items,
-          notes: booking?.notes || formData?.notes || '',
-          logistics: {
-            requiresStairs: (booking as any)?.requiresStairs ?? (formData?.requiresStairs === 'yes'),
-            isCovered: (booking as any)?.isCovered ?? (formData?.isCovered === 'yes'),
-            hasParking: (booking as any)?.hasParking ?? (formData?.hasParking === 'yes'),
-          },
-        });
-        // Tenta abrir o WhatsApp
-        setTimeout(() => {
-          if (!canceled) {
-            openWhatsApp(getWhatsAppPhone(), mensagem);
-            // Marca como "tentou abrir"
-            // setWhatsOpened(true); // Removido: não é mais necessário
-            // Se após 1s não abriu, mostra fallback
-            setTimeout(() => {
-              if (!window.document.hasFocus()) return; // se perdeu o foco, provavelmente abriu
-              setWhatsFailed(true);
-            }, 1200);
-          }
-        }, 300);
-      } catch (errWpp) {
-        setWhatsFailed(true);
-      }
-    }
-    return () => { canceled = true; };
-  }, [booking, formData]);
+  // Removido useEffect de abertura automática para evitar bloqueio de popups e erros de múltiplas raízes.
+  // A abertura é feita no QuoteRequestPage ou via botão manual.
 
   return (
     <div className="text-center bg-card p-8 rounded-lg max-w-2xl mx-auto border border-border">
@@ -112,18 +47,13 @@ export const BookingSuccessPage = () => {
       </p>
       {/* Texto para leitores de ecrã */}
       <p className="sr-only">Para abrir o WhatsApp, pressione o botão Abrir WhatsApp.</p>
-      {whatsFailed && (
-        <div className="bg-yellow-100 text-yellow-800 rounded p-3 mb-4 max-w-md mx-auto">
-          <strong>Não foi possível abrir o WhatsApp automaticamente.</strong><br />
-          Clique no botão abaixo para abrir manualmente.
-        </div>
-      )}
+
         <button
           aria-label="Abrir WhatsApp"
           title="Abrir WhatsApp"
           onClick={() => {
             try {
-              const items = booking?.kit ? [booking.kit] : booking?.equipments || [];
+              const items = cartItems || (booking?.kit ? [booking.kit] : booking?.equipments || []);
               const userInfo = {
                 name: booking?.client?.name || formData?.name || '-',
                 phone: (booking?.client && (booking.client as any).phone) || formData?.phone || '-',

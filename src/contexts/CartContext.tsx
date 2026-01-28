@@ -48,7 +48,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     fetchingRef.current = true;
     setIsLoading(true);
     try {
-  const cartData = await apiFetch('/api/cart');
+  const cartData = await apiFetch('/cart');
       setCart(cartData as Booking);
       lastFetchedAt.current = Date.now();
     } catch (error) {
@@ -59,7 +59,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
       fetchingRef.current = false;
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     fetchCart();
@@ -86,7 +86,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setCart((prev) => prev); // força re-render
       if (type === 'kit') {
         const kitItem = item as Kit;
-  const updatedCart = await apiFetch('/api/cart/add-kit', {
+  const updatedCart = await apiFetch('/cart/add-kit', {
           method: 'POST',
           body: JSON.stringify({ kitId: kitItem.id }),
         });
@@ -95,7 +95,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       // equipment
-  const updatedCart = await apiFetch('/api/cart/add', {
+  const updatedCart = await apiFetch('/cart/add', {
         method: 'POST',
         body: JSON.stringify({ equipmentId: item.id }),
       });
@@ -153,7 +153,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     try {
       // optimistic clear
       setCart(null);
-  const updatedCart = await apiFetch('/api/cart/clear', { method: 'POST' });
+  const updatedCart = await apiFetch('/cart/clear', { method: 'POST' });
       setCart(updatedCart as Booking);
       addNotification({ type: 'success', title: 'Carrinho limpo', message: 'O carrinho foi limpo.' });
     } catch (e: any) {

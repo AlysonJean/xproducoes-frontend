@@ -1,5 +1,6 @@
 import type { ICollaborator } from '@/types/types';
 import { useState } from 'react';
+import { asArray } from '../utils/normalize';
 // importação removida: tipos devem ser importados de '../types'
 import { api } from '../services/api';
 
@@ -24,7 +25,7 @@ export const useCollaborators = (): UseCollaboratorsReturn => {
 
   // Busca dados reais da API
   const response = await api.get('/collaborators');
-  setCollaborators(response.data || []);
+  setCollaborators(asArray(response.data));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao buscar colaboradores');
     } finally {

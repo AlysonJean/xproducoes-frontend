@@ -2,17 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
 import { StatsCard, SimpleCard } from '../../components/ui/Cards';
 import { 
-  BarChart3, 
-  TrendingUp, 
-  Calendar, 
-  Download,
-  Eye,
   Clock,
   Target,
   Star,
-  FileText
+  FileText,
+  TrendingUp,
+  Download,
+  Eye,
+  BarChart3,
+  Calendar
 } from 'lucide-react';
-import { XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Bar } from 'recharts';
+import { LineChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { collaboratorProfileAPI } from '../../services/api';
 
 import { ReportData } from '@/types/types';
 
@@ -25,36 +26,37 @@ const CollaboratorReportsPage: React.FC = () => {
     const fetchReportData = async () => {
       try {
         setLoading(true);
-        // Simular dados até implementar API real
-        const mockData: ReportData = {
+        // Buscar dados reais da API
+        const response = await collaboratorProfileAPI.getStats();
+        const apiStats = response.data?.data ?? response.data;
+
+        // Mapear dados da API para o formato do relatório
+        const report: ReportData = {
           performance: {
-            eventsCompleted: 45,
-            completionRate: 95.5,
-            averageRating: 4.7,
-            onTimeDelivery: 92.3
+            eventsCompleted: Number(apiStats.totalEvents || 0),
+            completionRate: Number(apiStats.completionRate || 0),
+            averageRating: Number(apiStats.averageRating || 0),
+            onTimeDelivery: 100 // Mock: Backend ainda não calcula pontualidade baseado em check-in/out
           },
-          monthly: [
-            { month: 'Jan', events: 12, rating: 4.5, earnings: 2800 },
-            { month: 'Fev', events: 14, rating: 4.6, earnings: 3100 },
-            { month: 'Mar', events: 13, rating: 4.7, earnings: 2900 },
-            { month: 'Abr', events: 16, rating: 4.8, earnings: 3400 },
-            { month: 'Mai', events: 15, rating: 4.7, earnings: 3200 },
-            { month: 'Jun', events: 18, rating: 4.9, earnings: 3600 },
-          ],
+          // Mapear ganhos mensais do backend
+          monthly: apiStats.monthlyEarnings ? apiStats.monthlyEarnings.map((m: any) => ({
+             month: m.month,
+             events: Number(m.events),
+             rating: Number(apiStats.averageRating), // Backend ainda não tem rating mensal histórico, usando média geral
+             earnings: Number(m.earnings)
+          })).slice(0, 6) : [],
+          // Mock: Backend ainda não retorna distribuição por tipos
           eventTypes: [
-            { type: 'Casamentos', count: 15, percentage: 33.3, color: '#3b82f6' },
-            { type: 'Aniversários', count: 12, percentage: 26.7, color: '#10b981' },
-            { type: 'Formaturas', count: 8, percentage: 17.8, color: '#f59e0b' },
-            { type: 'Corporativo', count: 6, percentage: 13.3, color: '#ef4444' },
-            { type: 'Outros', count: 4, percentage: 8.9, color: '#8b5cf6' }
+            { type: 'Geral', count: Number(apiStats.totalEvents || 0), percentage: 100, color: '#3b82f6' }
           ],
           timeAnalysis: {
-            mostProductiveHour: '14:00 - 18:00',
-            averageEventDuration: '4h 30min',
-            workingDaysPerMonth: 22
+            mostProductiveHour: 'N/A',
+            averageEventDuration: 'N/A', // Backend stats não tem duração média ainda
+            workingDaysPerMonth: 0
           }
         };
-        setReportData(mockData);
+        
+        setReportData(report);
       } catch (error) {
         console.error('Erro ao buscar dados de relatórios:', error);
       } finally {
