@@ -67,7 +67,9 @@ export const HomePage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [equipmentLoading, setEquipmentLoading] = useState(false);
-  const [error] = useState<string | null>(null);
+  // O erro não é mais usado para travar a tela
+  // const [error] = useState<string | null>(null);
+  
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -237,7 +239,7 @@ export const HomePage = () => {
   };
 
   if (loading) return <PageLoading message="Carregando página inicial..." />;
-  if (error) return <PageError message={error} onRetry={() => window.location.reload()} />;
+  // if (error) return <PageError message={error} onRetry={() => window.location.reload()} />;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
