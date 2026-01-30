@@ -12,7 +12,7 @@ import type { Equipment, Category, Kit, PortfolioItem } from '../types/types';
 import { transformEquipment } from '../utils/transformEquipment';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { GeminiEventSuggester } from '../components/ui/GeminiEventSuggester';
-import { PageLoading, PageError } from '../components/layouts/PageLayout';
+import { PageLoading } from '../components/layouts/PageLayout';
 import { Grid } from '../components/ui/StandardComponents';
 import { TestimonialCard } from '../components/ui/TestimonialCard';
 
