@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRevealOnView } from '../hooks/useRevealOnView';
 import { useParams } from 'react-router-dom';
+import ReactGA from 'react-ga4';
 import { apiFetch } from '../services/api';
 import { useCart } from '@/hooks/useCart';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
@@ -26,6 +27,17 @@ export const EquipmentDetailPage = () => {
         setLoading(true);
         const data = await apiFetch(`/equipments/${id}`);
         setEquipment(data as Equipment);
+        
+        // GA Tracking - View Item
+        if (data) {
+          ReactGA.event({
+            category: "ecommerce",
+            action: "view_item",
+            label: (data as Equipment).name,
+            value: Number((data as Equipment).pricePerHour || 0)
+          });
+        }
+
         setError(null);
       } catch (err: unknown) {
         if (err && typeof err === 'object' && 'message' in err) {

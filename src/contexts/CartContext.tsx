@@ -1,6 +1,7 @@
 // Caminho do arquivo: frontend/src/contexts/CartContext.tsx
 
 import React, { useState, useEffect, createContext, useCallback, type ReactNode, useContext, useRef, useMemo } from 'react';
+import ReactGA from 'react-ga4';
 import { normalizeString } from '../utils/string';
 import { apiFetch } from '../services/api';
 import type { Booking } from '../types/types';
@@ -91,15 +92,34 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           body: JSON.stringify({ kitId: kitItem.id }),
         });
         setCart(updatedCart as Booking);
+
+        // GA Tracking
+        ReactGA.event({
+          category: "ecommerce",
+          action: "add_to_cart",
+          label: kitItem.name,
+          value: Number(kitItem.price || 0)
+        });
+
         addNotification({ type: 'success', title: 'Kit adicionado', message: 'Kit adicionado ao carrinho.' });
         return;
       }
       // equipment
-  const updatedCart = await apiFetch('/cart/add', {
+      const equipmentItem = item as Equipment;
+      const updatedCart = await apiFetch('/cart/add', {
         method: 'POST',
         body: JSON.stringify({ equipmentId: item.id }),
       });
       setCart(updatedCart as Booking);
+
+      // GA Tracking
+      ReactGA.event({
+        category: "ecommerce",
+        action: "add_to_cart",
+        label: equipmentItem.name,
+        value: Number(equipmentItem.pricePerHour || 0)
+      });
+
       addNotification({ type: 'success', title: 'Item adicionado', message: 'Item adicionado ao carrinho.' });
     } catch (e: any) {
       setCart(previousCart ?? null);

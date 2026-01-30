@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { Link, useNavigate } from 'react-router-dom';
+import ReactGA from 'react-ga4';
 import GoogleAuthButton from '../components/ui/GoogleAuthButton';
 import FacebookAuthButton from '../components/ui/FacebookAuthButton';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -26,6 +27,13 @@ export const LoginPage = () => {
     try {
       const redirectTo = await loginWithCredentials?.({ email, password });
       
+      // GA Tracking
+      ReactGA.event({
+        category: "auth",
+        action: "login",
+        label: "email_password"
+      });
+
       addNotification({
         type: 'success',
         title: 'Login realizado!',
@@ -42,6 +50,14 @@ export const LoginPage = () => {
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : 'Falha no login. Verifique as suas credenciais.';
+      
+      // GA Tracking
+      ReactGA.event({
+        category: "auth",
+        action: "login_error",
+        label: errorMessage.substring(0, 50) // Truncate to avoid sensitive data leak
+      });
+
       setError(errorMessage);
       addNotification({
         type: 'error',

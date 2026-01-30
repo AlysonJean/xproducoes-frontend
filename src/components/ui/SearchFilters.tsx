@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import ReactGA from 'react-ga4';
 import type { Category } from '../../types/types';
 
 interface Props {
@@ -29,6 +30,33 @@ export const SearchFilters = ({ categories, onFiltersChange }: Props) => {
       sortBy,
     });
   }, [searchTerm, categoryId, minPrice, maxPrice, sortBy, onFiltersChange]);
+
+  // Analytics Tracking for Search
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (searchTerm.length > 2) {
+        ReactGA.event({
+          category: 'engagement',
+          action: 'search',
+          label: searchTerm,
+        });
+      }
+    }, 2000);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
+
+  // Analytics Tracking for Category Filter
+  useEffect(() => {
+    if (categoryId) {
+      const categoryName = categories.find(c => c.id === categoryId)?.name || categoryId;
+      ReactGA.event({
+        category: 'engagement',
+        action: 'filter_category',
+        label: categoryName,
+      });
+    }
+  }, [categoryId, categories]);
 
   const clearFilters = () => {
     setSearchTerm('');

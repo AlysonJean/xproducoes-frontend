@@ -176,5 +176,10 @@ export default defineConfig({
       'date-fns',
       'clsx'
     ]
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**', '**/playwright/**'],
   }
 })

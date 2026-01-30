@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import ReactGA from 'react-ga4';
 import { apiFetch } from '../services/api';
 import { useCart } from '@/hooks/useCart';
 import { useNotifications } from '../contexts/NotificationContext';
@@ -25,6 +26,16 @@ export const KitDetailPage = () => {
         setLoading(true);
         const data = await apiFetch(`/kits/${id}`);
         setKit(data as Kit);
+        
+        // GA Tracking - View Kit
+        if (data) {
+          ReactGA.event({
+            category: "ecommerce",
+            action: "view_item",
+            label: `Kit: ${(data as Kit).name}`,
+            value: Number((data as Kit).price || 0)
+          });
+        }
       } catch {
         setError('Não foi possível carregar os detalhes do kit.');
       } finally {

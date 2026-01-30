@@ -1,7 +1,9 @@
 import { useState, useContext, createContext, useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
+import { NotificationList } from '../components/ui/NotificationList';
 
 export interface Notification {
+
   id: string;
   type: 'success' | 'error' | 'warning' | 'info';
   title: string;
@@ -67,6 +69,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       value={value}
     >
       {children}
+      <NotificationList />
     </NotificationContext.Provider>
   );
 };

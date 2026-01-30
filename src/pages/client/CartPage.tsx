@@ -2,6 +2,7 @@
 
 
 import { Link, useNavigate } from 'react-router-dom';
+import ReactGA from 'react-ga4';
 import { useCart } from '@/hooks/useCart';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { formatPrice } from '../../utils/formatPrice';
@@ -77,6 +78,14 @@ export const CartPage = () => {
 
   const handleProceedToQuote = () => {
     if (itemCount > 0) {
+      // GA Tracking
+      ReactGA.event({
+        category: "ecommerce",
+        action: "begin_checkout",
+        value: totalPrice,
+        label: `Items: ${totalItems}`
+      });
+
       addNotification({
         type: 'info',
         title: 'Redirecionando...',
