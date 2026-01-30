@@ -4,13 +4,13 @@ import { asArray } from '../utils/normalize';
 import { normalizeString } from '../utils/string';
 import type { Kit, KitFilters } from '@/types/types';
 import { KitCard } from '../components/ui/KitCard';
-import { PageLayout, PageLoading, PageError, PageEmpty } from '../components/layouts/PageLayout';
+import { PageLayout, PageLoading, PageEmpty } from '../components/layouts/PageLayout';
 import { SearchAndFilters, FilterSelect, Grid } from '../components/ui/StandardComponents';
 
 export const KitListPage = () => {
   const [kits, setKits] = useState<Kit[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<KitFilters>({
       sortBy: 'name',
       sortOrder: 'asc'
@@ -25,7 +25,8 @@ export const KitListPage = () => {
   setKits(asArray<Kit>(kitsData));
       } catch (err) {
         console.error('Erro ao carregar dados:', err);
-        setError('Erro ao carregar os kits. Tente novamente.');
+        // setError('Erro ao carregar os kits. Tente novamente.');
+        setKits([]);
       } finally {
         setLoading(false);
       }
@@ -103,9 +104,7 @@ export const KitListPage = () => {
     return <PageLoading message="Carregando kits..." />;
   }
 
-  if (error) {
-    return <PageError message={error} onRetry={() => window.location.reload()} />;
-  }
+  // if (error) { return <PageError ... />; }
 
   return (
     <PageLayout
