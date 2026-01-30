@@ -152,20 +152,34 @@ export const HomePage = () => {
 
   const fetchPageData = useCallback(async () => {
     setLoading(true);
-    setError(null);
+    // Não limpa o erro anterior imediatamente para evitar flash, mas permite nova tentativa
+    // setError(null); 
+
+    // Helper para buscar dados de forma segura (sem quebrar a página toda se um falhar)
+    const safeFetch = async <T,>(promise: Promise<T>, fallback: T): Promise<T> => {
+      try {
+        return await promise;
+      } catch (error) {
+        console.warn('Falha não-crítica ao carregar seção da home:', error);
+        return fallback;
+      }
+    };
+
     try {
-  const [catsData, kitsData, portfolioData] = await Promise.all([
-  apiFetch('/categories'),
-  apiFetch('/kits?limit=4'),
-  apiFetch('/portfolio?limit=3'),
+      // Usa Promise.all com proteção individual para cada requisição
+      const [catsData, kitsData, portfolioData] = await Promise.all([
+        safeFetch(apiFetch('/categories'), []),
+        safeFetch(apiFetch('/kits?limit=4'), []),
+        safeFetch(apiFetch('/portfolio?limit=3'), []),
       ]);
 
-  setCategories(catsData as Category[]);
-  setKits(kitsData as Kit[]);
-  setPortfolio(portfolioData as PortfolioItem[]);
+      setCategories(catsData as Category[]);
+      setKits(kitsData as Kit[]);
+      setPortfolio(portfolioData as PortfolioItem[]);
     } catch (err) {
       console.error('Erro detalhado no fetchPageData:', err);
-      setError('Erro ao carregar dados da API. Tente novamente mais tarde.');
+      // Não bloqueia mais a renderização com tela de erro fatal
+      // setError('Erro ao carregar dados da API. Tente novamente mais tarde.');
     } finally {
       setLoading(false);
     }
@@ -204,14 +218,12 @@ export const HomePage = () => {
   fetchPublicReviews();
   }, [fetchPageData]);
 
-  // Busca equipamentos quando os filtros mudarem
+  // Busca equipamentos quando os filtros mudarem (independente de categorias existirem)
   useEffect(() => {
-    if (categories.length > 0) {
-      const parsedFilters = JSON.parse(debouncedFilters);
-      fetchEquipments(parsedFilters, 1);
-      setPagination((prev) => ({ ...prev, currentPage: 1 }));
-    }
-  }, [debouncedFilters, categories.length, fetchEquipments]);
+    const parsedFilters = JSON.parse(debouncedFilters);
+    fetchEquipments(parsedFilters, 1);
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  }, [debouncedFilters, fetchEquipments]);
 
   const handleFiltersChange = useCallback((newFilters: typeof filters) => {
     setFilters(newFilters);
