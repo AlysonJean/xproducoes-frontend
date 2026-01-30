@@ -2,14 +2,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { apiFetch } from '../services/api';
 import { asArray } from '../utils/normalize';
 import type { PortfolioItem, PortfolioFilters } from '@/types';
-import { PageLayout, PageLoading, PageError, PageEmpty } from '../components/layouts/PageLayout';
+import { PageLayout, PageLoading, PageEmpty } from '../components/layouts/PageLayout';
 import { normalizeString } from '../utils/string';
 import { SearchAndFilters, Grid } from '../components/ui/StandardComponents';
 
 export const PortfolioPage: React.FC = () => {
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // error state removed to prevent blocking UI
+  // const [error, setError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
   const [filters, setFilters] = useState<PortfolioFilters>({});
 
@@ -22,7 +23,8 @@ export const PortfolioPage: React.FC = () => {
   setPortfolio(asArray<PortfolioItem>(portfolioData));
       } catch (err) {
         console.error('Erro ao carregar portfolio:', err);
-        setError('Erro ao carregar portfólio. Tente novamente.');
+        // Não trava a tela, apenas loga o erro e deixa a lista vazia
+        setPortfolio([]);
       } finally {
         setLoading(false);
       }
@@ -76,9 +78,8 @@ export const PortfolioPage: React.FC = () => {
     return <PageLoading message="Carregando portfólio..." />;
   }
 
-  if (error) {
-    return <PageError message={error} onRetry={() => window.location.reload()} />;
-  }
+  // Error check removed to prevent blocking UI
+  // if (error) { return <PageError ... />; }
 
   return (
     <PageLayout
