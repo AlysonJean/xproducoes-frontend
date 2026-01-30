@@ -279,7 +279,7 @@ export const HomePage = () => {
         </div>
       </div>
 
-      <div className="container mx-auto space-y-16 sm:space-y-20 lg:space-y-24 xl:space-y-28 2xl:space-y-32">
+      <div className="container mx-auto px-4 md:px-6 lg:px-8 space-y-16 sm:space-y-20 lg:space-y-24 xl:space-y-28 2xl:space-y-32">
         {/* Kits em Destaque */}
         {kits && kits.length > 0 && (
           <section className="relative">

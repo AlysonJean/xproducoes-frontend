@@ -19,7 +19,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
   const { ref: titleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
   return (
     <div className={`min-h-screen bg-background ${className}`}>
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-12">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
