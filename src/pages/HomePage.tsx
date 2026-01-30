@@ -67,7 +67,7 @@ export const HomePage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [equipmentLoading, setEquipmentLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
