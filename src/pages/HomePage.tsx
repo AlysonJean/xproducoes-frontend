@@ -164,6 +164,7 @@ export const HomePage = () => {
   setKits(kitsData as Kit[]);
   setPortfolio(portfolioData as PortfolioItem[]);
     } catch (err) {
+      console.error('Erro detalhado no fetchPageData:', err);
       setError('Erro ao carregar dados da API. Tente novamente mais tarde.');
     } finally {
       setLoading(false);
