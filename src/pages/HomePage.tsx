@@ -1,6 +1,6 @@
 // Caminho do arquivo: frontend/src/pages/HomePage.tsx
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { useRevealOnView } from '../hooks/useRevealOnView';
 import { EquipmentCard } from '../components/ui/EquipmentCard';
 import { KitCard } from '../components/ui/KitCard';
@@ -28,6 +28,28 @@ const useDebounce = (value: string, delay: number) => {
   }, [value, delay]);
   return debouncedValue;
 };
+
+// Componente isolado para evitar rerenders e uso de style inline no pai
+const SoundBar = memo(() => {
+  const barRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (barRef.current) {
+      // Define variaveis CSS dinamicamente para evitar 'style' inline no JSX
+      barRef.current.style.setProperty('--bar-height', `${Math.random() * 60 + 20}%`);
+      barRef.current.style.setProperty('--bar-delay', `${Math.random() * 0.5}s`);
+      barRef.current.style.setProperty('--bar-duration', `${0.8 + Math.random() * 0.6}s`);
+    }
+  }, []);
+
+  return (
+    <div
+      ref={barRef}
+      className="sound-bar bg-primary/5 flex-1 rounded-full transition-all duration-300"
+    />
+  );
+});
+SoundBar.displayName = 'SoundBar';
 
 export const HomePage = () => {
   const { ref: heroTitleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
@@ -209,13 +231,36 @@ export const HomePage = () => {
       {/* Hero Section */}
       <div className="relative py-16 sm:py-20 lg:py-24 xl:py-28 2xl:py-32 mb-16 sm:mb-20 lg:mb-24 xl:mb-28 2xl:mb-32 overflow-hidden">
         <div className="absolute inset-0 -z-10 pointer-events-none bg-gradient-to-r from-primary/10 via-primary/5 to-transparent"></div>
-        <div className="relative text-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
-          <h1 ref={heroTitleRef} className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold mb-6 heading-elegant">
-            Equipamentos Profissionais
-          </h1>
-          <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl text-muted-foreground mb-8 max-w-5xl mx-auto">
-            Transforme seus eventos em experiências inesquecíveis com nossa tecnologia de ponta
-          </p>
+        <div 
+          className="relative text-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
+          onMouseMove={(e) => {
+            const el = e.currentTarget;
+            el.style.setProperty('--mouse-x', `${e.clientX}px`);
+            el.style.setProperty('--mouse-y', `${e.clientY}px`);
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget;
+            el.style.setProperty('--mouse-x', '-9999px');
+            el.style.setProperty('--mouse-y', '-9999px');
+          }}
+        >
+          {/* Animated Sound Wave Background */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
+            <div className="flex items-center justify-between gap-0.5 h-32 sm:h-40 lg:h-48 z-0 w-full px-2">
+              {[...Array(180)].map((_, i) => (
+                <SoundBar key={i} />
+              ))}
+            </div>
+          </div>
+
+          <div className="relative z-10 pointer-events-none">
+            <h1 ref={heroTitleRef} className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold mb-6 heading-elegant pointer-events-auto">
+              Equipamentos Profissionais
+            </h1>
+            <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl text-muted-foreground mb-8 max-w-5xl mx-auto pointer-events-auto">
+              Transforme seus eventos em experiências inesquecíveis com nossa tecnologia de ponta
+            </p>
+          </div>
         </div>
       </div>
 

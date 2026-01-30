@@ -85,13 +85,13 @@ const MonthlyEarningsChart: React.FC<{ monthlyData: Array<{ month: string; earni
               className="text-xs fill-muted-foreground"
             />
             <Tooltip
-              formatter={(value: number, name: string) => [
+              formatter={(value: number | undefined, name: string | undefined) => [
                 name === 'earnings'
-                  ? Number(value).toLocaleString('pt-BR', {
+                  ? Number(value || 0).toLocaleString('pt-BR', {
                       style: 'currency',
-                      currency: 'BRL'
+                      currency: 'BRL' 
                     })
-                  : value,
+                  : (value || 0),
                 name === 'earnings' ? 'Ganhos' : 'Eventos'
               ]}
               labelStyle={{ color: 'hsl(var(--foreground))' }}

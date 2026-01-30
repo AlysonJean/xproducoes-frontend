@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
+import ReactGA from 'react-ga4';
 import { v4 as uuidv4 } from 'uuid';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '../../contexts/AuthContext';
@@ -100,6 +101,15 @@ export const QuoteRequestPage: React.FC = () => {
       addNotification({ type: 'info', title: 'Enviando pedido', message: 'Salvando seu pedido...' });
       const resp = await api.post('/bookings', bookingData, { headers: { 'Idempotency-Key': idempotencyKey } });
       const createdBooking: Booking | null = resp?.data?.data ?? resp?.data ?? null;
+
+      // GA Tracking - Purchase / Lead Generation
+      ReactGA.event({
+        category: "ecommerce",
+        action: "purchase", // or generate_lead
+        label: "quote_request_success",
+        value: 0
+      });
+
       try { await clearCart(); } catch (e) { console.warn('Erro ao limpar carrinho', e); }
       addNotification({ type: 'success', title: 'Pedido salvo', message: 'O pedido foi salvo como pendente.' });
       
@@ -120,6 +130,14 @@ export const QuoteRequestPage: React.FC = () => {
       console.error('Erro ao criar booking', err);
       const msg = err?.response?.data?.message || err?.message || 'Erro ao salvar pedido.';
       setServerError(msg);
+      
+      // GA Tracking - Error
+      ReactGA.event({
+        category: "ecommerce",
+        action: "purchase_error",
+        label: msg.substring(0, 50)
+      });
+
       addNotification({ type: 'error', title: 'Erro ao salvar', message: msg });
     }
   };

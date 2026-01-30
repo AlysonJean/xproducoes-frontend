@@ -14,6 +14,7 @@ import { ModalManager } from './components/modals/ModalManager';
 // Layout Components
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
+import FloatingWhatsApp from './components/FloatingWhatsApp';
 import RoutePrefetch from './components/RoutePrefetch';
 
 // Auth & Route Protection
@@ -23,6 +24,7 @@ import { getDashboardRoute } from './utils/authUtils';
 // Performance Monitoring
 import { usePerformanceMonitoring } from './hooks/usePerformanceMonitoring';
 import { useBundleAnalytics } from './hooks/useBundleAnalytics';
+import { useGoogleAnalytics } from './hooks/useGoogleAnalytics';
 
 // ===== CORE PAGES (Carregamento imediato) =====
 import { HomePage } from './pages/HomePage';
@@ -334,6 +336,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   {/* Força scroll para o topo a cada mudança de rota */}
   <ScrollToTop />
       <main className={`flex-grow ${isAdminPage ? 'pt-16' : 'pt-20'}`}>{children}</main>
+      <FloatingWhatsApp />
       <Footer />
     </div>
   );
@@ -811,6 +814,7 @@ const AppWithMonitoring: React.FC = () => {
   // Initialize performance monitoring
   usePerformanceMonitoring();
   useBundleAnalytics();
+  useGoogleAnalytics();
 
   // Service Worker and PWA features
   const { updateAvailable, update } = useServiceWorker();

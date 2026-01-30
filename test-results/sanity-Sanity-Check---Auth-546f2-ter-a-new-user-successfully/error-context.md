@@ -1,0 +1,199 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - navigation [ref=e5]:
+      - link "X Produções e Eventos" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img "X Produções e Eventos" [ref=e7]
+      - generic [ref=e8]:
+        - link "Equipamentos" [ref=e9] [cursor=pointer]:
+          - /url: /equipments
+          - generic [ref=e10]:
+            - img [ref=e11]
+            - generic [ref=e13]: Equipamentos
+        - link "Kits" [ref=e14] [cursor=pointer]:
+          - /url: /kits
+          - generic [ref=e15]:
+            - img [ref=e16]
+            - generic [ref=e18]: Kits
+        - link "Portfólio" [ref=e19] [cursor=pointer]:
+          - /url: /portfolio
+          - generic [ref=e20]:
+            - img [ref=e21]
+            - generic [ref=e23]: Portfólio
+        - link "Contato" [ref=e24] [cursor=pointer]:
+          - /url: /contact
+          - generic [ref=e25]:
+            - img [ref=e26]
+            - generic [ref=e28]: Contato
+        - link "FAQ" [ref=e29] [cursor=pointer]:
+          - /url: /faq
+          - generic [ref=e30]:
+            - img [ref=e31]
+            - generic [ref=e33]: FAQ
+      - generic [ref=e34]:
+        - button "Switch to dark theme" [ref=e37] [cursor=pointer]:
+          - img [ref=e39]
+        - link "Favoritos" [ref=e41] [cursor=pointer]:
+          - /url: /favorites
+          - img [ref=e42]
+        - link "Comparar" [ref=e44] [cursor=pointer]:
+          - /url: /compare
+          - img [ref=e45]
+        - link "Carrinho" [ref=e47] [cursor=pointer]:
+          - /url: /cart
+          - img [ref=e48]
+        - link "Entrar" [ref=e51] [cursor=pointer]:
+          - /url: /login
+  - main [ref=e52]:
+    - generic [ref=e54]:
+      - generic [ref=e57]:
+        - heading "Criar Conta" [level=1] [ref=e58]
+        - paragraph [ref=e59]: Preencha os dados abaixo para criar sua conta e aproveitar todos os benefícios.
+      - generic [ref=e61]:
+        - heading "Criar Conta" [level=2] [ref=e62]
+        - generic [ref=e63]: Network Error
+        - generic [ref=e64]:
+          - generic [ref=e65]:
+            - generic [ref=e66]: Nome
+            - textbox "Nome" [ref=e67]:
+              - /placeholder: Nome completo
+              - text: Test User 8ccf42e5
+          - generic [ref=e68]:
+            - generic [ref=e69]: E-mail
+            - textbox "E-mail" [ref=e70]: test_8ccf42e5@example.com
+          - generic [ref=e71]:
+            - generic [ref=e72]: Telefone
+            - textbox "Telefone" [ref=e73]: "1234567890"
+          - generic [ref=e74]:
+            - generic [ref=e75]: Senha
+            - textbox "Senha" [ref=e76]: Password123!
+          - button "Criar Conta" [ref=e77] [cursor=pointer]
+        - paragraph [ref=e78]:
+          - text: Já tem uma conta?
+          - link "Entrar" [ref=e79] [cursor=pointer]:
+            - /url: /login
+  - link "Fale conosco no WhatsApp" [ref=e80] [cursor=pointer]:
+    - /url: https://wa.me/5531989252272?text=Olá! Gostaria de fazer um orçamento com a X Produções.
+    - img [ref=e81]
+  - contentinfo [ref=e83]:
+    - generic [ref=e86]:
+      - heading "Fique por dentro das novidades" [level=2] [ref=e87]
+      - paragraph [ref=e88]: Receba ofertas exclusivas, dicas de eventos e lançamentos de novos equipamentos
+      - generic [ref=e89]:
+        - textbox "Seu melhor e-mail" [ref=e90]
+        - button "Inscrever" [ref=e91] [cursor=pointer]
+    - generic [ref=e93]:
+      - generic [ref=e94]:
+        - img "X Produções e Eventos" [ref=e96]
+        - paragraph [ref=e97]: Transformamos suas ideias em eventos inesquecíveis. Equipamentos de qualidade profissional e atendimento excepcional desde 2015.
+        - generic [ref=e98]:
+          - generic [ref=e99]:
+            - img [ref=e100]
+            - generic [ref=e103]: Rua flor d'agua 407 Jardim Alvorada Belo Horizonte MG
+          - generic [ref=e104]:
+            - img [ref=e105]
+            - generic [ref=e107]: (31) 98925-2272
+          - generic [ref=e108]:
+            - img [ref=e109]
+            - generic [ref=e111]: suporte@xproducoeseventos.com.br
+      - generic [ref=e112]:
+        - heading "Produtos" [level=3] [ref=e113]
+        - list [ref=e114]:
+          - listitem [ref=e115]:
+            - link "Equipamentos de Som" [ref=e116] [cursor=pointer]:
+              - /url: /equipments?category=sound
+          - listitem [ref=e117]:
+            - link "Equipamentos de Luz" [ref=e118] [cursor=pointer]:
+              - /url: /equipments?category=lighting
+          - listitem [ref=e119]:
+            - link "Kits Completos" [ref=e120] [cursor=pointer]:
+              - /url: /kits
+          - listitem [ref=e121]:
+            - link "Acessórios" [ref=e122] [cursor=pointer]:
+              - /url: /equipments?category=accessories
+      - generic [ref=e123]:
+        - heading "Empresa" [level=3] [ref=e124]
+        - list [ref=e125]:
+          - listitem [ref=e126]:
+            - link "Sobre Nós" [ref=e127] [cursor=pointer]:
+              - /url: /about
+          - listitem [ref=e128]:
+            - link "Nossa História" [ref=e129] [cursor=pointer]:
+              - /url: /about#history
+          - listitem [ref=e130]:
+            - link "Equipe" [ref=e131] [cursor=pointer]:
+              - /url: /about#team
+          - listitem [ref=e132]:
+            - link "Carreiras" [ref=e133] [cursor=pointer]:
+              - /url: /careers
+          - listitem [ref=e134]:
+            - link "Imprensa" [ref=e135] [cursor=pointer]:
+              - /url: /press
+      - generic [ref=e136]:
+        - heading "Suporte" [level=3] [ref=e137]
+        - list [ref=e138]:
+          - listitem [ref=e139]:
+            - link "Central de Ajuda" [ref=e140] [cursor=pointer]:
+              - /url: /help
+          - listitem [ref=e141]:
+            - link "FAQ" [ref=e142] [cursor=pointer]:
+              - /url: /faq
+          - listitem [ref=e143]:
+            - link "Contato" [ref=e144] [cursor=pointer]:
+              - /url: /contact
+          - listitem [ref=e145]:
+            - link "Suporte Técnico" [ref=e146] [cursor=pointer]:
+              - /url: /support
+          - listitem [ref=e147]:
+            - link "Garantia" [ref=e148] [cursor=pointer]:
+              - /url: /warranty
+      - generic [ref=e149]:
+        - heading "Legal" [level=3] [ref=e150]
+        - list [ref=e151]:
+          - listitem [ref=e152]:
+            - link "Termos de Uso" [ref=e153] [cursor=pointer]:
+              - /url: /terms
+          - listitem [ref=e154]:
+            - link "Política de Privacidade" [ref=e155] [cursor=pointer]:
+              - /url: /privacy
+          - listitem [ref=e156]:
+            - link "Política de Cookies" [ref=e157] [cursor=pointer]:
+              - /url: /cookies
+          - listitem [ref=e158]:
+            - link "LGPD" [ref=e159] [cursor=pointer]:
+              - /url: /lgpd
+          - listitem [ref=e160]:
+            - link "Licenças" [ref=e161] [cursor=pointer]:
+              - /url: /licenses
+    - generic [ref=e164]:
+      - generic [ref=e165]:
+        - paragraph [ref=e166]: © 2026 X Produçoes e Eventos.
+        - paragraph [ref=e167]: Desenvolvido com ❤️ por Alyson Jean (31) 97580-8477
+      - generic [ref=e168]:
+        - generic [ref=e169]: "Nos siga:"
+        - generic [ref=e170]:
+          - link "Instagram" [ref=e171] [cursor=pointer]:
+            - /url: https://www.instagram.com/x_producoeseventos
+            - img [ref=e172]
+          - link "Facebook" [ref=e175] [cursor=pointer]:
+            - /url: https://facebook.com/xproducoes
+            - img [ref=e176]
+          - link "YouTube" [ref=e178] [cursor=pointer]:
+            - /url: https://youtube.com/@xproducoes
+            - img [ref=e179]
+          - link "LinkedIn" [ref=e181] [cursor=pointer]:
+            - /url: https://linkedin.com/company/xproducoes
+            - img [ref=e182]
+          - button "Abrir WhatsApp" [ref=e184] [cursor=pointer]:
+            - img [ref=e185]
+      - generic [ref=e187]:
+        - generic [ref=e188]:
+          - generic [ref=e189]: 🔒
+          - generic [ref=e190]: SSL Seguro
+        - generic [ref=e191]:
+          - generic [ref=e192]: ⚡
+          - generic [ref=e193]: Entrega Rápida
+```

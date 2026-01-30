@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactGA from 'react-ga4';
 import { PageLayout } from '../components/layouts/PageLayout';
 import { authAPI } from '../services/api';
 import { userRegisterSchema } from '../validators/userSchema';
@@ -77,6 +78,14 @@ export const RegisterPage = () => {
       if (phone) payload.phone = phone;
 
       await authAPI.register(payload);
+      
+      // GA Tracking - Sign Up
+      ReactGA.event({
+        category: "auth",
+        action: "sign_up",
+        label: "email_password"
+      });
+
       setSuccess(true);
     } catch (err: unknown) {
       let errorMessage = 'Falha ao criar conta. O e-mail pode já estar em uso.';

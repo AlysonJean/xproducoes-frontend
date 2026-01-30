@@ -16,7 +16,7 @@ export const GeminiEventSuggester = () => {
     setError('');
     setSuggestion('');
     try {
-  const response = await apiFetch('/api/gemini/suggest-theme');
+      const response = await apiFetch('/gemini/suggest-theme');
       setSuggestion((response as GeminiSuggestionResponse).suggestion);
     } catch (err: unknown) {
       if (err instanceof Error) {

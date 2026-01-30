@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactGA from 'react-ga4';
 import { useRevealOnView } from '../hooks/useRevealOnView';
 import { apiFetch } from '../services/api';
 import { useNotifications } from '../contexts/NotificationContext';
@@ -61,15 +62,28 @@ export const ContactPage = () => {
         title: 'Erro no formulário',
         message: 'Por favor, corrija os erros no formulário',
       });
+      // GA Tracking
+      ReactGA.event({
+        category: "contact",
+        action: "form_validation_error",
+        label: "contact_page"
+      });
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-  await apiFetch('/api/contact', {
+      await apiFetch('/api/contact', {
         method: 'POST',
         body: JSON.stringify(formState),
+      });
+
+      // GA Tracking
+      ReactGA.event({
+        category: "contact",
+        action: "form_submit_success",
+        label: formState.eventType || "general_inquiry"
       });
 
       addNotification({

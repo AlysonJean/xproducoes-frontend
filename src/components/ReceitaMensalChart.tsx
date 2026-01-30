@@ -147,8 +147,8 @@ export function ReceitaMensalChart({ year }: ReceitaMensalChartProps) {
             className="text-xs fill-muted-foreground"
           />
           <Tooltip 
-            formatter={(value: number) => [
-              Number(value).toLocaleString('pt-BR', { 
+            formatter={(value: number | undefined) => [
+              Number(value || 0).toLocaleString('pt-BR', { 
                 style: 'currency', 
                 currency: 'BRL' 
               }),
