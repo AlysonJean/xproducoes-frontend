@@ -6,11 +6,6 @@
   "installCommand": "npm install --include=dev",
   "framework": "vite",
   "regions": ["gru1"],
-  "build": {
-    "env": {
-      "NODE_ENV": "production"
-    }
-  },
   "rewrites": [
     {
       "source": "/(.*)",
