@@ -176,7 +176,7 @@ export const Footer = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Seu melhor e-mail"
-                className="flex-1 px-4 py-3 rounded-full border border-border bg-background/50 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300"
+                className="flex-1 px-4 py-3 rounded-lg border border-border bg-background/50 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300"
                 required
               />
               {/* Button do design system */}
@@ -185,7 +185,7 @@ export const Footer = () => {
                 variant={isSubscribed ? 'success' : 'primary'}
                 size="lg"
                 disabled={isSubscribed || loading}
-                className="rounded-full font-medium whitespace-nowrap px-8 py-3"
+                className="rounded-lg font-medium whitespace-nowrap px-8 py-3"
               >
                 {loading ? 'Enviando...' : isSubscribed ? '✅ Inscrito!' : 'Inscrever'}
               </Button>

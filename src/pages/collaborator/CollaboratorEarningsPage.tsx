@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
 import { StatsCard, SimpleCard } from '../../components/ui/Cards';
+import { formatPrice } from '@/utils/formatPrice';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -161,7 +162,7 @@ const CollaboratorEarningsPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
             title="Total Geral"
-            value={`R$ ${earnings?.totalEarnings?.toLocaleString('pt-BR') || '0'}`}
+            value={formatPrice(earnings?.totalEarnings || 0)}
             description="Ganhos acumulados"
             icon={<DollarSign className="h-5 w-5" />}
             trend={earnings?.earningsGrowth ? {
@@ -172,21 +173,21 @@ const CollaboratorEarningsPage: React.FC = () => {
           
           <StatsCard
             title="Este Mês"
-            value={`R$ ${earnings?.monthlyEarnings?.toLocaleString('pt-BR') || '0'}`}
+            value={formatPrice(earnings?.monthlyEarnings || 0)}
             description="Receita do mês atual"
             icon={<Calendar className="h-5 w-5" />}
           />
 
           <StatsCard
             title="Média por Evento"
-            value={`R$ ${earnings?.averagePerEvent?.toLocaleString('pt-BR') || '0'}`}
+            value={formatPrice(earnings?.averagePerEvent || 0)}
             description="Valor médio recebido"
             icon={<TrendingUp className="h-5 w-5" />}
           />
 
           <StatsCard
             title="Pagamentos Pendentes"
-            value={`R$ ${earnings?.pendingPayments?.toLocaleString('pt-BR') || '0'}`}
+            value={formatPrice(earnings?.pendingPayments || 0)}
             description="Aguardando processamento"
             icon={<Clock className="h-5 w-5" />}
           />
@@ -219,8 +220,8 @@ const CollaboratorEarningsPage: React.FC = () => {
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip 
-                  formatter={(value, name) => [
-                    `R$ ${Number(value).toLocaleString('pt-BR')}`,
+                  formatter={(value: number | undefined, name: string | undefined) => [
+                    formatPrice(Number(value || 0)),
                     name === 'earnings' ? 'Ganhos' : 'Eventos'
                   ]}
                 />
@@ -256,7 +257,7 @@ const CollaboratorEarningsPage: React.FC = () => {
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-foreground">
-                      R$ {payment.amount.toLocaleString('pt-BR')}
+                      {formatPrice(payment.amount)}
                     </p>
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(payment.status)}`}>
                       {getStatusText(payment.status)}
@@ -281,7 +282,7 @@ const CollaboratorEarningsPage: React.FC = () => {
                   </div>
                 </div>
                 <p className="text-xl font-bold text-green-900">
-                  R$ {((earnings?.totalEarnings || 0) - (earnings?.pendingPayments || 0)).toLocaleString('pt-BR')}
+                  {formatPrice(((earnings?.totalEarnings || 0) - (earnings?.pendingPayments || 0)))}
                 </p>
               </div>
 
@@ -296,7 +297,7 @@ const CollaboratorEarningsPage: React.FC = () => {
                   </div>
                 </div>
                 <p className="text-xl font-bold text-yellow-900">
-                  R$ {earnings?.pendingPayments?.toLocaleString('pt-BR') || '0'}
+                  {formatPrice(earnings?.pendingPayments || 0)}
                 </p>
               </div>
 

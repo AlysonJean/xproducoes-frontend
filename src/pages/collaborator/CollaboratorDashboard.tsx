@@ -5,6 +5,7 @@ import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLa
 import type { DashboardEvent } from '../../types/domains/dashboard';
 import { collaboratorsAPI } from '../../services/api';
 import { StatsCard, SimpleCard } from '../../components/ui/Cards';
+import { formatPrice } from '@/utils/formatPrice';
 import {
   Calendar,
   DollarSign,
@@ -23,7 +24,7 @@ const ProfessionalMetrics: React.FC<{ data: any | null }> = ({ data }) => {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <StatsCard
         title="Receita Total"
-        value={data.totalEarnings ? `R$ ${data.totalEarnings.toLocaleString('pt-BR')}` : 'R$ 0'}
+        value={formatPrice(data.totalEarnings || 0)}
         description="Ganhos acumulados"
         icon={<DollarSign className="h-5 w-5" />}
         trend={data.earningsGrowth ? {
@@ -154,7 +155,7 @@ const UpcomingEvents: React.FC<{ events: DashboardEvent[] }> = ({ events }) => (
                     : event.status}
               </span>
               <p className="text-sm font-medium text-primary">
-                R$ {event.totalPayment?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {formatPrice(event.totalPayment || 0)}
               </p>
             </div>
           </div>

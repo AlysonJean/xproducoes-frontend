@@ -6,6 +6,7 @@ import { Search, Edit, Trash2, Users, Download, Plus, Calendar } from 'lucide-re
 
 import AdminLayout from '@/components/admin/AdminLayout';
 import { SimpleCard, StatsCard } from '@/components/ui/Cards';
+import { formatPrice } from '@/utils/formatPrice';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -265,7 +266,7 @@ const ClientListPage: React.FC = () => {
         <StatsCard title="Suspensos" value={analytics.totalSuspended} icon={<Users className="h-5 w-5" />} />
         <StatsCard title="Novos (Mês)" value={analytics.newThisMonth} icon={<Calendar className="h-5 w-5" />} />
         <StatsCard title="Média Reservas" value={analytics.averageBookings.toFixed(1)} icon={<Calendar className="h-5 w-5" />} />
-        <StatsCard title="Receita Total" value={`R$ ${analytics.totalRevenue.toLocaleString('pt-BR')}`} icon={<Calendar className="h-5 w-5" />} />
+        <StatsCard title="Receita Total" value={formatPrice(analytics.totalRevenue)} icon={<Calendar className="h-5 w-5" />} />
       </div>
 
       <SimpleCard className="mb-6">
@@ -361,7 +362,7 @@ const ClientListPage: React.FC = () => {
 
                   <td className="px-6 py-4 whitespace-nowrap text-sm">{client.status}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">{client.totalBookings ?? 0}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{`R$ ${Number(client.totalSpent || 0).toLocaleString('pt-BR')}`}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">{formatPrice(client.totalSpent || 0)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">{format(new Date(client.createdAt), 'dd/MM/yyyy', { locale: ptBR })}</td>
 
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

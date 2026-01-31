@@ -11,18 +11,22 @@ export const AboutPage: React.FC = () => {
         <div className="bg-card rounded-xl shadow-sm border border-border p-8 space-y-6">
           <section>
             <h2 className="text-2xl font-bold text-foreground mb-3">Nossa História</h2>
-            <p className="text-muted-foreground">
-              A X Produçoes e Eventos é especialista em aluguel de equipamentos audiovisuais e produção de eventos.
-              Com anos de experiência no mercado, oferecemos soluções completas para eventos corporativos,
-              sociais e artísticos, sempre com foco em qualidade e excelência.
+            <p className="text-muted-foreground mb-4">
+              A X Produçoes e Eventos nasceu de uma visão clara: oferecer excelência técnica sem concessões no mercado audiovisual. 
+              Com uma trajetória marcada pela evolução constante, passamos de uma empresa de locação para nos tornarmos referência 
+              em engenharia de eventos. Nossa experiência foi forjada nos bastidores das mais exigentes produções, onde aprendemos 
+              que o domínio técnico e a precisão são o que separam um bom evento de uma experiência inesquecível.
             </p>
           </section>
 
           <section>
-            <h3 className="text-xl font-semibold text-foreground mb-3">Inspiração em grandes plataformas</h3>
+            <h3 className="text-xl font-semibold text-foreground mb-3">Excelência Técnica e Profissionalismo</h3>
             <p className="text-muted-foreground">
-              Buscamos as melhores práticas de UX e confiança observadas em grandes plataformas: adotamos a descoberta orientada por dados similar ao que o Netflix faz para recomendar soluções técnicas,
-              personalização de ofertas inspirada em abordagens do Spotify, e foco em confiança e verificações (reviews, políticas claras) no estilo Airbnb — tudo adaptado ao mercado de eventos.
+              Nosso diferencial não está apenas no que fazemos, mas em como fazemos. Construímos nossa reputação sobre pilares 
+              sólidos de conhecimento técnico e rigor operacional. Cada equipamento do nosso acervo passa por verificações 
+              exaustivas para garantir confiabilidade absoluta. Nossa equipe não é formada apenas por operadores, mas por 
+              especialistas apaixonados que entendem a física do som e a ciência da luz, garantindo que cada projeto seja 
+              executado com maestria técnica e postura profissional irrepreensível.
             </p>
           </section>
 
