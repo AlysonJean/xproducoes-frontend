@@ -5,6 +5,7 @@ import type { PortfolioItem, PortfolioFilters } from '@/types';
 import { PageLayout, PageLoading, PageEmpty } from '../components/layouts/PageLayout';
 import { normalizeString } from '../utils/string';
 import { SearchAndFilters, Grid } from '../components/ui/StandardComponents';
+import { SEO } from '../components/SEO';
 
 export const PortfolioPage: React.FC = () => {
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
@@ -86,6 +87,10 @@ export const PortfolioPage: React.FC = () => {
       title="Nosso Portfólio"
       description="Explore nossos trabalhos realizados e se inspire para seu próximo evento."
     >
+      <SEO 
+        title="Portfólio de Eventos" 
+        description="Veja fotos de casamentos, shows e eventos corporativos realizados com a estrutura da X Produções. Qualidade comprovada em Belo Horizonte."
+      />
       <div className="w-full max-w-6xl mx-auto">
         <SearchAndFilters
           searchQuery={filters.searchQuery}

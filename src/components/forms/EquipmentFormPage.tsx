@@ -17,6 +17,7 @@ import {
   Button
 } from '../ui/StandardComponents';
 import type { Category, Equipment } from '../../types/types';
+import { generateSeoFilename } from '../../utils/seoUtils';
 
 // Schema simplificado para o formulário de equipamento
 const equipmentFormSchema = z.object({
@@ -103,6 +104,12 @@ export const EquipmentFormPage: React.FC = () => {
       setSubmitLoading(true);
 
       const formData = new FormData();
+      
+      // Generate SEO-friendly filename
+      const categoryName = categories.find(c => c.id === data.categoryId)?.name;
+      const seoFilename = generateSeoFilename('equipments', data.name, categoryName);
+      formData.append('fileName', seoFilename);
+
       formData.append('name', data.name);
       formData.append('description', data.description);
       formData.append('pricePerHour', data.pricePerHour.toString());

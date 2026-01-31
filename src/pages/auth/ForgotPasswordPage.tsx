@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { api } from '../../services/api';
 
 function validateEmail(email: string) {
   return /^\S+@\S+\.\S+$/.test(email);
@@ -26,24 +27,14 @@ const ForgotPasswordPage: React.FC = () => {
 
   setLoading(true);
     try {
-      const res = await fetch('/api/v1/auth/request-password-reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
+      await api.post('/auth/request-password-reset', { email });
 
-      if (res.ok) {
-        setMessage('Se houver uma conta com esse e-mail, enviamos instruções para redefinir a senha.');
-        addNotification({ type: 'info', title: 'Verifique seu e-mail', message: 'Caso exista uma conta, enviaremos instruções para redefinir a senha.' });
-      } else {
-        const data = await res.json().catch(() => ({}));
-        const msg = (data && data.message) || 'Erro ao enviar instruções. Tente novamente mais tarde.';
-        setError(msg);
-        addNotification({ type: 'error', title: 'Erro', message: msg });
-      }
-    } catch (err) {
-      setError('Erro de rede. Verifique sua conexão.');
-      addNotification({ type: 'error', title: 'Erro de rede', message: 'Não foi possível contatar o servidor.' });
+      setMessage('E-mail enviado com sucesso! Verifique sua caixa de entrada (e spam) para redefinir sua senha.');
+      addNotification({ type: 'success', title: 'E-mail enviado', message: 'Instruções enviadas para seu e-mail.' });
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Erro ao enviar instruções. Verifique sua conexão e tente novamente.';
+      setError(msg);
+      addNotification({ type: 'error', title: 'Erro', message: msg });
     } finally {
       setLoading(false);
     }

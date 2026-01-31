@@ -9,6 +9,7 @@ import { useCart } from '@/hooks/useCart';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import type { Equipment } from '../types/types';
 import { formatPrice } from '../utils/formatPrice';
+import { SEO } from '../components/SEO';
 
 export const EquipmentDetailPage = () => {
   const { ref: titleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
@@ -77,6 +78,30 @@ export const EquipmentDetailPage = () => {
 
   return (
   <div className="bg-card p-6 md:p-8 rounded-lg shadow-2xl border border-border">
+      <SEO 
+        title={equipment.name} 
+        description={equipment.description || `Aluguel de ${equipment.name} em Belo Horizonte e região. Confira preço e disponibilidade.`}
+        image={equipment.imageUrl}
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": equipment.name,
+          "image": equipment.imageUrl ? [equipment.imageUrl] : [],
+          "description": equipment.description,
+          "sku": equipment.id,
+          "brand": {
+            "@type": "Brand",
+            "name": "X Produções"
+          },
+          "offers": {
+            "@type": "Offer",
+            "url": window.location.href,
+            "priceCurrency": "BRL",
+            "price": equipment.pricePerHour,
+            "availability": equipment.isAvailable ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+          }
+        }}
+      />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
           <img

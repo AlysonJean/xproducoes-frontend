@@ -328,7 +328,7 @@ export const collaboratorsAPI = {
   update: (id: string, data: Record<string, unknown>) => api.put(`/admin/collaborators/${id}`, data),
   delete: (id: string) => api.delete(`/admin/collaborators/${id}`),
   // Enviar convite por e-mail (admin)
-  invite: (email: string) => api.post('/admin/collaborators/invite', { email }),
+  invite: (email: string) => api.post('/collaborators/invite', { email }),
   // Dashboard pessoal do colaborador
   getMyDashboard: () => api.get('/collaborators/me/dashboard'),
   

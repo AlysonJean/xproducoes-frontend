@@ -2,6 +2,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import App from './App';
 import { initSentry } from './utils/sentry';
 import './styles/themes/theme-variables.css';
@@ -24,14 +25,16 @@ if (!root) {
 }
 root.render(
   <React.StrictMode>
-    <BrowserRouter future={{
-      v7_startTransition: true,
-      v7_relativeSplatPath: true
-    }}>
-      <SentryErrorBoundary>
-        <App />
-      </SentryErrorBoundary>
-    </BrowserRouter>
+    <HelmetProvider>
+      <BrowserRouter future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true
+      }}>
+        <SentryErrorBoundary>
+          <App />
+        </SentryErrorBoundary>
+      </BrowserRouter>
+    </HelmetProvider>
   </React.StrictMode>
 );
 

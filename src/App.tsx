@@ -195,6 +195,11 @@ const PortfolioListPage = lazy(() =>
 const PortfolioFormPage = lazy(() =>
   import('./components/forms/PortfolioFormPage').then((m) => ({ default: m.PortfolioFormPage }))
 );
+// lazy load banner page
+const BannerManagementPage = lazy(() =>
+  import('./pages/admin/BannerManagementPage').then((m) => ({ default: m.BannerManagementPage }))
+);
+
 const ContactSubmissionsListPage = lazy(() =>
   import('./pages/admin/ContactSubmissionsListPage').then((m) => ({
     default: m.ContactSubmissionsListPage,
@@ -788,6 +793,16 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      
+      <Route
+        path="/admin/banners"
+        element={
+          <ProtectedRoute adminOnly>
+            <BannerManagementPage />
+          </ProtectedRoute>
+        }
+      />
+
       {/* Alias antigo para /admin/settings: redireciona para /admin/settings/logo */}
       <Route
         path="/admin/configuracoes"

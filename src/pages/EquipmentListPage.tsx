@@ -6,6 +6,7 @@ import { normalizeString } from '../utils/string';
 import type { Equipment, Category, EquipmentFilters } from '@/types/types';
 import { PageLayout, PageLoading, PageEmpty } from '../components/layouts/PageLayout';
 import { SearchAndFilters, FilterSelect, Grid } from '../components/ui/StandardComponents';
+import { SEO } from '../components/SEO';
 
 export const EquipmentListPage: React.FC = () => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
@@ -96,6 +97,10 @@ export const EquipmentListPage: React.FC = () => {
       title="Equipamentos Profissionais"
       description="Descubra nossa coleção completa de equipamentos profissionais para eventos de alta qualidade."
     >
+      <SEO 
+        title="Catálogo de Equipamentos de Som e Luz" 
+        description="Aluguel de caixas de som, microfones, moving heads, painéis de LED e estruturas em Belo Horizonte. Equipamentos revisados e de marcas profissionais."
+      />
       <SearchAndFilters
         searchQuery={filters.searchQuery}
         onSearchChange={(query) => handleFilterChange({ searchQuery: query })}

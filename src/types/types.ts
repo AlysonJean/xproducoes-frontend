@@ -2,6 +2,21 @@
 // ENUMS
 // ================================
 
+export interface Banner {
+  id: string;
+  title: string;
+  description?: string;
+  imageUrl: string;
+  mobileImageUrl?: string;
+  linkUrl?: string;
+  active: boolean;
+  sortOrder: number;
+  startDate?: string;
+  endDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export enum UserRole {
   CLIENT = 'CLIENT',
   ADMIN = 'ADMIN',

@@ -7,6 +7,7 @@ import { apiFetch } from '../../services/api';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { generateSeoFilename } from '../../utils/seoUtils';
 
 export const LogoSettingsPage = () => {
   const { logoUrl, setLogoUrl, companyName, setCompanyName } = useSettings();
@@ -79,6 +80,11 @@ export const LogoSettingsPage = () => {
         });
         
         const formData = new FormData();
+
+        // SEO Filename
+        const seoFilename = generateSeoFilename('branding', 'logo', nameInput.trim());
+        formData.append('fileName', seoFilename);
+
         formData.append('logo', newLogoFile);
         
   console.log('Sending request to /logo...');

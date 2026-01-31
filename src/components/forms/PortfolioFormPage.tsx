@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../../services/api';
-import { 
+import { apiFetch } from '../../services/api';import { generateSeoFilename } from '../../utils/seoUtils';import { 
   Form, 
   FormSection, 
   FormActions, 
@@ -33,6 +32,11 @@ export const PortfolioFormPage = () => {
 
     try {
       const formData = new FormData();
+
+      // SEO Filename
+      const seoFilename = generateSeoFilename('portfolio', title);
+      formData.append('fileName', seoFilename);
+
       formData.append('title', title);
       formData.append('description', description);
       formData.append('eventDate', new Date(eventDate).toISOString());

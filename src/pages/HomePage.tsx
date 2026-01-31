@@ -15,6 +15,8 @@ import { GeminiEventSuggester } from '../components/ui/GeminiEventSuggester';
 import { PageLoading } from '../components/layouts/PageLayout';
 import { Grid } from '../components/ui/StandardComponents';
 import { TestimonialCard } from '../components/ui/TestimonialCard';
+import { BannerCarousel } from '../components/ui/BannerCarousel';
+import { SEO } from '../components/SEO';
 
 const useDebounce = (value: string, delay: number) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -243,11 +245,19 @@ export const HomePage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      {/* Hero Section */}
-      <div className="relative py-16 sm:py-20 lg:py-24 xl:py-28 2xl:py-32 mb-16 sm:mb-20 lg:mb-24 xl:mb-28 2xl:mb-32 overflow-hidden">
+      <SEO 
+        title="Aluguel de Som, Luz e LED" 
+        description="A melhor empresa de aluguel de som, iluminação e painel de LED em Belo Horizonte. Equipamentos profissionais para casamentos, festas e eventos corporativos."
+      />
+      
+      {/* Dynamic Banner Carousel */}
+      <BannerCarousel />
+
+      {/* Hero Section - Reduced Size */}
+      <div className="relative py-8 sm:py-10 lg:py-12 mb-8 sm:mb-12 overflow-hidden">
         <div className="absolute inset-0 -z-10 pointer-events-none bg-gradient-to-r from-primary/10 via-primary/5 to-transparent"></div>
         <div 
-          className="relative text-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
+          className="relative text-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
           onMouseMove={(e) => {
             const el = e.currentTarget;
             el.style.setProperty('--mouse-x', `${e.clientX}px`);
@@ -269,10 +279,10 @@ export const HomePage = () => {
           </div>
 
           <div className="relative z-10 pointer-events-none">
-            <h1 ref={heroTitleRef} className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold mb-6 heading-elegant pointer-events-auto">
+            <h1 ref={heroTitleRef} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 heading-elegant pointer-events-auto">
               Equipamentos Profissionais
             </h1>
-            <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl text-muted-foreground mb-8 max-w-5xl mx-auto pointer-events-auto">
+            <p className="text-base sm:text-lg lg:text-xl text-muted-foreground mb-6 max-w-4xl mx-auto pointer-events-auto">
               Transforme seus eventos em experiências inesquecíveis com nossa tecnologia de ponta
             </p>
           </div>
