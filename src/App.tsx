@@ -212,6 +212,9 @@ const LogoSettingsPage = lazy(() =>
   import('./pages/admin/LogoSettingsPage').then((m) => ({ default: m.LogoSettingsPage }))
 );
 const MonitoringPage = lazy(() => import('./pages/admin/MonitoringPage'));
+const NewsletterSubscribersPage = lazy(() => 
+  import('./pages/admin/NewsletterSubscribersPage').then((m) => ({ default: m.NewsletterSubscribersPage }))
+);
 // ===== LOADING COMPONENT FOR SUSPENSE =====
 const PageLoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen bg-surface">
@@ -750,6 +753,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute adminOnly>
             <ContactSubmissionsListPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/newsletter"
+        element={
+          <ProtectedRoute adminOnly>
+            <NewsletterSubscribersPage />
           </ProtectedRoute>
         }
       />
