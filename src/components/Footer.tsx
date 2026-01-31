@@ -54,40 +54,40 @@ export const Footer = () => {
     {
       title: 'Produtos',
       links: [
-        { name: 'Equipamentos de Som', href: '/equipments?category=sound' },
-        { name: 'Equipamentos de Luz', href: '/equipments?category=lighting' },
+        { name: 'Equipamentos de Som', href: '/equipamentos?category=sound' },
+        { name: 'Equipamentos de Luz', href: '/equipamentos?category=lighting' },
         { name: 'Kits Completos', href: '/kits' },
-        { name: 'Acessórios', href: '/equipments?category=accessories' },
+        { name: 'Acessórios', href: '/equipamentos?category=accessories' },
       ]
     },
     {
       title: 'Empresa',
       links: [
-        { name: 'Sobre Nós', href: '/about' },
-        { name: 'Nossa História', href: '/about#history' },
-        { name: 'Equipe', href: '/about#team' },
-        { name: 'Carreiras', href: '/careers' },
-        { name: 'Imprensa', href: '/press' },
+        { name: 'Sobre Nós', href: '/sobre' },
+        { name: 'Nossa História', href: '/sobre#history' },
+        { name: 'Equipe', href: '/sobre#team' },
+        { name: 'Carreiras', href: '/carreiras' },
+        { name: 'Imprensa', href: '/imprensa' },
       ]
     },
     {
       title: 'Suporte',
       links: [
-        { name: 'Central de Ajuda', href: '/help' },
+        { name: 'Central de Ajuda', href: '/ajuda' },
         { name: 'FAQ', href: '/faq' },
-        { name: 'Contato', href: '/contact' },
-        { name: 'Suporte Técnico', href: '/support' },
-        { name: 'Garantia', href: '/warranty' },
+        { name: 'Contato', href: '/contato' },
+        { name: 'Suporte Técnico', href: '/ajuda' },
+        { name: 'Garantia', href: '/garantia' },
       ]
     },
     {
       title: 'Legal',
       links: [
-        { name: 'Termos de Uso', href: '/terms' },
-        { name: 'Política de Privacidade', href: '/privacy' },
+        { name: 'Termos de Uso', href: '/termos' },
+        { name: 'Política de Privacidade', href: '/privacidade' },
         { name: 'Política de Cookies', href: '/cookies' },
         { name: 'LGPD', href: '/lgpd' },
-        { name: 'Licenças', href: '/licenses' },
+        { name: 'Licenças', href: '/licencas' },
       ]
     }
   ];

@@ -257,15 +257,15 @@ const ProtectedRoute: React.FC<{
   if (role && user?.role !== role) {
     switch (user?.role) {
       case 'ADMIN':
-        return <Navigate to="/admin/dashboard" replace />;
+        return <Navigate to="/admin/painel" replace />;
       case 'COLLABORATOR':
-        return <Navigate to="/collaborator/dashboard" replace />;
+        return <Navigate to="/colaborador/painel" replace />;
       case 'FREELANCER':
-        return <Navigate to="/freelancer/dashboard" replace />;
+        return <Navigate to="/freelancer/painel" replace />;
       case 'CLIENT':
-        return <Navigate to="/client/dashboard" replace />;
+        return <Navigate to="/cliente/painel" replace />;
       default:
-        return <Navigate to="/dashboard" replace />;
+        return <Navigate to="/painel" replace />;
     }
   }
 
@@ -353,29 +353,29 @@ const AppRoutes: React.FC = () => {
       <Route path="/" element={<HomePage />} />
       <Route path="/kits" element={<KitListPage />} />
       <Route path="/kits/:id" element={<KitDetailPage />} />
-      <Route path="/equipments" element={<PublicEquipmentListPage />} />
-      <Route path="/equipments/:id" element={<EquipmentDetailPage />} />
+      <Route path="/equipamentos" element={<PublicEquipmentListPage />} />
+      <Route path="/equipamentos/:id" element={<EquipmentDetailPage />} />
       <Route path="/portfolio" element={<PortfolioPage />} />
-      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/contato" element={<ContactPage />} />
       <Route path="/faq" element={<FaqPage />} />
-      <Route path="/compare" element={<ComparePage />} />
-  <Route path="/cart" element={<CartPage />} />
-      <Route path="/quote-request" element={<QuoteRequestPage />} />
-      <Route path="/quote-success" element={<QuoteSuccessPage />} />
-  <Route path="/booking-success" element={<BookingSuccessPage />} />
-  <Route path="/booking-success/:id" element={<BookingSuccessPage />} />
+      <Route path="/comparar" element={<ComparePage />} />
+      <Route path="/carrinho" element={<CartPage />} />
+      <Route path="/orcamento" element={<QuoteRequestPage />} />
+      <Route path="/orcamento-sucesso" element={<QuoteSuccessPage />} />
+      <Route path="/reserva-sucesso" element={<BookingSuccessPage />} />
+      <Route path="/reserva-sucesso/:id" element={<BookingSuccessPage />} />
 
       {/* Institutional Pages */}
-      <Route path="/about" element={<AboutPage />} />
-  <Route path="/careers" element={<CareersPage />} />
-  <Route path="/press" element={<PressPage />} />
-  <Route path="/warranty" element={<WarrantyPage />} />
-  <Route path="/cookies" element={<CookiesPage />} />
-  <Route path="/licenses" element={<LicensesPage />} />
-  <Route path="/lgpd" element={<LGPDPage />} />
-  <Route path="/help" element={<HelpPage />} />
-      <Route path="/terms" element={<TermsPage />} />
-      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/sobre" element={<AboutPage />} />
+      <Route path="/carreiras" element={<CareersPage />} />
+      <Route path="/imprensa" element={<PressPage />} />
+      <Route path="/garantia" element={<WarrantyPage />} />
+      <Route path="/cookies" element={<CookiesPage />} />
+      <Route path="/licencas" element={<LicensesPage />} />
+      <Route path="/lgpd" element={<LGPDPage />} />
+      <Route path="/ajuda" element={<HelpPage />} />
+      <Route path="/termos" element={<TermsPage />} />
+      <Route path="/privacidade" element={<PrivacyPage />} />
 
       {/* Development Modal Examples */}
 
@@ -388,36 +388,36 @@ const AppRoutes: React.FC = () => {
           </AuthRedirect>
         }
       />
-  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-  <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/recuperar-senha" element={<ForgotPasswordPage />} />
+      <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
       <Route
-        path="/register"
+        path="/cadastro"
         element={
           <AuthRedirect>
             <RegisterPage />
           </AuthRedirect>
         }
       />
-  <Route path="/register-from-invite" element={<RegisterFromInvitePage />} />
+      <Route path="/cadastro-convite" element={<RegisterFromInvitePage />} />
       <Route
-        path="/complete-registration"
+        path="/completar-cadastro"
         element={
           <CompleteRegistrationPage />
         }
       />
-    <Route path="/auth/oauth-complete" element={<OAuthComplete />} />
+      <Route path="/auth/oauth-concluido" element={<OAuthComplete />} />
 
       {/* Protected User Routes - Role specific dashboards only */}
       <Route
-        path="/dashboard"
+        path="/painel"
         element={
           <ProtectedRoute>
-            <Navigate to="/client/dashboard" replace />
+            <Navigate to="/cliente/painel" replace />
           </ProtectedRoute>
         }
       />
       <Route
-        path="/client/dashboard"
+        path="/cliente/painel"
         element={
           <ProtectedRoute role="CLIENT">
             <ClientDashboardPage />
@@ -425,7 +425,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/collaborator/dashboard"
+        path="/colaborador/painel"
         element={
           <ProtectedRoute role="COLLABORATOR">
             <CollaboratorDashboardPage />
@@ -433,7 +433,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/collaborator/schedule"
+        path="/colaborador/agenda"
         element={
           <ProtectedRoute role="COLLABORATOR">
             <CollaboratorWorkSchedule />
@@ -441,7 +441,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/collaborator/profile"
+        path="/colaborador/perfil"
         element={
           <ProtectedRoute role="COLLABORATOR">
             <CollaboratorProfilePage />
@@ -449,7 +449,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/collaborator/earnings"
+        path="/colaborador/ganhos"
         element={
           <ProtectedRoute role="COLLABORATOR">
             <CollaboratorEarningsPage />
@@ -457,7 +457,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/collaborator/reports"
+        path="/colaborador/relatorios"
         element={
           <ProtectedRoute role="COLLABORATOR">
             <CollaboratorReportsPage />
@@ -465,7 +465,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/collaborator/availability"
+        path="/colaborador/disponibilidade"
         element={
           <ProtectedRoute role="COLLABORATOR">
             <CollaboratorAvailabilityPage />
@@ -473,7 +473,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/collaborator/notifications"
+        path="/colaborador/notificacoes"
         element={
           <ProtectedRoute role="COLLABORATOR">
             <CollaboratorNotificationsPage />
@@ -481,7 +481,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/collaborator/settings"
+        path="/colaborador/configuracoes"
         element={
           <ProtectedRoute role="COLLABORATOR">
             <CollaboratorSettingsPage />
@@ -489,7 +489,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/freelancer/dashboard"
+        path="/freelancer/painel"
         element={
           <ProtectedRoute role="FREELANCER">
             <FreelancerDashboardPage />
@@ -497,7 +497,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/my-bookings"
+        path="/minhas-reservas"
         element={
           <ProtectedRoute>
             <MyBookingsPage />
@@ -505,7 +505,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/client/bookings/:id"
+        path="/cliente/reservas/:id"
         element={
           <ProtectedRoute>
             <BookingDetailsPage />
@@ -513,7 +513,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/favorites"
+        path="/favoritos"
         element={
           <ProtectedRoute>
             <FavoritesPage />
@@ -521,7 +521,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/profile"
+        path="/perfil"
         element={
           <ProtectedRoute>
             <ProfilePage />
@@ -534,12 +534,12 @@ const AppRoutes: React.FC = () => {
         path="/admin"
         element={
           <ProtectedRoute adminOnly>
-            <Navigate to="/admin/dashboard" replace />
+            <Navigate to="/admin/painel" replace />
           </ProtectedRoute>
         }
       />
       <Route
-        path="/admin/dashboard"
+        path="/admin/painel"
         element={
           <ProtectedRoute adminOnly>
             <AdminDashboardPage />
@@ -555,7 +555,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/kits/new"
+        path="/admin/kits/novo"
         element={
           <ProtectedRoute adminOnly>
             <KitFormPage />
@@ -563,7 +563,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/kits/:id/edit"
+        path="/admin/kits/:id/editar"
         element={
           <ProtectedRoute adminOnly>
             <KitFormPage />
@@ -571,7 +571,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/bookings"
+        path="/admin/reservas"
         element={
           <ProtectedRoute adminOnly>
             <BookingListPage />
@@ -580,7 +580,7 @@ const AppRoutes: React.FC = () => {
       />
       {/* Alias para calendário dentro de bookings */}
       <Route
-        path="/admin/bookings/calendar"
+        path="/admin/reservas/calendario"
         element={
           <ProtectedRoute adminOnly>
             <BookingCalendarPage />
@@ -588,7 +588,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/bookings/new"
+        path="/admin/reservas/nova"
         element={
           <ProtectedRoute adminOnly>
             <BookingFormPage />
@@ -596,7 +596,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/bookings/:id/edit"
+        path="/admin/reservas/:id/editar"
         element={
           <ProtectedRoute adminOnly>
             <BookingFormPage />
@@ -604,7 +604,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/bookings/:id"
+        path="/admin/reservas/:id"
         element={
           <ProtectedRoute adminOnly>
             <BookingDetailPage />
@@ -612,7 +612,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/calendar"
+        path="/admin/calendario"
         element={
           <ProtectedRoute adminOnly>
             <BookingCalendarPage />
@@ -620,7 +620,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-  path="/admin/clients"
+  path="/admin/clientes"
         element={
           <ProtectedRoute adminOnly>
             <ClientListPage />
@@ -628,7 +628,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-  path="/admin/clients/:id/edit"
+  path="/admin/clientes/:id/editar"
         element={
           <ProtectedRoute adminOnly>
             <ClientEditPage />
@@ -636,7 +636,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-  path="/admin/clients/new"
+  path="/admin/clientes/novo"
         element={
           <ProtectedRoute adminOnly>
             <ClientFormPage />
@@ -644,7 +644,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/equipment"
+        path="/admin/equipamentos"
         element={
           <ProtectedRoute adminOnly>
             <EquipmentListPage />
@@ -652,7 +652,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/equipment/new"
+        path="/admin/equipamentos/novo"
         element={
           <ProtectedRoute adminOnly>
             <EquipmentFormPage />
@@ -660,7 +660,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/equipment/:id/edit"
+        path="/admin/equipamentos/:id/editar"
         element={
           <ProtectedRoute adminOnly>
             <EquipmentFormPage />
@@ -668,7 +668,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/categories"
+        path="/admin/categorias"
         element={
           <ProtectedRoute adminOnly>
             <CategoryListPage />
@@ -676,7 +676,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/categories/new"
+        path="/admin/categorias/nova"
         element={
           <ProtectedRoute adminOnly>
             <CategoryFormPage />
@@ -684,7 +684,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/categories/:id/edit"
+        path="/admin/categorias/:id/editar"
         element={
           <ProtectedRoute adminOnly>
             <CategoryFormPage />
@@ -709,7 +709,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/faq/new"
+        path="/admin/faq/nova"
         element={
           <ProtectedRoute adminOnly>
             <FaqFormPage />
@@ -717,7 +717,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/faq/:id/edit"
+        path="/admin/faq/:id/editar"
         element={
           <ProtectedRoute adminOnly>
             <FaqFormPage />
@@ -733,7 +733,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/portfolio/new"
+        path="/admin/portfolio/novo"
         element={
           <ProtectedRoute adminOnly>
             <PortfolioFormPage />
@@ -741,7 +741,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/portfolio/:id/edit"
+        path="/admin/portfolio/:id/editar"
         element={
           <ProtectedRoute adminOnly>
             <PortfolioFormPage />
@@ -749,7 +749,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/contacts"
+        path="/admin/contatos"
         element={
           <ProtectedRoute adminOnly>
             <ContactSubmissionsListPage />
@@ -765,7 +765,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/collaborators"
+        path="/admin/colaboradores"
         element={
           <ProtectedRoute adminOnly>
             <AdminCollaboratorsPage />
@@ -773,7 +773,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/collaborators/new"
+        path="/admin/colaboradores/novo"
         element={
           <ProtectedRoute adminOnly>
             <CollaboratorFormPage />
@@ -781,7 +781,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/settings/logo"
+        path="/admin/configuracoes/logo"
         element={
           <ProtectedRoute adminOnly>
             <LogoSettingsPage />
@@ -790,15 +790,15 @@ const AppRoutes: React.FC = () => {
       />
       {/* Alias antigo para /admin/settings: redireciona para /admin/settings/logo */}
       <Route
-        path="/admin/settings"
+        path="/admin/configuracoes"
         element={
           <ProtectedRoute adminOnly>
-            <Navigate to="/admin/settings/logo" replace />
+            <Navigate to="/admin/configuracoes/logo" replace />
           </ProtectedRoute>
         }
       />
       <Route
-        path="/admin/monitoring"
+        path="/admin/monitoramento"
         element={
           <ProtectedRoute adminOnly>
             <MonitoringPage />
@@ -806,7 +806,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/reviews"
+        path="/admin/avaliacoes"
         element={
           <ProtectedRoute adminOnly>
             <ReviewManagementPage />

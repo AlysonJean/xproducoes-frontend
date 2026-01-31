@@ -100,7 +100,7 @@ export const BookingSuccessPage = () => {
         </Link>
         {/* Link corrigido para a nova página */}
         <Link
-          to="/my-bookings"
+          to="/minhas-reservas"
           className="bg-muted hover:bg-muted/70 text-foreground font-bold py-2 px-6 rounded-lg border border-border"
         >
           Ver Minhas Reservas

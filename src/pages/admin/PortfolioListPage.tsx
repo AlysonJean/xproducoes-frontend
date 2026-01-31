@@ -86,7 +86,7 @@ export const PortfolioListPage = () => {
           <h1 className="text-2xl font-bold text-foreground">Portfólio</h1>
           <p className="mt-1 text-sm text-muted-foreground">Gerencie seus itens de portfólio</p>
         </div>
-        <Link to="/admin/portfolio/new">
+        <Link to="/admin/portfolio/novo">
           <Button variant="primary">Adicionar Novo Item</Button>
         </Link>
       </div>
@@ -95,7 +95,7 @@ export const PortfolioListPage = () => {
         <SimpleCard className="p-12 text-center">
           <div className="text-muted-foreground">Nenhum item encontrado.</div>
           <div className="mt-4">
-            <Link to="/admin/portfolio/new">
+            <Link to="/admin/portfolio/novo">
               <Button variant="primary">Adicionar Item</Button>
             </Link>
           </div>
@@ -117,7 +117,7 @@ export const PortfolioListPage = () => {
                 <h3 className="font-semibold text-lg mb-2 text-foreground">{item.title}</h3>
                 <p className="text-muted-foreground text-sm mb-4">{item.description}</p>
                 <div className="flex gap-2">
-                  <Link to={`/admin/portfolio/${item.id}/edit`} className="flex-1">
+                  <Link to={`/admin/portfolio/${item.id}/editar`} className="flex-1">
                     <Button variant="outline" className="w-full">Editar</Button>
                   </Link>
                   <Button variant="danger" className="flex-1" onClick={() => handleDeleteClick(item.id)}>

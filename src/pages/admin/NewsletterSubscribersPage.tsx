@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { newsletterService, NewsletterSubscriber } from '../../services/newsletterService';
 import { Button, Card } from '../../components/ui/StandardComponents';
-import { formatDate } from '../../utils/date';
+import { formatDate } from '../../utils/typeSafeFormatters';
 import { PageLoading } from '../../components/layouts/PageLayout';
 import * as XLSX from 'xlsx';
 

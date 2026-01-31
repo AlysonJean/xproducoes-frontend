@@ -61,7 +61,7 @@ export const ClientDashboardPage = () => {
       title: 'Minhas Reservas',
       description: 'Veja e gerencie suas reservas',
       icon: <Calendar className="h-6 w-6" />,
-      href: '/my-bookings',
+      href: '/minhas-reservas',
       color: 'success'
     },
     {
@@ -69,7 +69,7 @@ export const ClientDashboardPage = () => {
       title: 'Favoritos',
       description: 'Equipamentos salvos para depois',
       icon: <Heart className="h-6 w-6" />,
-      href: '/favorites',
+      href: '/favoritos',
       color: 'warning',
       badge: stats?.favoriteEquipments ? `${stats.favoriteEquipments}` : undefined
     },
@@ -78,7 +78,7 @@ export const ClientDashboardPage = () => {
       title: 'Meu Perfil',
       description: 'Atualize suas informações',
       icon: <Settings className="h-6 w-6" />,
-      href: '/profile',
+      href: '/perfil',
       color: 'info'
     }
   ];
@@ -391,7 +391,7 @@ export const ClientDashboardPage = () => {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-semibold text-foreground">Próximas Reservas</h2>
-                  <Link to="/my-bookings">
+                  <Link to="/minhas-reservas">
                     <Button variant="outline" size="sm">
                       Ver Todas
                     </Button>
@@ -492,7 +492,7 @@ export const ClientDashboardPage = () => {
                   fullWidth
                   className="mt-4"
                   leftIcon={<Settings className="h-4 w-4" />}
-                  onClick={() => navigate('/profile')}
+                  onClick={() => navigate('/perfil')}
                 >
                   Editar Perfil
                 </Button>
@@ -507,7 +507,7 @@ export const ClientDashboardPage = () => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-foreground">Reservas Recentes</h2>
-                <Link to="/my-bookings">
+                <Link to="/minhas-reservas">
                   <Button variant="outline" size="sm">
                     Ver Histórico Completo
                   </Button>

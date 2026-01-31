@@ -3,15 +3,15 @@
 export const getDashboardRoute = (role: string): string => {
   switch (role) {
     case 'ADMIN':
-      return '/admin/dashboard';
+      return '/admin/painel';
     case 'COLLABORATOR':
-      return '/collaborator/dashboard';
+      return '/colaborador/painel';
     case 'FREELANCER':
-      return '/freelancer/dashboard';
+      return '/freelancer/painel';
     case 'CLIENT':
-      return '/client/dashboard';
+      return '/cliente/painel';
     default:
-      return '/dashboard';
+      return '/painel';
   }
 };
 

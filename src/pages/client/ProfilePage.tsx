@@ -321,7 +321,7 @@ export const ProfilePage = () => {
             <Button
               variant="outline"
               leftIcon={<Settings className="h-4 w-4" />}
-              onClick={() => navigate('/client/dashboard')}
+              onClick={() => navigate('/cliente/painel')}
             >
               Voltar ao Dashboard
             </Button>

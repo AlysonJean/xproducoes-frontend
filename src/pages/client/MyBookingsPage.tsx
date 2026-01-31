@@ -69,7 +69,7 @@ export const MyBookingsPage = () => {
                   booking={booking}
                   onReviewClick={(id) => setReviewBookingId(id)}
                   onViewDetails={(id) => {
-                    navigate(`/client/bookings/${id}`);
+                    navigate(`/cliente/reservas/${id}`);
                   }}
                 />
               </div>
