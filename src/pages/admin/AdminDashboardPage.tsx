@@ -262,52 +262,6 @@ const PerformanceOverview = ({ stats }: { stats: AdminDashboardStats | null }) =
   );
 };
 
-// Componente de Status das Integrações
-const SystemIntegrations = () => {
-  const gaId = import.meta.env.VITE_GOOGLE_ANALYTICS_ID;
-  // Considera ativo se existir e não for o placeholder padrão
-  const hasGa = !!gaId && gaId !== 'G-XXXXXXXXXX';
-
-  return (
-    <SimpleCard title="Integrações do Sistema">
-      <div className="space-y-4">
-        {/* Google Analytics 4 */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
-          <div className="flex items-center space-x-3">
-            <div className={`p-2 rounded-full ${hasGa ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400' : 'bg-muted text-muted-foreground'}`}>
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12.025.04c-2.88 0-2.88 2.65-2.88 2.65s0 .64-.49 1.5c-2.31 4.09-8.655 4.96-8.655 9.49 0 4.14 5.38 7.37 9.875 10.32 1.34-1.28 7.35-7.38 7.35-13.62 0-3.37-2.35-10.34-5.2-10.34z"/>
-                <circle cx="12" cy="18" r="2" fill="white" fillOpacity="0.8"/>
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">Google Analytics 4</p>
-              <p className="text-xs text-muted-foreground">
-                {hasGa ? `ID: ${gaId}` : 'Integração pendente'}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-1">
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${hasGa ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
-              {hasGa ? 'Online' : 'Inativo'}
-            </span>
-            {hasGa && (
-              <a 
-                href="https://analytics.google.com/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-[10px] text-primary hover:underline"
-              >
-                Ver Relatórios
-              </a>
-            )}
-          </div>
-        </div>
-      </div>
-    </SimpleCard>
-  );
-};
-
 // Bloco de colaboradores com avaliações removido por política: colaboradores não têm avaliações
 
 export const AdminDashboardPage = () => {
@@ -474,7 +428,6 @@ export const AdminDashboardPage = () => {
           {/* Performance Overview & Integrations */}
           <div className="lg:col-span-1 space-y-6">
             <PerformanceOverview stats={stats} />
-            <SystemIntegrations />
           </div>
         </div>
 
