@@ -28,6 +28,24 @@ export const MonitoringPage: React.FC = () => {
     try {
       setIsLoading(true);
       const data = await monitoringService.getDashboard();
+      
+      // Adicionar verificação local do Google Analytics 4
+      const gaId = import.meta.env.VITE_GOOGLE_ANALYTICS_ID;
+      const hasGa = !!gaId && gaId.length > 5; // Verificação simples
+      
+      const gaIntegration: IntegrationHealth = {
+        name: 'Google Analytics 4',
+        status: hasGa ? 'healthy' : 'warning', 
+        responseTime: 0, // Client-side logic, tempo desprezível
+        lastCheck: new Date().toISOString(),
+        errorMessage: hasGa ? undefined : 'ID de rastreamento pendente'
+      };
+      
+      // Inserir GA na lista de integrações se não existir (evita duplicidade do backend se um dia for implementado lá)
+      if (!data.integrations.find(i => i.name === 'Google Analytics 4')) {
+         data.integrations.push(gaIntegration);
+      }
+
       setDashboardData(data);
       setIntegrations(data.integrations);
       setAlerts(data.activeAlerts);

@@ -23,9 +23,20 @@ export const useCollaborators = (): UseCollaboratorsReturn => {
       setIsLoading(true);
       setError(null);
 
-  // Busca dados reais da API
-  const response = await api.get('/collaborators');
-  setCollaborators(asArray(response.data));
+      // Busca dados reais da API
+      const response = await api.get('/collaborators');
+      const rawData = asArray(response.data);
+      
+      // Mapear dados do backend (que podem vir aninhados com user) para o formato esperado pelo frontend
+      const mappedData = rawData.map((item: any) => ({
+        ...item,
+        name: item.user?.name || item.name || 'Sem nome',
+        email: item.user?.email || item.email || 'Sem email',
+        role: item.collaboratorRole || item.role,
+        avatar: item.user?.avatar || item.user?.avatarUrl || item.avatar,
+      }));
+
+      setCollaborators(mappedData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao buscar colaboradores');
     } finally {

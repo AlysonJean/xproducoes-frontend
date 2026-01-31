@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Trash2, Users, TrendingUp, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -60,6 +60,10 @@ export const AdminCollaboratorsPage: React.FC = () => {
     fetchCollaborators,
     deleteCollaborator,
   } = useCollaborators();
+
+  useEffect(() => {
+    fetchCollaborators();
+  }, []);
 
   // Melhor prática: usar diretamente se já tem os campos necessários
   const collaborators: CollaboratorDashboard[] = (rawCollaborators ||
