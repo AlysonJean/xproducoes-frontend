@@ -7,12 +7,13 @@ import { useSettings } from '../contexts/SettingsContext';
 import { Link } from 'react-router-dom';
 import ThemedLogo from './ui/ThemedLogo';
 import { getWhatsAppPhone, openWhatsApp } from '../utils/whatsapp';
-
+import { useModal } from './modals/ModalContext';
 
 export const Footer = () => {
   const { logoUrl, companyName } = useSettings();
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const { openModal } = useModal();
 
   // Ocultar footer nas páginas admin ou colaborador
   const path = window.location.pathname;
@@ -75,6 +76,18 @@ export const Footer = () => {
     openWhatsApp(getWhatsAppPhone(), 'Olá! Gostaria de saber mais sobre locação de equipamentos.');
   };
 
+  const handleSocialClick = (e: React.MouseEvent, social: { name: string; href: string }) => {
+    if (!social.href) {
+      e.preventDefault();
+      openModal('alert', {
+        title: 'Em breve!',
+        message: `Estamos preparando conteúdos incríveis para o nosso canal no ${social.name}. Fique ligado!`,
+        type: 'info',
+        confirmText: 'Entendi'
+      });
+    }
+  };
+
   const socialLinks = [
     { 
       name: 'Instagram', 
@@ -88,7 +101,7 @@ export const Footer = () => {
     },
     { 
       name: 'Facebook', 
-      href: 'https://facebook.com/xproducoes', 
+      href: 'https://www.facebook.com/XProducoeseEventos/?locale=pt_BR', 
       icon: (
         <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
           <path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd" />
@@ -97,7 +110,7 @@ export const Footer = () => {
     },
     { 
       name: 'YouTube', 
-      href: 'https://youtube.com/@xproducoes', 
+      href: '', 
       icon: (
         <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
           <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
@@ -106,7 +119,7 @@ export const Footer = () => {
     },
     { 
       name: 'LinkedIn', 
-      href: 'https://linkedin.com/company/xproducoes', 
+      href: '', 
       icon: (
         <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
           <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
@@ -270,11 +283,12 @@ export const Footer = () => {
                   ) : (
                     <a
                       key={social.name}
-                      href={social.href}
-                      target="_blank"
+                      href={social.href || '#'}
+                      target={social.href ? "_blank" : undefined}
                       rel="noopener noreferrer"
                       title={social.name}
                       className="icon-btn"
+                      onClick={(e) => handleSocialClick(e, social)}
                     >
                       {social.icon}
                     </a>
