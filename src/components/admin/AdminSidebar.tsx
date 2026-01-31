@@ -214,6 +214,12 @@ const menuGroups: MenuGroup[] = [
         icon: MailIcon,
         description: 'Mensagens recebidas',
       },
+      {
+        name: 'Newsletter',
+        href: '/admin/newsletter',
+        icon: MailIcon,
+        description: 'Inscritos para novidades',
+      },
     ],
   },
   {

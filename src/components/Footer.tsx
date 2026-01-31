@@ -8,11 +8,13 @@ import { Link } from 'react-router-dom';
 import ThemedLogo from './ui/ThemedLogo';
 import { getWhatsAppPhone, openWhatsApp } from '../utils/whatsapp';
 import { useModal } from './modals/ModalContext';
+import { newsletterService } from '../services/newsletterService';
 
 export const Footer = () => {
   const { logoUrl, companyName } = useSettings();
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { openModal } = useModal();
 
   // Ocultar footer nas páginas admin ou colaborador
@@ -21,12 +23,30 @@ export const Footer = () => {
   const isCollaboratorPage = path.startsWith('/collaborator');
   if (isAdminPage || isCollaboratorPage) return null;
 
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
+    if (!email) return;
+
+    setLoading(true);
+    try {
+      await newsletterService.subscribe(email);
       setIsSubscribed(true);
       setEmail('');
+      openModal('alert', {
+        title: 'Sucesso!',
+        message: 'Você foi inscrito na nossa newsletter. Fique atento ao seu e-mail!',
+        type: 'success'
+      });
       setTimeout(() => setIsSubscribed(false), 3000);
+    } catch (error: any) {
+      console.error('Newsletter error:', error);
+      openModal('alert', {
+        title: 'Atenção',
+        message: error.response?.data?.error || 'Erro ao realizar inscrição. Tente novamente.',
+        type: 'warning'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -164,10 +184,10 @@ export const Footer = () => {
                 type="submit"
                 variant={isSubscribed ? 'success' : 'primary'}
                 size="lg"
-                disabled={isSubscribed}
+                disabled={isSubscribed || loading}
                 className="rounded-full font-medium whitespace-nowrap px-8 py-3"
               >
-                {isSubscribed ? '✅ Inscrito!' : 'Inscrever'}
+                {loading ? 'Enviando...' : isSubscribed ? '✅ Inscrito!' : 'Inscrever'}
               </Button>
             </form>
           </div>
