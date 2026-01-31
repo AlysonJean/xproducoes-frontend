@@ -242,7 +242,7 @@ const CollaboratorDashboard: React.FC = () => {
 
   // Redirect se não for colaborador
   if (user?.role !== 'COLLABORATOR') {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/painel" replace />;
   }
 
   return (

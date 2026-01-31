@@ -179,7 +179,7 @@ export const BookingListPage = () => {
             
             <div className="flex gap-2">
               <Button variant="outline">📊 Exportar</Button>
-              <Link to="/admin/bookings/new">
+              <Link to="/admin/reservas/nova">
                 <Button variant="primary">➕ Nova Reserva</Button>
               </Link>
             </div>
@@ -260,7 +260,7 @@ export const BookingListPage = () => {
                         />
                       </td>
                       <td className="p-4">
-                        <Link to={`/admin/bookings/${booking.id}`}>
+                        <Link to={`/admin/reservas/${booking.id}`}>
                           <Button variant="outline" size="sm">Ver Detalhes</Button>
                         </Link>
                       </td>

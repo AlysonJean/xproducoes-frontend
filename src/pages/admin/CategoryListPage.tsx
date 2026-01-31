@@ -84,7 +84,7 @@ export const CategoryListPage = () => {
             Total de categorias: <span className="font-semibold text-foreground">{categories.length}</span>
           </div>
         </div>
-        <Link to="/admin/categories/new" className="self-start sm:self-auto">
+        <Link to="/admin/categorias/nova" className="self-start sm:self-auto">
           <Button variant="primary" className="gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -133,7 +133,7 @@ export const CategoryListPage = () => {
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <Link
-                        to={`/admin/categories/${category.id}/edit`}
+                        to={`/admin/categorias/${category.id}/editar`}
                         title="Editar categoria"
                         aria-label="Editar categoria"
                       >

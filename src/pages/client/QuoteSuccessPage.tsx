@@ -63,7 +63,7 @@ export const QuoteSuccessPage = () => {
           Página Inicial
         </Link>
         <Link
-          to="/my-bookings"
+          to="/minhas-reservas"
           className="bg-muted hover:bg-muted text-foreground font-bold py-2 px-6 rounded-lg transition-colors duration-200"
         >
           Ver Meus Pedidos

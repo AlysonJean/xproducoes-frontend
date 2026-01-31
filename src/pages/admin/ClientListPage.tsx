@@ -255,7 +255,7 @@ const ClientListPage: React.FC = () => {
             <Trash2 className="h-4 w-4 mr-2" />
             {selectedClients.size > 0 ? `Excluir (${selectedClients.size}) selecionados` : 'Excluir selecionados'}
           </Button>
-          <Link to="/admin/clients/new"><Button variant="primary"><Plus className="h-4 w-4 mr-2" /> Novo Cliente</Button></Link>
+          <Link to="/admin/clientes/novo"><Button variant="primary"><Plus className="h-4 w-4 mr-2" /> Novo Cliente</Button></Link>
         </div>
       </div>
 
@@ -366,7 +366,7 @@ const ClientListPage: React.FC = () => {
 
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
-                      <Link to={`/admin/clients/${client.id}/edit`}>
+                      <Link to={`/admin/clientes/${client.id}/editar`}>
                         <Button variant="outline" size="sm">
                           <Edit className="h-4 w-4 mr-1" />
                           Editar
@@ -416,7 +416,7 @@ const ClientListPage: React.FC = () => {
             <p className="mt-1 text-sm text-muted-foreground">{searchTerm || selectedStatus ? 'Tente ajustar os filtros de busca.' : 'Comece criando um novo cliente.'}</p>
             {!searchTerm && !selectedStatus && (
               <div className="mt-6">
-                <Link to="/admin/clients/new"><Button variant="primary"><Plus className="h-4 w-4 mr-2" /> Novo Cliente</Button></Link>
+                <Link to="/admin/clientes/novo"><Button variant="primary"><Plus className="h-4 w-4 mr-2" /> Novo Cliente</Button></Link>
               </div>
             )}
           </div>

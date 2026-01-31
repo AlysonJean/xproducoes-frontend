@@ -30,7 +30,7 @@ export const BookingDetailPage = () => {
     if (!window.confirm('Tem certeza que deseja deletar esta reserva?')) return;
     try {
   await bookingAPI.delete(booking.id);
-  navigate('/admin/bookings');
+  navigate('/admin/reservas');
     } catch (err: unknown) {
       alert('Erro ao deletar reserva: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
     }
@@ -39,7 +39,7 @@ export const BookingDetailPage = () => {
   // Função para alterar reserva
   const handleEditBooking = () => {
     if (!booking?.id) return;
-  navigate(`/admin/bookings/${booking.id}/edit`);
+  navigate(`/admin/reservas/${booking.id}/editar`);
   };
   const { id } = useParams<{ id: string }>();
   const [booking, setBooking] = useState<BookingDetails | null>(null);
@@ -263,11 +263,11 @@ export const BookingDetailPage = () => {
   return (
     <AdminLayout
       title={`Detalhes da Reserva #${booking.id ? booking.id.substring(0, 8) : ''}`}
-      breadcrumbs={[{ name: 'Admin' }, { name: 'Reservas', href: '/admin/bookings' }, { name: 'Detalhes' }]}
+      breadcrumbs={[{ name: 'Admin' }, { name: 'Reservas', href: '/admin/reservas' }, { name: 'Detalhes' }]}
     >
       <div className="flex justify-end items-center mb-4">
         <Link
-          to="/admin/bookings"
+          to="/admin/reservas"
           className="mr-auto bg-muted hover:bg-muted text-primary font-bold py-2 px-4 rounded-lg transition-colors border border-border"
         >
           &larr; Voltar
@@ -286,7 +286,7 @@ export const BookingDetailPage = () => {
             Deletar Reserva
           </button>
           <button
-            onClick={() => navigate('/admin/bookings/new')}
+            onClick={() => navigate('/admin/reservas/nova')}
             className="bg-success hover:bg-success text-success-foreground py-2 px-4 rounded-lg font-bold border border-border"
           >
             ➕ Nova Reserva

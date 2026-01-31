@@ -588,7 +588,7 @@ export const BookingCalendarPage = () => {
             <div className="action-buttons-grid">
               <button
                 className="btn-ghost btn-small"
-                onClick={() => navigate(`/admin/bookings/${hovered.resource.id}/edit`)}
+                onClick={() => navigate(`/admin/reservas/${hovered.resource.id}/editar`)}
                 disabled={!!actionLoading}
                 title="Editar reserva"
               >
@@ -596,7 +596,7 @@ export const BookingCalendarPage = () => {
               </button>
               <button
                 className="btn-ghost btn-small"
-                onClick={() => navigate(`/admin/bookings/new?duplicate=${hovered.resource.id}`)}
+                onClick={() => navigate(`/admin/reservas/nova?duplicate=${hovered.resource.id}`)}
                 disabled={!!actionLoading}
                 title="Duplicar reserva"
               >
@@ -604,7 +604,7 @@ export const BookingCalendarPage = () => {
               </button>
               <button
                 className="btn-ghost btn-small"
-                onClick={() => navigate(`/admin/bookings/${hovered.resource.id}`)}
+                onClick={() => navigate(`/admin/reservas/${hovered.resource.id}`)}
                 disabled={!!actionLoading}
                 title="Ver detalhes completos"
               >

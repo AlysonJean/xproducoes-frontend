@@ -161,7 +161,7 @@ export const BookingDetailsPage = () => {
           <h2 className="text-2xl font-bold mb-4 text-destructive">Erro</h2>
           <p className="text-muted-foreground mb-6">{error || 'Reserva não encontrada'}</p>
           <button
-            onClick={() => navigate('/client/bookings')}
+            onClick={() => navigate('/minhas-reservas')}
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2 px-6 rounded-lg"
           >
             Voltar para Reservas
@@ -183,7 +183,7 @@ export const BookingDetailsPage = () => {
             </p>
           </div>
           <button
-            onClick={() => navigate('/client/bookings')}
+            onClick={() => navigate('/minhas-reservas')}
             className="bg-primary-foreground/10 hover:bg-primary-foreground/20 text-primary-foreground px-4 py-2 rounded-lg transition-colors"
           >
             ← Voltar

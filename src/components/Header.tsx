@@ -50,10 +50,10 @@ export const Header = () => {
 
   type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
   const navItems: { href: string; label: string; Icon: IconType }[] = [
-    { href: '/equipments', label: 'Equipamentos', Icon: ClipboardDocumentListIcon },
+    { href: '/equipamentos', label: 'Equipamentos', Icon: ClipboardDocumentListIcon },
     { href: '/kits', label: 'Kits', Icon: CubeIcon },
     { href: '/portfolio', label: 'Portfólio', Icon: PhotoIcon },
-    { href: '/contact', label: 'Contato', Icon: PhoneIcon },
+    { href: '/contato', label: 'Contato', Icon: PhoneIcon },
     { href: '/faq', label: 'FAQ', Icon: QuestionMarkCircleIcon },
   ];
 
@@ -125,7 +125,7 @@ export const Header = () => {
 
             {/* Favoritos */}
             <Link
-              to="/favorites"
+              to="/favoritos"
               aria-label="Favoritos"
               className="group relative icon-btn"
               title="Favoritos"
@@ -135,7 +135,7 @@ export const Header = () => {
 
             {/* Comparar (primário) */}
             <Link
-              to="/compare"
+              to="/comparar"
               aria-label="Comparar"
               className="group relative icon-btn"
               title="Comparar"
@@ -148,7 +148,7 @@ export const Header = () => {
 
             {/* Carrinho */}
             <Link
-              to="/cart"
+              to="/carrinho"
               aria-label="Carrinho"
               className="group relative icon-btn"
               title="Carrinho"
@@ -166,7 +166,7 @@ export const Header = () => {
             {isAuthenticated ? (
               <div className="flex items-center space-x-3">
                 <Link
-                  to="/dashboard"
+                  to="/painel"
                   className="hidden lg:block text-sm font-medium text-foreground/80 hover:text-foreground transition-colors duration-300"
                 >
                   {user?.role === 'ADMIN'
@@ -243,7 +243,7 @@ export const Header = () => {
             <div className="space-y-2">
               {/* Favoritos */}
               <Link
-                to="/favorites"
+                to="/favoritos"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="flex items-center space-x-4 p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
               >
@@ -253,7 +253,7 @@ export const Header = () => {
 
               {/* Comparar */}
               <Link
-                to="/compare"
+                to="/comparar"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="flex items-center justify-between p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
               >
@@ -270,7 +270,7 @@ export const Header = () => {
 
               {/* Carrinho */}
               <Link
-                to="/cart"
+                to="/carrinho"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="flex items-center justify-between p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
               >
@@ -294,7 +294,7 @@ export const Header = () => {
               <div className="space-y-2">
                 {/* Dashboard/Conta */}
                 <Link
-                  to="/dashboard"
+                  to="/painel"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center space-x-4 p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
                 >

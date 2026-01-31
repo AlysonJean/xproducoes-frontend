@@ -118,13 +118,13 @@ const menuGroups: MenuGroup[] = [
     items: [
       {
         name: 'Dashboard',
-        href: '/admin/dashboard',
+        href: '/admin/painel',
         icon: HomeIcon,
         description: 'Visão geral e métricas',
       },
       {
         name: 'Monitoramento',
-        href: '/admin/monitoring',
+        href: '/admin/monitoramento',
         icon: AnalyticsIcon,
         description: 'Monitoramento Enterprise',
       },
@@ -135,19 +135,19 @@ const menuGroups: MenuGroup[] = [
     items: [
       {
         name: 'Reservas',
-        href: '/admin/bookings',
+        href: '/admin/reservas',
         icon: CalendarIcon,
         description: 'Gestão de agendamentos',
       },
       {
         name: 'Calendário',
-        href: '/admin/bookings/calendar',
+        href: '/admin/reservas/calendario',
         icon: CalendarIcon,
         description: 'Calendário de reservas',
       },
       {
         name: 'Equipamentos',
-        href: '/admin/equipment',
+        href: '/admin/equipamentos',
         icon: CameraIcon,
         description: 'Catálogo de equipamentos',
       },
@@ -164,13 +164,13 @@ const menuGroups: MenuGroup[] = [
     items: [
       {
         name: 'Clientes',
-  href: '/admin/clients',
+        href: '/admin/clientes',
         icon: UsersIcon,
         description: 'Base de clientes',
       },
       {
         name: 'Colaboradores',
-        href: '/admin/collaborators',
+        href: '/admin/colaboradores',
         icon: UsersIcon,
         description: 'Equipe e parceiros',
       },
@@ -181,7 +181,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       {
         name: 'Categorias',
-        href: '/admin/categories',
+        href: '/admin/categorias',
         icon: TagIcon,
         description: 'Organização de produtos',
       },
@@ -199,7 +199,7 @@ const menuGroups: MenuGroup[] = [
       },
       {
         name: 'Avaliações',
-        href: '/admin/reviews',
+        href: '/admin/avaliacoes',
         icon: AnalyticsIcon,
         description: 'Moderação de avaliações',
       },
@@ -210,7 +210,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       {
         name: 'Contatos',
-        href: '/admin/contacts',
+        href: '/admin/contatos',
         icon: MailIcon,
         description: 'Mensagens recebidas',
       },
@@ -227,7 +227,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       {
         name: 'Logo e Marca',
-        href: '/admin/settings/logo',
+        href: '/admin/configuracoes/logo',
         icon: SettingsIcon,
         description: 'Identidade visual',
       },

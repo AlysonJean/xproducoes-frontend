@@ -108,7 +108,7 @@ const CollaboratorProfilePage: React.FC = () => {
     return (
       <CollaboratorLayout
         title="Perfil do Colaborador"
-        breadcrumbs={[{ name: 'Colaborador', href: '/collaborator' }, { name: 'Perfil' }]}
+        breadcrumbs={[{ name: 'Colaborador', href: '/colaborador' }, { name: 'Perfil' }]}
       >
         <div className="flex items-center justify-center min-h-96">
           <Loader2 className="w-8 h-8 animate-spin" />
@@ -122,12 +122,12 @@ const CollaboratorProfilePage: React.FC = () => {
     return (
       <CollaboratorLayout
         title="Perfil do Colaborador"
-        breadcrumbs={[{ name: 'Colaborador', href: '/collaborator' }, { name: 'Perfil' }]}
+        breadcrumbs={[{ name: 'Colaborador', href: '/colaborador' }, { name: 'Perfil' }]}
       >
         <div className="text-center py-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Perfil não encontrado</h2>
           <p className="text-gray-600 mb-6">Não foi possível carregar seu perfil de colaborador.</p>
-          <Button onClick={() => navigate('/dashboard')}>Voltar ao Dashboard</Button>
+          <Button onClick={() => navigate('/painel')}>Voltar ao Painel</Button>
         </div>
       </CollaboratorLayout>
     );
@@ -137,7 +137,7 @@ const CollaboratorProfilePage: React.FC = () => {
   return (
     <CollaboratorLayout
       title="Perfil do Colaborador"
-      breadcrumbs={[{ name: 'Colaborador', href: '/collaborator' }, { name: 'Perfil' }]}
+      breadcrumbs={[{ name: 'Colaborador', href: '/colaborador' }, { name: 'Perfil' }]}
     >
       <div className="bg-white rounded-lg shadow-sm border p-6">
         <div className="flex items-start space-x-6">

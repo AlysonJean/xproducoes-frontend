@@ -120,7 +120,7 @@ const RecentActivity = ({ activities }: { activities: Activity[] }) => {
             const isClickable = activity.type === 'booking' && activity.id;
             const goTo = () => {
               if (activity.type === 'booking' && activity.id) {
-                navigate(`/admin/bookings/${activity.id}`);
+                navigate(`/admin/reservas/${activity.id}`);
               }
             };
             return (
@@ -178,7 +178,7 @@ const RecentActivity = ({ activities }: { activities: Activity[] }) => {
       </div>
       <div className="mt-4 text-right">
         <button
-          onClick={() => navigate('/admin/bookings')}
+          onClick={() => navigate('/admin/reservas')}
           className="text-sm text-primary hover:underline"
         >
           Ver todas as reservas
@@ -407,14 +407,14 @@ export const AdminDashboardPage = () => {
             value={stats?.totalClients || 0}
             icon={<UsersIcon />}
             description="Clientes cadastrados"
-            onClick={() => navigate('/admin/clients')}
+            onClick={() => navigate('/admin/clientes')}
           />
           <StatsCard
             title="Reservas Ativas"
             value={stats?.confirmedBookings || 0}
             icon={<CalendarIcon />}
             description="Reservas confirmadas"
-            onClick={() => navigate('/admin/bookings')}
+            onClick={() => navigate('/admin/reservas')}
             {...(typeof stats?.bookingsGrowth === 'number'
               ? {
                   trend: {
@@ -453,7 +453,7 @@ export const AdminDashboardPage = () => {
             value={stats?.totalEquipments || 0}
             icon={<CameraIcon />}
             description="Equipamentos disponíveis"
-            onClick={() => navigate('/admin/equipment')}
+            onClick={() => navigate('/admin/equipamentos')}
           />
         </div>
 
@@ -485,7 +485,7 @@ export const AdminDashboardPage = () => {
               title="Clientes"
               description="Gerenciar clientes cadastrados"
               icon={<UsersIcon />}
-              onClick={() => navigate('/admin/clients')}
+              onClick={() => navigate('/admin/clientes')}
               color="primary"
             />
 
@@ -493,7 +493,7 @@ export const AdminDashboardPage = () => {
               title="Reservas"
               description="Gerenciar reservas e agendamentos"
               icon={<CalendarIcon />}
-              onClick={() => navigate('/admin/bookings')}
+              onClick={() => navigate('/admin/reservas')}
               color="info"
               badge={
                 ((stats?.pendingBookings || 0) > 0 || (liveStats?.todayBookings || 0) > 0)
@@ -510,7 +510,7 @@ export const AdminDashboardPage = () => {
               title="Equipamentos"
               description="Catálogo de equipamentos disponíveis"
               icon={<EquipmentIcon />}
-              onClick={() => navigate('/admin/equipment')}
+              onClick={() => navigate('/admin/equipamentos')}
               color="success"
             />
 
@@ -518,7 +518,7 @@ export const AdminDashboardPage = () => {
               title="Monitoramento"
               description="Monitoramento Enterprise em tempo real"
               icon={<AnalyticsIcon />}
-              onClick={() => navigate('/admin/monitoring')}
+              onClick={() => navigate('/admin/monitoramento')}
               color="warning"
               badge={
                 (typeof liveStats?.todayRevenue === 'number' && liveStats.todayRevenue > 0)
@@ -534,7 +534,7 @@ export const AdminDashboardPage = () => {
               title="Colaboradores"
               description="Equipe e parceiros cadastrados"
               icon={<UsersIcon />}
-              onClick={() => navigate('/admin/collaborators')}
+              onClick={() => navigate('/admin/colaboradores')}
               color="secondary"
             />
 
@@ -542,7 +542,7 @@ export const AdminDashboardPage = () => {
               title="Nova Reserva"
               description="Criar novo agendamento"
               icon={<PlusIcon />}
-              onClick={() => navigate('/admin/bookings/new')}
+              onClick={() => navigate('/admin/reservas/nova')}
               color="primary"
             />
 
@@ -550,7 +550,7 @@ export const AdminDashboardPage = () => {
               title="Calendário"
               description="Visualizar agenda de reservas"
               icon={<CalendarIcon />}
-              onClick={() => navigate('/admin/bookings/calendar')}
+              onClick={() => navigate('/admin/reservas/calendario')}
               color="info"
             />
 
@@ -558,7 +558,7 @@ export const AdminDashboardPage = () => {
               title="Configurações"
               description="Logo, marca e configurações"
               icon={<SettingsIcon />}
-              onClick={() => navigate('/admin/settings/logo')}
+              onClick={() => navigate('/admin/configuracoes/logo')}
               color="muted"
             />
           </div>
@@ -569,7 +569,7 @@ export const AdminDashboardPage = () => {
           title="Próximos eventos"
           headerRight={
             <button
-              onClick={() => navigate('/admin/bookings/calendar')}
+              onClick={() => navigate('/admin/reservas/calendario')}
               className="text-sm text-primary hover:underline"
             >
               Ver calendário
@@ -595,7 +595,7 @@ export const AdminDashboardPage = () => {
                 return (
                   <li key={b.id} className="py-3">
                     <button
-                      onClick={() => navigate(`/admin/bookings/${b.id}`)}
+                      onClick={() => navigate(`/admin/reservas/${b.id}`)}
                       className="w-full text-left flex items-center justify-between gap-4 hover:bg-muted/40 p-2 rounded-lg transition-colors"
                     >
                       <div className="min-w-0">

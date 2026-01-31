@@ -45,7 +45,7 @@ export const LoginPage = () => {
         navigate(redirectTo);
       } else {
         // Fallback para rota padrão
-        navigate('/dashboard');
+        navigate('/painel');
       }
     } catch (err: unknown) {
       const errorMessage =
@@ -87,14 +87,14 @@ export const LoginPage = () => {
           const dashboardRoute = getDashboardRoute(userData.role);
           navigate(dashboardRoute);
         } else {
-          navigate('/dashboard');
+          navigate('/painel');
         }
       } catch (error) {
         console.error('Erro ao buscar dados do usuário:', error);
-        navigate('/dashboard');
+        navigate('/painel');
       }
     } else {
-      navigate('/dashboard');
+      navigate('/painel');
     }
   };
 
@@ -240,7 +240,7 @@ export const LoginPage = () => {
 
               <div className="text-sm">
                 <Link
-                  to="/forgot-password"
+                  to="/recuperar-senha"
                   className="font-medium text-primary hover:text-primary/80"
                 >
                   Esqueceu sua senha?
@@ -268,18 +268,18 @@ export const LoginPage = () => {
           <div className="text-center space-y-4">
             <p className="text-muted-foreground">
               Não tem uma conta?{' '}
-              <Link to="/register" className="text-primary hover:text-primary/80">
+              <Link to="/cadastro" className="text-primary hover:text-primary/80">
                 Registe-se
               </Link>
             </p>
 
             <p className="text-xs text-muted-foreground">
               Ao fazer login, você concorda com nossos{' '}
-              <Link to="/terms" className="text-primary hover:text-primary/80">
+              <Link to="/termos" className="text-primary hover:text-primary/80">
                 Termos de Serviço
               </Link>{' '}
               e{' '}
-              <Link to="/privacy" className="text-primary hover:text-primary/80">
+              <Link to="/privacidade" className="text-primary hover:text-primary/80">
                 Política de Privacidade
               </Link>
             </p>

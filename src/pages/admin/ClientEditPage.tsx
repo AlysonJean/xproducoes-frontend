@@ -61,7 +61,7 @@ export const ClientEditPage = () => {
         body: JSON.stringify(client),
       });
       setSuccess('Dados do cliente atualizados com sucesso!');
-  setTimeout(() => navigate('/admin/clients'), 1500);
+  setTimeout(() => navigate('/admin/clientes'), 1500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Falha ao atualizar os dados.');
     }
@@ -114,7 +114,7 @@ export const ClientEditPage = () => {
           <Button type="submit" variant="primary" size="md">
             Salvar Alterações
           </Button>
-          <Button type="button" variant="outline" size="md" onClick={() => navigate('/admin/clients')}>
+          <Button type="button" variant="outline" size="md" onClick={() => navigate('/admin/clientes')}>
             Voltar
           </Button>
         </div>
