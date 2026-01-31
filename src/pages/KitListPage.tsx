@@ -6,6 +6,7 @@ import type { Kit, KitFilters } from '@/types/types';
 import { KitCard } from '../components/ui/KitCard';
 import { PageLayout, PageLoading, PageEmpty } from '../components/layouts/PageLayout';
 import { SearchAndFilters, FilterSelect, Grid } from '../components/ui/StandardComponents';
+import { SEO } from '../components/SEO';
 
 export const KitListPage = () => {
   const [kits, setKits] = useState<Kit[]>([]);
@@ -111,6 +112,10 @@ export const KitListPage = () => {
       title="Kits de Equipamentos"
       description="Soluções completas para o seu evento com preços especiais."
     >
+      <SEO 
+        title="Kits de Som e Iluminação para Festas" 
+        description="Confira nossos kits completos de som, luz e DJ para casamentos, festas de 15 anos e eventos corporativos em BH. Economize alugando o pacote completo."
+      />
       <SearchAndFilters
         searchQuery={filters.searchQuery}
         onSearchChange={(query) => handleFilterChange({ searchQuery: query })}

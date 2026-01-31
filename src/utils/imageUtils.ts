@@ -46,6 +46,26 @@ export function normalizeImageUrl(url: string | undefined | null): string {
 }
 
 /**
+ * Otimiza URLs do Cloudinary para entregar WebP/AVIF automaticamente e ajustar qualidade
+ * Adiciona parâmetros 'f_auto,q_auto' na URL
+ */
+export function optimizeCloudinaryUrl(url: string, width?: number): string {
+  if (!url || !url.includes('res.cloudinary.com')) return url;
+  
+  // Evitar duplicação ou aplicar em URLs de demo
+  if (url.includes('/f_auto,q_auto') || url.includes('/demo/')) return url;
+
+  // Inserir transformação após '/upload/'
+  const [base, file] = url.split('/upload/');
+  if (!file) return url;
+
+  let transformation = 'f_auto,q_auto';
+  if (width) transformation += `,w_${width}`;
+
+  return `${base}/upload/${transformation}/${file}`;
+}
+
+/**
  * Gera URL de placeholder com texto personalizado
  */
 export function getPlaceholderUrl(text: string, width = 600, height = 400): string {

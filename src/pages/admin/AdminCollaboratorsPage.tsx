@@ -571,7 +571,8 @@ export const AdminCollaboratorsPage: React.FC = () => {
                 onClick={async () => {
                   setInviteLoading(true);
                   try {
-                    const resp = await api.post('/admin/collaborators/invite', { email: inviteEmail });
+                    // Corrigido o endpoint para /collaborators/invite (sem /admin)
+                    const resp = await api.post('/collaborators/invite', { email: inviteEmail });
                     const data = resp.data || {};
                     const inviteUrl = data.inviteUrl || data.registrationLink || '';
                     if (inviteUrl) {

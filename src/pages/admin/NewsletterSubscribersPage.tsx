@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { SimpleCard } from '../../components/ui/Cards';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { formatDate } from '../../utils/typeSafeFormatters';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { Download, Mail } from 'lucide-react';
 
 export const NewsletterSubscribersPage = () => {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { PageLayout } from '../components/layouts/PageLayout';
+import { SEO } from '../components/SEO';
 
 export const AboutPage: React.FC = () => {
   return (
@@ -7,6 +8,10 @@ export const AboutPage: React.FC = () => {
       title="Sobre Nós"
       description="Quem somos, nossa história e valores que guiam o nosso trabalho."
     >
+      <SEO 
+        title="Sobre a X Produções" 
+        description="Conheça a história da X Produções e Eventos. Referência em qualidade técnica no aluguel de equipamentos audiovisuais em Belo Horizonte."
+      />
       <div className="max-w-4xl mx-auto">
         <div className="bg-card rounded-xl shadow-sm border border-border p-8 space-y-6">
           <section>

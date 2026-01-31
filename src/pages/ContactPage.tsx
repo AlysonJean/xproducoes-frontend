@@ -6,6 +6,7 @@ import { useNotifications } from '../contexts/NotificationContext';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { PageLayout } from '../components/layouts/PageLayout';
 import { Button } from '../components/ui/StandardComponents';
+import { SEO } from '../components/SEO';
 
 export const ContactPage = () => {
   const { ref: infoTitleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
@@ -119,6 +120,10 @@ export const ContactPage = () => {
       title="Entre em Contato"
       description="Estamos aqui para ajudar você a tornar o seu evento inesquecível. Entre em contato conosco!"
     >
+      <SEO 
+        title="Fale Conosco - Orçamento de Som e Luz" 
+        description="Solicite seu orçamento para aluguel de som, iluminação e painel de LED. Atendimento rápido e personalizado via WhatsApp, E-mail ou Telefone."
+      />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
         {/* Informações de Contato */}
         <div className="lg:col-span-1">

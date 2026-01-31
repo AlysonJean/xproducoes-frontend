@@ -7,6 +7,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '@/services/api';
 import { useModal } from '@/components/modals/ModalContext';
+import { generateSeoFilename } from '@/utils/seoUtils';
 
 export const ClientFormPage: React.FC = () => {
   const navigate = useNavigate();
@@ -57,6 +58,11 @@ export const ClientFormPage: React.FC = () => {
 
       if (avatarFile) {
         const fd = new FormData();
+        
+        // SEO Filename
+        const seoFilename = generateSeoFilename('clients', name);
+        fd.append('fileName', seoFilename);
+
         fd.append('name', name.trim());
         fd.append('email', email.trim());
         fd.append('phone', phone.trim() || '');

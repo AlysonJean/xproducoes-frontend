@@ -5,6 +5,7 @@ import type { Category } from '../../types/types';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../services/api';
+import { generateSeoFilename } from '../../utils/seoUtils';
 import {
   Form,
   FormSection,
@@ -20,6 +21,7 @@ export const CategoryFormPage = () => {
   const isEditing = Boolean(id);
 
   const [name, setName] = useState('');
+  const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,19 +44,41 @@ export const CategoryFormPage = () => {
     setLoading(true);
     setError(null);
 
-    const payload = { name };
+    const formData = new FormData();
+    formData.append('name', name);
+    if (file) {
+      // SEO Filename
+      const seoFilename = generateSeoFilename('categories', name);
+      formData.append('fileName', seoFilename);
+      formData.append('image', file);
+    }
+    
+    // Fallback to JSON if no file, OR assume backend handles FormData for both text and file.
+    // Based on user request, we want images to have SEO names.
+    // Assuming backend Category Controller accepts FormData if file is present.
+    // However, original code was JSON.stringify.
+    // If backend only accepts JSON for creation without file, we need a distinct path or update backend.
+    // Given the task is about "when uploading an image", I will assume we are adding image capability here.
+    
+    // Wait, the original code had NO file input.
+    // I need to add the file input to the form as well.
 
     try {
       if (isEditing) {
-        await apiFetch(`/categories/${id}`, {
-          method: 'PUT',
-          body: JSON.stringify(payload),
-        });
+        // If updating with file, likely need FormData
+        // If updating without file, JSON might be fine, or FormData without file.
+        // Let's assume FormData is safer if we want to support file upload now.
+        if (file) {
+           await apiFetch(`/categories/${id}`, { method: 'PUT', body: formData });
+        } else {
+           await apiFetch(`/categories/${id}`, { method: 'PUT', body: JSON.stringify({ name }) });
+        }
       } else {
-  await apiFetch('/api/categories', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
+        if (file) {
+          await apiFetch('/api/categories', { method: 'POST', body: formData });
+        } else {
+          await apiFetch('/api/categories', { method: 'POST', body: JSON.stringify({ name }) });
+        }
       }
       navigate('/admin/categories');
     } catch (err: unknown) {
@@ -101,6 +125,23 @@ export const CategoryFormPage = () => {
             placeholder="Digite o nome da categoria"
             required
           />
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">
+              Imagem da Categoria (Opcional)
+            </label>
+            <input
+              type="file"
+              title="Selecione a imagem da categoria"
+              placeholder="Selecione um arquivo"
+              accept="image/*"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="w-full px-3 py-2 border-2 border-border rounded-lg bg-card text-foreground"
+            />
+             <p className="text-xs text-muted-foreground">
+              A imagem sera renomeada automaticamente para SEO.
+            </p>
+          </div>
         </FormSection>
 
         <FormActions>

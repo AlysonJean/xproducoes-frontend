@@ -1,9 +1,11 @@
-import React, { useState, ImgHTMLAttributes } from 'react';
+import React, { useState, ImgHTMLAttributes, useMemo } from 'react';
+import { optimizeCloudinaryUrl } from '../../utils/imageUtils';
 
 interface SafeImageProps extends ImgHTMLAttributes<HTMLImageElement> {
   src: string;
   fallbackSrc?: string;
   alt: string;
+  optimize?: boolean;
 }
 
 /**
@@ -16,18 +18,24 @@ export const SafeImage: React.FC<SafeImageProps> = ({
   alt,
   className = '',
   onError,
+  optimize = true,
   ...props
 }) => {
-  const [imageSrc, setImageSrc] = useState(src);
+  // Otimizar URL inicial se for Cloudinary
+  const optimizedSrc = useMemo(() => 
+    optimize ? optimizeCloudinaryUrl(src) : src
+  , [src, optimize]);
+
+  const [imageSrc, setImageSrc] = useState(optimizedSrc);
   const [hasError, setHasError] = useState(false);
 
   const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     if (!hasError) {
-      console.warn(`Failed to load image: ${imageSrc}, using fallback`);
+      // console.warn(`Failed to load image: ${imageSrc}, using fallback`);
       setHasError(true);
       setImageSrc(fallbackSrc);
     }
-
+  
     // Chamar onError personalizado se fornecido
     if (onError) {
       onError(e);
@@ -39,9 +47,12 @@ export const SafeImage: React.FC<SafeImageProps> = ({
       {...props}
       src={imageSrc}
       alt={alt}
-      className={className}
+      className={`${className} ${hasError ? 'opacity-80' : ''}`}
       onError={handleError}
       loading="lazy"
+      // Previne CLS se width/height forem passados
+      width={props.width}
+      height={props.height}
     />
   );
 };

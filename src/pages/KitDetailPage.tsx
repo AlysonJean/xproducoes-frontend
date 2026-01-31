@@ -9,6 +9,7 @@ import { FavoriteButton } from '../components/ui/FavoriteButton';
 import { formatPrice } from '../utils/typeSafeFormatters';
 import { toNumber, calculateSavingsAmount } from '../utils/typeSafeFormatters';
 import type { Kit } from '../types/types';
+import { SEO } from '../components/SEO';
 
 export const KitDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -88,6 +89,11 @@ export const KitDetailPage = () => {
 
   return (
     <div className="space-y-8">
+      <SEO 
+        title={kit.name}
+        description={kit.description || `Aluguel de ${kit.name} em Belo Horizonte. Kit completo para festas e eventos.`}
+        image={kit.imageUrl}
+      />
       {/* Breadcrumb */}
       <nav className="text-sm text-muted-foreground">
         <Link to="/" className="hover:text-primary">Início</Link>

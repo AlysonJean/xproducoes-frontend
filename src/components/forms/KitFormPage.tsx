@@ -6,6 +6,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { generateSeoFilename } from '../../utils/seoUtils';
 import { apiFetch } from '../../services/api';
 import type { Kit, Equipment } from '../../types/types';
 import LoadingSpinner from '../ui/LoadingSpinner';
@@ -83,6 +84,11 @@ export const KitFormPage = () => {
   const onSubmit: SubmitHandler<KitFormData> = async (data) => {
     setServerError(null);
     const formData = new FormData();
+    
+    // SEO Filename
+    const seoFilename = generateSeoFilename('kits', data.name);
+    formData.append('fileName', seoFilename);
+
     formData.append('name', data.name);
     formData.append('description', data.description);
     formData.append('price', String(data.price));

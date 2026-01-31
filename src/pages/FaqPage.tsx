@@ -6,6 +6,7 @@ import { apiFetch } from '../services/api';
 import { asArray } from '../utils/normalize';
 import { Card, Grid } from '../components/ui/StandardComponents';
 import { PageLayout, PageLoading, PageError, PageEmpty } from '../components/layouts/PageLayout';
+import { SEO } from '../components/SEO';
 
 // AccordionItem com visual de Card, igual ao portfólio
 const AccordionItem = ({ faq }: { faq: FaqItem }) => {
@@ -65,6 +66,10 @@ export const FaqPage = () => {
       title="Perguntas Frequentes"
       description="Encontre respostas para as dúvidas mais comuns."
     >
+      <SEO 
+        title="Perguntas Frequentes (FAQ)" 
+        description="Dúvidas sobre aluguel de som e luz? Veja aqui como funciona o processo de locação, pagamento e entrega da X Produções."
+      />
       <div className="w-full max-w-3xl mx-auto">
         {faqs.length > 0 ? (
           <Grid columns={{ sm: 1 }} gap={0}>
