@@ -3,6 +3,7 @@ import type { Booking } from '../../types/types';
 import { collaboratorsAPI, collaboratorProfileAPI } from '../../services/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
+import { formatPrice } from '@/utils/formatPrice';
 
 import { CalendarDay, WorkStats } from '@/types/types';
 
@@ -87,10 +88,7 @@ const MonthlyEarningsChart: React.FC<{ monthlyData: Array<{ month: string; earni
             <Tooltip
               formatter={(value: number | undefined, name: string | undefined) => [
                 name === 'earnings'
-                  ? Number(value || 0).toLocaleString('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL' 
-                    })
+                  ? formatPrice(Number(value || 0))
                   : (value || 0),
                 name === 'earnings' ? 'Ganhos' : 'Eventos'
               ]}

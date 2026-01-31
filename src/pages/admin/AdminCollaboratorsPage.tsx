@@ -13,6 +13,7 @@ import type { CollaboratorDashboard } from '../../types/types';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { formatPrice } from '@/utils/formatPrice';
 import { SimpleCard, StatsCard } from '@/components/ui/Cards';
 
 // Defina ROLE_LABELS localmente se não existir em '../../types'
@@ -232,7 +233,7 @@ export const AdminCollaboratorsPage: React.FC = () => {
           {/* Espaço reservado opcional para um quarto card no grid responsivo */}
           <StatsCard
             title="Faturamento Total"
-            value={`R$ ${stats.totalEarnings.toLocaleString('pt-BR')}`}
+            value={formatPrice(stats.totalEarnings)}
             icon={<DollarSign className="h-5 w-5" />}
           />
         </div>
@@ -420,7 +421,7 @@ export const AdminCollaboratorsPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                      R$ {collaborator.hourlyRate?.toLocaleString('pt-BR') || '0'}
+                      {formatPrice(collaborator.hourlyRate || 0)}
                     </td>
                     {/* Coluna de avaliação removida */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">

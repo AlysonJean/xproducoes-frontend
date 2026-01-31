@@ -14,8 +14,8 @@ export const HelpPage: React.FC = () => (
         <li>Requisitos técnicos para eventos</li>
       </ul>
       <section className="mt-6">
-        <h3 className="text-md font-medium">Design de suporte inspirado em grandes apps</h3>
-        <p className="text-muted-foreground">Oferecemos autoatendimento claro com articulação por tópicos e pesquisa rápida, inspirada em abordagens utilizadas por grandes plataformas para reduzir tempo de resolução e aumentar satisfação do usuário.</p>
+        <h3 className="text-md font-medium">Suporte ágil e eficiente</h3>
+        <p className="text-muted-foreground">Oferecemos um sistema de autoatendimento inteligente e descomplicado, desenvolvido para que você encontre as respostas que precisa em instantes, garantindo mais autonomia e agilidade para sua experiência.</p>
       </section>
     </div>
   </PageLayout>

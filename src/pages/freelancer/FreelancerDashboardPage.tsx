@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { PageLayout } from '../../components/layouts/PageLayout';
 import type { DashboardStats } from '../../types/domains/dashboard';
+import { formatPrice } from '@/utils/formatPrice';
 
 // Componente de Estatísticas
 const StatsCards: React.FC<{ stats: DashboardStats | null }> = ({ stats }) => {
@@ -18,7 +19,7 @@ const StatsCards: React.FC<{ stats: DashboardStats | null }> = ({ stats }) => {
     },
     {
       title: 'Receita Total',
-      value: `R$ ${(stats.totalEarnings || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      value: formatPrice(stats.totalEarnings || 0),
       icon: '💰',
       color: 'bg-gradient-to-br from-green-500 to-green-600',
       change: '+12%',
