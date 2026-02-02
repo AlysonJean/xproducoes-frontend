@@ -10,6 +10,10 @@ function getApiUrl(envVar: string, fallback: string) {
   if (import.meta.env.MODE === 'production') {
     const value = import.meta.env[envVar];
     if (!value || value.includes('localhost')) {
+      // Fallback de emergência para produção
+      if (envVar === 'VITE_API_BASE_URL') return 'https://api.xproducoeseeventos.com.br/api/v1';
+      if (envVar === 'VITE_API_URL') return 'https://api.xproducoeseeventos.com.br';
+
       throw new Error(
         `Variável de ambiente ${envVar} não definida corretamente em produção. Corrija no painel do Vercel.`
       );

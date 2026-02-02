@@ -317,9 +317,8 @@ function OfflineNotification() {
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-  window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-    }
+    // Scroll instantâneo para o topo (sem smooth) para garantir que funcione em todas as trocas de rota
+    window.scrollTo(0, 0);
   }, [pathname]);
   return null;
 }
