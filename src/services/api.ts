@@ -14,9 +14,9 @@ function getApiUrl(envVar: string, fallback: string) {
       if (envVar === 'VITE_API_BASE_URL') return 'https://api.xproducoeseeventos.com.br/api/v1';
       if (envVar === 'VITE_API_URL') return 'https://api.xproducoeseeventos.com.br';
 
-      throw new Error(
-        `Variável de ambiente ${envVar} não definida corretamente em produção. Corrija no painel do Vercel.`
-      );
+      // Fallback genérico em vez de throw (evita página em branco)
+      console.error(`Variável de ambiente ${envVar} não definida corretamente em produção.`);
+      return fallback;
     }
     return value;
   }
