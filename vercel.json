@@ -5,9 +5,8 @@
   "installCommand": "npm install --include=dev",
   "framework": "vite",
   "regions": ["gru1"],
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
     {
