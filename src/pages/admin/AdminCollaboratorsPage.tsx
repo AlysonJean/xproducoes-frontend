@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Trash2, Users, TrendingUp, DollarSign } from 'lucide-react';
+import { Search, Trash2, Users, TrendingUp, DollarSign, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useCollaborators } from '../../hooks';
@@ -15,6 +15,8 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { formatPrice } from '@/utils/formatPrice';
 import { SimpleCard, StatsCard } from '@/components/ui/Cards';
+import { Modal } from '@/components/ui/StandardComponents';
+import { CollaboratorForm } from '@/components/forms/CollaboratorFormPage';
 
 // Defina ROLE_LABELS localmente se não existir em '../../types'
 const ROLE_LABELS = {
@@ -47,7 +49,8 @@ export const AdminCollaboratorsPage: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<string | ''>('');
   const [selectedStatus, setSelectedStatus] = useState<'ACTIVE' | 'INACTIVE' | ''>('');
   const [currentPage, setCurrentPage] = useState(1);
-  // Removidos: showCreateModal, editingCollaborator (não utilizados)
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCollaborator, setEditingCollaborator] = useState<CollaboratorDashboard | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [collaboratorToDelete, setCollaboratorToDelete] = useState<string | null>(null);
   const [selectedCollaborators, setSelectedCollaborators] = useState<Set<string>>(new Set());
@@ -80,6 +83,16 @@ export const AdminCollaboratorsPage: React.FC = () => {
   const bulkUpdate = async (_ids: string[], _updates: Record<string, unknown>) => {
     // TODO: Implementar chamada real de API para atualização em massa
     // Exemplo: await api.bulkUpdateCollaborators(ids, updates);
+  };
+
+  const handleCreate = () => {
+    setEditingCollaborator(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (collaborator: CollaboratorDashboard) => {
+    setEditingCollaborator(collaborator);
+    setIsModalOpen(true);
   };
 
   const { addNotification } = useNotifications();
@@ -215,9 +228,7 @@ export const AdminCollaboratorsPage: React.FC = () => {
           </div>
           <div>
             <div className="flex gap-2">
-              <a href="/admin/colaboradores/novo">
-                <Button variant="primary">Novo Colaborador</Button>
-              </a>
+              <Button variant="primary" onClick={handleCreate}>Novo Colaborador</Button>
               <Button variant="outline" onClick={() => setInviteDialogOpen(true)}>Enviar Convite</Button>
             </div>
           </div>
@@ -436,7 +447,15 @@ export const AdminCollaboratorsPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
-                        {/* Botão de editar removido */}
+                        <Button
+                          onClick={() => handleEdit(collaborator)}
+                          variant="ghost"
+                          size="sm"
+                          className="text-primary hover:text-primary"
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
                         <Button
                           onClick={() => handleDelete(collaborator.id)}
                           variant="ghost"
@@ -538,6 +557,21 @@ export const AdminCollaboratorsPage: React.FC = () => {
             </div>
           </SimpleCard>
         )}
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingCollaborator ? 'Editar Colaborador' : 'Novo Colaborador'}
+      >
+        <CollaboratorForm
+          initialData={editingCollaborator}
+          onSuccess={() => {
+            setIsModalOpen(false);
+            fetchCollaborators();
+          }}
+          onCancel={() => setIsModalOpen(false)}
+        />
+      </Modal>
       
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
@@ -551,19 +585,20 @@ export const AdminCollaboratorsPage: React.FC = () => {
         isLoading={isDeleting}
       />
 
-      {/* Invite input dialog (simple inline modal) */}
-      {inviteDialogOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/40" onClick={() => setInviteDialogOpen(false)} />
-          <div className="bg-card rounded-lg p-6 z-50 w-full max-w-md">
-            <h3 className="text-lg font-medium mb-2">Enviar Convite por E-mail</h3>
-            <p className="text-sm text-muted-foreground mb-4">Digite o e-mail do colaborador que receberá o convite.</p>
-            <input
+      {/* Invite Modal */}
+      <Modal
+         isOpen={inviteDialogOpen}
+         onClose={() => setInviteDialogOpen(false)}
+         title="Enviar Convite por E-mail"
+         className="max-w-md"
+      >
+        <div className="space-y-4">
+            <p className="text-sm text-muted-foreground p-0">Digite o e-mail do colaborador que receberá o convite.</p>
+            <Input
               type="email"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder="email@exemplo.com"
-              className="w-full border rounded px-3 py-2 mb-4"
             />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>Cancelar</Button>
@@ -589,14 +624,14 @@ export const AdminCollaboratorsPage: React.FC = () => {
                     setInviteLoading(false);
                   }
                 }}
+                isLoading={inviteLoading}
                 disabled={inviteLoading || !inviteEmail}
               >
-                {inviteLoading ? 'Enviando...' : 'Enviar Convite'}
+                Enviar Convite
               </Button>
             </div>
-          </div>
         </div>
-      )}
+      </Modal>
       
       {/* Loading overlay for actions */}
       {(loading || isDeleting) && (

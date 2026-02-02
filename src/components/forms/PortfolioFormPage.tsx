@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../../services/api';import { generateSeoFilename } from '../../utils/seoUtils';import { 
+// src/components/forms/PortfolioFormPage.tsx
+import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../../services/api';
+import { generateSeoFilename } from '../../utils/seoUtils';
+import type { PortfolioItem } from '../../types/types';
+import { 
   Form, 
   FormSection, 
   FormActions, 
@@ -10,8 +13,15 @@ import { apiFetch } from '../../services/api';import { generateSeoFilename } fro
   Alert 
 } from '../ui/StandardComponents';
 
-export const PortfolioFormPage = () => {
-  const navigate = useNavigate();
+interface PortfolioFormProps {
+  initialData?: PortfolioItem | null;
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuccess, onCancel }) => {
+  const isEditing = Boolean(initialData);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [eventDate, setEventDate] = useState('');
@@ -19,10 +29,23 @@ export const PortfolioFormPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (initialData) {
+      setTitle(initialData.title);
+      setDescription(initialData.description);
+      // Date logic removed as PortfolioItem lacks date
+    } else {
+      setTitle('');
+      setDescription('');
+      // setEventDate(''); removed
+    }
+  }, [initialData]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!title || !description || !eventDate || !image) {
+    // For edit, image is optional. For create, it is required.
+    if (!title || !description || !eventDate || (!isEditing && !image)) {
       setError('Todos os campos são obrigatórios.');
       return;
     }
@@ -40,33 +63,26 @@ export const PortfolioFormPage = () => {
       formData.append('title', title);
       formData.append('description', description);
       formData.append('eventDate', new Date(eventDate).toISOString());
-      formData.append('image', image);
+      if (image) {
+        formData.append('image', image);
+      }
 
-  await apiFetch('/api/portfolio', {
-        method: 'POST',
-        body: formData,
-        // Remove ALL headers for FormData - let browser set them
-      });
+      if (isEditing && initialData) {
+        await apiFetch(`/portfolio/${initialData.id}`, { method: 'PUT', body: formData });
+      } else {
+        await apiFetch('/portfolio', { method: 'POST', body: formData });
+      }
 
-      navigate('/admin/portfolio');
+      onSuccess();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erro ao criar item do portfólio.');
+      setError(err instanceof Error ? err.message : 'Erro ao salvar item do portfólio.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-foreground mb-2">
-          Criar Item do Portfólio
-        </h1>
-        <p className="text-muted-foreground">
-          Adicione um novo projeto ao seu portfólio
-        </p>
-      </div>
-      
+    <div className="space-y-6">
       {error && (
         <Alert 
           variant="error" 
@@ -76,10 +92,10 @@ export const PortfolioFormPage = () => {
         />
       )}
 
-      <Form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-8 shadow-sm">
+      <Form onSubmit={handleSubmit} className="space-y-6">
         <FormSection 
-          title="Informações do Projeto"
-          description="Preencha os dados básicos do projeto"
+          title=""
+          description=""
         >
           <Input
             label="Título"
@@ -107,21 +123,30 @@ export const PortfolioFormPage = () => {
           />
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">
+            <label className="block text-sm font-medium text-foreground">
               Imagem do Projeto
             </label>
             <input
               type="file"
               accept="image/*"
               title="Selecione uma imagem do projeto"
-              placeholder="Escolha um arquivo de imagem"
               onChange={(e) => setImage(e.target.files?.[0] || null)}
-              className="w-full px-3 py-2 border-2 border-border rounded-lg bg-card text-foreground transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary hover:border-primary/50 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-              required
+              className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              required={!isEditing}
             />
             <p className="text-xs text-muted-foreground">
               Formatos aceitos: JPG, PNG, GIF (máx. 10MB)
             </p>
+            {isEditing && initialData?.imageUrl && (
+              <div className="mt-2">
+                <p className="text-xs text-muted-foreground mb-1">Imagem atual:</p>
+                <img 
+                  src={initialData.imageUrl} 
+                  alt={initialData.title} 
+                  className="h-24 w-auto object-cover rounded border"
+                />
+              </div>
+            )}
           </div>
         </FormSection>
 
@@ -129,7 +154,7 @@ export const PortfolioFormPage = () => {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate('/admin/portfolio')}
+            onClick={onCancel}
             disabled={loading}
           >
             Cancelar
@@ -140,10 +165,12 @@ export const PortfolioFormPage = () => {
             isLoading={loading}
             disabled={loading}
           >
-            {loading ? 'Criando...' : 'Criar Item'}
+            {loading ? 'Salvando...' : 'Salvar'}
           </Button>
         </FormActions>
       </Form>
     </div>
   );
 };
+
+export default PortfolioForm;

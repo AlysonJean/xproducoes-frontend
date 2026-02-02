@@ -1,8 +1,5 @@
-// Caminho: frontend/src/pages/admin/KitFormPage.tsx
-
-
+// src/components/forms/KitFormPage.tsx
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -30,10 +27,14 @@ const kitFormSchema = z.object({
 
 type KitFormData = z.infer<typeof kitFormSchema>;
 
-export const KitFormPage = () => {
-  const { id } = useParams<{ id?: string }>();
-  const navigate = useNavigate();
-  const isEditing = Boolean(id);
+interface KitFormProps {
+  initialData?: Kit | null;
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCancel }) => {
+  const isEditing = Boolean(initialData);
 
   const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -57,15 +58,14 @@ export const KitFormPage = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-  const equipData = await apiFetch('/api/equipments');
+        const equipData = await apiFetch('/equipments');
         setAllEquipments(equipData as Equipment[]);
-        if (isEditing) {
-          const kitData: Kit = await apiFetch(`/kits/${id}`);
+        if (initialData) {
           reset({
-            name: kitData.name,
-            description: kitData.description,
-            price: kitData.price,
-            equipmentIds: kitData.equipments.map((eq) => eq.id),
+            name: initialData.name,
+            description: initialData.description,
+            price: initialData.price,
+            equipmentIds: initialData.equipments.map((eq) => eq.id),
           });
         }
       } catch (err) {
@@ -79,7 +79,7 @@ export const KitFormPage = () => {
       }
     };
     fetchInitialData();
-  }, [id, isEditing, reset]);
+  }, [initialData, reset]);
 
   const onSubmit: SubmitHandler<KitFormData> = async (data) => {
     setServerError(null);
@@ -100,30 +100,21 @@ export const KitFormPage = () => {
       }
     }
     try {
-      if (isEditing) {
-        await apiFetch(`/kits/${id}`, { method: 'PUT', body: formData });
+      if (isEditing && initialData) {
+        await apiFetch(`/kits/${initialData.id}`, { method: 'PUT', body: formData });
       } else {
-  await apiFetch('/api/kits', { method: 'POST', body: formData });
+        await apiFetch('/kits', { method: 'POST', body: formData });
       }
-      navigate('/admin/kits');
+      onSuccess();
     } catch (err: unknown) {
       setServerError(err instanceof Error ? err.message : 'Ocorreu um erro ao salvar o kit.');
     }
   };
 
-  if (pageLoading) return <LoadingSpinner label="A carregar formulário do kit..." />;
+  if (pageLoading) return <LoadingSpinner label="A carregar formulário..." />;
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-foreground mb-2">
-          {isEditing ? 'Editar Kit' : 'Adicionar Novo Kit'}
-        </h1>
-        <p className="text-muted-foreground">
-          {isEditing ? 'Atualize as informações do kit' : 'Adicione um novo kit ao sistema'}
-        </p>
-      </div>
-
+    <div className="space-y-6">
       {serverError && (
         <Alert 
           variant="error" 
@@ -133,10 +124,10 @@ export const KitFormPage = () => {
         />
       )}
 
-      <Form onSubmit={handleSubmit(onSubmit)} className="bg-card border border-border rounded-xl p-8 shadow-sm">
+      <Form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <FormSection 
-          title="Informações do Kit"
-          description="Preencha os dados básicos do kit"
+          title="Dados do Kit"
+          description=""
         >
           <Input
             label="Nome do Kit"
@@ -169,16 +160,16 @@ export const KitFormPage = () => {
             <label className="text-sm font-medium text-foreground">
               Selecione os Equipamentos
             </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-card p-4 rounded-lg max-h-60 overflow-y-auto">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 bg-muted/40 p-4 rounded-lg max-h-48 overflow-y-auto border">
               {allEquipments.map((eq) => (
-                <label key={eq.id} className="flex items-center space-x-2 cursor-pointer">
+                <label key={eq.id} className="flex items-center space-x-2 cursor-pointer hover:bg-muted p-1 rounded">
                   <Input
                     type="checkbox"
                     value={eq.id}
                     {...register('equipmentIds')}
-                    className="form-checkbox h-5 w-5 text-primary bg-card border rounded"
+                    className="form-checkbox h-4 w-4 text-primary rounded border"
                   />
-                  <span>{eq.name}</span>
+                  <span className="text-sm">{eq.name}</span>
                 </label>
               ))}
             </div>
@@ -191,8 +182,8 @@ export const KitFormPage = () => {
         </FormSection>
 
         <FormSection 
-          title="Imagem do Kit"
-          description="Adicione uma imagem representativa do kit"
+          title="Imagem"
+          description=""
         >
           <Input
             type="file"
@@ -209,7 +200,7 @@ export const KitFormPage = () => {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate('/admin/kits')}
+            onClick={onCancel}
             disabled={isSubmitting}
           >
             Cancelar
@@ -219,10 +210,12 @@ export const KitFormPage = () => {
             isLoading={isSubmitting}
             disabled={isSubmitting}
           >
-            {isEditing ? 'Atualizar Kit' : 'Criar Kit'}
+            {isEditing ? 'Salvar' : 'Criar Kit'}
           </Button>
         </FormActions>
       </Form>
     </div>
   );
 };
+
+export default KitForm;

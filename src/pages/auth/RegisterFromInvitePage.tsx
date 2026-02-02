@@ -53,16 +53,16 @@ export const RegisterFromInvitePage: React.FC = () => {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Nome</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} className="w-full border rounded px-3 py-2" />
+              <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1">Nome</label>
+              <input id="name" placeholder="Seu nome" value={name} onChange={(e) => setName(e.target.value)} className="w-full border rounded px-3 py-2" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">E-mail</label>
-              <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border rounded px-3 py-2" />
+              <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">E-mail</label>
+              <input id="email" placeholder="Seu email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border rounded px-3 py-2" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Senha</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border rounded px-3 py-2" />
+              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">Senha</label>
+              <input id="password" placeholder="Sua senha" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border rounded px-3 py-2" />
             </div>
             <div className="flex justify-end">
               <button disabled={loading} className="bg-primary text-white px-4 py-2 rounded">

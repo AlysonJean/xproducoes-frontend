@@ -1,7 +1,10 @@
+import { ConfirmModal } from './ConfirmModal';
 import React, { useState, useMemo } from 'react';
 import type { ICollaborator, EventAssignment, SelectedCollaboratorAssignment } from '../../types/types';
 import { ECollaboratorRole } from '../../types/types';
 import type { Event } from '../../types/domains/dashboard';
+import { Modal } from '../ui/StandardComponents'; // Added Input and Button if needed, or just Modal
+import { Search, X, Calendar, MapPin, Inbox } from 'lucide-react'; // Using Lucide icons for consistency if possible, or keep SVGs
 
 interface EventManagementProps {
   event: Event;
@@ -115,10 +118,14 @@ export const EventManagement: React.FC<EventManagementProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden border border-border">
+    <Modal
+      isOpen={true} // Controlled by parent usually, but here checking existing code
+      onClose={onClose}
+      showCloseButton={false} // Custom header has close button
+      className="max-w-6xl p-0 overflow-hidden flex flex-col h-[90vh]"
+    >
         {/* Header */}
-        <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-6">
+        <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-6 shrink-0">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold">Gerenciar Colaboradores</h2>
@@ -129,36 +136,27 @@ export const EventManagement: React.FC<EventManagementProps> = ({
               className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full p-2 transition-colors"
               aria-label="Fechar"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X className="w-6 h-6" />
             </button>
           </div>
           <div className="flex items-center gap-4 mt-4 text-sm text-primary-foreground/70">
             <div className="flex items-center gap-1">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+              <Calendar className="w-4 h-4" />
               {event.startDate ? new Date(event.startDate).toLocaleDateString('pt-BR') : 'Data não definida'}
             </div>
             <div className="flex items-center gap-1">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
+              <MapPin className="w-4 h-4" />
               {event.location || 'Local não definido'}
             </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-300px)]">
+        <div className="p-6 overflow-y-auto flex-1 bg-background">
           {/* Search */}
           <div className="mb-6">
             <div className="relative">
-              <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Buscar colaboradores por nome ou email..."
@@ -186,9 +184,7 @@ export const EventManagement: React.FC<EventManagementProps> = ({
               >
                 {availableCollaborators.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    <svg className="w-12 h-12 mx-auto mb-4 text-muted-foreground/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
+                    <Inbox className="w-12 h-12 mx-auto mb-4 text-muted-foreground/60" />
                     <p>Nenhum colaborador encontrado</p>
                   </div>
                 ) : (
@@ -484,47 +480,17 @@ export const EventManagement: React.FC<EventManagementProps> = ({
             Salvar Equipe ({Object.keys(selectedCollaborators).length})
           </button>
         </div>
-      </div>
 
-      {/* Modal de Confirmação para Excluir Comprovante */}
-      {showDeleteProofModal && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-          <div className="bg-card rounded-2xl shadow-2xl max-w-md w-full border border-border">
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">Excluir Comprovante</h3>
-                  <p className="text-sm text-muted-foreground">Esta ação não pode ser desfeita</p>
-                </div>
-              </div>
-
-              <p className="text-foreground mb-6">
-                Tem certeza que deseja excluir este comprovante? Todos os dados associados serão perdidos permanentemente.
-              </p>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={cancelDeleteProof}
-                  className="flex-1 px-4 py-2 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={confirmDeleteProof}
-                  className="flex-1 px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors"
-                >
-                  Excluir
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <ConfirmModal
+        isOpen={showDeleteProofModal}
+        onClose={cancelDeleteProof}
+        onConfirm={confirmDeleteProof}
+        title="Excluir Comprovante"
+        message="Tem certeza que deseja excluir este comprovante? Todos os dados associados serão perdidos permanentemente."
+        variant="danger"
+        confirmText="Excluir"
+        cancelText="Cancelar"
+      />
+    </Modal>
   );
 };

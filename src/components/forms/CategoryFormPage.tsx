@@ -1,9 +1,6 @@
-// src/pages/admin/CategoryFormPage.tsx
+// src/components/forms/CategoryFormPage.tsx
 import type { Category } from '../../types/types';
-
-
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react'; // removed useParams, useNavigate
 import { apiFetch } from '../../services/api';
 import { generateSeoFilename } from '../../utils/seoUtils';
 import {
@@ -15,29 +12,27 @@ import {
   Alert
 } from '../ui/StandardComponents';
 
-export const CategoryFormPage = () => {
-  const { id } = useParams<{ id?: string }>();
-  const navigate = useNavigate();
-  const isEditing = Boolean(id);
+interface CategoryFormProps {
+  initialData?: Category | null;
+  onSuccess: () => void;
+  onCancel: () => void;
+}
 
-  const [name, setName] = useState('');
+export const CategoryForm: React.FC<CategoryFormProps> = ({ initialData, onSuccess, onCancel }) => {
+  const isEditing = Boolean(initialData);
+
+  const [name, setName] = useState(initialData?.name || '');
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isEditing) {
-      const fetchCategory = async () => {
-        try {
-          const data: Category = await apiFetch(`/categories/${id}`);
-          setName(data.name);
-        } catch {
-          setError('Não foi possível carregar a categoria para edição.');
-        }
-      };
-      fetchCategory();
+    if (initialData) {
+      setName(initialData.name);
+    } else {
+      setName('');
     }
-  }, [id, isEditing]);
+  }, [initialData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,40 +42,28 @@ export const CategoryFormPage = () => {
     const formData = new FormData();
     formData.append('name', name);
     if (file) {
-      // SEO Filename
       const seoFilename = generateSeoFilename('categories', name);
       formData.append('fileName', seoFilename);
       formData.append('image', file);
     }
-    
-    // Fallback to JSON if no file, OR assume backend handles FormData for both text and file.
-    // Based on user request, we want images to have SEO names.
-    // Assuming backend Category Controller accepts FormData if file is present.
-    // However, original code was JSON.stringify.
-    // If backend only accepts JSON for creation without file, we need a distinct path or update backend.
-    // Given the task is about "when uploading an image", I will assume we are adding image capability here.
-    
-    // Wait, the original code had NO file input.
-    // I need to add the file input to the form as well.
 
     try {
-      if (isEditing) {
-        // If updating with file, likely need FormData
-        // If updating without file, JSON might be fine, or FormData without file.
-        // Let's assume FormData is safer if we want to support file upload now.
+      if (isEditing && initialData) {
         if (file) {
-           await apiFetch(`/categories/${id}`, { method: 'PUT', body: formData });
+           await apiFetch(`/categories/${initialData.id}`, { method: 'PUT', body: formData });
         } else {
-           await apiFetch(`/categories/${id}`, { method: 'PUT', body: JSON.stringify({ name }) });
+           await apiFetch(`/categories/${initialData.id}`, { method: 'PUT', body: JSON.stringify({ name }) });
         }
       } else {
+        // Usando /category no singular para garantir compatibilidade com rotas
+        const endpoint = '/category'; 
         if (file) {
-          await apiFetch('/api/categories', { method: 'POST', body: formData });
+          await apiFetch(endpoint, { method: 'POST', body: formData });
         } else {
-          await apiFetch('/api/categories', { method: 'POST', body: JSON.stringify({ name }) });
+          await apiFetch(endpoint, { method: 'POST', body: JSON.stringify({ name }) });
         }
       }
-      navigate('/admin/categories');
+      onSuccess();
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -93,16 +76,7 @@ export const CategoryFormPage = () => {
   };
 
   return (
-    <div className="max-w-lg mx-auto p-6 space-y-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-foreground mb-2">
-          {isEditing ? 'Editar Categoria' : 'Adicionar Nova Categoria'}
-        </h1>
-        <p className="text-muted-foreground">
-          {isEditing ? 'Atualize a categoria' : 'Adicione uma nova categoria ao sistema'}
-        </p>
-      </div>
-
+    <div className="space-y-6">
       {error && (
         <Alert 
           variant="error" 
@@ -112,11 +86,8 @@ export const CategoryFormPage = () => {
         />
       )}
 
-      <Form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-8 shadow-sm">
-        <FormSection 
-          title="Informações da Categoria"
-          description="Preencha o nome da categoria"
-        >
+      <Form onSubmit={handleSubmit} className="space-y-6">
+        <FormSection title="" description="">
           <Input
             label="Nome da Categoria"
             value={name}
@@ -136,10 +107,10 @@ export const CategoryFormPage = () => {
               placeholder="Selecione um arquivo"
               accept="image/*"
               onChange={(e) => setFile(e.target.files?.[0] || null)}
-              className="w-full px-3 py-2 border-2 border-border rounded-lg bg-card text-foreground"
+              className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
              <p className="text-xs text-muted-foreground">
-              A imagem sera renomeada automaticamente para SEO.
+              A imagem será renomeada automaticamente para SEO.
             </p>
           </div>
         </FormSection>
@@ -148,7 +119,7 @@ export const CategoryFormPage = () => {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate('/admin/categories')}
+            onClick={onCancel}
             disabled={loading}
           >
             Cancelar
@@ -158,10 +129,13 @@ export const CategoryFormPage = () => {
             isLoading={loading}
             disabled={loading}
           >
-            {loading ? 'A Salvar...' : 'Salvar Categoria'}
+            {loading ? 'Salvando...' : 'Salvar'}
           </Button>
         </FormActions>
       </Form>
     </div>
   );
 };
+
+// Export also as default to keep compatibility if imported elsewhere as default (temporarily)
+export default CategoryForm;

@@ -5,6 +5,7 @@ import { authAPI } from '../services/api';
 import { userRegisterSchema } from '../validators/userSchema';
 import { useNavigate } from 'react-router-dom';
 import { normalizeString } from '../utils/string';
+import GoogleAuthButton from '../components/ui/GoogleAuthButton'; // Importação
 
 const validateEmail = (email: string): boolean => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -202,6 +203,17 @@ export const RegisterPage = () => {
             >
               {loading ? 'Criando conta...' : 'Criar Conta'}
             </button>
+            
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-card text-muted-foreground">Ou continue com</span>
+              </div>
+            </div>
+
+            <GoogleAuthButton onSuccess={() => setSuccess(true)} />
           </form>
         )}
         <p className="text-center text-muted-foreground mt-8">

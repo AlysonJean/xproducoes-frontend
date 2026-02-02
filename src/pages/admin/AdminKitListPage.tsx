@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import { formatPrice } from '../../utils/typeSafeFormatters';
@@ -8,19 +7,24 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { Button } from '../../components/ui/Button';
 import { SimpleCard } from '../../components/ui/Cards';
-
-// formatPrice padronizado via util (BRL)
+import KitForm from '../../components/forms/KitFormPage';
+import { Plus, Edit2, Trash2, Package } from 'lucide-react';
+import { Modal } from '@/components/ui/StandardComponents';
 
 export const AdminKitListPage = () => {
   const [kits, setKits] = useState<Kit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingKit, setEditingKit] = useState<Kit | null>(null);
+
   const fetchKits = async () => {
     try {
       setLoading(true);
-  const data = await apiFetch('/kits');
-  setKits(asArray<Kit>(data));
+      const data = await apiFetch('/kits');
+      setKits(asArray<Kit>(data));
     } catch (err) {
       setError('Erro ao carregar kits.');
       console.error('Erro ao carregar kits:', err);
@@ -40,12 +44,21 @@ export const AdminKitListPage = () => {
           method: 'DELETE',
         });
         await fetchKits();
-        alert('Kit excluído com sucesso!');
       } catch (err) {
         console.error('Erro ao excluir kit:', err);
         alert('Erro ao excluir kit.');
       }
     }
+  };
+
+  const handleCreate = () => {
+    setEditingKit(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (kit: Kit) => {
+    setEditingKit(kit);
+    setIsModalOpen(true);
   };
 
   if (loading) {
@@ -78,14 +91,10 @@ export const AdminKitListPage = () => {
             Total de kits: <span className="font-semibold text-foreground">{kits.length}</span>
           </div>
         </div>
-        <Link to="/admin/kits/novo" className="self-start sm:self-auto">
-          <Button variant="primary" className="gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Adicionar Kit
-          </Button>
-        </Link>
+        <Button onClick={handleCreate} variant="primary" className="gap-2 self-start sm:self-auto">
+          <Plus size={20} />
+          Adicionar Kit
+        </Button>
       </div>
 
       <SimpleCard className="overflow-hidden">
@@ -113,9 +122,7 @@ export const AdminKitListPage = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-                        <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
+                        <Package className="w-5 h-5 text-primary" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-foreground">{kit.name}</p>
@@ -139,13 +146,15 @@ export const AdminKitListPage = () => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <Link to={`/admin/kits/${kit.id}/editar`} title="Editar kit" aria-label="Editar kit">
-                        <Button variant="outline" size="sm">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </Button>
-                      </Link>
+                       <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(kit)}
+                        title="Editar kit"
+                        aria-label="Editar kit"
+                      >
+                         <Edit2 size={16} />
+                      </Button>
                       <Button
                         onClick={() => handleDelete(kit.id)}
                         variant="danger"
@@ -153,9 +162,7 @@ export const AdminKitListPage = () => {
                         title="Excluir kit"
                         aria-label="Excluir kit"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        <Trash2 size={16} />
                       </Button>
                     </div>
                   </td>
@@ -168,9 +175,7 @@ export const AdminKitListPage = () => {
         {kits.length === 0 && (
           <div className="text-center py-16">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-              <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
+              <Package className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">Nenhum kit encontrado</h3>
             <p className="text-muted-foreground">
@@ -179,6 +184,24 @@ export const AdminKitListPage = () => {
           </div>
         )}
       </SimpleCard>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingKit ? 'Editar Kit' : 'Novo Kit'}
+        className="max-w-2xl"
+      >
+        <div className="max-h-[80vh]">
+            <KitForm
+            initialData={editingKit}
+            onSuccess={() => {
+                setIsModalOpen(false);
+                fetchKits();
+            }}
+            onCancel={() => setIsModalOpen(false)}
+            />
+        </div>
+      </Modal>
     </AdminLayout>
   );
 };

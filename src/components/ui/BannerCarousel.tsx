@@ -30,7 +30,7 @@ export const BannerCarousel = () => {
   const prev = () => setCurrentIndex((prev) => (prev - 1 + banners.length) % banners.length);
 
   return (
-    <div className="relative w-full overflow-hidden group bg-black" style={{ height: 'min(500px, 60vh)' }}>
+    <div className="relative w-full overflow-hidden group bg-black h-[min(500px,60vh)]">
       {/* Images */}
       <div className="relative w-full h-full">
          <Link to={current.linkUrl || '#'} className={`block w-full h-full ${!current.linkUrl ? 'pointer-events-none' : ''}`}>

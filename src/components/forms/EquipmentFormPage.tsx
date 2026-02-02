@@ -1,7 +1,5 @@
-// Caminho: frontend/src/pages/admin/EquipmentFormPage.tsx
-
+// src/components/forms/EquipmentFormPage.tsx
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -31,17 +29,17 @@ const equipmentFormSchema = z.object({
 
 type EquipmentFormData = z.infer<typeof equipmentFormSchema>;
 
-// Helper removido - usando apiFetch centralizado que já gerencia autenticação
+interface EquipmentFormProps {
+  initialData?: Equipment | null;
+  onSuccess: () => void;
+  onCancel: () => void;
+}
 
-
-export const EquipmentFormPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  // Removido: equipment não utilizado
+export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuccess, onCancel }) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
-  const [isEditing] = useState(!!id);
+  const isEditing = Boolean(initialData);
 
   const {
     register,
@@ -61,43 +59,38 @@ export const EquipmentFormPage: React.FC = () => {
   });
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchCategories = async () => {
       try {
         setLoading(true);
-        // Buscar categorias — o backend retorna um array puro, porém manter compatibilidade com { data: [...] }
-  const categoriesResponse = await apiFetch('/api/categories');
+        // Backend returns mixed structures sometimes, normalize it
+        const categoriesResponse = await apiFetch('/categories');
+        
+        let cats: Category[] = [];
         if (Array.isArray(categoriesResponse)) {
-          setCategories(categoriesResponse as Category[]);
+          cats = categoriesResponse as Category[];
         } else if ((categoriesResponse as any)?.data && Array.isArray((categoriesResponse as any).data)) {
-          setCategories((categoriesResponse as any).data as Category[]);
-        } else {
-          setCategories([]);
+          cats = (categoriesResponse as any).data as Category[];
         }
-
-        // Se tiver ID, buscar equipamento para edição
-        if (id) {
-          const equipmentResponse = (await apiFetch(`/equipment/${id}`)) as { data: Equipment };
-          const equipmentData = equipmentResponse.data;
-          // setEquipment removido (não utilizado)
-
-          // Preencher o formulário com dados do equipamento
+        setCategories(cats);
+        
+        if (initialData) {
           reset({
-            name: equipmentData.name,
-            description: equipmentData.description,
-            pricePerHour: equipmentData.pricePerHour,
-            categoryId: equipmentData.categoryId,
-            quantity: equipmentData.quantity,
+            name: initialData.name,
+            description: initialData.description,
+            pricePerHour: initialData.pricePerHour,
+            categoryId: initialData.categoryId || '',
+            quantity: initialData.quantity || 1,
           });
         }
-      } catch {
-        // erro ao buscar dados
+      } catch (err) {
+        console.error('Failed to load form data', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [id, reset]);
+    fetchCategories();
+  }, [initialData, reset]);
 
   const onSubmit: SubmitHandler<EquipmentFormData> = async (data) => {
     try {
@@ -105,7 +98,6 @@ export const EquipmentFormPage: React.FC = () => {
 
       const formData = new FormData();
       
-      // Generate SEO-friendly filename
       const categoryName = categories.find(c => c.id === data.categoryId)?.name;
       const seoFilename = generateSeoFilename('equipments', data.name, categoryName);
       formData.append('fileName', seoFilename);
@@ -119,153 +111,140 @@ export const EquipmentFormPage: React.FC = () => {
         formData.append('quantity', data.quantity.toString());
       }
 
-      // Adicionar imagens se houver
-      // Backend expects a single file field named 'image' (uploadSingle('image'))
       if (data.images && data.images.length > 0) {
-        // If multiple files, send the first as 'image' (required) and the rest as 'images'
         const files = Array.from((data.images as unknown) as FileList);
         if (files.length > 0) {
-          formData.append('image', files[0]); // required by backend
+          formData.append('image', files[0]);
         }
         for (let i = 1; i < files.length; i++) {
           formData.append('images', files[i]);
         }
       }
 
-      if (isEditing) {
-        await apiFetch(`/equipment/${id}`, { method: 'PUT', body: formData });
+      if (isEditing && initialData) {
+        await apiFetch(`/equipment/${initialData.id}`, { method: 'PUT', body: formData });
       } else {
-        // Create new equipment
         await apiFetch('/equipment', { method: 'POST', body: formData });
       }
 
-      navigate('/admin/equipment');
-    } catch {
-      // erro ao salvar equipamento
+      onSuccess();
+    } catch (err) {
       alert('Erro ao salvar equipamento. Tente novamente.');
+      console.error(err);
     } finally {
       setSubmitLoading(false);
     }
   };
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="flex justify-center py-6">
+        <LoadingSpinner label="Carregando..." />
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            {id ? 'Editar Equipamento' : 'Criar Novo Equipamento'}
-          </h1>
-          <p className="text-muted-foreground">
-            {id ? 'Atualize as informações do equipamento' : 'Adicione um novo equipamento ao sistema'}
-          </p>
-        </div>
-
-        <Form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-          <FormSection 
-            title="Informações Básicas"
-            description="Dados principais do equipamento"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input
-                label="Nome do Equipamento"
-                {...register('name')}
-                error={errors.name?.message}
-                placeholder="Ex: Câmera Canon EOS R5"
-                description="Nome identificador do equipamento"
-              />
-
-              <Select
-                label="Categoria"
-                {...register('categoryId')}
-                options={[
-                  { value: '', label: 'Selecione uma categoria' },
-                  ...categories.map(category => ({
-                    value: category.id,
-                    label: category.name
-                  }))
-                ]}
-                error={errors.categoryId?.message}
-                placeholder="Selecione uma categoria"
-              />
-            </div>
-
-            <Textarea
-              label="Descrição"
-              {...register('description')}
-              error={errors.description?.message}
-              rows={4}
-              placeholder="Descreva as características, especificações técnicas e detalhes importantes do equipamento..."
-              description="Informações detalhadas que ajudem os clientes a entender o equipamento"
-            />
-          </FormSection>
-
-          <FormSection 
-            title="Configurações Comerciais"
-            description="Preços e disponibilidade"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input
-                label="Preço por Hora (R$)"
-                type="number"
-                step="0.01"
-                {...register('pricePerHour', { valueAsNumber: true })}
-                error={errors.pricePerHour?.message}
-                placeholder="0.00"
-                description="Valor cobrado por hora de locação"
-              />
-
-              <Input
-                label="Quantidade Disponível"
-                type="number"
-                {...register('quantity', { valueAsNumber: true })}
-                error={errors.quantity?.message}
-                placeholder="1"
-                description="Quantas unidades você possui deste equipamento"
-              />
-            </div>
-          </FormSection>
-
-          <FormSection 
-            title="Imagens"
-            description="Fotos do equipamento para o catálogo"
-          >
+    <Form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <FormSection 
+        title="Dados do Equipamento"
+        description=""
+      >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
+              label="Nome"
+              {...register('name')}
+              error={errors.name?.message}
+              placeholder="Ex: Câmera Canon EOS R5"
+            />
+
+            <Select
+              label="Categoria"
+              {...register('categoryId')}
+              options={[
+                { value: '', label: 'Selecione uma categoria' },
+                ...categories.map(category => ({
+                  value: category.id,
+                  label: category.name
+                }))
+              ]}
+              error={errors.categoryId?.message}
+            />
+          </div>
+
+          <Textarea
+            label="Descrição"
+            {...register('description')}
+            error={errors.description?.message}
+            rows={3}
+            placeholder="Descrição detalhada do equipamento"
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Preço por Hora (€)"
+              type="number"
+              step="0.01"
+              {...register('pricePerHour', { valueAsNumber: true })}
+              error={errors.pricePerHour?.message}
+            />
+
+            <Input
+              label="Quantidade"
+              type="number"
+              {...register('quantity', { valueAsNumber: true })}
+              error={errors.quantity?.message}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-foreground">
+              Imagens
+            </label>
+            <input
               type="file"
-              label="Imagens do Equipamento"
-              {...register('images')}
               multiple
               accept="image/*"
-              error={errors.images ? String(errors.images.message) : undefined}
-              description="Selecione uma ou mais imagens do equipamento (formato JPG, PNG, etc.)"
+              className="block w-full text-sm text-muted-foreground
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-primary file:text-primary-foreground
+                hover:file:bg-primary/90"
+              {...register('images')}
             />
-          </FormSection>
+            {initialData?.imageUrl && (
+              <div className="mt-2">
+                <p className="text-xs text-muted-foreground mb-1">Imagem atual:</p>
+                <img 
+                  src={initialData.imageUrl} 
+                  alt={initialData.name} 
+                  className="h-20 w-20 object-cover rounded border"
+                />
+              </div>
+            )}
+          </div>
+        </FormSection>
 
-          <FormActions>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate('/admin/equipment')}
-              disabled={submitLoading}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              isLoading={submitLoading}
-              disabled={submitLoading}
-            >
-              {id ? 'Atualizar Equipamento' : 'Criar Equipamento'}
-            </Button>
-          </FormActions>
-        </Form>
-      </div>
-    </div>
+        <FormActions>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={submitLoading}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            isLoading={submitLoading}
+            disabled={submitLoading}
+          >
+            {submitLoading ? 'Salvando...' : 'Salvar'}
+          </Button>
+        </FormActions>
+      </Form>
   );
 };
 
-export default EquipmentFormPage;
+export default EquipmentForm;
