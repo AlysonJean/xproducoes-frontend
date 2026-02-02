@@ -33,27 +33,37 @@ const FacebookAuthButton: React.FC<FacebookAuthButtonProps> = ({ onSuccess }) =>
       return;
     }
 
-    // Carregar SDK do Facebook
-    if (!window.FB) {
-      window.fbAsyncInit = function () {
-        window.FB.init({
-          appId: FACEBOOK_APP_ID,
-          cookie: true,
-          xfbml: true,
-          version: 'v18.0',
-        });
-        setSdkLoaded(true);
-      };
+    // Evitar carregar múltiplas vezes
+    if (document.getElementById('facebook-jssdk')) {
+      if (window.FB) {
+        requestAnimationFrame(() => setSdkLoaded(true));
+      }
+      return;
+    }
 
-      // Carregar script do Facebook
-      const script = document.createElement('script');
-      script.src = 'https://connect.facebook.net/pt_BR/sdk.js';
-      script.async = true;
-      script.defer = true;
-      document.body.appendChild(script);
+    // Callback quando SDK carregar (padrão oficial Facebook)
+    window.fbAsyncInit = function () {
+      window.FB.init({
+        appId: FACEBOOK_APP_ID,
+        cookie: true,
+        xfbml: true,
+        version: 'v18.0',
+      });
+      setSdkLoaded(true);
+    };
+
+    // Carregar script do Facebook (padrão oficial)
+    const script = document.createElement('script');
+    script.id = 'facebook-jssdk';
+    script.src = 'https://connect.facebook.net/pt_BR/sdk.js';
+    script.async = true;
+    script.defer = true;
+    
+    const firstScript = document.getElementsByTagName('script')[0];
+    if (firstScript && firstScript.parentNode) {
+      firstScript.parentNode.insertBefore(script, firstScript);
     } else {
-      // SDK já carregado - usar requestAnimationFrame para evitar setState síncrono
-      requestAnimationFrame(() => setSdkLoaded(true));
+      document.body.appendChild(script);
     }
   }, [FACEBOOK_APP_ID]);
 
