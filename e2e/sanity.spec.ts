@@ -11,7 +11,7 @@ test.describe('Sanity Check - Auth Flow', () => {
   };
 
   test('should register a new user successfully', async ({ page }) => {
-    await page.goto('/register');
+    await page.goto('/cadastro');
     
     // Fill form
     await page.fill('input[id="name"]', testUser.name);
@@ -55,7 +55,7 @@ test.describe('Sanity Check - Auth Flow', () => {
 
   test('Full Auth Flow: Register -> Login -> Dashboard', async ({ page }) => {
     // 1. Register
-    await page.goto('/register');
+    await page.goto('/cadastro');
     await page.fill('input[id="name"]', testUser.name);
     await page.fill('input[id="email"]', testUser.email);
     await page.fill('input[id="phone"]', testUser.phone);
@@ -86,11 +86,11 @@ test.describe('Sanity Check - Auth Flow', () => {
     // Check "Criar conta" link
     const registerLink = page.getByRole('link', { name: /Registe-se/i });
     await expect(registerLink).toBeVisible();
-    await expect(registerLink).toHaveAttribute('href', '/register');
+    await expect(registerLink).toHaveAttribute('href', '/cadastro');
 
     // Check "Esqueceu sua senha?" link
     const forgotLink = page.getByRole('link', { name: /Esqueceu sua senha/i });
     await expect(forgotLink).toBeVisible();
-    await expect(forgotLink).toHaveAttribute('href', '/forgot-password');
+    await expect(forgotLink).toHaveAttribute('href', '/recuperar-senha');
   });
 });

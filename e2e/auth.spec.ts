@@ -8,8 +8,8 @@ test.describe('Authentication Flow', () => {
 
   test('should allow a user to register, login and logout', async ({ page }) => {
     // 1. Register
-    await page.goto('/register');
-    await expect(page).toHaveURL(/\/register/);
+    await page.goto('/cadastro');
+    await expect(page).toHaveURL(/\/cadastro/);
 
     // Fill registration form
     // Using ID selectors which are present in the RegisterPage.tsx
