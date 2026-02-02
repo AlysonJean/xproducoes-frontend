@@ -74,8 +74,18 @@ export const LoginPage = () => {
     const token = localStorage.getItem('authToken');
     if (token) {
       try {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+        
+        // Fallback de segurança se a variável de ambiente falhar em prod
+        if (!API_BASE_URL) {
+           if (window.location.hostname.includes('xproducoeseeventos.com.br')) {
+             API_BASE_URL = 'https://api.xproducoeseeventos.com.br/api/v1';
+           } else {
+             API_BASE_URL = 'http://localhost:4000/api/v1';
+           }
+        }
+
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',

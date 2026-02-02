@@ -12,6 +12,14 @@ const getApiBaseUrl = () => {
   if (envUrl) {
     return envUrl.endsWith('/') ? envUrl.slice(0, -1) : envUrl;
   }
+
+  // Fallback inteligente para produção (caso a variável de ambiente falhe)
+  if (typeof window !== 'undefined' && 
+     (window.location.hostname === 'xproducoeseeventos.com.br' || 
+      window.location.hostname === 'www.xproducoeseeventos.com.br')) {
+    return 'https://api.xproducoeseeventos.com.br/api/v1';
+  }
+
   // Fallback padrão alinhado com api.ts
   return 'http://localhost:4000/api/v1';
 };
