@@ -269,20 +269,20 @@ export const HomePage = () => {
             el.style.setProperty('--mouse-y', '-9999px');
           }}
         >
-          {/* Animated Sound Wave Background */}
+          {/* Animated Sound Wave Background - Reduced Height */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-            <div className="flex items-center justify-between gap-0.5 h-32 sm:h-40 lg:h-48 z-0 w-full px-2">
-              {[...Array(180)].map((_, i) => (
+            <div className="flex items-center justify-between gap-0.5 h-16 sm:h-20 lg:h-24 z-0 w-full px-2">
+              {[...Array(120)].map((_, i) => (
                 <SoundBar key={i} />
               ))}
             </div>
           </div>
 
           <div className="relative z-10 pointer-events-none">
-            <h1 ref={heroTitleRef} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 heading-elegant pointer-events-auto">
+            <h1 ref={heroTitleRef} className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 heading-elegant pointer-events-auto">
               Equipamentos Profissionais
             </h1>
-            <p className="text-base sm:text-lg lg:text-xl text-muted-foreground mb-6 max-w-4xl mx-auto pointer-events-auto">
+            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground mb-4 max-w-3xl mx-auto pointer-events-auto">
               Transforme seus eventos em experiências inesquecíveis com nossa tecnologia de ponta
             </p>
           </div>
@@ -294,11 +294,11 @@ export const HomePage = () => {
         {kits && kits.length > 0 && (
           <section className="relative">
             <div className="text-center mb-12 sm:mb-14 lg:mb-16 xl:mb-18 2xl:mb-20">
-              <div className="inline-flex items-center px-4 py-2 bg-primary/10 rounded-full text-primary font-medium text-sm mb-4">
+              <div className="inline-flex items-center px-4 py-2 bg-primary/10 rounded-full text-primary font-medium text-xs sm:text-sm mb-3">
                 ⭐ Soluções Completas
               </div>
-              <h2 ref={kitsTitleRef} className="text-4xl font-bold text-foreground mb-4 heading-elegant">Kits em Destaque</h2>
-              <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl text-muted-foreground max-w-3xl mx-auto">
+              <h2 ref={kitsTitleRef} className="text-2xl sm:text-3xl font-bold text-foreground mb-3 heading-elegant">Kits em Destaque</h2>
+              <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto">
                 Pacotes completos que combinam os melhores equipamentos para diferentes tipos de eventos
               </p>
             </div>
@@ -314,12 +314,12 @@ export const HomePage = () => {
 
         {/* Equipamentos */}
         <section className="relative">
-          <div className="text-center mb-12 sm:mb-14 lg:mb-16 xl:mb-18 2xl:mb-20">
-            <div className="inline-flex items-center px-4 py-2 bg-primary/10 rounded-full text-primary font-medium text-sm mb-4">
+          <div className="text-center mb-10 sm:mb-12 lg:mb-14">
+            <div className="inline-flex items-center px-4 py-2 bg-primary/10 rounded-full text-primary font-medium text-xs sm:text-sm mb-3">
               🎯 Catálogo Completo
             </div>
-            <h2 ref={equipmentsTitleRef} className="text-4xl font-bold text-foreground mb-4 heading-elegant">Nossos Equipamentos</h2>
-            <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl text-muted-foreground max-w-3xl mx-auto">
+            <h2 ref={equipmentsTitleRef} className="text-2xl sm:text-3xl font-bold text-foreground mb-3 heading-elegant">Nossos Equipamentos</h2>
+            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto">
               Equipamentos profissionais de alta qualidade para todos os tipos de eventos e produções
             </p>
           </div>
@@ -376,13 +376,13 @@ export const HomePage = () => {
         {/* Portfólio */}
         {portfolio && portfolio.length > 0 && (
           <section className="relative">
-            <div className="text-center mb-12 sm:mb-14 lg:mb-16 xl:mb-18 2xl:mb-20">
-              <div className="inline-flex items-center px-4 py-2 bg-success/10 rounded-full text-success font-medium text-sm mb-4">
+            <div className="text-center mb-10 sm:mb-12 lg:mb-14">
+              <div className="inline-flex items-center px-4 py-2 bg-success/10 rounded-full text-success font-medium text-xs sm:text-sm mb-3">
                 📸 Galeria de Eventos
               </div>
-              <h2 ref={portfolioTitleRef} className="text-4xl font-bold text-foreground mb-4 heading-elegant">Galeria de Eventos</h2>
-              <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl text-muted-foreground max-w-3xl mx-auto">
-                Confira algumas imagens dos eventos incríveis que tivemos o prazer de realizar com nossos equipamentos
+              <h2 ref={portfolioTitleRef} className="text-2xl sm:text-3xl font-bold text-foreground mb-3 heading-elegant">Galeria de Eventos</h2>
+              <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto">
+                Confira alguns dos eventos realizados com nossos equipamentos
               </p>
             </div>
             <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 3, '2xl': 4, '3xl': 4, '4xl': 5 }} gap={8}>
@@ -398,12 +398,12 @@ export const HomePage = () => {
         {/* Depoimentos (Avaliações aprovadas) */}
         {(!reviewsLoading && reviews && reviews.length > 0) && (
           <section className="relative">
-            <div className="text-center mb-12 sm:mb-14 lg:mb-16 xl:mb-18 2xl:mb-20">
-              <div className="inline-flex items-center px-4 py-2 bg-amber-500/10 rounded-full text-amber-600 font-medium text-sm mb-4">
+            <div className="text-center mb-10 sm:mb-12 lg:mb-14">
+              <div className="inline-flex items-center px-4 py-2 bg-amber-500/10 rounded-full text-amber-600 font-medium text-xs sm:text-sm mb-3">
                 💬 Clientes Satisfeitos
               </div>
-              <h2 className="text-4xl font-bold text-foreground mb-4 heading-elegant">O que dizem sobre nós</h2>
-              <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl text-muted-foreground max-w-3xl mx-auto">
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3 heading-elegant">O que dizem sobre nós</h2>
+              <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto">
                 Depoimentos reais de clientes que alugaram nossos equipamentos e aprovaram a experiência
               </p>
             </div>
@@ -422,12 +422,12 @@ export const HomePage = () => {
 
         {/* Gemini Event Suggester */}
         <section className="relative">
-          <div className="text-center mb-12 sm:mb-14 lg:mb-16 xl:mb-18 2xl:mb-20">
-            <div className="inline-flex items-center px-4 py-2 bg-purple-500/10 rounded-full text-purple-600 font-medium text-sm mb-4">
+          <div className="text-center mb-10 sm:mb-12 lg:mb-14">
+            <div className="inline-flex items-center px-4 py-2 bg-purple-500/10 rounded-full text-purple-600 font-medium text-xs sm:text-sm mb-3">
               🤖 IA Personalizada
             </div>
-            <h2 ref={aiTitleRef} className="text-4xl font-bold text-foreground mb-4 heading-elegant">Sugestões Inteligentes</h2>
-            <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl text-muted-foreground max-w-3xl mx-auto">
+            <h2 ref={aiTitleRef} className="text-2xl sm:text-3xl font-bold text-foreground mb-3 heading-elegant">Sugestões Inteligentes</h2>
+            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto">
               Nossa IA analisa suas necessidades e sugere os equipamentos ideais para seu evento
             </p>
           </div>

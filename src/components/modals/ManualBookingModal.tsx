@@ -7,9 +7,9 @@ import { z } from 'zod';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../../services/api';
 import type { Equipment, Kit } from '../../types/types';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import { Button, Input, Textarea } from '../ui/StandardComponents';
+import { Button, Input, Textarea, FormActions, Alert, Select } from '../ui/StandardComponents'; // Added Select
 import { formatPrice } from '../../utils/typeSafeFormatters';
+import { BaseModal } from './BaseModal';
 
 const manualBookingSchema = z
   .object({
@@ -54,6 +54,9 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
   const [serverError, setServerError] = useState<string | null>(null);
   const [selectedEquipments, setSelectedEquipments] = useState<string[]>([]);
   const [selectedKit, setSelectedKit] = useState<string>('');
+  const [clients, setClients] = useState<Array<{id: string, name: string, email?: string, phone?: string}>>([]);
+  const [kitSearch, setKitSearch] = useState('');
+  const [equipSearch, setEquipSearch] = useState('');
 
   const {
     register,
@@ -100,12 +103,22 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
     if (isOpen) {
       const loadData = async () => {
         try {
-          const [equipData, kitData] = await Promise.all([
+          const [equipData, kitData, clientsRes] = await Promise.all([
             apiFetch('/api/equipments'),
             apiFetch('/api/kits'),
+            apiFetch<any>('/admin/clients').catch(() => ({ data: [] })),
           ]);
           setEquipments(equipData as Equipment[]);
           setKits(kitData as Kit[]);
+          
+          const list = Array.isArray(clientsRes?.data) ? clientsRes.data : (Array.isArray(clientsRes) ? clientsRes : []);
+          const mappedClients = list.map((c: any) => ({
+            id: c.id || c.user?.id,
+            name: c.user?.name || c.name || 'Cliente',
+            email: c.user?.email || c.email,
+            phone: c.phone || '',
+          })).sort((a: any, b: any) => a.name.localeCompare(b.name));
+          setClients(mappedClients);
         } catch {
           setServerError('Falha ao carregar dados.');
         }
@@ -146,53 +159,65 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
-      <div className="bg-muted p-8 rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Adicionar Reserva Manual</h2>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            title="Fechar modal"
-            className="text-3xl"
-          >
-            &times;
-          </Button>
-        </div>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Adicionar Reserva Manual"
+      className="max-w-4xl"
+    >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          
+          <div className="bg-muted/50 p-4 rounded-lg mb-4">
+            <h4 className="text-sm font-semibold mb-2">Buscar Cliente Cadastrado (Opcional)</h4>
+            <Select
+              placeholder="Selecione para preencher automaticamente..."
+              options={clients.map(c => ({ 
+                value: c.id, 
+                label: `${c.name} ${c.phone ? `(${c.phone})` : ''}` 
+              }))}
+              onChange={(e: any) => {
+                const clientId = e.target.value;
+                const client = clients.find(c => c.id === clientId);
+                if (client) {
+                   setValue('clientName', client.name);
+                   if (client.phone) setValue('clientContact', client.phone);
+                }
+              }}
+            />
+          </div>
+
           <Input
             {...register('clientName')}
             placeholder="Nome do Cliente"
             className="w-full"
+            error={errors.clientName?.message}
           />
-          {errors.clientName && <p className="text-red-400">{errors.clientName.message}</p>}
+
           <Input
             {...register('clientContact')}
             placeholder="Contato (Telefone/Email)"
             className="w-full"
+            error={errors.clientContact?.message}
           />
-          {errors.clientContact && <p className="text-red-400">{errors.clientContact.message}</p>}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-muted-foreground">Início do Evento</label>
+              <label className="block text-sm text-muted-foreground mb-1">Início do Evento</label>
               <Input
                 type="datetime-local"
                 {...register('eventDate')}
                 className="w-full"
+                error={errors.eventDate?.message}
               />
-              {errors.eventDate && <p className="text-red-400">{errors.eventDate.message}</p>}
             </div>
             <div>
-              <label className="block text-sm text-muted-foreground">Fim do Evento</label>
+              <label className="block text-sm text-muted-foreground mb-1">Fim do Evento</label>
               <Input
                 type="datetime-local"
                 {...register('eventEndDate')}
                 className="w-full"
+                error={errors.eventEndDate?.message}
               />
-              {errors.eventEndDate && <p className="text-red-400">{errors.eventEndDate.message}</p>}
             </div>
           </div>
 
@@ -201,8 +226,8 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
             {...register('location')}
             placeholder="Local do Evento"
             className="w-full"
+            error={errors.location?.message}
           />
-          {errors.location && <p className="text-red-400">{errors.location.message}</p>}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -210,18 +235,16 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
                 {...register('street')}
                 placeholder="Rua"
                 className="w-full"
+                error={errors.street?.message}
               />
-              {errors.street && <p className="text-red-400">{errors.street.message}</p>}
             </div>
             <div>
               <Input
                 {...register('addressNumber')}
                 placeholder="Número"
                 className="w-full"
+                error={errors.addressNumber?.message}
               />
-              {errors.addressNumber && (
-                <p className="text-red-400">{errors.addressNumber.message}</p>
-              )}
             </div>
           </div>
 
@@ -231,16 +254,16 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
                 {...register('neighborhood')}
                 placeholder="Bairro"
                 className="w-full"
+                error={errors.neighborhood?.message}
               />
-              {errors.neighborhood && <p className="text-red-400">{errors.neighborhood.message}</p>}
             </div>
             <div>
               <Input
                 {...register('zipCode')}
                 placeholder="CEP"
                 className="w-full"
+                error={errors.zipCode?.message}
               />
-              {errors.zipCode && <p className="text-red-400">{errors.zipCode.message}</p>}
             </div>
           </div>
 
@@ -250,16 +273,16 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
                 {...register('city')}
                 placeholder="Cidade"
                 className="w-full"
+                error={errors.city?.message}
               />
-              {errors.city && <p className="text-red-400">{errors.city.message}</p>}
             </div>
             <div>
               <Input
                 {...register('state')}
                 placeholder="Estado"
                 className="w-full"
+                error={errors.state?.message}
               />
-              {errors.state && <p className="text-red-400">{errors.state.message}</p>}
             </div>
           </div>
 
@@ -286,8 +309,16 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
             {/* Kits */}
             <div className="bg-muted p-4 rounded-md">
               <h4 className="font-semibold mb-2">Kits Disponíveis</h4>
+              <Input
+                placeholder="Buscar kit..."
+                value={kitSearch}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setKitSearch(e.target.value)}
+                className="mb-2 h-8 bg-background"
+              />
               <div className="max-h-32 overflow-y-auto space-y-2">
-                {kits.map((kit) =>
+                {kits
+                  .filter(kit => kit.name.toLowerCase().includes(kitSearch.toLowerCase()))
+                  .map((kit) =>
                   kit.id ? (
                     <label key={kit.id} className="flex items-center gap-2">
                       <input
@@ -319,8 +350,16 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
             {/* Equipamentos Individuais */}
             <div className="bg-muted p-4 rounded-md">
               <h4 className="font-semibold mb-2">Equipamentos Individuais</h4>
+              <Input
+                placeholder="Buscar equipamento..."
+                value={equipSearch}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEquipSearch(e.target.value)}
+                className="mb-2 h-8 bg-background"
+              />
               <div className="max-h-40 overflow-y-auto space-y-2">
-                {equipments.map((eq) =>
+                {equipments
+                  .filter(eq => eq.name.toLowerCase().includes(equipSearch.toLowerCase()))
+                  .map((eq) =>
                   eq.id ? (
                     <label key={eq.id} className="flex items-center gap-2">
                       <input
@@ -342,23 +381,30 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
             </div>
           </div>
 
-          {errors.kitId && <p className="text-red-400">{errors.kitId.message}</p>}
-          {errors.equipmentIds && <p className="text-red-400">{errors.equipmentIds.message}</p>}
+          {errors.kitId && <p className="text-red-400 font-medium">{errors.kitId.message}</p>}
+          {errors.equipmentIds && <p className="text-red-400 font-medium">{errors.equipmentIds.message}</p>}
 
-          {serverError && <p className="text-red-400">{serverError}</p>}
+          {serverError && <Alert variant="error" title="Erro" description={serverError} />}
 
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            isLoading={isSubmitting}
-            disabled={isSubmitting}
-            className="w-full font-bold"
-          >
-            {isSubmitting ? <LoadingSpinner /> : 'Salvar Reserva'}
-          </Button>
+          <FormActions>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={isSubmitting}
+              disabled={isSubmitting}
+            >
+              Salvar Reserva
+            </Button>
+          </FormActions>
         </form>
-      </div>
-    </div>
+    </BaseModal>
   );
 };

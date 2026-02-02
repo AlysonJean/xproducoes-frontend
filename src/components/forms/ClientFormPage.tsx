@@ -1,18 +1,23 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import AdminLayout from '@/components/admin/AdminLayout';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '@/services/api';
 import { useModal } from '@/components/modals/ModalContext';
 import { generateSeoFilename } from '@/utils/seoUtils';
+import type { User } from '@/types/types';
 
-export const ClientFormPage: React.FC = () => {
-  const navigate = useNavigate();
+interface ClientFormProps {
+  initialData?: User | null;
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, onCancel }) => {
   const { addNotification } = useNotifications();
   const { openModal } = useModal();
+
+  const isEditing = Boolean(initialData);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -20,6 +25,18 @@ export const ClientFormPage: React.FC = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (initialData) {
+      setName(initialData.name);
+      setEmail(initialData.email);
+      setPhone(initialData.phone || '');
+    } else {
+      setName('');
+      setEmail('');
+      setPhone('');
+    }
+  }, [initialData]);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -56,44 +73,65 @@ export const ClientFormPage: React.FC = () => {
       setIsSubmitting(true);
       let responseData: any = null;
 
-      if (avatarFile) {
-        const fd = new FormData();
-        
-        // SEO Filename
-        const seoFilename = generateSeoFilename('clients', name);
-        fd.append('fileName', seoFilename);
+      const fd = new FormData();
+      
+      // SEO Filename
+      const seoFilename = generateSeoFilename('clients', name);
+      fd.append('fileName', seoFilename);
 
-        fd.append('name', name.trim());
-        fd.append('email', email.trim());
-        fd.append('phone', phone.trim() || '');
-        fd.append('status', 'ACTIVE');
+      fd.append('name', name.trim());
+      fd.append('email', email.trim());
+      fd.append('phone', phone.trim() || '');
+      fd.append('status', 'ACTIVE');
+      if (avatarFile) {
         fd.append('avatar', avatarFile);
-  responseData = await apiFetch<any>('/api/admin/clients', { method: 'POST', body: fd });
-      } else {
-  responseData = await apiFetch<any>('/api/admin/clients', {
-          method: 'POST',
-          body: JSON.stringify({
-            name: name.trim(),
-            email: email.trim(),
-            phone: phone.trim() || undefined,
-            status: 'ACTIVE',
-          }),
-        });
       }
 
-      const tempPassword = responseData?.tempPassword;
-      const inviteUrl = responseData?.inviteUrl;
-      const clientId = responseData?.client?.id || responseData?.clientId || responseData?.id;
-
-      addNotification({ type: 'success', title: 'Sucesso', message: 'Cliente criado!' });
-
-      if (tempPassword || inviteUrl) {
-        openInviteModal({ tempPassword, inviteUrl, clientId });
+      if (isEditing && initialData) {
+        // Edit Mode
+        if (avatarFile) {
+           await apiFetch(`/api/admin/clients/${initialData.id}`, { method: 'PUT', body: fd });
+        } else {
+           await apiFetch(`/api/admin/clients/${initialData.id}`, {
+             method: 'PUT',
+             body: JSON.stringify({
+               name: name.trim(),
+               email: email.trim(),
+               phone: phone.trim() || undefined,
+             })
+           });
+        }
+        addNotification({ type: 'success', title: 'Sucesso', message: 'Cliente atualizado!' });
+        onSuccess();
       } else {
-  navigate('/admin/clients');
+        // Create Mode
+        if (avatarFile) {
+          responseData = await apiFetch<any>('/api/admin/clients', { method: 'POST', body: fd });
+        } else {
+          responseData = await apiFetch<any>('/api/admin/clients', {
+            method: 'POST',
+            body: JSON.stringify({
+              name: name.trim(),
+              email: email.trim(),
+              phone: phone.trim() || undefined,
+              status: 'ACTIVE',
+            }),
+          });
+        }
+        
+        const tempPassword = responseData?.tempPassword;
+        const inviteUrl = responseData?.inviteUrl;
+        const clientId = responseData?.client?.id || responseData?.clientId || responseData?.id;
+
+        addNotification({ type: 'success', title: 'Sucesso', message: 'Cliente criado!' });
+        onSuccess();
+
+        if (tempPassword || inviteUrl) {
+          openInviteModal({ tempPassword, inviteUrl, clientId });
+        }
       }
     } catch (err) {
-      const message = (err as any)?.message || 'Falha ao criar cliente';
+      const message = (err as any)?.message || `Falha ao ${isEditing ? 'atualizar' : 'criar'} cliente`;
       addNotification({ type: 'error', title: 'Erro', message });
     } finally {
       setIsSubmitting(false);
@@ -101,70 +139,61 @@ export const ClientFormPage: React.FC = () => {
   };
 
   return (
-  <AdminLayout title="Novo Cliente" breadcrumbs={[{ name: 'Admin' }, { name: 'Clientes', href: '/admin/clients' }, { name: 'Novo' }]}>
-      <form onSubmit={onSubmit} className="max-w-xl space-y-6">
-        <div className="bg-card border rounded-xl p-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Nome</label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nome completo"
-                aria-invalid={!!errors.name}
-              />
-              {errors.name && <p className="mt-1 text-sm text-destructive">{errors.name}</p>}
-            </div>
+      <form onSubmit={onSubmit} className="space-y-6">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Nome</label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nome completo"
+              aria-invalid={!!errors.name}
+            />
+            {errors.name && <p className="mt-1 text-sm text-destructive">{errors.name}</p>}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Email</label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@exemplo.com"
-                aria-invalid={!!errors.email}
-              />
-              {errors.email && <p className="mt-1 text-sm text-destructive">{errors.email}</p>}
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Email</label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@exemplo.com"
+              aria-invalid={!!errors.email}
+            />
+            {errors.email && <p className="mt-1 text-sm text-destructive">{errors.email}</p>}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Telefone (opcional)</label>
-              <Input
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="(00) 00000-0000"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Telefone (opcional)</label>
+            <Input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(00) 00000-0000"
+            />
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Avatar (opcional)</label>
-              <input aria-label="Avatar do cliente" type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files ? e.target.files[0] : null)} />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Avatar (opcional)</label>
+            <input aria-label="Avatar do cliente" type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files ? e.target.files[0] : null)} className="block w-full text-sm text-slate-500
+              file:mr-4 file:py-2 file:px-4
+              file:rounded-full file:border-0
+              file:text-sm file:font-semibold
+              file:bg-violet-50 file:text-violet-700
+              hover:file:bg-violet-100" />
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => navigate('/admin/clients')}>
+        <div className="flex items-center justify-end gap-3 pt-4 border-t">
+          <Button type="button" variant="outline" onClick={onCancel}>
             Cancelar
           </Button>
           <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting}>
-            {isSubmitting ? 'Salvando...' : 'Criar Cliente'}
+            {isSubmitting ? 'Salvando...' : (isEditing ? 'Salvar Alterações' : 'Criar Cliente')}
           </Button>
         </div>
       </form>
-
-      {isSubmitting && (
-        <div className="fixed inset-0 bg-[--overlay] flex items-center justify-center z-50">
-          <div className="bg-card rounded-xl p-6">
-            <LoadingSpinner label="Salvando cliente..." />
-          </div>
-        </div>
-      )}
-
-      {/* Invite modal provided by ModalManager (opened programmatically) */}
-    </AdminLayout>
   );
 };
 
-export default ClientFormPage;
+export default ClientForm;

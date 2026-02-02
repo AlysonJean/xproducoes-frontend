@@ -1,7 +1,6 @@
 // src/pages/admin/PortfolioListPage.tsx
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { apiFetch } from '../../services/api';
 import type { PortfolioItem } from '../../types/types';
 import { asArray } from '@/utils/normalize';
@@ -10,21 +9,30 @@ import { Button } from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { SimpleCard } from '@/components/ui/Cards';
+import PortfolioForm from '@/components/forms/PortfolioFormPage';
+import { Modal } from '@/components/ui/StandardComponents';
+import { Edit, Trash2, Plus } from 'lucide-react';
 
 export const PortfolioListPage = () => {
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Delete Dialog State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<number | string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null);
 
   const fetchPortfolioItems = async () => {
     try {
       setLoading(true);
       setError(null);
-  const data = await apiFetch('/portfolio');
-  setItems(asArray<PortfolioItem>(data));
+      const data = await apiFetch('/portfolio');
+      setItems(asArray<PortfolioItem>(data));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar itens do portfólio');
     } finally {
@@ -36,7 +44,7 @@ export const PortfolioListPage = () => {
     fetchPortfolioItems();
   }, []);
 
-  const handleDeleteClick = (id: string) => {
+  const handleDeleteClick = (id: number | string) => {
     setItemToDelete(id);
     setDeleteDialogOpen(true);
   };
@@ -56,7 +64,23 @@ export const PortfolioListPage = () => {
     }
   };
 
-  if (loading) {
+  const handleCreate = () => {
+    setEditingItem(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (item: PortfolioItem) => {
+    setEditingItem(item);
+    setIsModalOpen(true);
+  };
+
+  const handleModalSuccess = () => {
+    setIsModalOpen(false);
+    setEditingItem(null);
+    fetchPortfolioItems();
+  };
+
+  if (loading && !items.length) {
     return (
       <AdminLayout title="Gestão de Portfólio" breadcrumbs={[{ name: 'Admin' }, { name: 'Portfólio' }]}>
         <div className="flex items-center justify-center min-h-96">
@@ -66,7 +90,9 @@ export const PortfolioListPage = () => {
     );
   }
 
-  if (error) {
+  // Error state is handled inline in main view if we have some items, or full page if blocking
+  // But let's keep it simple and show error if blocking
+  if (error && !items.length) {
     return (
       <AdminLayout title="Gestão de Portfólio" breadcrumbs={[{ name: 'Admin' }, { name: 'Portfólio' }]}>
         <div className="flex items-center justify-center min-h-96 text-center">
@@ -86,49 +112,75 @@ export const PortfolioListPage = () => {
           <h1 className="text-2xl font-bold text-foreground">Portfólio</h1>
           <p className="mt-1 text-sm text-muted-foreground">Gerencie seus itens de portfólio</p>
         </div>
-        <Link to="/admin/portfolio/novo">
-          <Button variant="primary">Adicionar Novo Item</Button>
-        </Link>
+        <Button onClick={handleCreate} variant="primary" className="flex items-center gap-2">
+          <Plus size={18} />
+          Adicionar Novo Item
+        </Button>
       </div>
+
+      {error && (
+        <div className="bg-destructive/10 text-destructive p-4 rounded-md mb-6">
+          {error}
+          <Button onClick={fetchPortfolioItems} variant="outline" className="ml-4 text-xs h-8">
+            Tentar novamente
+          </Button>
+        </div>
+      )}
 
       {items.length === 0 ? (
         <SimpleCard className="p-12 text-center">
           <div className="text-muted-foreground">Nenhum item encontrado.</div>
           <div className="mt-4">
-            <Link to="/admin/portfolio/novo">
-              <Button variant="primary">Adicionar Item</Button>
-            </Link>
+            <Button onClick={handleCreate} variant="primary">Adicionar Item</Button>
           </div>
         </SimpleCard>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {items.map((item) => (
-            <SimpleCard key={item.id} className="overflow-hidden">
-              <img
-                src={item.imageUrl || '/placeholder-portfolio.jpg'}
-                alt={item.title || 'Item do portfólio'}
-                className="w-full h-48 object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = '/placeholder-portfolio.jpg';
-                }}
-              />
-              <div className="p-4">
-                <h3 className="font-semibold text-lg mb-2 text-foreground">{item.title}</h3>
-                <p className="text-muted-foreground text-sm mb-4">{item.description}</p>
-                <div className="flex gap-2">
-                  <Link to={`/admin/portfolio/${item.id}/editar`} className="flex-1">
-                    <Button variant="outline" className="w-full">Editar</Button>
-                  </Link>
-                  <Button variant="danger" className="flex-1" onClick={() => handleDeleteClick(item.id)}>
-                    Apagar
-                  </Button>
+            <SimpleCard key={item.id} className="overflow-hidden flex flex-col h-full p-0">
+              <div className="relative h-48 group">
+                <img
+                  src={item.imageUrl || '/placeholder-portfolio.jpg'}
+                  alt={item.title || 'Item do portfólio'}
+                  className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-105"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/placeholder-portfolio.jpg';
+                  }}
+                />
+                
+                {/* Overlay actions */}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
+                  <button 
+                    onClick={() => handleEdit(item)}
+                    className="p-2 bg-background/90 rounded-full hover:bg-primary hover:text-primary-foreground transition-colors"
+                    title="Editar"
+                  >
+                    <Edit size={18} />
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteClick(item.id)}
+                    className="p-2 bg-background/90 rounded-full hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                    title="Excluir"
+                  >
+                    <Trash2 size={18} />
+                  </button>
                 </div>
+              </div>
+
+              <div className="p-4 flex flex-col flex-1">
+                <h3 className="font-bold text-lg mb-2 line-clamp-1">{item.title}</h3>
+                <p className="text-muted-foreground text-sm line-clamp-3 mb-4 flex-1">
+                  {item.description}
+                </p>
+                {/* Date removed */}
               </div>
             </SimpleCard>
           ))}
         </div>
       )}
+
+      {/* Delete Dialog */}
       <ConfirmDialog
         isOpen={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
@@ -139,6 +191,20 @@ export const PortfolioListPage = () => {
         confirmVariant="danger"
         isLoading={isDeleting}
       />
+
+      {/* Edit/Create Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingItem ? 'Editar Projeto' : 'Novo Projeto'}
+        className="max-w-2xl"
+      >
+        <PortfolioForm 
+            initialData={editingItem}
+            onSuccess={handleModalSuccess}
+            onCancel={() => setIsModalOpen(false)}
+        />
+      </Modal>
     </AdminLayout>
   );
 };

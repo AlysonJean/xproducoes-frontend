@@ -1,143 +1,162 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import AdminLayout from '@/components/admin/AdminLayout';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Button } from '@/components/ui/Button';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { useNotifications } from '@/contexts/NotificationContext';
+// src/components/forms/CollaboratorFormPage.tsx
+import React, { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { apiFetch } from '@/services/api';
+import { useNotifications } from '@/contexts/NotificationContext';
+import {
+  Form,
+  FormSection,
+  FormActions,
+  Input,
+  Select,
+  Button
+} from '@/components/ui/StandardComponents';
 
-type Role = 'PHOTOGRAPHER' | 'VIDEOGRAPHER' | 'EDITOR' | 'ASSISTANT' | 'OTHER';
+const collaboratorSchema = z.object({
+  name: z.string().min(1, 'Nome é obrigatório'),
+  email: z.string().email('Email inválido'),
+  role: z.enum(['PHOTOGRAPHER', 'VIDEOGRAPHER', 'EDITOR', 'ASSISTANT', 'OTHER']).default('PHOTOGRAPHER'),
+  hourlyRate: z.union([z.number().min(0, 'Valor deve ser positivo'), z.string().transform(v => v === '' ? undefined : Number(v))]).optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'PENDING_APPROVAL', 'SUSPENDED']).default('ACTIVE'),
+});
 
-const ROLE_OPTIONS: { value: Role; label: string }[] = [
-  { value: 'PHOTOGRAPHER', label: 'Fotógrafo' },
-  { value: 'VIDEOGRAPHER', label: 'Videomaker' },
-  { value: 'EDITOR', label: 'Editor' },
-  { value: 'ASSISTANT', label: 'Assistente' },
-  { value: 'OTHER', label: 'Outro' },
-];
+type CollaboratorFormData = z.infer<typeof collaboratorSchema>;
 
-export const CollaboratorFormPage: React.FC = () => {
-  const navigate = useNavigate();
+interface CollaboratorFormProps {
+  initialData?: any;
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
+  initialData,
+  onSuccess,
+  onCancel,
+}) => {
   const { addNotification } = useNotifications();
+  const isEditing = Boolean(initialData);
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<Role>('PHOTOGRAPHER');
-  const [hourlyRate, setHourlyRate] = useState<number | ''>('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<CollaboratorFormData>({
+    resolver: zodResolver(collaboratorSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      role: 'PHOTOGRAPHER',
+      hourlyRate: undefined,
+      status: 'ACTIVE',
+    },
+  });
 
-  const validate = () => {
-    const e: Record<string, string> = {};
-    if (!name.trim()) e.name = 'Nome é obrigatório';
-    if (!email.trim()) e.email = 'Email é obrigatório';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = 'Email inválido';
-    if (hourlyRate !== '' && Number(hourlyRate) < 0) e.hourlyRate = 'Valor/hora inválido';
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
-  const onSubmit = async (ev: React.FormEvent) => {
-    ev.preventDefault();
-    if (!validate()) return;
-    try {
-      setIsSubmitting(true);
-  await apiFetch('/api/collaborators', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim(),
-          role,
-          hourlyRate: hourlyRate === '' ? undefined : Number(hourlyRate),
-          status: 'ACTIVE',
-        }),
+  useEffect(() => {
+    if (initialData) {
+      reset({
+        name: initialData.name || '',
+        email: initialData.email || '',
+        role: initialData.role || 'PHOTOGRAPHER',
+        hourlyRate: initialData.hourlyRate,
+        status: initialData.status || 'ACTIVE',
       });
-      addNotification({ type: 'success', title: 'Sucesso', message: 'Colaborador criado!' });
-      navigate('/admin/collaborators');
+    }
+  }, [initialData, reset]);
+
+  const onSubmit = async (data: CollaboratorFormData) => {
+    try {
+      const payload = {
+        ...data,
+        hourlyRate: Number(data.hourlyRate) || undefined,
+      };
+
+      if (isEditing && initialData?.id) {
+        await apiFetch(`/api/collaborators/${initialData.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload),
+        });
+        addNotification({ type: 'success', title: 'Sucesso', message: 'Colaborador atualizado!' });
+      } else {
+        await apiFetch('/api/collaborators', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        addNotification({ type: 'success', title: 'Sucesso', message: 'Colaborador criado!' });
+      }
+      onSuccess();
     } catch (err) {
-      addNotification({ type: 'error', title: 'Erro', message: 'Falha ao criar colaborador' });
-    } finally {
-      setIsSubmitting(false);
+      console.error(err);
+      addNotification({ type: 'error', title: 'Erro', message: 'Falha ao salvar colaborador' });
     }
   };
 
   return (
-    <AdminLayout title="Novo Colaborador" breadcrumbs={[{ name: 'Admin' }, { name: 'Colaboradores', href: '/admin/collaborators' }, { name: 'Novo' }]}>
-      <form onSubmit={onSubmit} className="max-w-xl space-y-6">
-        <div className="bg-card border rounded-xl p-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Nome</label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nome completo"
-                aria-invalid={!!errors.name}
-              />
-              {errors.name && <p className="mt-1 text-sm text-destructive">{errors.name}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Email</label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@exemplo.com"
-                aria-invalid={!!errors.email}
-              />
-              {errors.email && <p className="mt-1 text-sm text-destructive">{errors.email}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Papel</label>
-              <Select value={role} onChange={(e) => setRole(e.target.value as Role)}>
-                {ROLE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Valor/hora (opcional)</label>
-              <Input
-                type="number"
-                step="0.01"
-                value={hourlyRate}
-                onChange={(e) => setHourlyRate(e.target.value === '' ? '' : Number(e.target.value))}
-                placeholder="0.00"
-                aria-invalid={!!errors.hourlyRate}
-              />
-              {errors.hourlyRate && (
-                <p className="mt-1 text-sm text-destructive">{errors.hourlyRate}</p>
-              )}
-            </div>
-          </div>
+    <Form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <FormSection title="Dados Pessoais" description="Informações básicas do colaborador">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            label="Nome"
+            placeholder="Nome completo"
+            {...register('name')}
+            error={errors.name?.message}
+          />
+          <Input
+            label="Email"
+            type="email"
+            placeholder="email@exemplo.com"
+            {...register('email')}
+            error={errors.email?.message}
+          />
         </div>
+      </FormSection>
 
-        <div className="flex items-center justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => navigate('/admin/collaborators')}>
-            Cancelar
-          </Button>
-          <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting}>
-            {isSubmitting ? 'Salvando...' : 'Criar Colaborador'}
-          </Button>
+      <FormSection title="Dados Profissionais" description="Função e remuneração">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Select
+            label="Função"
+            {...register('role')}
+            error={errors.role?.message}
+            options={[
+              { value: 'PHOTOGRAPHER', label: 'Fotógrafo' },
+              { value: 'VIDEOGRAPHER', label: 'Videomaker' },
+              { value: 'EDITOR', label: 'Editor' },
+              { value: 'ASSISTANT', label: 'Assistente' },
+              { value: 'OTHER', label: 'Outro' },
+            ]}
+          />
+          <Input
+            label="Valor Hora (R$)"
+            type="number"
+            step="0.01"
+            placeholder="0.00"
+            {...register('hourlyRate')}
+            error={errors.hourlyRate?.message}
+          />
+          <Select
+            label="Status"
+            {...register('status')}
+            error={errors.status?.message}
+            options={[
+              { value: 'ACTIVE', label: 'Ativo' },
+              { value: 'INACTIVE', label: 'Inativo' },
+              { value: 'PENDING_APPROVAL', label: 'Pendente' },
+              { value: 'SUSPENDED', label: 'Suspenso' },
+            ]}
+          />
         </div>
-      </form>
+      </FormSection>
 
-      {isSubmitting && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-card rounded-xl p-6">
-            <LoadingSpinner label="Salvando colaborador..." />
-          </div>
-        </div>
-      )}
-    </AdminLayout>
+      <FormActions>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit" variant="primary" disabled={isSubmitting}>
+          {isSubmitting ? 'Salvando...' : isEditing ? 'Salvar Alterações' : 'Criar Colaborador'}
+        </Button>
+      </FormActions>
+    </Form>
   );
 };
-
-export default CollaboratorFormPage;

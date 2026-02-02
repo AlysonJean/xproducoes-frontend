@@ -1,8 +1,5 @@
-// src/pages/admin/FaqFormPage.tsx
-
-
+// src/components/forms/FaqFormPage.tsx
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../services/api';
 import type { FaqItem } from '../../types/types';
 import {
@@ -15,10 +12,14 @@ import {
   Textarea
 } from '../ui/StandardComponents';
 
-export const FaqFormPage = () => {
-  const { id } = useParams<{ id?: string }>();
-  const navigate = useNavigate();
-  const isEditing = Boolean(id);
+interface FaqFormProps {
+  initialData?: FaqItem | null;
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+export const FaqForm: React.FC<FaqFormProps> = ({ initialData, onSuccess, onCancel }) => {
+  const isEditing = Boolean(initialData);
 
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
@@ -26,19 +27,14 @@ export const FaqFormPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isEditing) {
-      const fetchFaq = async () => {
-        try {
-          const data: FaqItem = await apiFetch(`/faq/${id}`);
-          setQuestion(data.question);
-          setAnswer(data.answer);
-        } catch {
-          setError('Não foi possível carregar a pergunta para edição.');
-        }
-      };
-      fetchFaq();
+    if (initialData) {
+      setQuestion(initialData.question);
+      setAnswer(initialData.answer);
+    } else {
+      setQuestion('');
+      setAnswer('');
     }
-  }, [id, isEditing]);
+  }, [initialData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,12 +44,12 @@ export const FaqFormPage = () => {
     const payload = { question, answer };
 
     try {
-      if (isEditing) {
-        await apiFetch(`/faq/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      if (isEditing && initialData) {
+        await apiFetch(`/faq/${initialData.id}`, { method: 'PUT', body: JSON.stringify(payload) });
       } else {
-  await apiFetch('/api/faq', { method: 'POST', body: JSON.stringify(payload) });
+        await apiFetch('/faq', { method: 'POST', body: JSON.stringify(payload) });
       }
-      navigate('/admin/faq');
+      onSuccess();
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message || 'Ocorreu um erro ao salvar a pergunta.');
@@ -66,16 +62,7 @@ export const FaqFormPage = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-foreground mb-2">
-          {isEditing ? 'Editar Pergunta' : 'Adicionar Nova Pergunta'}
-        </h1>
-        <p className="text-muted-foreground">
-          {isEditing ? 'Atualize a pergunta' : 'Adicione uma nova pergunta à FAQ'}
-        </p>
-      </div>
-
+    <div className="space-y-6">
       {error && (
         <Alert 
           variant="error" 
@@ -85,10 +72,10 @@ export const FaqFormPage = () => {
         />
       )}
 
-      <Form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-8 shadow-sm">
+      <Form onSubmit={handleSubmit} className="space-y-6">
         <FormSection 
-          title="Informações da Pergunta"
-          description="Preencha os dados da FAQ"
+          title=""
+          description=""
         >
           <Input
             label="Pergunta"
@@ -98,14 +85,13 @@ export const FaqFormPage = () => {
             placeholder="Digite a pergunta"
             required
           />
-
           <Textarea
             label="Resposta"
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
             error={error || undefined}
             placeholder="Digite a resposta"
-            rows={4}
+            rows={5}
             required
           />
         </FormSection>
@@ -114,7 +100,7 @@ export const FaqFormPage = () => {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate('/admin/faq')}
+            onClick={onCancel}
             disabled={loading}
           >
             Cancelar
@@ -124,10 +110,12 @@ export const FaqFormPage = () => {
             isLoading={loading}
             disabled={loading}
           >
-            {loading ? 'A Salvar...' : 'Salvar Pergunta'}
+            {loading ? 'Salvar' : 'Salvar'}
           </Button>
         </FormActions>
       </Form>
     </div>
   );
 };
+
+export default FaqForm;

@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Search, Edit, Trash2, Users, Download, Plus, Calendar } from 'lucide-react';
@@ -15,6 +14,8 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { apiFetch } from '@/services/api';
 import type { ClientResponse, User } from '@/types/types';
 import { useNotifications } from '@/contexts/NotificationContext';
+import ClientForm from '@/components/forms/ClientFormPage';
+import { Modal } from '@/components/ui/StandardComponents';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -54,6 +55,10 @@ const ClientListPage: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<User | null>(null);
 
   const { addNotification } = useNotifications();
 
@@ -101,6 +106,22 @@ const ClientListPage: React.FC = () => {
       setLoading(false);
     }
   }, [currentPage, debouncedSearchTerm, selectedStatus, sortBy, sortOrder, addNotification]);
+
+  const handleCreate = () => {
+    setEditingClient(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (client: User) => {
+    setEditingClient(client);
+    setIsModalOpen(true);
+  };
+
+  const handleModalSuccess = () => {
+    setIsModalOpen(false);
+    setEditingClient(null);
+    fetchClients();
+  };
 
   useEffect(() => {
     fetchClients();
@@ -256,7 +277,7 @@ const ClientListPage: React.FC = () => {
             <Trash2 className="h-4 w-4 mr-2" />
             {selectedClients.size > 0 ? `Excluir (${selectedClients.size}) selecionados` : 'Excluir selecionados'}
           </Button>
-          <Link to="/admin/clientes/novo"><Button variant="primary"><Plus className="h-4 w-4 mr-2" /> Novo Cliente</Button></Link>
+          <Button onClick={handleCreate} variant="primary"><Plus className="h-4 w-4 mr-2" /> Novo Cliente</Button>
         </div>
       </div>
 
@@ -367,12 +388,10 @@ const ClientListPage: React.FC = () => {
 
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
-                      <Link to={`/admin/clientes/${client.id}/editar`}>
-                        <Button variant="outline" size="sm">
-                          <Edit className="h-4 w-4 mr-1" />
-                          Editar
-                        </Button>
-                      </Link>
+                      <Button onClick={() => handleEdit(client)} variant="outline" size="sm">
+                        <Edit className="h-4 w-4 mr-1" />
+                        Editar
+                      </Button>
                       <Button onClick={() => handleDelete(client.id)} variant="ghost" size="sm" className="text-destructive hover:text-destructive">
                         <Trash2 className="h-4 w-4 mr-1" />
                         Excluir
@@ -417,7 +436,7 @@ const ClientListPage: React.FC = () => {
             <p className="mt-1 text-sm text-muted-foreground">{searchTerm || selectedStatus ? 'Tente ajustar os filtros de busca.' : 'Comece criando um novo cliente.'}</p>
             {!searchTerm && !selectedStatus && (
               <div className="mt-6">
-                <Link to="/admin/clientes/novo"><Button variant="primary"><Plus className="h-4 w-4 mr-2" /> Novo Cliente</Button></Link>
+                <Button onClick={handleCreate} variant="primary"><Plus className="h-4 w-4 mr-2" /> Novo Cliente</Button>
               </div>
             )}
           </div>
@@ -436,6 +455,20 @@ const ClientListPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Client Modal */}
+      <Modal
+         isOpen={isModalOpen}
+         onClose={() => setIsModalOpen(false)}
+         title={editingClient ? 'Editar Cliente' : 'Novo Cliente'}
+         className="max-w-2xl"
+      >
+        <ClientForm 
+            initialData={editingClient}
+            onSuccess={handleModalSuccess}
+            onCancel={() => setIsModalOpen(false)}
+        />
+      </Modal>
     </AdminLayout>
   );
 };

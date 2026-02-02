@@ -8,8 +8,9 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Select } from '../../components/ui/StandardComponents';
+import { Select, Modal } from '../../components/ui/StandardComponents';
 import { SimpleCard, StatsCard } from '@/components/ui/Cards';
+import { AdminBookingForm as BookingForm } from '@/components/forms/AdminBookingForm';
 import type { BookingListItem } from '../../types/types';
 
 // Função auxiliar para parsing seguro de preços
@@ -25,14 +26,17 @@ export const BookingListPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingBooking, setEditingBooking] = useState<BookingListItem | null>(null);
+  const [initialClientType, setInitialClientType] = useState<'registered' | 'manual'>('registered');
 
-  useEffect(() => {
-    const fetchBookings = async () => {
+  const fetchBookings = async () => {
       try {
         setLoading(true);
-  const response = await apiFetch('/admin/bookings');
-  // Garante que bookings seja sempre um array
-  setBookings(asArray(response));
+        const response = await apiFetch('/admin/bookings');
+        // Garante que bookings seja sempre um array
+        setBookings(asArray(response));
       } catch (err: unknown) {
         if (err instanceof Error) {
           setError(err.message);
@@ -43,8 +47,39 @@ export const BookingListPage = () => {
         setLoading(false);
       }
     };
+
+  useEffect(() => {
     fetchBookings();
   }, []);
+
+  const handleCreate = () => {
+    setEditingBooking(null);
+    setInitialClientType('registered');
+    setIsModalOpen(true);
+  };
+
+  const handleCreateManual = () => {
+    setEditingBooking(null);
+    setInitialClientType('manual');
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (booking: BookingListItem) => {
+    setEditingBooking(booking);
+    setInitialClientType('registered'); // Na edição isso é determinado pelos dados
+    setIsModalOpen(true);
+  };
+
+  const handleSuccess = () => {
+    setIsModalOpen(false);
+    setEditingBooking(null);
+    fetchBookings();
+  };
+
+  const handleCancel = () => {
+    setIsModalOpen(false);
+    setEditingBooking(null);
+  };
 
   const handleStatusChange = async (
     bookingId: string,
@@ -179,9 +214,8 @@ export const BookingListPage = () => {
             
             <div className="flex gap-2">
               <Button variant="outline">📊 Exportar</Button>
-              <Link to="/admin/reservas/nova">
-                <Button variant="primary">➕ Nova Reserva</Button>
-              </Link>
+              <Button variant="outline" onClick={handleCreateManual}>📝 Nova Reserva Manual</Button>
+              <Button variant="primary" onClick={handleCreate}>➕ Nova Reserva</Button>
             </div>
           </div>
         </SimpleCard>
@@ -259,10 +293,11 @@ export const BookingListPage = () => {
                           ]}
                         />
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 flex gap-2">
                         <Link to={`/admin/reservas/${booking.id}`}>
                           <Button variant="outline" size="sm">Ver Detalhes</Button>
                         </Link>
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(booking)}>Editar</Button>
                       </td>
                     </tr>
                   ))
@@ -289,6 +324,22 @@ export const BookingListPage = () => {
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleCancel}
+        title={editingBooking ? 'Editar Reserva' : (initialClientType === 'manual' ? 'Nova Reserva Manual' : 'Nova Reserva')}
+        className="max-w-4xl"
+      >
+        <div className="py-2">
+            <BookingForm
+            initialData={editingBooking ? { ...editingBooking, totalPrice: Number(editingBooking.totalPrice) } as any : editingBooking}
+            defaultClientType={initialClientType}
+            onSuccess={handleSuccess}
+            onCancel={handleCancel}
+            />
+        </div>
+      </Modal>
     </AdminLayout>
   );
 };

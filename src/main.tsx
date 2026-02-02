@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
+import { GoogleOAuthProvider } from '@react-oauth/google'; // Importação do Provider
 import App from './App';
 import { initSentry } from './utils/sentry';
 import './styles/themes/theme-variables.css';
@@ -25,16 +26,18 @@ if (!root) {
 }
 root.render(
   <React.StrictMode>
-    <HelmetProvider>
-      <BrowserRouter future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true
-      }}>
-        <SentryErrorBoundary>
-          <App />
-        </SentryErrorBoundary>
-      </BrowserRouter>
-    </HelmetProvider>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
+      <HelmetProvider>
+        <BrowserRouter future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true
+        }}>
+          <SentryErrorBoundary>
+            <App />
+          </SentryErrorBoundary>
+        </BrowserRouter>
+      </HelmetProvider>
+    </GoogleOAuthProvider>
   </React.StrictMode>
 );
 

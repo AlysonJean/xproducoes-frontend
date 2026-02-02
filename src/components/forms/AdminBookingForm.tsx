@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -70,10 +69,15 @@ const bookingFormSchema = z
 type BookingFormData = z.infer<typeof bookingFormSchema>;
 type ClientForSelect = { id: string; name: string; email?: string; phone?: string };
 
-export default function BookingFormPage() {
-  const { id } = useParams<{ id?: string }>();
-  const isEditing = Boolean(id);
-  const navigate = useNavigate();
+interface AdminBookingFormProps {
+  initialData?: Booking | null;
+  defaultClientType?: 'registered' | 'manual';
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData, defaultClientType = 'registered', onSuccess, onCancel }) => {
+  const isEditing = Boolean(initialData);
   const { addNotification } = useNotifications();
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
@@ -83,7 +87,9 @@ export default function BookingFormPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [clients, setClients] = useState<ClientForSelect[]>([]);
   const [kits, setKits] = useState<Kit[]>([]);
+  const [kitSearch, setKitSearch] = useState('');
   const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [equipSearch, setEquipSearch] = useState('');
 
   const {
     register,
@@ -95,7 +101,7 @@ export default function BookingFormPage() {
   } = useForm<BookingFormData>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
-      clientType: 'registered',
+      clientType: defaultClientType,
       selectionType: 'kit',
       equipmentIds: [],
       status: 'PENDING',
@@ -112,8 +118,19 @@ export default function BookingFormPage() {
       try {
         setLoading(true);
         // clientes
-  const clientsRes = await apiFetch<any>('/api/admin/clients');
+        let clientsRes: any = { data: [] };
+        try {
+           clientsRes = await apiFetch<any>('/admin/clients');
+        } catch (e) {
+           console.warn("Could not load clients", e);
+        }
         const list = Array.isArray(clientsRes?.data) ? clientsRes.data : (Array.isArray(clientsRes) ? clientsRes : []);
+        // Sort clients alphabetically
+        list.sort((a: any, b: any) => {
+          const nameA = a.user?.name || a.name || '';
+          const nameB = b.user?.name || b.name || '';
+          return nameA.localeCompare(nameB);
+        });
         const mapped: ClientForSelect[] = list.map((c: any) => ({
           id: c.id || c.user?.id,
           name: c.user?.name || c.name || 'Cliente',
@@ -124,22 +141,22 @@ export default function BookingFormPage() {
 
         // kits e equipamentos
         const [kitsData, eqData] = await Promise.all([
-          apiFetch<Kit[]>('/api/kits'),
-          apiFetch<Equipment[]>('/api/equipments'),
+          apiFetch<Kit[]>('/api/kits').catch(() => []),
+          apiFetch<Equipment[]>('/api/equipments').catch(() => []),
         ]);
         setKits(Array.isArray(kitsData) ? kitsData : []);
         setEquipments(Array.isArray(eqData) ? eqData : []);
 
-        if (isEditing && id) {
-          const booking = await apiFetch<Booking>(`/api/bookings/${id}`);
+        if (initialData) {
+          const booking = initialData;
           const manualClient = !(booking as any).userId;
           const eventDate = (booking.eventDate as string) || '';
           const eventEndDate = (booking.eventEndDate as string) || eventDate;
           const location = (booking as any).location || '';
-          const address = (booking as any);
-          const extractedKitId = (Array.isArray(booking.kits)
+          const address = (booking as any).venue || booking;
+          const extractedKitId = (Array.isArray(booking.kits) && booking.kits.length > 0)
             ? (booking.kits as any[])[0]?.kitId || (booking.kits as any[])[0]?.id
-            : undefined) as string | undefined;
+            : undefined;
           const extractedEquipmentIds = Array.isArray(booking.equipments)
             ? (booking.equipments as any[]).map((e) => e.equipmentId || e.id).filter(Boolean)
             : [];
@@ -155,11 +172,11 @@ export default function BookingFormPage() {
             eventDate: eventDate ? eventDate.substring(0, 16) : '',
             eventEndDate: eventEndDate ? eventEndDate.substring(0, 16) : '',
             location: location,
-            street: (address as any).street || (booking as any)?.venue?.street || '',
+            street: (address as any).street || '',
             neighborhood: (address as any).neighborhood || '',
-            city: (address as any).city || (booking as any)?.venue?.city || '',
-            state: (address as any).state || (booking as any)?.venue?.state || '',
-            zipCode: (address as any).zipCode || (booking as any)?.venue?.zipCode || '',
+            city: (address as any).city || '',
+            state: (address as any).state || '',
+            zipCode: (address as any).zipCode || '',
             addressNumber: (address as any).addressNumber || '',
             addressComplement: (address as any).addressComplement || '',
             notes: (booking.notes as string) || '',
@@ -175,7 +192,7 @@ export default function BookingFormPage() {
       }
     };
     loadInitial();
-  }, [id, isEditing, reset]);
+  }, [initialData, reset]);
 
   const onSubmit = async (data: BookingFormData) => {
     setServerError(null);
@@ -239,16 +256,14 @@ export default function BookingFormPage() {
         }
       }
       
-      if (isEditing && id) {
-  await apiFetch(`/api/bookings/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      if (isEditing && initialData) {
+        await apiFetch(`/api/bookings/${initialData.id}`, { method: 'PUT', body: JSON.stringify(payload) });
         addNotification({ type: 'success', title: 'Reserva atualizada', message: 'As alterações foram salvas.' });
-        navigate(`/admin/bookings/${id}`);
       } else {
-        const created = await apiFetch<any>(`/bookings`, { method: 'POST', body: JSON.stringify(payload) });
+        await apiFetch(`/bookings`, { method: 'POST', body: JSON.stringify(payload) });
         addNotification({ type: 'success', title: 'Reserva criada', message: 'Reserva criada com sucesso.' });
-        const newId = (created as any)?.data?.id || (created as any)?.id;
-        navigate(newId ? `/admin/bookings/${newId}` : '/admin/bookings');
       }
+      onSuccess();
     } catch (e: any) {
       setServerError(e?.message || 'Falha ao salvar reserva');
       addNotification({ type: 'error', title: 'Erro', message: e?.message || 'Não foi possível salvar.' });
@@ -260,17 +275,12 @@ export default function BookingFormPage() {
   if (loading) return <LoadingSpinner label="A carregar formulário de reserva..." />;
 
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-foreground mb-2">{isEditing ? 'Editar Reserva' : 'Nova Reserva'}</h1>
-        <p className="text-muted-foreground">{isEditing ? 'Atualize as informações da reserva' : 'Cadastre uma nova reserva'}</p>
-      </div>
-
+    <div className="space-y-6">
       {serverError && (
         <Alert variant="error" title="Erro" description={serverError} onClose={() => setServerError(null)} />
       )}
 
-      <Form onSubmit={handleSubmit(onSubmit)} className="bg-card border border-border rounded-xl p-8 shadow-sm">
+      <Form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <FormSection title="Cliente" description="Associe a reserva a um cliente">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Select
@@ -315,18 +325,37 @@ export default function BookingFormPage() {
               ]}
             />
             {selectionType === 'kit' ? (
-              <Select
-                label="Kit"
-                placeholder="Selecione um kit"
-                {...register('kitId')}
-                error={errors.kitId?.message as string | undefined}
-                options={kits.map((k) => ({ value: k.id, label: k.name }))}
-              />
+              <div className="space-y-2"> 
+                <Input
+                  label="Buscar Kit"
+                  value={kitSearch}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setKitSearch(e.target.value)}
+                  placeholder="Filtrar kits..."
+                />
+                <Select
+                  label="Kit"
+                  placeholder="Selecione um kit"
+                  {...register('kitId')}
+                  error={errors.kitId?.message as string | undefined}
+                  options={kits
+                    .filter(k => k.name.toLowerCase().includes(kitSearch.toLowerCase()))
+                    .map((k) => ({ value: k.id, label: k.name }))
+                  }
+                />
+              </div>
             ) : (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Equipamentos</label>
+                <Input
+                  placeholder="Buscar equipamento..."
+                  value={equipSearch}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEquipSearch(e.target.value)}
+                  className="mb-2"
+                />
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-56 overflow-auto p-3 border border-border rounded-lg bg-background">
-                  {equipments.map((eq) => (
+                  {equipments
+                    .filter(eq => eq.name.toLowerCase().includes(equipSearch.toLowerCase()))
+                    .map((eq) => (
                     <label key={eq.id} className="flex items-center gap-2 text-sm">
                       <input type="checkbox" value={eq.id} className="h-4 w-4" {...register('equipmentIds')} />
                       <span>{eq.name}</span>
@@ -419,7 +448,7 @@ export default function BookingFormPage() {
         </FormSection>
 
         <FormActions>
-          <Button type="button" variant="outline" onClick={() => navigate('/admin/bookings')} disabled={saving}>Cancelar</Button>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>Cancelar</Button>
           <Button type="submit" isLoading={saving} disabled={saving}>{isEditing ? 'Salvar alterações' : 'Criar reserva'}</Button>
         </FormActions>
       </Form>

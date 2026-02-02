@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { normalizeString } from '../../utils/string';
 import { useAuth } from '../../contexts/AuthContext';
@@ -98,13 +98,8 @@ const SearchIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
   </svg>
 );
 
-const ChevronDownIcon = () => (
-  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-  </svg>
-);
-
 interface MenuGroup {
+
   name: string;
   items: MenuItem[];
 }
@@ -249,10 +244,28 @@ const menuGroups: MenuGroup[] = [
 
 export const AdminSidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const location = useLocation();
   const { user } = useAuth();
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Restaurar posição do scroll
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    if (sidebar) {
+      const savedPosition = sessionStorage.getItem('adminSidebarScroll');
+      if (savedPosition) {
+        sidebar.scrollTop = parseInt(savedPosition, 10);
+      }
+
+      const handleScroll = () => {
+        sessionStorage.setItem('adminSidebarScroll', sidebar.scrollTop.toString());
+      };
+
+      sidebar.addEventListener('scroll', handleScroll);
+      return () => sidebar.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
 
   // Don't show sidebar if not admin
   if (!user || user.role !== 'ADMIN') {
@@ -263,18 +276,6 @@ export const AdminSidebar: React.FC = () => {
   if (!location.pathname.startsWith('/admin')) {
     return null;
   }
-
-  const toggleGroup = (groupName: string) => {
-    const newCollapsed = new Set(collapsedGroups);
-    if (newCollapsed.has(groupName)) {
-      newCollapsed.delete(groupName);
-    } else {
-      newCollapsed.add(groupName);
-    }
-    setCollapsedGroups(newCollapsed);
-  };
-
-  const isGroupCollapsed = (groupName: string) => collapsedGroups.has(groupName);
 
   // Filter items based on search query
   const q = normalizeString(searchQuery);
@@ -340,10 +341,9 @@ export const AdminSidebar: React.FC = () => {
         </div>
 
         {/* Navigation - com alternância de cores */}
-        <div className="flex-1 overflow-y-auto">
+        <div ref={sidebarRef} className="flex-1 overflow-y-auto">
           <div className="px-4 py-6 space-y-6">
             {filteredGroups.map((group, groupIndex) => {
-              const isCollapsed = isGroupCollapsed(group.name);
               const isEven = groupIndex % 2 === 0;
               
               return (
@@ -353,21 +353,17 @@ export const AdminSidebar: React.FC = () => {
                     isEven ? 'bg-muted/30' : 'bg-card/50'
                   }`}
                 >
-                  {/* Group Header - com alternância */}
+                  {/* Group Header - Fixed (no toggle) */}
                   {searchQuery === '' && (
-                    <button
-                      onClick={() => toggleGroup(group.name)}
-                      className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors duration-200 group"
+                    <div
+                      className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider"
                     >
                       <span>{group.name}</span>
-                      <div className={`transition-transform duration-200 ${isCollapsed ? '' : 'rotate-180'}`}>
-                        <ChevronDownIcon />
-                      </div>
-                    </button>
+                    </div>
                   )}
 
-                  {/* Group Items - com alternância de hover */}
-                  {(searchQuery !== '' || !isCollapsed) && (
+                  {/* Group Items - Always visible */}
+                  {(searchQuery !== '' || true) && (
                     <div className="space-y-1 px-2 pb-2">
                       {group.items.map((item, itemIndex) => {
                         const isActive = location.pathname === item.href;
