@@ -141,8 +141,8 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
 
         // kits e equipamentos
         const [kitsData, eqData] = await Promise.all([
-          apiFetch<Kit[]>('/api/kits').catch(() => []),
-          apiFetch<Equipment[]>('/api/equipments').catch(() => []),
+          apiFetch<Kit[]>('/kits').catch(() => []),
+          apiFetch<Equipment[]>('/equipments').catch(() => []),
         ]);
         setKits(Array.isArray(kitsData) ? kitsData : []);
         setEquipments(Array.isArray(eqData) ? eqData : []);
