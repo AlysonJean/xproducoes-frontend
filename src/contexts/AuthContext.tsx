@@ -134,6 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Importante: envia cookies automaticamente
         body: JSON.stringify({ refreshToken: tokens.refreshToken }),
       });
 
@@ -209,6 +210,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
     const initializeAuth = async () => {
+      // Timeout/abort para evitar que a inicialização prenda a aplicação indefinidamente
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000); // 8s
+
       try {
         const savedTokens = loadTokens();
 
@@ -229,6 +234,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refreshToken: refreshTok }),
+                signal: controller.signal,
               });
 
               if (!refreshResponse.ok) return false;
@@ -247,6 +253,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               // Buscar perfil do usuário com o novo token
               const meResp = await fetch(`${API_BASE_URL}/auth/me`, {
                 headers: { Authorization: `Bearer ${newTokens.accessToken}`, 'Content-Type': 'application/json' },
+                signal: controller.signal,
               });
               if (meResp.ok) {
                 const userData = await meResp.json();
@@ -257,6 +264,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }
               return false;
             } catch (e) {
+              if ((e as any).name === 'AbortError') {
+                logger.warn('Auth initialization aborted due to timeout', 'AuthContext');
+                return false;
+              }
               logger.error('Refresh attempt failed during init', 'AuthContext', e);
               return false;
             }
@@ -267,6 +278,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             try {
               const resp = await fetch(`${API_BASE_URL}/auth/me`, {
                 headers: { Authorization: `Bearer ${savedTokens.accessToken}`, 'Content-Type': 'application/json' },
+                signal: controller.signal,
               });
 
               if (resp.ok) {
@@ -287,7 +299,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setUser(null);
               }
             } catch (e) {
-              logger.error('Auth validation failed during init', 'AuthContext', e);
+              if ((e as any).name === 'AbortError') {
+                logger.warn('Auth validation aborted due to timeout', 'AuthContext');
+              } else {
+                logger.error('Auth validation failed during init', 'AuthContext', e);
+              }
               clearTokens();
               setUser(null);
             }
@@ -307,6 +323,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
         }
       } finally {
+        clearTimeout(timeout);
         if (isMounted) {
           setIsLoading(false);
         }

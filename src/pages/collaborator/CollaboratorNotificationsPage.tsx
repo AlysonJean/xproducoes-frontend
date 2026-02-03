@@ -16,6 +16,7 @@ import {
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
 import { SimpleCard } from '../../components/ui/Cards';
 import { collaboratorProfileAPI } from '../../services/api';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 
 interface Notification {
   id: string;
@@ -209,10 +210,7 @@ const CollaboratorNotificationsPage: React.FC = () => {
     return (
       <CollaboratorLayout>
         <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Carregando notificações...</p>
-          </div>
+          <BrandLoader size={120} label="Carregando notificações..." />
         </div>
       </CollaboratorLayout>
     );

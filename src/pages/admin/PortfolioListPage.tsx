@@ -6,7 +6,7 @@ import type { PortfolioItem } from '../../types/types';
 import { asArray } from '@/utils/normalize';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/Button';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import BrandLoader from '@/components/ui/BrandLoader';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { SimpleCard } from '@/components/ui/Cards';
 import PortfolioForm from '@/components/forms/PortfolioFormPage';
@@ -83,9 +83,7 @@ export const PortfolioListPage = () => {
   if (loading && !items.length) {
     return (
       <AdminLayout title="Gestão de Portfólio" breadcrumbs={[{ name: 'Admin' }, { name: 'Portfólio' }]}>
-        <div className="flex items-center justify-center min-h-96">
-          <LoadingSpinner label="Carregando portfólio..." />
-        </div>
+        <BrandLoader size={120} label="Carregando portfólio..." />
       </AdminLayout>
     );
   }

@@ -14,6 +14,7 @@ import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLa
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { collaboratorMessagesAPI } from '../../services/api';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 
 interface Chat {
   id: string;
@@ -162,7 +163,7 @@ const CollaboratorMessagesPage: React.FC = () => {
     return (
       <CollaboratorLayout>
         <div className="flex items-center justify-center min-h-96">
-          <Loader2 className="w-8 h-8 animate-spin" />
+          <BrandLoader size={120} label="Carregando mensagens..." />
         </div>
       </CollaboratorLayout>
     );

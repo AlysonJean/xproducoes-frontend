@@ -4,7 +4,7 @@ import { asArray } from '../../utils/normalize';
 import { formatPrice } from '../../utils/formatPrice';
 import { normalizeString } from '../../utils/string';
 import { Link } from 'react-router-dom';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -142,7 +142,7 @@ export const BookingListPage = () => {
     return (
       <AdminLayout title="Gestão de Reservas" breadcrumbs={[{ name: 'Admin' }, { name: 'Reservas' }]}>
         <div className="flex items-center justify-center min-h-96">
-          <LoadingSpinner label="A carregar reservas..." />
+          <BrandLoader size={120} label="Carregando reservas..." />
         </div>
       </AdminLayout>
     );

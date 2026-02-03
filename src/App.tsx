@@ -224,7 +224,9 @@ const NewsletterSubscribersPage = lazy(() =>
 );
 // ===== LOADING COMPONENT FOR SUSPENSE =====
 const PageLoadingSpinner = () => (
-  <BrandLoader fullScreen size={160} label="Carregando..." />
+  <div className="flex flex-col items-center justify-center w-full min-h-[calc(100vh-200px)] py-20">
+    <BrandLoader size={120} label="Carregando..." />
+  </div>
 );
 
 // Route Protection Component

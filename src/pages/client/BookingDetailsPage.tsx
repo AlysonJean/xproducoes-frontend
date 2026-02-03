@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/services/api';
 import type { BookingDetails } from '@/types/types';
 import { formatPrice } from '@/utils/formatPrice';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import BrandLoader from '@/components/ui/BrandLoader';
 
 export const BookingDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -147,11 +147,7 @@ export const BookingDetailsPage = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <LoadingSpinner />
-      </div>
-    );
+    return <BrandLoader fullScreen size={140} label="Carregando reserva..." />;
   }
 
   if (error || !booking) {

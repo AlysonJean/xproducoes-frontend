@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 import { apiFetch } from '../../services/api';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 import type { GeminiSuggestionResponse } from '../../types/types';
 
 export const GeminiEventSuggester = () => {
@@ -45,7 +45,7 @@ export const GeminiEventSuggester = () => {
 
       {isLoading && (
         <div className="mt-6">
-          <LoadingSpinner label="A pensar..." />
+          <BrandLoader size={80} label="A pensar..." />
         </div>
       )}
 

@@ -90,12 +90,14 @@ export const initSentry = () => {
     },
   });
 
-  // Log initialization
-  console.log('✅ Sentry inicializado:', {
-    environment: SENTRY_ENVIRONMENT,
-    dsn: SENTRY_DSN.substring(0, 20) + '...',
-    release: `xproducoes-frontend@${import.meta.env.VITE_APP_VERSION || '1.0.0'}`,
-  });
+  // Log initialization only in development
+  if (SENTRY_ENVIRONMENT === 'development') {
+    console.log('✅ Sentry inicializado:', {
+      environment: SENTRY_ENVIRONMENT,
+      dsn: SENTRY_DSN.substring(0, 20) + '...',
+      release: `xproducoes-frontend@${import.meta.env.VITE_APP_VERSION || '1.0.0'}`,
+    });
+  }
 
   // Set user context if available
   const setUserContext = (user: any) => {
@@ -107,10 +109,8 @@ export const initSentry = () => {
         role: user.role,
       });
       Sentry.setTag('user_role', user.role);
-      console.log('👤 Sentry: Contexto de usuário definido:', user.email);
     } else {
       Sentry.setUser(null);
-      console.log('👤 Sentry: Contexto de usuário removido');
     }
   };
 

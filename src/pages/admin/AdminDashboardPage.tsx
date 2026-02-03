@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../services/api';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { StatsCard, SimpleCard } from '../../components/ui/Cards';
 import { QuickActionCard } from '../../components/ui/QuickActionCard';
@@ -327,7 +327,7 @@ export const AdminDashboardPage = () => {
     return (
       <AdminLayout title="Dashboard Administrativo" breadcrumbs={[{ name: 'Admin' }, { name: 'Dashboard' }]}>
         <div className="flex items-center justify-center min-h-96">
-          <LoadingSpinner />
+          <BrandLoader size={120} label="Carregando dashboard..." />
         </div>
       </AdminLayout>
     );
@@ -530,7 +530,7 @@ export const AdminDashboardPage = () => {
           }
         >
           {loadingNext ? (
-            <div className="flex items-center justify-center py-10"><LoadingSpinner /></div>
+            <div className="flex items-center justify-center py-10"><BrandLoader size={80} /></div>
           ) : nextBookings.length === 0 ? (
             <div className="text-sm text-muted-foreground py-6">Nenhum evento agendado para os próximos dias.</div>
           ) : (

@@ -5,7 +5,7 @@ import { ptBR } from 'date-fns/locale';
 import { apiFetch } from '@/services/api';
 import { asArray } from '@/utils/normalize';
 import type { Equipment, Kit, BookingStatus, ICollaborator, CalendarBooking } from '@/types/types';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/Button';
 
@@ -869,7 +869,7 @@ export const BookingCalendarPage = () => {
       )}
       {loading && (
         <div className="flex items-center justify-center min-h-[200px]">
-          <LoadingSpinner label="Carregando reservas..." />
+          <BrandLoader size={100} label="Carregando reservas..." />
         </div>
       )}
 

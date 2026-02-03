@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
+import BrandLoader from '../../components/ui/BrandLoader';
 import { StatsCard, SimpleCard } from '../../components/ui/Cards';
 import { 
   Clock,
@@ -97,9 +98,7 @@ const CollaboratorReportsPage: React.FC = () => {
           { name: 'Relatórios' }
         ]}
       >
-        <div className="flex items-center justify-center min-h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
+        <BrandLoader size={120} label="Carregando relatórios..." />
       </CollaboratorLayout>
     );
   }

@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { SimpleCard } from '../../components/ui/Cards';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { formatDate } from '../../utils/typeSafeFormatters';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 import * as XLSX from 'xlsx-js-style';
 import { Download, Mail } from 'lucide-react';
 
@@ -42,7 +43,7 @@ export const NewsletterSubscribersPage = () => {
     return (
       <AdminLayout title="Newsletter" breadcrumbs={[{ name: 'Admin' }, { name: 'Newsletter' }]}>
         <div className="flex items-center justify-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <BrandLoader size={120} label="Carregando inscritos..." />
         </div>
       </AdminLayout>
     );

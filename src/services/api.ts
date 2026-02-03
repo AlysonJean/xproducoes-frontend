@@ -45,6 +45,7 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Importante: envia cookies httpOnly automaticamente
 });
 
 // ✅ SECURE REQUEST INTERCEPTOR WITH TOKEN REFRESH
@@ -156,55 +157,75 @@ api.interceptors.response.use(
 );
 
 // ✅ SECURE FETCH UTILITY WITH AUTO REFRESH
+// Log curto para debug de configuração em dev
+if (typeof window !== 'undefined') {
+  // eslint-disable-next-line no-console
+  console.info('API_BASE_URL (runtime):', API_BASE_URL);
+}
+
 export const apiFetch = async <T = unknown>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> => {
   const makeRequest = async (url: string, config: RequestInit): Promise<Response> => {
-    const response = await fetch(url, config);
+    // Add timeout handling
+    const timeout = parseInt(import.meta.env.VITE_API_TIMEOUT || '30000');
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    
+    config.signal = controller.signal;
 
-    // If 401, try to refresh token and retry
-    if (response.status === 401) {
-      try {
-        const refreshToken = secureStorage.get('refreshToken');
-        if (refreshToken) {
-          const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken }),
-          });
+    try {
+      const response = await fetch(url, config);
+      clearTimeout(id);
+      
+      // If 401, try to refresh token and retry
+      if (response.status === 401) {
+        try {
+          const refreshToken = secureStorage.get('refreshToken');
+          if (refreshToken) {
+            const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refreshToken }),
+              // Short timeout for refresh
+              signal: AbortSignal.timeout(10000)
+            });
 
-          if (refreshResponse.ok) {
-            const data = await refreshResponse.json();
+            if (refreshResponse.ok) {
+              const data = await refreshResponse.json();
 
-            // Update tokens
-            secureStorage.set('accessToken', data.accessToken);
-            if (data.refreshToken) {
-              secureStorage.set('refreshToken', data.refreshToken);
+              // Update tokens
+              secureStorage.set('accessToken', data.accessToken);
+              if (data.refreshToken) {
+                secureStorage.set('refreshToken', data.refreshToken);
+              }
+              secureStorage.set('tokenExpiresAt', (Date.now() + (15 * 60 * 1000)).toString());
+
+              // Retry with new token
+              config.headers = {
+                ...config.headers,
+                Authorization: `Bearer ${data.accessToken}`,
+              };
+              // Create new controller for retry
+              const retryController = new AbortController();
+              const retryId = setTimeout(() => retryController.abort(), timeout);
+              config.signal = retryController.signal;
+              
+              const retryResponse = await fetch(url, config);
+              clearTimeout(retryId);
+              return retryResponse;
             }
-            secureStorage.set('tokenExpiresAt', (Date.now() + (15 * 60 * 1000)).toString());
-
-            // Retry with new token
-            config.headers = {
-              ...config.headers,
-              Authorization: `Bearer ${data.accessToken}`,
-            };
-            return fetch(url, config);
           }
+        } catch (refreshError) {
+          logDebug('Token refresh failed inside makeRequest', { refreshError });
         }
-      } catch (refreshError) {
-        logDebug('Token refresh failed in apiFetch', { refreshError });
       }
-
-      // If refresh failed, clear tokens and redirect
-      secureStorage.remove('accessToken');
-      secureStorage.remove('refreshToken');
-      secureStorage.remove('tokenExpiresAt');
-      window.location.href = '/login';
-      throw new Error('Session expired');
+      return response;
+    } catch (error) {
+       clearTimeout(id);
+       throw error;
     }
-
-    return response;
   };
 
   const url = `${API_BASE_URL}${endpoint}`;
@@ -248,7 +269,35 @@ export const apiFetch = async <T = unknown>(
     // ignore
   }
 
-  const response = await makeRequest(url, config);
+  // Retry logic para falhas de rede transitórias
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY_MS = 300; // inicial, exponencial
+  let attempt = 0;
+  let lastError: any = null;
+  let response: Response | null = null;
+
+  while (attempt < MAX_RETRIES) {
+    try {
+      response = await makeRequest(url, config);
+      break;
+    } catch (err: any) {
+      lastError = err;
+      // Só retry em erros de rede (ex.: TypeError: Failed to fetch)
+      if (err instanceof TypeError || (err && /failed to fetch|network error/i.test(String(err.message || err)))) {
+        attempt++;
+        const delay = RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      // Erro não-retryável
+      throw err;
+    }
+  }
+
+  if (!response) {
+    // Rejeta com última mensagem
+    throw lastError || new Error('Network request failed');
+  }
 
   if (!response.ok) {
     // Tentar extrair mensagem detalhada do servidor

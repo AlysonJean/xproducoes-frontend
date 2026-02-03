@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import type { FaqItem } from '../../types/types';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import BrandLoader from '../../components/ui/BrandLoader';
 import { SimpleCard } from '../../components/ui/Cards';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { Button } from '../../components/ui/Button';
@@ -63,9 +63,7 @@ export const FaqListPage = () => {
   if (loading) {
     return (
       <AdminLayout title="Gestão de FAQ" breadcrumbs={[{ name: 'Admin' }, { name: 'FAQ' }]}>
-        <div className="flex items-center justify-center min-h-96">
-          <LoadingSpinner label="A carregar perguntas..." />
-        </div>
+        <BrandLoader size={120} label="Carregando perguntas..." />
       </AdminLayout>
     );
   }

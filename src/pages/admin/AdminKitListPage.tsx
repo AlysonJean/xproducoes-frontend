@@ -3,7 +3,7 @@ import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import { formatPrice } from '../../utils/typeSafeFormatters';
 import type { Kit } from '../../types/types';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { Button } from '../../components/ui/Button';
 import { SimpleCard } from '../../components/ui/Cards';
@@ -65,7 +65,7 @@ export const AdminKitListPage = () => {
     return (
       <AdminLayout title="Gestão de Kits" breadcrumbs={[{ name: 'Admin' }, { name: 'Kits' }]}>
         <div className="flex items-center justify-center min-h-96">
-          <LoadingSpinner label="A carregar kits..." />
+          <BrandLoader size={120} label="Carregando kits..." />
         </div>
       </AdminLayout>
     );
