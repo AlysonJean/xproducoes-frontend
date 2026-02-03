@@ -15,7 +15,7 @@ export const SEO: React.FC<SEOProps> = ({
   title, 
   description = "Líder em aluguel de som, iluminação, painel de LED e equipamentos audiovisuais em Belo Horizonte e região.",
   keywords = "aluguel de som, iluminação, painel de led, eventos, belo horizonte",
-  image = "/xproducoes-logo.png",
+  image = "/xproducoes-logo.svg",
   url = typeof window !== 'undefined' ? window.location.href : '',
   type = 'website',
   jsonLd
