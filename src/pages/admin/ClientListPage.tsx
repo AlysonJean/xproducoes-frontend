@@ -9,7 +9,7 @@ import { formatPrice } from '@/utils/formatPrice';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { apiFetch } from '@/services/api';
 import type { ClientResponse, User } from '@/types/types';
@@ -450,8 +450,7 @@ const ClientListPage: React.FC = () => {
       {(loading || isDeleting) && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-card rounded-xl p-6">
-            <LoadingSpinner />
-            <div className="mt-4 text-sm text-muted-foreground">{isDeleting ? 'Excluindo cliente...' : 'Processando...'}</div>
+            <BrandLoader size={100} label={isDeleting ? 'Excluindo cliente...' : 'Processando...'} />
           </div>
         </div>
       )}

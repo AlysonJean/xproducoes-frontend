@@ -14,6 +14,7 @@ import {
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
 import { SimpleCard } from '../../components/ui/Cards';
 import { collaboratorProfileAPI, authAPI } from '../../services/api';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 
 import { ProfileSettings, SecuritySettings, PrivacySettings, PaymentSettings } from '@/types/types';
 
@@ -148,10 +149,7 @@ const CollaboratorSettingsPage: React.FC = () => {
     return (
       <CollaboratorLayout>
         <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Carregando configurações...</p>
-          </div>
+          <BrandLoader size={120} label="Carregando configurações..." />
         </div>
       </CollaboratorLayout>
     );

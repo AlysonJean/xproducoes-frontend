@@ -14,7 +14,7 @@ import {
 } from '../ui/StandardComponents';
 import { generateSeoFilename } from '../../utils/seoUtils';
 import { Banner } from '../../types/types';
-import LoadingSpinner from '../ui/LoadingSpinner';
+import { BrandLoader } from '../ui/BrandLoader';
 
 
 // Schema
@@ -151,7 +151,7 @@ export const BannerForm: React.FC<BannerFormProps> = ({ initialData, onSuccess, 
     }
   };
 
-  if (loading) return <LoadingSpinner label="Salvando..." />;
+  if (loading) return <BrandLoader size={80} label="Salvando..." />;
 
   return (
     <Form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

@@ -4,7 +4,7 @@ import ReactGA from 'react-ga4';
 import { apiFetch } from '../services/api';
 import { useCart } from '@/hooks/useCart';
 import { useNotifications } from '../contexts/NotificationContext';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import BrandLoader from '@/components/ui/BrandLoader';
 import { FavoriteButton } from '../components/ui/FavoriteButton';
 import { formatPrice } from '../utils/typeSafeFormatters';
 import { toNumber, calculateSavingsAmount } from '../utils/typeSafeFormatters';
@@ -48,11 +48,7 @@ export const KitDetailPage = () => {
 
   // Estados de carregamento/erro
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <LoadingSpinner label="Carregando kit..." />
-      </div>
-    );
+    return <BrandLoader fullScreen size={140} label="Carregando kit..." />;
   }
 
   if (error) {

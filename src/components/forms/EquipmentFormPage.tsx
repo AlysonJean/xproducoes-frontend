@@ -4,7 +4,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { apiFetch } from '../../services/api';
-import LoadingSpinner from '../ui/LoadingSpinner';
+import { BrandLoader } from '../ui/BrandLoader';
 import { 
   Form, 
   FormSection, 
@@ -139,7 +139,7 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
   if (loading) {
     return (
       <div className="flex justify-center py-6">
-        <LoadingSpinner label="Carregando..." />
+        <BrandLoader size={100} label="Carregando..." />
       </div>
     );
   }

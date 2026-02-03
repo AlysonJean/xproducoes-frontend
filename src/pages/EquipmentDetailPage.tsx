@@ -6,7 +6,7 @@ import { useParams } from 'react-router-dom';
 import ReactGA from 'react-ga4';
 import { apiFetch } from '../services/api';
 import { useCart } from '@/hooks/useCart';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import BrandLoader from '../components/ui/BrandLoader';
 import type { Equipment } from '../types/types';
 import { formatPrice } from '../utils/formatPrice';
 import { SEO } from '../components/SEO';
@@ -62,7 +62,7 @@ export const EquipmentDetailPage = () => {
     }
   };
 
-  if (loading) return <LoadingSpinner label="A carregar equipamento..." />;
+  if (loading) return <BrandLoader fullScreen size={140} label="Carregando equipamento..." />;
   if (error)
     return (
       <div className="text-center text-destructive bg-destructive/10 p-4 rounded-md border border-destructive">

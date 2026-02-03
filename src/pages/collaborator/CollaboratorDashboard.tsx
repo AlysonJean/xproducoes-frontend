@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Navigate, Link } from 'react-router-dom';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
+import BrandLoader from '../../components/ui/BrandLoader';
 import type { DashboardEvent } from '../../types/domains/dashboard';
 import { collaboratorsAPI } from '../../services/api';
 import { StatsCard, SimpleCard } from '../../components/ui/Cards';
@@ -255,9 +256,7 @@ const CollaboratorDashboard: React.FC = () => {
       ]}
     >
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
+        <BrandLoader size={120} label="Carregando painel..." />
       ) : (
         <div className="space-y-8">
           {/* Boas-vindas personalizada */}

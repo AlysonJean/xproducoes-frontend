@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { bannerService } from '../../services/bannerService';
 import { Banner } from '../../types/types';
 import { Trash2, Edit2, Plus } from 'lucide-react';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { Modal } from '../../components/ui/StandardComponents';
@@ -77,7 +77,7 @@ export const BannerManagementPage = () => {
         </div>
 
       {loading ? (
-        <LoadingSpinner />
+        <BrandLoader size={120} label="Carregando banners..." />
       ) : (
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {banners.map((banner) => (

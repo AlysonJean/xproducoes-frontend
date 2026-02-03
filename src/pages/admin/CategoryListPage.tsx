@@ -5,7 +5,7 @@ import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import { Category } from '../../types/types';
 import AdminLayout from '../../components/admin/AdminLayout';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 import { SimpleCard } from '../../components/ui/Cards';
 import { Button } from '../../components/ui/Button';
 import { Trash2, Edit2, Plus } from 'lucide-react';
@@ -71,7 +71,7 @@ export const CategoryListPage = () => {
     return (
       <AdminLayout title="Gestão de Categorias" breadcrumbs={[{ name: 'Admin' }, { name: 'Categorias' }]}>
         <div className="flex items-center justify-center min-h-96">
-          <LoadingSpinner label="A carregar categorias..." />
+          <BrandLoader size={120} label="Carregando categorias..." />
         </div>
       </AdminLayout>
     );

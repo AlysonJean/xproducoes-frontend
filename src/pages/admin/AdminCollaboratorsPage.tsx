@@ -3,7 +3,7 @@ import { Search, Trash2, Users, TrendingUp, DollarSign, Edit } from 'lucide-reac
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useCollaborators } from '../../hooks';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 import { Button } from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -196,8 +196,7 @@ export const AdminCollaboratorsPage: React.FC = () => {
     return (
       <AdminLayout title="Colaboradores" breadcrumbs={[{ name: 'Admin' }, { name: 'Colaboradores' }]}>
         <div className="flex items-center justify-center min-h-96">
-          <LoadingSpinner />
-          <div className="mt-4 text-sm text-muted-foreground">Carregando colaboradores...</div>
+          <BrandLoader size={120} label="Carregando colaboradores..." />
         </div>
       </AdminLayout>
     );
@@ -637,10 +636,7 @@ export const AdminCollaboratorsPage: React.FC = () => {
       {(loading || isDeleting) && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-card rounded-xl p-6">
-            <LoadingSpinner />
-            <div className="mt-4 text-sm text-muted-foreground">
-              {isDeleting ? 'Excluindo colaborador...' : 'Processando...'}
-            </div>
+            <BrandLoader size={100} label={isDeleting ? 'Excluindo colaborador...' : 'Processando...'} />
           </div>
         </div>
       )}

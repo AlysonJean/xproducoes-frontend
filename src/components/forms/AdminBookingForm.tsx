@@ -16,7 +16,7 @@ import {
   Button,
   Alert,
 } from '../ui/StandardComponents';
-import LoadingSpinner from '../ui/LoadingSpinner';
+import { BrandLoader } from '../ui/BrandLoader';
 
 const idSchema = z.union([
   z.string().uuid(),
@@ -272,7 +272,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
     }
   };
 
-  if (loading) return <LoadingSpinner label="A carregar formulário de reserva..." />;
+  if (loading) return <BrandLoader size={100} label="Carregando formulário de reserva..." />;
 
   return (
     <div className="space-y-6">

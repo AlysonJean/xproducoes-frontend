@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { EquipmentCard } from '../../components/ui/EquipmentCard';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import BrandLoader from '../../components/ui/BrandLoader';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import { apiFetch } from '../../services/api';
 import type { Equipment } from '../../types/types';
@@ -59,7 +59,7 @@ export const FavoritesPage = () => {
   }, [favorites]);
 
   if (loading) {
-    return <LoadingSpinner label="Carregando favoritos..." size="lg" className="py-20" />;
+    return <BrandLoader fullScreen size={140} label="Carregando favoritos..." />;
   }
 
   if (error) {

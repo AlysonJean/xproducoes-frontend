@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import type { ContactSubmission } from '../../types/types';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import BrandLoader from '../../components/ui/BrandLoader';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { Button } from '../../components/ui/Button';
 import { SimpleCard } from '../../components/ui/Cards';
@@ -56,9 +56,7 @@ export const ContactSubmissionsListPage = () => {
   if (loading) {
     return (
       <AdminLayout title="Mensagens de Contato" breadcrumbs={[{ name: 'Admin' }, { name: 'Contatos' }]}>
-        <div className="flex items-center justify-center min-h-96">
-          <LoadingSpinner label="A carregar mensagens..." />
-        </div>
+        <BrandLoader size={120} label="Carregando mensagens..." />
       </AdminLayout>
     );
   }

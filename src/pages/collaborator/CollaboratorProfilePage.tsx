@@ -16,6 +16,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
 import { collaboratorProfileAPI } from '../../services/api';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 
 const CollaboratorProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -111,7 +112,7 @@ const CollaboratorProfilePage: React.FC = () => {
         breadcrumbs={[{ name: 'Colaborador', href: '/colaborador' }, { name: 'Perfil' }]}
       >
         <div className="flex items-center justify-center min-h-96">
-          <Loader2 className="w-8 h-8 animate-spin" />
+          <BrandLoader size={120} label="Carregando perfil..." />
         </div>
       </CollaboratorLayout>
     );

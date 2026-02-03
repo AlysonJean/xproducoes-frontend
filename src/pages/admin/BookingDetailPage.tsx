@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 // apiFetch was removed in favor of bookingAPI helpers
 import type { BookingDetails } from '../../types/types';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 import { useAuth } from '../../contexts/AuthContext';
 // Assuming WhatsAppConfirmationModal is a shared component, moved to a consistent path
 import { WhatsAppConfirmationModal } from '../../components/modals/WhatsAppConfirmationModal';
@@ -237,7 +237,7 @@ export const BookingDetailPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-card flex items-center justify-center">
-        <LoadingSpinner label="A carregar detalhes..." />
+        <BrandLoader size={120} label="Carregando detalhes..." />
   </div>
     );
   }

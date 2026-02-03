@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { generateSeoFilename } from '../../utils/seoUtils';
 import { apiFetch } from '../../services/api';
 import type { Kit, Equipment } from '../../types/types';
-import LoadingSpinner from '../ui/LoadingSpinner';
+import { BrandLoader } from '../ui/BrandLoader';
 import {
   Form,
   FormSection,
@@ -111,7 +111,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
     }
   };
 
-  if (pageLoading) return <LoadingSpinner label="A carregar formulário..." />;
+  if (pageLoading) return <BrandLoader size={100} label="Carregando formulário..." />;
 
   return (
     <div className="space-y-6">

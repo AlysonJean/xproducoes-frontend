@@ -6,7 +6,7 @@ import { asArray } from '../../utils/normalize';
 import type { Equipment } from '../../types/types';
 import { formatPrice } from '../../utils/typeSafeFormatters'; 
 import { AdminLayout } from '../../components/admin/AdminLayout';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import BrandLoader from '../../components/ui/BrandLoader';
 import { Button } from '../../components/ui/Button';
 import { SimpleCard } from '../../components/ui/Cards';
 import { Modal } from '../../components/ui/StandardComponents';
@@ -75,9 +75,7 @@ export const EquipmentListPage = () => {
   if (loading) {
     return (
       <AdminLayout title="Gestão de Equipamentos" breadcrumbs={[{ name: 'Admin' }, { name: 'Equipamentos' }]}>
-        <div className="flex items-center justify-center min-h-96">
-          <LoadingSpinner label="A carregar equipamentos..." />
-        </div>
+        <BrandLoader size={120} label="Carregando equipamentos..." />
       </AdminLayout>
     );
   }

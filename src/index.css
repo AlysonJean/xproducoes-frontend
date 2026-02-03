@@ -382,3 +382,23 @@
   background-blend-mode: screen;
   @apply rounded-full;
 }
+
+/* BrandLoader Styles */
+.brand-loader-animation {
+  width: var(--loader-size, 180px);
+  height: var(--loader-size, 180px);
+  /* Converte branco para azul petróleo #003049 */
+  filter: brightness(0) saturate(100%) invert(15%) sepia(50%) saturate(1500%) hue-rotate(175deg) brightness(95%) contrast(105%);
+}
+
+.brand-loader-animation > * {
+  width: 100%;
+  height: 100%;
+}
+
+/* Tema escuro: ajuste para prata */
+:root.dark .brand-loader-animation,
+.dark .brand-loader-animation {
+  /* Converte branco para prata #c9d1d9 */
+  filter: brightness(0) saturate(100%) invert(90%) sepia(5%) saturate(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}

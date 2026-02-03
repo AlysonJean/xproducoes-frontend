@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../services/api';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import type { User } from '../../types/types';
@@ -67,7 +67,7 @@ export const ClientEditPage = () => {
     }
   };
 
-  if (loading) return <LoadingSpinner label="A carregar dados do cliente..." />;
+  if (loading) return <BrandLoader size={120} label="Carregando dados do cliente..." />;
   if (error && !client.name) return <div className="text-destructive">{error}</div>;
 
   return (

@@ -10,7 +10,7 @@ import { Pagination } from '../components/ui/Pagination';
 import { apiFetch } from '../services/api';
 import type { Equipment, Category, Kit, PortfolioItem } from '../types/types';
 import { transformEquipment } from '../utils/transformEquipment';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 import { GeminiEventSuggester } from '../components/ui/GeminiEventSuggester';
 import { PageLoading } from '../components/layouts/PageLayout';
 import { Grid } from '../components/ui/StandardComponents';
@@ -156,6 +156,12 @@ export const HomePage = () => {
 
   const fetchPageData = useCallback(async () => {
     setLoading(true);
+    // Timeout de segurança para garantir que o loader desapareça
+    const loadingTimeout = setTimeout(() => {
+      setLoading(false);
+      console.warn('Forçando fim do loading da Home após timeout');
+    }, 10000);
+
     // Não limpa o erro anterior imediatamente para evitar flash, mas permite nova tentativa
     // setError(null); 
 
@@ -185,6 +191,7 @@ export const HomePage = () => {
       // Não bloqueia mais a renderização com tela de erro fatal
       // setError('Erro ao carregar dados da API. Tente novamente mais tarde.');
     } finally {
+      clearTimeout(loadingTimeout);
       setLoading(false);
     }
   }, []);
@@ -330,7 +337,7 @@ export const HomePage = () => {
 
           {equipmentLoading ? (
             <div className="flex justify-center items-center py-16 sm:py-18 lg:py-20 xl:py-22 2xl:py-24">
-              <LoadingSpinner size="lg" label="Carregando equipamentos..." />
+              <BrandLoader size={100} label="Carregando equipamentos..." />
             </div>
           ) : equipments && equipments.length > 0 ? (
             <>
@@ -416,7 +423,7 @@ export const HomePage = () => {
         )}
         {reviewsLoading && (
           <div className="flex justify-center items-center py-6 sm:py-7 lg:py-8 xl:py-9 2xl:py-10">
-            <LoadingSpinner label="Carregando depoimentos..." />
+            <BrandLoader size={80} label="Carregando depoimentos..." />
           </div>
         )}
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
+import BrandLoader from '@/components/ui/BrandLoader';
 import { PageLayout } from '../../components/layouts/PageLayout';
 import type { DashboardStats } from '../../types/domains/dashboard';
 import { formatPrice } from '@/utils/formatPrice';
@@ -89,11 +90,7 @@ export const FreelancerDashboardPage: React.FC = () => {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <BrandLoader fullScreen size={140} label="Carregando dashboard..." />;
   }
 
   return (

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useRevealOnView } from '../../hooks/useRevealOnView';
+import { BrandLoader } from '../ui/BrandLoader';
 
 interface PageLayoutProps {
   children: React.ReactNode;
@@ -55,13 +56,7 @@ export const PageLoading: React.FC<{ message?: string }> = ({
   message = "Carregando..." 
 }) => (
   <div className="min-h-screen bg-background flex items-center justify-center">
-    <div className="text-center max-w-md mx-auto px-6">
-      <div className="relative">
-        <div className="animate-spin rounded-full h-16 w-16 border-4 border-border border-t-primary mx-auto mb-6"></div>
-        <div className="absolute inset-0 rounded-full border-4 border-primary/20"></div>
-      </div>
-      <p className="text-muted-foreground text-lg font-medium">{message}</p>
-    </div>
+    <BrandLoader size={140} label={message} />
   </div>
 );
 
