@@ -106,9 +106,9 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
       } else {
         // Create Mode
         if (avatarFile) {
-          responseData = await apiFetch<any>('/api/admin/clients', { method: 'POST', body: fd });
+          responseData = await apiFetch<any>('/admin/clients', { method: 'POST', body: fd });
         } else {
-          responseData = await apiFetch<any>('/api/admin/clients', {
+          responseData = await apiFetch<any>('/admin/clients', {
             method: 'POST',
             body: JSON.stringify({
               name: name.trim(),

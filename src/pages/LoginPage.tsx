@@ -71,7 +71,8 @@ export const LoginPage = () => {
 
   const handleSocialSuccess = async () => {
     // Para login social, verificar role e redirecionar
-    const token = localStorage.getItem('authToken');
+    // O GoogleAuthButton/FacebookAuthButton salvam tokens via secureStorage
+    const token = localStorage.getItem('accessToken');
     if (token) {
       try {
         let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;

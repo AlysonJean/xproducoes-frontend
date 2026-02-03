@@ -89,8 +89,8 @@ export const BookingListPage = () => {
     try {
       const endpoint =
           field === 'status'
-            ? `/api/admin/bookings/${bookingId}/status`
-            : `/api/admin/bookings/${bookingId}/delivery-status`;
+            ? `/admin/bookings/${bookingId}/status`
+            : `/admin/bookings/${bookingId}/delivery-status`;
 
   const requestBody = { status: value };
 
