@@ -93,47 +93,37 @@ export default defineConfig({
     port: 3000,
     open: true
   },
-  build: {
+    build: {
     outDir: 'dist',
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Core React
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+        // Use a function to reliably split chunks by module id
+        manualChunks(id) {
+          if (!id) return null;
 
-          // UI Libraries
-          'ui-vendor': ['@heroicons/react', 'lucide-react'],
+          // Node modules -> vendor groups
+          if (id.includes('node_modules')) {
+            if (id.includes('recharts') || id.includes('date-fns')) return 'charts-vendor';
+            if (id.includes('react-big-calendar')) return 'calendar-vendor';
+            if (id.includes('xlsx-js-style')) return 'xlsx-vendor';
+            if (id.includes('lucide-react') || id.includes('@heroicons')) return 'ui-vendor';
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) return 'react-vendor';
+            // fallback vendor bundle
+            return 'vendor';
+          }
 
-          // Form handling
-          'forms-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          // Project pages -> dedicated chunks
+          if (id.includes('/src/pages/admin/') || id.includes('src\\pages\\admin\\')) return 'admin-chunk';
+          if (
+            id.includes('/src/pages/client/') ||
+            id.includes('/src/pages/collaborator/') ||
+            id.includes('/src/pages/freelancer/') ||
+            id.includes('src\\pages\\client\\')
+          )
+            return 'dashboard-chunk';
 
-          // Charts and data visualization
-          'charts-vendor': ['recharts', 'date-fns'],
-
-          // Authentication
-          'auth-vendor': [],
-
-          // State management
-          'state-vendor': [],
-
-          // Utils and helpers
-          'utils-vendor': ['clsx'],
-
-          // Admin heavy components (lazy loaded)
-          'admin-chunk': [
-            './src/pages/admin/AdminDashboardPage',
-            './src/pages/admin/BookingListPage',
-            './src/pages/admin/ClientListPage',
-            './src/pages/admin/EquipmentListPage'
-          ],
-
-          // User dashboard components
-          'dashboard-chunk': [
-            './src/pages/client/ClientDashboardPage',
-            './src/pages/collaborator/CollaboratorDashboard',
-            './src/pages/freelancer/FreelancerDashboardPage'
-          ]
+          return null;
         }
       }
     },
