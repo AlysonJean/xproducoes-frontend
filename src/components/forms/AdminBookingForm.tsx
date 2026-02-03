@@ -208,7 +208,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
           formData.append('image', (data.paymentProof as FileList)[0]);
           formData.append('folder', 'payment-proofs');
           
-          const uploadResponse = await apiFetch('/api/upload/image', {
+          const uploadResponse = await apiFetch('/upload/image', {
             method: 'POST',
             body: formData,
           });
@@ -257,7 +257,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
       }
       
       if (isEditing && initialData) {
-        await apiFetch(`/api/bookings/${initialData.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+        await apiFetch(`/bookings/${initialData.id}`, { method: 'PUT', body: JSON.stringify(payload) });
         addNotification({ type: 'success', title: 'Reserva atualizada', message: 'As alterações foram salvas.' });
       } else {
         await apiFetch(`/bookings`, { method: 'POST', body: JSON.stringify(payload) });

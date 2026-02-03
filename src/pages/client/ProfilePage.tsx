@@ -89,8 +89,8 @@ export const ProfilePage = () => {
         setError(null);
         
         const [profileResponse, statsResponse] = await Promise.allSettled([
-          apiFetch('/api/user/profile'),
-          apiFetch('/api/user/stats')
+          apiFetch('/user/profile'),
+          apiFetch('/user/stats')
         ]);
 
         if (profileResponse.status === 'fulfilled') {
@@ -122,7 +122,7 @@ export const ProfilePage = () => {
             try {
               if (!profileData.isVip && computedIsVip) {
                 // ✅ Mostrar loading durante promoção VIP
-                await apiFetch('/api/user/promote-vip', { method: 'POST' });
+                await apiFetch('/user/promote-vip', { method: 'POST' });
                 setSuccess('Parabéns — você agora é cliente VIP!');
                 setTimeout(() => setSuccess(null), 4000);
               }
@@ -210,7 +210,7 @@ export const ProfilePage = () => {
       setSaving(true);
       setError(null);
 
-  await apiFetch('/api/user/profile', {
+  await apiFetch('/user/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -246,7 +246,7 @@ export const ProfilePage = () => {
       setSaving(true);
       setError(null);
 
-  await apiFetch('/api/user/change-password', {
+  await apiFetch('/user/change-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -26,7 +26,7 @@ export const ClientEditPage = () => {
     const fetchClient = async () => {
       try {
         setLoading(true);
-  const clientData: User = await apiFetch(`/api/admin/clients/${id}`);
+  const clientData: User = await apiFetch(`/admin/clients/${id}`);
         setClient({
           name: clientData.name || '',
           email: clientData.email || '',
@@ -55,7 +55,7 @@ export const ClientEditPage = () => {
       return;
     }
     try {
-  await apiFetch(`/api/admin/clients/${id}`, {
+  await apiFetch(`/admin/clients/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(client),

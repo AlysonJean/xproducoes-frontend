@@ -104,7 +104,7 @@ export default function ReviewManagementPage() {
   const handleReject = async (id: string) => {
     try {
       setActionId(id);
-  await apiFetch(`/api/reviews/${id}/reject`, { method: 'POST' });
+  await apiFetch(`/reviews/${id}/reject`, { method: 'POST' });
       addNotification({ type: 'info', title: 'Rejeitada', message: 'Avaliação marcada como rejeitada.' });
       await load();
     } catch (e: any) {
@@ -117,7 +117,7 @@ export default function ReviewManagementPage() {
     try {
       if (!window.confirm('Tem certeza que deseja apagar esta avaliação?')) return;
       setActionId(id);
-  await apiFetch(`/api/reviews/${id}`, { method: 'DELETE' });
+  await apiFetch(`/reviews/${id}`, { method: 'DELETE' });
       addNotification({ type: 'success', title: 'Excluída', message: 'Avaliação apagada com sucesso.' });
       await load();
     } catch (e: any) {
@@ -130,7 +130,7 @@ export default function ReviewManagementPage() {
   const handleUpdate = async (id: string, data: { rating: number; comment?: string }) => {
     try {
       setActionId(id);
-  await apiFetch(`/api/reviews/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  await apiFetch(`/reviews/${id}`, { method: 'PUT', body: JSON.stringify(data) });
       addNotification({ type: 'success', title: 'Atualizada', message: 'Avaliação atualizada com sucesso.' });
       setEditing(null);
       await load();

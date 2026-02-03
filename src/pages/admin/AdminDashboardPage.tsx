@@ -306,12 +306,12 @@ export const AdminDashboardPage = () => {
         }
         // Live stats do dia
         try {
-          const ls = await apiFetch('/api/dashboard/live-stats') as { todayBookings: number; todayRevenue: number; activeUsers: number };
+          const ls = await apiFetch('/dashboard/live-stats') as { todayBookings: number; todayRevenue: number; activeUsers: number };
           setLiveStats(ls);
         } catch {}
         // Notificações (para possível badge futuro)
         try {
-          const notifs = await apiFetch('/api/dashboard/notifications') as Array<{ id: string; read?: boolean }>;
+          const notifs = await apiFetch('/dashboard/notifications') as Array<{ id: string; read?: boolean }>;
           setUnreadNotifications((notifs || []).filter(n => !n.read).length);
         } catch {}
       } catch (error) {

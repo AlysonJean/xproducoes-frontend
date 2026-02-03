@@ -74,13 +74,13 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
       };
 
       if (isEditing && initialData?.id) {
-        await apiFetch(`/api/collaborators/${initialData.id}`, {
+        await apiFetch(`/collaborators/${initialData.id}`, {
           method: 'PUT',
           body: JSON.stringify(payload),
         });
         addNotification({ type: 'success', title: 'Sucesso', message: 'Colaborador atualizado!' });
       } else {
-        await apiFetch('/api/collaborators', {
+        await apiFetch('/collaborators', {
           method: 'POST',
           body: JSON.stringify(payload),
         });

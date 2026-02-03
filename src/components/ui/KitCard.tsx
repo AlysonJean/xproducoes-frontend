@@ -61,7 +61,10 @@ export const KitCard: React.FC<KitCardProps> = ({ kit, showCompare = true, showF
         <h3 className="text-xl font-bold text-foreground mb-2 truncate">{kit.name}</h3>
         <p className="text-muted-foreground text-sm mb-4 h-10 overflow-hidden">{kit.description}</p>
         <div className="flex justify-between items-center mt-4">
-          <span className="text-lg font-semibold text-primary">{formatPrice(kit.price ?? 0)}</span>
+          <span className="text-lg font-semibold text-primary">
+            <span className="text-xs font-normal mr-1">a partir de</span>
+            {formatPrice(kit.price ?? 0)}
+          </span>
           <div className="bg-secondary text-secondary-foreground hover:bg-secondary/80 font-bold py-2 px-4 rounded transition-colors">
             Alugar Kit
           </div>

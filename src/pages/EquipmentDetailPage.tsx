@@ -128,6 +128,7 @@ export const EquipmentDetailPage = () => {
             <div className="flex justify-between items-center">
         <span className="text-muted-foreground">Preço por hora</span>
         <span className="text-3xl font-extrabold text-foreground">
+                <span className="text-lg font-normal mr-2">a partir de</span>
                 {formatPrice(equipment.pricePerHour || 0)}
               </span>
             </div>

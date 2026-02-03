@@ -21,7 +21,7 @@ export const MyBookingsPage = () => {
   const fetchMyBookings = async () => {
     try {
       setLoading(true);
-  const data = await apiFetch('/api/bookings/user');
+  const data = await apiFetch('/bookings/user');
   setBookings(asArray<SafeBooking>(data));
     } catch (err: unknown) {
       if (err instanceof Error) {

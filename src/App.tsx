@@ -91,6 +91,7 @@ const CookiesPage = lazy(() => import('./pages/CookiesPage').then((m) => ({ defa
 const LicensesPage = lazy(() => import('./pages/LicensesPage').then((m) => ({ default: m.LicensesPage })));
 const LGPDPage = lazy(() => import('./pages/LGPDPage').then((m) => ({ default: m.LGPDPage })));
 const HelpPage = lazy(() => import('./pages/HelpPage').then((m) => ({ default: m.HelpPage })));
+const DataDeletionStatusPage = lazy(() => import('./pages/DataDeletionStatusPage').then((m) => ({ default: m.DataDeletionStatusPage })));
 
 // Protected User Pages - Lazy Loading
 const ClientDashboardPage = lazy(() =>
@@ -380,6 +381,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/ajuda" element={<HelpPage />} />
       <Route path="/termos" element={<TermsPage />} />
       <Route path="/privacidade" element={<PrivacyPage />} />
+      <Route path="/data-deletion-status" element={<DataDeletionStatusPage />} />
 
       {/* Development Modal Examples */}
 
