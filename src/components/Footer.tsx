@@ -11,7 +11,7 @@ import { useModal } from './modals/ModalContext';
 import { newsletterService } from '../services/newsletterService';
 
 export const Footer = () => {
-  const { logoUrl, companyName } = useSettings();
+  const { companyName } = useSettings();
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -198,24 +198,10 @@ export const Footer = () => {
           {/* Brand Section */}
           <div className="lg:col-span-2">
             <div className="flex items-center space-x-3 mb-6">
-              {logoUrl ? (
-                // Quando há logo carregado, mostrar apenas o logo (persistente do Cloudinary)
-                <ThemedLogo
-                  src={logoUrl}
-                  title={companyName || 'Logo'}
-                  className="h-12 w-auto text-foreground"
-                />
-              ) : (
-                // Fallback: ícone + nome quando não há logo
-                <>
-                  <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center">
-                    <span className="text-primary-foreground font-bold text-xl">X</span>
-                  </div>
-                  <span className="text-2xl font-bold heading-elegant">
-                    {companyName}
-                  </span>
-                </>
-              )}
+              <ThemedLogo
+                title={companyName || 'Logo'}
+                className="h-12 w-auto"
+              />
             </div>
             
             <p className="text-muted-foreground mb-6 leading-relaxed">
