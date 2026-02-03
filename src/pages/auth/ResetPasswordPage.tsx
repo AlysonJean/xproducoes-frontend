@@ -32,20 +32,16 @@ const ResetPasswordPage: React.FC = () => {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/auth/reset-password', {
+      await (await import('@/services/api')).apiFetch('/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password }),
       });
-      if (res.ok) {
-        addNotification({ type: 'success', title: 'Senha atualizada', message: 'Sua senha foi redefinida com sucesso.' });
-        navigate('/login');
-      } else {
-        const data = await res.json().catch(() => ({}));
-        addNotification({ type: 'error', title: 'Erro', message: data.message || 'Falha ao redefinir senha.' });
-      }
-    } catch (e) {
-      addNotification({ type: 'error', title: 'Erro de rede', message: 'Não foi possível contatar o servidor.' });
+      addNotification({ type: 'success', title: 'Senha atualizada', message: 'Sua senha foi redefinida com sucesso.' });
+      navigate('/login');
+    } catch (e: any) {
+      const msg = e instanceof Error ? e.message : 'Falha ao redefinir senha.';
+      addNotification({ type: 'error', title: 'Erro', message: msg });
     } finally {
       setLoading(false);
     }

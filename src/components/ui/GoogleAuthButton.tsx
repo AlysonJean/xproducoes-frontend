@@ -8,6 +8,10 @@ import { secureStorage } from '@/utils/secureStorage';
 const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const { addNotification } = useNotifications();
+  
+  // Verificar se o Google Client ID está configurado
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const isConfigured = !!googleClientId && googleClientId !== 'your-google-client-id';
 
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -71,6 +75,14 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
       });
     }
   });
+
+  // Não renderizar o botão se o Google não está configurado
+  if (!isConfigured) {
+    if (import.meta.env.DEV) {
+      console.warn('Google OAuth não configurado: VITE_GOOGLE_CLIENT_ID não definido');
+    }
+    return null;
+  }
 
   return (
     <button

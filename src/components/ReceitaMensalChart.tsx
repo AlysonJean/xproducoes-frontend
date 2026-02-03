@@ -26,38 +26,34 @@ export function ReceitaMensalChart({ year }: ReceitaMensalChartProps) {
 
   // Buscar anos disponíveis ao montar
   useEffect(() => {
-  apiFetch<number[]>(`/api/dashboard/available-years`)
-      .then((res) => {
-        // Garante que é array de números
-        let anos = Array.isArray(res) ? res.map(Number) : [];
-        // Adiciona o ano inicial se não estiver presente
-        if (!anos.includes(year)) {
-          anos.push(year);
-        }
-        // Remove duplicidades e ordena decrescente
-        anos = Array.from(new Set(anos)).sort((a, b) => b - a);
-        setYears(anos);
-      })
-      .catch(() => {
-        // fallback: mostra apenas o ano inicial
-        setYears([year]);
-      });
+  (async () => {
+    try {
+      const res = await apiFetch<number[]>(`/dashboard/available-years`);
+      // Garante que é array de números
+      let anos = Array.isArray(res) ? res.map(Number) : [];
+      // Adiciona o ano inicial se não estiver presente
+      if (!anos.includes(year)) {
+        anos.push(year);
+      }
+      // Remove duplicidades e ordena decrescente
+      anos = Array.from(new Set(anos)).sort((a, b) => b - a);
+      setYears(anos);
+    } catch {
+      // fallback: mostra apenas o ano inicial
+      setYears([year]);
+    }
+  })();
   }, [year]);
 
   // Buscar dados do ano selecionado
   useEffect(() => {
     setLoading(true);
     setError(null);
-  apiFetch<MonthlyRevenue[]>(`/api/dashboard/monthly-revenue?year=${selectedYear}`)
-      .then((res) => {
-        setData(res);
-      })
+    apiFetch<MonthlyRevenue[]>(`/dashboard/monthly-revenue?year=${selectedYear}`)
+      .then((res) => setData(res))
       .catch((err) => {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('Erro desconhecido ao carregar o gráfico.');
-        }
+        if (err instanceof Error) setError(err.message);
+        else setError('Erro desconhecido ao carregar o gráfico.');
       })
       .finally(() => setLoading(false));
   }, [selectedYear]);

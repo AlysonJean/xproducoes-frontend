@@ -43,14 +43,8 @@ export const useDashboard = () => {
 
     try {
       // Busca dados reais do dashboard
-      const response = await fetch(`/api/dashboard/stats`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-        },
-      });
-      if (!response.ok) throw new Error('Erro ao buscar dados do dashboard');
-      const data = await response.json();
-      setStats(data.data || {});
+      const data = await (await import('@/services/api')).apiFetch('/dashboard/stats');
+      setStats((data as any)?.data || {});
     } catch (error) {
       setError('Erro ao carregar dados do dashboard');
     } finally {
