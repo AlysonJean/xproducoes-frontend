@@ -25,7 +25,7 @@ export const Header = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const { itemCount } = useCart();
   const { items: compareItems } = useCompare();
-  const { logoUrl, companyName } = useSettings();
+  const { companyName } = useSettings();
   const navigate = useNavigate();
 
   const [isScrolled, setIsScrolled] = useState(false);
@@ -72,24 +72,10 @@ export const Header = () => {
             to="/"
             className="group flex items-center transition-transform duration-300 hover:scale-105"
           >
-            {logoUrl ? (
-              /* Quando há logo carregado, mostra APENAS o logo */
-              <ThemedLogo
-                src={logoUrl}
-                title={companyName || 'Logo'}
-                className="h-12 w-auto sm:h-14 lg:h-16 max-w-[220px] sm:max-w-[280px] lg:max-w-[350px] transition-all duration-300 group-hover:brightness-110 text-foreground"
-              />
-            ) : (
-              /* Fallback: mostra ícone + nome quando não há logo */
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:rotate-6 group-hover:scale-110">
-                  <span className="text-primary-foreground font-bold text-lg sm:text-xl lg:text-2xl">X</span>
-                </div>
-                <span className="text-lg sm:text-xl lg:text-2xl font-bold heading-elegant">
-                  {companyName}
-                </span>
-              </div>
-            )}
+            <ThemedLogo
+              title={companyName || 'Logo'}
+              className="h-11 w-auto sm:h-[50px] lg:h-14 max-w-[200px] sm:max-w-[250px] lg:max-w-[315px] transition-all duration-300 group-hover:brightness-110"
+            />
           </Link>
 
           {/* Navegação desktop */}

@@ -506,14 +506,6 @@ export const AdminDashboardPage = () => {
               onClick={() => navigate('/admin/reservas/calendario')}
               color="info"
             />
-
-            <QuickActionCard
-              title="Configurações"
-              description="Logo, marca e configurações"
-              icon={<SettingsIcon />}
-              onClick={() => navigate('/admin/configuracoes/logo')}
-              color="muted"
-            />
           </div>
         </SimpleCard>
 

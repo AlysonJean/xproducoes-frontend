@@ -215,9 +215,7 @@ const AdminCollaboratorsPage = lazy(() =>
 // const CollaboratorFormPage = lazy(() =>
 //   import('./components/forms/CollaboratorFormPage').then((m) => ({ default: m.CollaboratorFormPage }))
 // );
-const LogoSettingsPage = lazy(() =>
-  import('./pages/admin/LogoSettingsPage').then((m) => ({ default: m.LogoSettingsPage }))
-);
+
 const MonitoringPage = lazy(() => import('./pages/admin/MonitoringPage'));
 const NewsletterSubscribersPage = lazy(() => 
   import('./pages/admin/NewsletterSubscribersPage').then((m) => ({ default: m.NewsletterSubscribersPage }))
@@ -776,14 +774,7 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       /> */}
-      <Route
-        path="/admin/configuracoes/logo"
-        element={
-          <ProtectedRoute adminOnly>
-            <LogoSettingsPage />
-          </ProtectedRoute>
-        }
-      />
+
       
       <Route
         path="/admin/banners"
@@ -794,12 +785,12 @@ const AppRoutes: React.FC = () => {
         }
       />
 
-      {/* Alias antigo para /admin/settings: redireciona para /admin/settings/logo */}
+      {/* Alias antigo para /admin/settings: redireciona para /painel */}
       <Route
         path="/admin/configuracoes"
         element={
           <ProtectedRoute adminOnly>
-            <Navigate to="/admin/configuracoes/logo" replace />
+            <Navigate to="/painel" replace />
           </ProtectedRoute>
         }
       />
