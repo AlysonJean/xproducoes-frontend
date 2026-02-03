@@ -43,7 +43,8 @@ Thumbs.db
 !README.md
 
 # Scripts de desenvolvimento
-scripts/
+# manter a maioria dos scripts excluídos, mas permitir o gerador de favicons
+!scripts/generate-favicons.js
 *.ps1
 *.sh
 
