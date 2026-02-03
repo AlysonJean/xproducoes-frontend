@@ -16,6 +16,7 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import FloatingWhatsApp from './components/FloatingWhatsApp';
 import RoutePrefetch from './components/RoutePrefetch';
+import BrandLoader from './components/ui/BrandLoader';
 
 // Auth & Route Protection
 import { useAuth } from './contexts/AuthContext';
@@ -223,12 +224,7 @@ const NewsletterSubscribersPage = lazy(() =>
 );
 // ===== LOADING COMPONENT FOR SUSPENSE =====
 const PageLoadingSpinner = () => (
-  <div className="flex items-center justify-center min-h-screen bg-surface">
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-      <p className="text-muted">Carregando...</p>
-    </div>
-  </div>
+  <BrandLoader fullScreen size={160} label="Carregando..." />
 );
 
 // Route Protection Component
@@ -244,11 +240,7 @@ const ProtectedRoute: React.FC<{
   const { isAuthenticated, user, isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-surface">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <BrandLoader fullScreen size={140} label="Verificando acesso..." />;
   }
 
   if (!isAuthenticated) {
@@ -284,11 +276,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const location = useLocation();
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-surface">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <BrandLoader fullScreen size={140} label="Iniciando..." />;
   }
 
   // Só redireciona se estiver na página de login ou registro
