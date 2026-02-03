@@ -154,6 +154,7 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
 
   <div className="flex justify-between items-center mt-4">
           <span className="text-lg font-semibold text-primary">
+            <span className="text-xs font-normal mr-1">a partir de</span>
             {formatPrice(equipment.pricePerHour || 0)} / hora
           </span>
           <div

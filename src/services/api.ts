@@ -6,15 +6,15 @@ import { normalizeString } from '../utils/string';
 
 // Centralização robusta da configuração da URL da API
 function getApiUrl(envVar: string, fallback: string) {
-  // Em produção, nunca permita fallback para localhost
+  // Em produção, verificamos se a variável está definida
   if (import.meta.env.MODE === 'production') {
     const value = import.meta.env[envVar];
-    if (!value || value.includes('localhost')) {
+    // Apenas usa fallback se o valor não estiver definido ou estiver vazio
+    if (!value) {
       // Fallback de emergência para produção
       if (envVar === 'VITE_API_BASE_URL') return 'https://api.xproducoeseeventos.com.br/api/v1';
       if (envVar === 'VITE_API_URL') return 'https://api.xproducoeseeventos.com.br';
 
-      // Fallback genérico em vez de throw (evita página em branco)
       console.error(`Variável de ambiente ${envVar} não definida corretamente em produção.`);
       return fallback;
     }
@@ -268,6 +268,10 @@ export const apiFetch = async <T = unknown>(
       // ignore
     }
     throw new Error(message);
+  }
+
+  if (response.status === 204) {
+    return {} as T;
   }
 
   return response.json() as Promise<T>;

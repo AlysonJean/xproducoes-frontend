@@ -64,8 +64,6 @@ export const Footer = () => {
       title: 'Empresa',
       links: [
         { name: 'Sobre Nós', href: '/sobre' },
-        { name: 'Nossa História', href: '/sobre#history' },
-        { name: 'Equipe', href: '/sobre#team' },
         { name: 'Carreiras', href: '/carreiras' },
         { name: 'Imprensa', href: '/imprensa' },
       ]
@@ -76,7 +74,6 @@ export const Footer = () => {
         { name: 'Central de Ajuda', href: '/ajuda' },
         { name: 'FAQ', href: '/faq' },
         { name: 'Contato', href: '/contato' },
-        { name: 'Suporte Técnico', href: '/ajuda' },
         { name: 'Garantia', href: '/garantia' },
       ]
     },

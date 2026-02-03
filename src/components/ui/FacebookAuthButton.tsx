@@ -111,7 +111,10 @@ const FacebookAuthButton: React.FC<FacebookAuthButtonProps> = ({ onSuccess }) =>
 
               if (onSuccess) onSuccess(backendResponse.data);
               
-              window.location.href = '/cliente/painel';
+              // Aguardar um pouco para o AuthContext detectar o novo token antes de redirecionar
+              setTimeout(() => {
+                window.location.href = '/cliente/painel';
+              }, 500);
             }
           } catch (error) {
             console.error('Erro no login Facebook:', error);

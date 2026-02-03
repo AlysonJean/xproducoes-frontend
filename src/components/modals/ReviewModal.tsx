@@ -54,7 +54,7 @@ export const ReviewModal = ({ bookingId, onClose, onSuccess }: ReviewModalProps)
     setLoading(true);
     setError('');
     try {
-  await apiFetch('/api/reviews', {
+  await apiFetch('/reviews', {
         method: 'POST',
         body: JSON.stringify({ bookingId, rating, comment }),
       });

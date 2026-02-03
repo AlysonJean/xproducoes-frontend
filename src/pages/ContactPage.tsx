@@ -75,7 +75,7 @@ export const ContactPage = () => {
     setIsSubmitting(true);
 
     try {
-      await apiFetch('/api/contact', {
+      await apiFetch('/contact', {
         method: 'POST',
         body: JSON.stringify(formState),
       });

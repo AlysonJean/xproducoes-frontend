@@ -57,7 +57,7 @@ export const CartPage = () => {
   const handleRemoveItem = async (itemId: string, itemName: string, type: 'equipment' | 'kit') => {
     if (type === 'kit') {
       // Remove o kit do carrinho
-  await apiFetch('/api/cart/clear-kit', { method: 'POST' });
+  await apiFetch('/cart/clear-kit', { method: 'POST' });
       addNotification({
         type: 'success',
         title: 'Kit removido',

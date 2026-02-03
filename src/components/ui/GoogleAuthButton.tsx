@@ -42,8 +42,10 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
 
            if (onSuccess) onSuccess(response.data);
            
-           // Forçar reload para que AuthContext detecte o novo token
-           window.location.href = '/cliente/painel';
+           // Aguardar um pouco para o AuthContext detectar o novo token antes de redirecionar
+           setTimeout(() => {
+             window.location.href = '/cliente/painel';
+           }, 500);
         }
 
       } catch (error) {
@@ -55,7 +57,7 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
           title: 'Erro de Autenticação',
           message: axios.isAxiosError(error) && error.response?.data?.message 
             ? error.response.data.message 
-            : 'Falha ao conectar com Google.'
+            : `Falha ao conectar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`
         });
       } finally {
         setLoading(false);

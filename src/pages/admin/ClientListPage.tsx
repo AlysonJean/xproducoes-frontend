@@ -171,7 +171,7 @@ const ClientListPage: React.FC = () => {
     if (!clientToDelete) return;
     try {
       setIsDeleting(true);
-  await apiFetch(`/api/admin/clients/${clientToDelete}`, { method: 'DELETE' });
+  await apiFetch(`/admin/clients/${clientToDelete}`, { method: 'DELETE' });
       await fetchClients();
       addNotification({ type: 'success', title: 'Cliente', message: 'Cliente excluído com sucesso' });
     } catch (e: any) {
@@ -189,7 +189,7 @@ const ClientListPage: React.FC = () => {
     try {
       setIsBulkDeleting(true);
       const results = await Promise.allSettled(
-  ids.map((id) => apiFetch(`/api/admin/clients/${id}`, { method: 'DELETE' }))
+  ids.map((id) => apiFetch(`/admin/clients/${id}`, { method: 'DELETE' }))
       );
 
       const failed = results.filter((r) => r.status === 'rejected') as PromiseRejectedResult[];

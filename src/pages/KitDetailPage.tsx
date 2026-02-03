@@ -136,7 +136,10 @@ export const KitDetailPage = () => {
               <div className="bg-muted/30 p-6 rounded-lg mb-6 border border-border">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-2xl font-bold text-foreground">Preço do Kit</span>
-                  <span className="text-3xl font-extrabold text-foreground">{formatPrice(Number(kit.price ?? 0))}</span>
+                  <span className="text-3xl font-extrabold text-foreground">
+                    <span className="text-lg font-normal mr-2">a partir de</span>
+                    {formatPrice(Number(kit.price ?? 0))}
+                  </span>
                 </div>
                 {savings > 0 && (
                   <div className="text-sm text-muted-foreground">

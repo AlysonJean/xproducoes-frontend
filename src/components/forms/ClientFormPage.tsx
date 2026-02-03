@@ -57,7 +57,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
           return;
         }
         try {
-          await apiFetch(`/api/admin/clients/${data.clientId}/resend-invite`, { method: 'POST' });
+          await apiFetch(`/admin/clients/${data.clientId}/resend-invite`, { method: 'POST' });
           addNotification({ type: 'success', title: 'Sucesso', message: 'Convite reenviado' });
         } catch (e) {
           addNotification({ type: 'error', title: 'Erro', message: 'Falha ao reenviar convite' });
@@ -90,9 +90,9 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
       if (isEditing && initialData) {
         // Edit Mode
         if (avatarFile) {
-           await apiFetch(`/api/admin/clients/${initialData.id}`, { method: 'PUT', body: fd });
+           await apiFetch(`/admin/clients/${initialData.id}`, { method: 'PUT', body: fd });
         } else {
-           await apiFetch(`/api/admin/clients/${initialData.id}`, {
+           await apiFetch(`/admin/clients/${initialData.id}`, {
              method: 'PUT',
              body: JSON.stringify({
                name: name.trim(),
