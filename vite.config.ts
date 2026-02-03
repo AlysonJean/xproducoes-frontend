@@ -31,7 +31,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'xproducoes-logo.png'],
+      includeAssets: ['favicon.svg', 'xproducoes-logo.svg'],
       manifest: {
         name: 'X-Produções',
         short_name: 'X-Produções',
@@ -41,21 +41,15 @@ export default defineConfig({
         start_url: '/',
         display: 'standalone',
         lang: 'pt-BR',
-        icons: [
+          icons: [
           {
-            src: 'xproducoes-logo.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
-          },
-          {
-            src: 'xproducoes-logo.png',
+            src: 'favicon-192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any maskable'
           },
           {
-            src: 'xproducoes-logo.png',
+            src: 'favicon-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'

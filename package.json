@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "generate-favicons": "node scripts/generate-favicons.js",
+    "prebuild": "npm run generate-favicons",
     "build": "tsc && vite build",
     "build:analyze": "tsc && vite build --mode analyze",
     "preview": "vite preview",
@@ -72,7 +74,8 @@
     "vite-plugin-pwa": "^1.0.3",
     "vite-tsconfig-paths": "^4.2.0",
     "vitest": "^3.2.4",
-    "workbox-window": "^7.0.0"
+    "workbox-window": "^7.0.0",
+    "sharp": "^0.32.1"
   },
   "engines": {
     "node": ">=18.18.0"
