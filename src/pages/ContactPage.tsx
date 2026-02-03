@@ -151,9 +151,9 @@ export const ContactPage = () => {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-foreground font-semibold mb-1">Email</h3>
-                  <p className="text-muted-foreground">suporte@xproducoeseventos.com.br</p>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="font-semibold text-foreground mb-1">Email</h3>
+                  <p className="text-muted-foreground text-sm">suporte@xproducoeseventos.com.br</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">
                     Respondemos em até 24h
                   </p>
                 </div>
@@ -177,9 +177,9 @@ export const ContactPage = () => {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-foreground font-semibold mb-1">Telefone</h3>
-                  <p className="text-muted-foreground">(31) 98925-2272</p>
-                  <p className="text-sm text-muted-foreground">Seg-Sex, 9h às 18h</p>
+                  <h3 className="font-semibold text-foreground mb-1">Telefone</h3>
+                  <p className="text-muted-foreground text-sm">(31) 98925-2272</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Seg-Sex, 9h às 18h</p>
                 </div>
               </div>
 
@@ -195,9 +195,9 @@ export const ContactPage = () => {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-foreground font-semibold mb-1">WhatsApp</h3>
-                  <p className="text-muted-foreground">(31) 98925-2272</p>
-                  <p className="text-sm text-muted-foreground">Disponível 24/7</p>
+                  <h3 className="font-semibold text-foreground mb-1">WhatsApp</h3>
+                  <p className="text-muted-foreground text-sm">(31) 98925-2272</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Disponível 24/7</p>
                 </div>
               </div>
 
@@ -225,9 +225,9 @@ export const ContactPage = () => {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-foreground font-semibold mb-1">Localização</h3>
-                  <p className="text-muted-foreground">Rua flor d'agua 407 Jardim Alvorada Belo Horizonte MG</p>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="font-semibold text-foreground mb-1">Localização</h3>
+                  <p className="text-muted-foreground text-sm">Rua flor d'agua 407 Jardim Alvorada Belo Horizonte MG</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">
                     Atendemos toda a região
                   </p>
                 </div>
@@ -251,8 +251,8 @@ export const ContactPage = () => {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-foreground font-semibold mb-1">Empresa Registrada</h3>
-                  <p className="text-muted-foreground font-mono text-sm">CNPJ: 55.343.824/0001-56</p>
+                  <h3 className="font-semibold text-foreground mb-1">Empresa Registrada</h3>
+                  <p className="text-muted-foreground text-sm font-mono">CNPJ: 55.343.824/0001-56</p>
                   <p className="text-xs text-muted-foreground/70 mt-1">
                     Empresa legal e registrada, com mais de 8 anos de experiência
                   </p>
