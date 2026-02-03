@@ -6,9 +6,18 @@
   "framework": "vite",
   "regions": ["gru1"],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/animations/:path*", "destination": "/animations/:path*" },
+    { "source": "/uploads/:path*", "destination": "/uploads/:path*" },
+    { "source": "/((?!assets|animations|uploads|.*\\..*).*)", "destination": "/index.html" }
   ],
   "headers": [
+    {
+      "source": "/animations/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" },
+        { "key": "Content-Type", "value": "application/octet-stream" }
+      ]
+    },
     {
       "source": "/assets/(.*)",
       "headers": [
