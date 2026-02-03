@@ -102,8 +102,7 @@ export default defineConfig({
             if (id.includes('react-big-calendar')) return 'calendar-vendor';
             if (id.includes('xlsx-js-style')) return 'xlsx-vendor';
             if (id.includes('lucide-react') || id.includes('@heroicons')) return 'ui-vendor';
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) return 'react-vendor';
-            // fallback vendor bundle
+            // Put React and most libraries into a single vendor chunk to avoid circular chunk dependencies
             return 'vendor';
           }
 
