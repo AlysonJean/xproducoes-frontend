@@ -232,6 +232,32 @@ export const ContactPage = () => {
                   </p>
                 </div>
               </div>
+
+              {/* CNPJ */}
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-success to-success/80 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <svg
+                    className="w-6 h-6 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-foreground font-semibold mb-1">Empresa Registrada</h3>
+                  <p className="text-muted-foreground font-mono text-sm">CNPJ: 55.343.824/0001-56</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">
+                    Empresa legal e registrada, com mais de 8 anos de experiência
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Horários de Funcionamento */}
