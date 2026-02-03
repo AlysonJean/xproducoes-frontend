@@ -237,10 +237,6 @@ export const Footer = () => {
         <EnvelopeIcon className="w-5 h-5 text-primary" aria-hidden="true" />
                 <span>suporte@xproducoeseventos.com.br</span>
               </div>
-              <div className="flex items-center space-x-3 text-muted-foreground mt-4 pt-4 border-t border-border/20">
-                <span className="text-xs font-semibold text-primary">CNPJ:</span>
-                <span className="text-xs">55.343.824/0001-56</span>
-              </div>
             </div>
 
 
