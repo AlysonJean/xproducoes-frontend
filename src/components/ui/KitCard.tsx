@@ -63,7 +63,7 @@ export const KitCard: React.FC<KitCardProps> = ({ kit, showCompare = true, showF
         <div className="flex justify-between items-center mt-4">
           <span className="text-lg font-semibold text-primary">
             <span className="text-xs font-normal mr-1">a partir de</span>
-            {formatPrice(kit.price ?? 0)}
+            {formatPrice(kit.price ?? 0)} / hora
           </span>
           <div className="bg-secondary text-secondary-foreground hover:bg-secondary/80 font-bold py-2 px-4 rounded transition-colors">
             Alugar Kit
