@@ -130,6 +130,8 @@ export interface Kit {
   isActive?: boolean;
   createdAt?: Date | string;
   updatedAt?: Date | string;
+  prevSlug?: string | null;
+  nextSlug?: string | null;
 }
 
 export interface Booking {
