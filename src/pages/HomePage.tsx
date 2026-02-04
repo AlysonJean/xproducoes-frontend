@@ -2,14 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { useRevealOnView } from '../hooks/useRevealOnView';
-import { EquipmentCard } from '../components/ui/EquipmentCard';
 import { KitCard } from '../components/ui/KitCard';
 import { PortfolioCard } from '../components/ui/PortfolioCard';
-import { SearchFilters } from '../components/ui/SearchFilters';
-import { Pagination } from '../components/ui/Pagination';
 import { apiFetch } from '../services/api';
-import type { Equipment, Category, Kit, PortfolioItem } from '../types/types';
-import { transformEquipment } from '../utils/transformEquipment';
+import type { Category, Kit, PortfolioItem } from '../types/types';
 import { transformKit } from '../utils/transformKit';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { GeminiEventSuggester } from '../components/ui/GeminiEventSuggester';
@@ -17,20 +13,8 @@ import { PageLoading } from '../components/layouts/PageLayout';
 import { Grid } from '../components/ui/StandardComponents';
 import { TestimonialCard } from '../components/ui/TestimonialCard';
 import { BannerCarousel } from '../components/ui/BannerCarousel';
+import { CategoryEquipmentRow } from '../components/ui/CategoryEquipmentRow';
 import { SEO } from '../components/SEO';
-
-const useDebounce = (value: string, delay: number) => {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-  return debouncedValue;
-};
 
 // Componente isolado para evitar rerenders e uso de style inline no pai
 const SoundBar = memo(() => {
@@ -61,7 +45,6 @@ export const HomePage = () => {
   const { ref: portfolioTitleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
   // Seção de avaliações/depoimentos
   const { ref: aiTitleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
-  const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [kits, setKits] = useState<Kit[]>([]);
   // Estado de avaliações públicas aprovadas
   const [reviews, setReviews] = useState<any[]>([]);
@@ -69,91 +52,6 @@ export const HomePage = () => {
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [equipmentLoading, setEquipmentLoading] = useState(false);
-  // O erro não é mais usado para travar a tela
-  // const [error] = useState<string | null>(null);
-  
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    totalItems: 0,
-    itemsPerPage: 12,
-  });
-  const [filters, setFilters] = useState({
-    searchTerm: '',
-    categoryId: '',
-    minPrice: '',
-    maxPrice: '',
-    sortBy: '',
-  });
-
-  const debouncedFilters = useDebounce(JSON.stringify(filters), 500);
-
-  const fetchEquipments = useCallback(async (searchFilters: typeof filters, page: number = 1) => {
-    setEquipmentLoading(true);
-    try {
-      const queryParams = new URLSearchParams();
-
-      if (searchFilters.searchTerm) queryParams.append('query', searchFilters.searchTerm);
-      if (searchFilters.categoryId) queryParams.append('categoryId', searchFilters.categoryId);
-      if (searchFilters.minPrice) queryParams.append('minPrice', searchFilters.minPrice);
-      if (searchFilters.maxPrice) queryParams.append('maxPrice', searchFilters.maxPrice);
-      if (searchFilters.sortBy) queryParams.append('sortBy', searchFilters.sortBy);
-      queryParams.append('page', page.toString());
-      queryParams.append('limit', '12');
-
-      const response = await apiFetch(`/equipments/search?${queryParams.toString()}`);
-      
-      // Verificar se a resposta tem o formato esperado { data, pagination } ou é um array direto
-      let equipmentsData: Equipment[];
-      let paginationData;
-      
-      if (Array.isArray(response)) {
-        // Resposta é array direto - usar fallback para paginação
-        equipmentsData = response;
-        paginationData = {
-          currentPage: 1,
-          totalPages: 1,
-          totalItems: response.length,
-          itemsPerPage: response.length
-        };
-      } else if (response && (response as any).data && Array.isArray((response as any).data)) {
-        // Resposta tem formato { data, pagination }
-        equipmentsData = (response as any).data;
-        paginationData = (response as any).pagination || {
-          currentPage: 1,
-          totalPages: 1,
-          totalItems: (response as any).data.length,
-          itemsPerPage: (response as any).data.length
-        };
-      } else {
-        // Fallback - tentar usar resposta direta
-        equipmentsData = [];
-        paginationData = {
-          currentPage: 1,
-          totalPages: 1,
-          totalItems: 0,
-          itemsPerPage: 12
-        };
-        console.warn('Formato de resposta inesperado:', response);
-      }
-
-      const transformedEquipments = equipmentsData.map((eq: Equipment) => transformEquipment(eq));
-      setEquipments(transformedEquipments);
-      setPagination(paginationData);
-    } catch (error) {
-      console.error('Erro ao buscar equipamentos:', error);
-      setEquipments([]);
-      setPagination({
-        currentPage: 1,
-        totalPages: 1,
-        totalItems: 0,
-        itemsPerPage: 12
-      });
-    } finally {
-      setEquipmentLoading(false);
-    }
-  }, []);
 
   const fetchPageData = useCallback(async () => {
     setLoading(true);
@@ -231,25 +129,7 @@ export const HomePage = () => {
   useEffect(() => {
     fetchPageData();
   fetchPublicReviews();
-  }, [fetchPageData]);
-
-  // Busca equipamentos quando os filtros mudarem (independente de categorias existirem)
-  useEffect(() => {
-    const parsedFilters = JSON.parse(debouncedFilters);
-    fetchEquipments(parsedFilters, 1);
-    setPagination((prev) => ({ ...prev, currentPage: 1 }));
-  }, [debouncedFilters, fetchEquipments]);
-
-  const handleFiltersChange = useCallback((newFilters: typeof filters) => {
-    setFilters(newFilters);
-  }, []);
-
-  const handlePageChange = (page: number) => {
-    const parsedFilters = JSON.parse(debouncedFilters);
-    fetchEquipments(parsedFilters, page);
-    setPagination((prev) => ({ ...prev, currentPage: page }));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, [fetchPageData, fetchPublicReviews]);
 
   if (loading) return <PageLoading message="Carregando página inicial..." />;
   // if (error) return <PageError message={error} onRetry={() => window.location.reload()} />;
@@ -323,7 +203,7 @@ export const HomePage = () => {
           </section>
         )}
 
-        {/* Equipamentos */}
+        {/* Equipamentos por Categoria */}
         <section className="relative">
           <div className="text-center mb-10 sm:mb-12 lg:mb-14">
             <div className="inline-flex items-center px-4 py-2 bg-primary/10 rounded-full text-primary font-medium text-xs sm:text-sm mb-3">
@@ -331,57 +211,21 @@ export const HomePage = () => {
             </div>
             <h2 ref={equipmentsTitleRef} className="text-2xl sm:text-3xl font-bold text-foreground mb-3 heading-elegant">Nossos Equipamentos</h2>
             <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto">
-              Equipamentos profissionais de alta qualidade para todos os tipos de eventos e produções
+              Explore nossa coleção completa dividida por categorias
             </p>
           </div>
 
-          <div className="mb-10 sm:mb-12 lg:mb-14 xl:mb-16 2xl:mb-18">
-            <SearchFilters categories={categories} onFiltersChange={handleFiltersChange} />
+          <div className="space-y-4">
+             {loading ? (
+                <div className="flex justify-center py-12">
+                   <BrandLoader size={60} label="Carregando categorias..." />
+                </div>
+             ) : (
+                categories.map((category) => (
+                  <CategoryEquipmentRow key={category.id} category={category} />
+                ))
+             )}
           </div>
-
-          {equipmentLoading ? (
-            <div className="flex justify-center items-center py-16 sm:py-18 lg:py-20 xl:py-22 2xl:py-24">
-              <BrandLoader size={100} label="Carregando equipamentos..." />
-            </div>
-          ) : equipments && equipments.length > 0 ? (
-            <>
-              <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 4, '2xl': 4, '3xl': 5, '4xl': 6, '5xl': 6 }} gap={8}>
-                {equipments.map((eq) => (
-                  <div key={eq.id} className="group">
-                    <EquipmentCard equipment={eq} />
-                  </div>
-                ))}
-              </Grid>
-
-              {pagination.totalPages > 1 && (
-                <div className="mt-10 sm:mt-12 lg:mt-14 xl:mt-16 2xl:mt-18 flex justify-center">
-                  <Pagination
-                    currentPage={pagination.currentPage}
-                    totalPages={pagination.totalPages}
-                    totalItems={pagination.totalItems}
-                    itemsPerPage={pagination.itemsPerPage}
-                    onPageChange={handlePageChange}
-                  />
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-16 sm:py-18 lg:py-20 xl:py-22 2xl:py-24">
-              <div className="bg-gradient-to-r from-muted/30 to-muted/20 rounded-2xl border border-border/50 p-12 sm:p-14 lg:p-16 xl:p-18 2xl:p-20 max-w-lg mx-auto">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 lg:w-18 lg:h-18 xl:w-20 xl:h-20 mx-auto mb-6 bg-gradient-to-br from-muted to-muted/80 rounded-full flex items-center justify-center">
-                  <svg className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 xl:w-10 xl:h-10 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-semibold text-foreground mb-3">
-                  Nenhum equipamento encontrado
-                </h3>
-                <p className="text-base sm:text-lg lg:text-xl xl:text-2xl text-muted-foreground">
-                  Tente ajustar sua pesquisa ou filtros para encontrar mais equipamentos.
-                </p>
-              </div>
-            </div>
-          )}
         </section>
 
         {/* Portfólio */}

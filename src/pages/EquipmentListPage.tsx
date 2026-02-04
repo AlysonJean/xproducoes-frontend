@@ -138,14 +138,59 @@ export const EquipmentListPage: React.FC = () => {
       />
 
       {filteredEquipments.length > 0 ? (
-        <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={8}>
-          {filteredEquipments.map((equipment) => (
-            <EquipmentCard
-              key={equipment.id}
-              equipment={equipment}
-            />
-          ))}
-        </Grid>
+        <div className="space-y-12">
+          {/* Categorias Mapeadas */}
+          {categories.map((category) => {
+            const categoryEquipments = filteredEquipments.filter(eq => eq.categoryId === category.id);
+            if (categoryEquipments.length === 0) return null;
+
+            return (
+              <section key={category.id} className="space-y-6">
+                <div className="flex items-center gap-3 border-b border-border/50 pb-4">
+                  <h2 className="text-2xl font-bold heading-elegant text-foreground">
+                    {category.name}
+                  </h2>
+                  <span className="text-sm font-medium px-2.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                    {categoryEquipments.length}
+                  </span>
+                </div>
+                
+                <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={8}>
+                  {categoryEquipments.map((equipment) => (
+                    <EquipmentCard
+                      key={equipment.id}
+                      equipment={equipment}
+                    />
+                  ))}
+                </Grid>
+              </section>
+            );
+          })}
+
+          {/* Itens sem categoria (se houver) */}
+          {filteredEquipments.some(eq => !eq.categoryId || !categories.find(c => c.id === eq.categoryId)) && (
+            <section className="space-y-6">
+               <div className="flex items-center gap-3 border-b border-border/50 pb-4">
+                  <h2 className="text-2xl font-bold heading-elegant text-foreground">
+                    Outros
+                  </h2>
+                  <span className="text-sm font-medium px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                    {filteredEquipments.filter(eq => !eq.categoryId || !categories.find(c => c.id === eq.categoryId)).length}
+                  </span>
+                </div>
+                <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={8}>
+                  {filteredEquipments
+                    .filter(eq => !eq.categoryId || !categories.find(c => c.id === eq.categoryId))
+                    .map((equipment) => (
+                      <EquipmentCard
+                        key={equipment.id}
+                        equipment={equipment}
+                      />
+                    ))}
+                </Grid>
+            </section>
+          )}
+        </div>
       ) : (
         <PageEmpty
           title="Nenhum equipamento encontrado"

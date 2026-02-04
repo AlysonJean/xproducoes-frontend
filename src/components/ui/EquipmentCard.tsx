@@ -94,7 +94,7 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
   return (
     <Link
       {...rest}
-      to={`/equipamentos/${equipment.id}`}
+      to={`/equipamentos/${equipment.slug || equipment.id}`}
       className={`relative block bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02] ${className}`}
       onClick={() => {
         if (equipment.id && onCardClick) onCardClick(equipment.id);

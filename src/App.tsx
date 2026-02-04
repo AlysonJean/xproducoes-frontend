@@ -345,9 +345,10 @@ const AppRoutes: React.FC = () => {
       {/* Public Routes */}
       <Route path="/" element={<HomePage />} />
       <Route path="/kits" element={<KitListPage />} />
-      <Route path="/kits/:id" element={<KitDetailPage />} />
+      {/* Route uses :slug but falls back to matching by ID if needed inside component logic */}
+      <Route path="/kits/:slug" element={<KitDetailPage />} />
       <Route path="/equipamentos" element={<PublicEquipmentListPage />} />
-      <Route path="/equipamentos/:id" element={<EquipmentDetailPage />} />
+      <Route path="/equipamentos/:slug" element={<EquipmentDetailPage />} />
       <Route path="/portfolio" element={<PortfolioPage />} />
       <Route path="/contato" element={<ContactPage />} />
       <Route path="/faq" element={<FaqPage />} />
