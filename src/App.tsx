@@ -53,6 +53,9 @@ const EquipmentDetailPage = lazy(() =>
 const PortfolioPage = lazy(() =>
   import('./pages/PortfolioPage').then((m) => ({ default: m.PortfolioPage }))
 );
+const ReviewDetailPage = lazy(() =>
+  import('./pages/ReviewDetailPage').then((m) => ({ default: m.ReviewDetailPage }))
+);
 const ContactPage = lazy(() =>
   import('./pages/ContactPage').then((m) => ({ default: m.ContactPage }))
 );
@@ -350,6 +353,8 @@ const AppRoutes: React.FC = () => {
       <Route path="/equipamentos" element={<PublicEquipmentListPage />} />
       <Route path="/equipamentos/:slug" element={<EquipmentDetailPage />} />
       <Route path="/portfolio" element={<PortfolioPage />} />
+      <Route path="/portfolio/:slug" element={<PortfolioPage />} />
+      <Route path="/depoimentos/:slug" element={<ReviewDetailPage />} />
       <Route path="/contato" element={<ContactPage />} />
       <Route path="/faq" element={<FaqPage />} />
       <Route path="/comparar" element={<ComparePage />} />

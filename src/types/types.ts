@@ -667,6 +667,7 @@ export interface Review {
   author: string;
   rating: number;
   comment: string;
+  slug?: string;
   user?: {
     name?: string;
   };
@@ -675,6 +676,7 @@ export interface Review {
 export interface PortfolioItem {
   id: string;
   title: string;
+  slug?: string;
   imageUrl: string;
   description: string;
   images?: string[];

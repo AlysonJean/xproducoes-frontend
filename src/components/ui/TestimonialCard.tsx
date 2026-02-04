@@ -27,7 +27,12 @@ const Stars = ({ rating }: StarsProps) => {
 
 export const TestimonialCard: React.FC<TestimonialCardProps> = ({ review, ...rest }) => {
   return (
-    <div {...rest} className="bg-card border border-border p-6 rounded-lg shadow-sm flex flex-col h-full">
+    <div {...rest} className="bg-card border border-border p-6 rounded-lg shadow-sm flex flex-col h-full relative group">
+      {review.slug && (
+        <a href={`/depoimentos/${review.slug}`} className="absolute top-4 right-4 text-muted-foreground hover:text-primary transition-colors" title="Link direto">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+        </a>
+      )}
       <div className="flex-grow">
         <Stars rating={review.rating} />
         <p className="text-muted-foreground mt-4 italic">"{review.comment || 'Sem comentário'}"</p>
