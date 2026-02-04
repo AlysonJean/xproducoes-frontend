@@ -99,8 +99,8 @@ api.interceptors.response.use(
 
     // If 401 and we haven't tried to refresh yet and haven't exceeded max attempts
     if (
-      error.response?.status === 401 && 
-      !originalRequest._retry && 
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
       refreshAttempts < MAX_REFRESH_ATTEMPTS
     ) {
       originalRequest._retry = true;
@@ -143,7 +143,7 @@ api.interceptors.response.use(
       if (refreshAttempts >= MAX_REFRESH_ATTEMPTS) {
         logDebug('Max refresh attempts reached, forcing logout', { attempts: refreshAttempts });
       }
-      
+
       // If refresh failed, redirect to login
       secureStorage.remove('accessToken');
       secureStorage.remove('refreshToken');
@@ -172,13 +172,13 @@ export const apiFetch = async <T = unknown>(
     const timeout = parseInt(import.meta.env.VITE_API_TIMEOUT || '30000');
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
-    
+
     config.signal = controller.signal;
 
     try {
       const response = await fetch(url, config);
       clearTimeout(id);
-      
+
       // If 401, try to refresh token and retry
       if (response.status === 401) {
         try {
@@ -211,7 +211,7 @@ export const apiFetch = async <T = unknown>(
               const retryController = new AbortController();
               const retryId = setTimeout(() => retryController.abort(), timeout);
               config.signal = retryController.signal;
-              
+
               const retryResponse = await fetch(url, config);
               clearTimeout(retryId);
               return retryResponse;
@@ -223,8 +223,8 @@ export const apiFetch = async <T = unknown>(
       }
       return response;
     } catch (error) {
-       clearTimeout(id);
-       throw error;
+      clearTimeout(id);
+      throw error;
     }
   };
 
@@ -241,6 +241,8 @@ export const apiFetch = async <T = unknown>(
       ...options.headers,
     },
   };
+
+
 
   // Add current access token
   const token = secureStorage.get('accessToken');
@@ -388,7 +390,7 @@ export const collaboratorsAPI = {
   invite: (email: string) => api.post('/collaborators/invite', { email }),
   // Dashboard pessoal do colaborador
   getMyDashboard: () => api.get('/collaborators/me/dashboard'),
-  
+
   // Meus pagamentos
   getMyPayments: () => api.get('/collaborators/me/payments'),
 };
@@ -489,40 +491,40 @@ export default api;
 export const collaboratorProfileAPI = {
   // Obter perfil do colaborador atual
   getMyProfile: () => api.get('/collaborators/me/profile'),
-  
+
   // Atualizar perfil do colaborador
   updateProfile: (data: Record<string, unknown>) => api.put('/collaborators/me/profile', data),
-  
+
   // Upload de avatar
   uploadAvatar: (formData: FormData) => api.post('/upload/avatar', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
-  
+
   // Obter portfólio do colaborador
   getPortfolio: () => api.get('/collaborators/me/portfolio'),
-  
+
   // Adicionar item ao portfólio
   addPortfolioItem: (data: Record<string, unknown>) => api.post('/collaborators/me/portfolio', data),
-  
+
   // Atualizar item do portfólio
-  updatePortfolioItem: (id: string, data: Record<string, unknown>) => 
+  updatePortfolioItem: (id: string, data: Record<string, unknown>) =>
     api.put(`/collaborators/me/portfolio/${id}`, data),
-  
+
   // Remover item do portfólio
   deletePortfolioItem: (id: string) => api.delete(`/collaborators/me/portfolio/${id}`),
-  
+
   // Upload de imagem do portfólio
-  uploadPortfolioImage: (id: string, formData: FormData) => 
+  uploadPortfolioImage: (id: string, formData: FormData) =>
     api.post(`/collaborators/me/portfolio/${id}/images`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
-  
+
   // Obter configurações do colaborador
   getSettings: () => api.get('/collaborators/me/settings'),
-  
+
   // Atualizar configurações
   updateSettings: (data: Record<string, unknown>) => api.put('/collaborators/me/settings', data),
-  
+
   // Obter estatísticas do colaborador
   getStats: () => api.get('/collaborators/me/stats'),
 
@@ -531,35 +533,78 @@ export const collaboratorProfileAPI = {
 
   // Obter notificações do colaborador
   getMyNotifications: () => api.get('/collaborators/me/notifications'),
-  
+
   // Obter disponibilidade
   getAvailability: () => api.get('/collaborators/me/availability'),
-  
+
   // Atualizar disponibilidade
   updateAvailability: (data: Record<string, unknown>) => api.put('/collaborators/me/availability', data),
-  
+
   // Obter avaliações recebidas
-  getReviews: (page?: number, limit?: number) => 
+  getReviews: (page?: number, limit?: number) =>
     api.get(`/collaborators/me/reviews?page=${page || 1}&limit=${limit || 10}`),
-  
+
   // Responder a uma avaliação
-  respondToReview: (reviewId: string, response: string) => 
+  respondToReview: (reviewId: string, response: string) =>
     api.post(`/collaborators/me/reviews/${reviewId}/respond`, { response }),
+};
+
+// ✅ RECOMMENDATION ENGINE API
+export const recommendationAPI = {
+  // Recomendações personalizadas baseadas no histórico do usuário
+  getPersonalized: (limit: number = 8) =>
+    api.get(`/recommendations/personalized?limit=${limit}`),
+
+  // Produtos similares a um equipamento/kit específico
+  getSimilar: (id: string, type: 'equipment' | 'kit' = 'equipment', limit: number = 4) =>
+    api.get(`/recommendations/similar/${type}/${id}?limit=${limit}`),
+
+  // Frequentemente reservados juntos
+  getFrequentlyBought: (id: string, type: 'equipment' | 'kit' = 'equipment', limit: number = 4) =>
+    api.get(`/recommendations/frequently-bought/${type}/${id}?limit=${limit}`),
+
+  // Trending/Popular agora
+  getTrending: (limit: number = 8, category?: string) =>
+    api.get(`/recommendations/trending?limit=${limit}${category ? `&category=${category}` : ''}`),
+
+  // Novos produtos
+  getNew: (limit: number = 8, category?: string) =>
+    api.get(`/recommendations/new?limit=${limit}${category ? `&category=${category}` : ''}`),
+
+  // Recomendações sazonais
+  getSeasonal: (limit: number = 8) =>
+    api.get(`/recommendations/seasonal?limit=${limit}`),
+
+  // Baseado em favoritos do usuário
+  getBasedOnFavorites: (limit: number = 8) =>
+    api.get(`/recommendations/based-on-favorites?limit=${limit}`),
+
+  // Completar o setup (kits complementares)
+  getComplementary: (items: string[], limit: number = 4) =>
+    api.post('/recommendations/complementary', { items, limit }),
+
+  // Recomendações para categoria específica
+  getByCategory: (categoryId: string, limit: number = 8) =>
+    api.get(`/recommendations/category/${categoryId}?limit=${limit}`),
+
+  // Recomendações baseadas em orçamento
+  getByBudget: (minPrice: number, maxPrice: number, limit: number = 8) =>
+    api.get(`/recommendations/budget?min=${minPrice}&max=${maxPrice}&limit=${limit}`),
 };
 
 // ✅ API DE MENSAGENS PARA COLABORADORES
 export const collaboratorMessagesAPI = {
   // Obter chats do colaborador
   getMyChats: () => api.get('/collaborator/messages/chats'),
-  
+
   // Criar chat de suporte
   createSupportChat: () => api.post('/collaborator/messages/chats/support'),
-  
+
   // Obter mensagens de um chat
-  getChatMessages: (chatId: string, page?: number, limit?: number) => 
+  getChatMessages: (chatId: string, page?: number, limit?: number) =>
     api.get(`/collaborator/messages/chats/${chatId}/messages?page=${page || 1}&limit=${limit || 20}`),
-  
+
   // Enviar mensagem
-  sendMessage: (chatId: string, content: string, messageType?: string) => 
+  sendMessage: (chatId: string, content: string, messageType?: string) =>
     api.post(`/collaborator/messages/chats/${chatId}/messages`, { content, messageType: messageType || 'TEXT' }),
 };

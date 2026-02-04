@@ -7,6 +7,7 @@ import {
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
 import { SimpleCard } from '../../components/ui/Cards';
 import { collaboratorProfileAPI } from '../../services/api';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 interface Availability {
   id: string;
@@ -18,6 +19,7 @@ interface Availability {
 }
 
 const CollaboratorAvailabilityPage: React.FC = () => {
+  const { addNotification } = useNotifications();
   const [availabilities, setAvailabilities] = useState<Availability[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -29,7 +31,7 @@ const CollaboratorAvailabilityPage: React.FC = () => {
     notes: ''
   });
 
-  const loadAvailabilities = async () => {
+  const loadAvailabilities = React.useCallback(async () => {
     try {
       setLoading(true);
       const response = await collaboratorProfileAPI.getAvailability();
@@ -39,20 +41,28 @@ const CollaboratorAvailabilityPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Erro ao carregar disponibilidades:', error);
-      alert('Erro ao carregar disponibilidades.');
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: 'Erro ao carregar disponibilidades.'
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [addNotification]);
 
   useEffect(() => {
     loadAvailabilities();
-  }, []);
+  }, [loadAvailabilities]);
 
   const handleAddAvailability = async () => {
     try {
       if (!newAvailability.date || !newAvailability.startTime || !newAvailability.endTime) {
-        alert('Preencha todos os campos obrigatórios.');
+        addNotification({
+          type: 'warning',
+          title: 'Atenção',
+          message: 'Preencha todos os campos obrigatórios.'
+        });
         return;
       }
 
@@ -64,12 +74,20 @@ const CollaboratorAvailabilityPage: React.FC = () => {
         notes: newAvailability.notes
       });
       
-      alert('Disponibilidade adicionada!');
+      addNotification({
+        type: 'success',
+        title: 'Sucesso',
+        message: 'Disponibilidade adicionada!'
+      });
       setShowAddForm(false);
       loadAvailabilities();
     } catch (error) {
       console.error('Erro ao adicionar:', error);
-      alert('Erro ao adicionar disponibilidade.');
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: 'Erro ao adicionar disponibilidade.'
+      });
     }
   };
 

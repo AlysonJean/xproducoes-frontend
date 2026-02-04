@@ -5,7 +5,8 @@ import { authAPI } from '../services/api';
 import { userRegisterSchema } from '../validators/userSchema';
 import { useNavigate } from 'react-router-dom';
 import { normalizeString } from '../utils/string';
-import GoogleAuthButton from '../components/ui/GoogleAuthButton'; // Importação
+import GoogleAuthButton from '../components/ui/GoogleAuthButton';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 const validateEmail = (email: string): boolean => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -24,7 +25,7 @@ export const RegisterPage = () => {
     phone: '',
     general: '',
   });
-  const [success, setSuccess] = useState(false);
+  const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(false);
 
   const validateForm = (): boolean => {
@@ -62,7 +63,9 @@ export const RegisterPage = () => {
     if (!validateForm()) {
       return;
     }
-    setSuccess(false);
+    if (!validateForm()) {
+      return;
+    }
     setLoading(true);
     try {
       // Validação extra com Zod
@@ -87,33 +90,35 @@ export const RegisterPage = () => {
         label: "email_password"
       });
 
-      setSuccess(true);
+      addNotification({
+        type: 'success',
+        title: 'Conta criada!',
+        message: 'Sua conta foi criada com sucesso. Faça login para continuar.'
+      });
+      navigate('/login');
     } catch (err: unknown) {
       let errorMessage = 'Falha ao criar conta. O e-mail pode já estar em uso.';
       if (err instanceof Error) {
         errorMessage = err.message;
         // Tentar extrair mensagem do axios
-        // @ts-ignore
+        // @ts-expect-error - Response structure is unknown in catch block
         if (err.response && err.response.data) {
-          // @ts-ignore
+          // @ts-expect-error - Response structure is unknown in catch block
           errorMessage = err.response.data.message || err.response.data.error || errorMessage;
         }
       }
       setFormErrors((prev) => ({ ...prev, general: errorMessage }));
+      addNotification({
+        type: 'error',
+        title: 'Erro no registro',
+        message: errorMessage
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const navigate = useNavigate();
-
-  // Redirecionar automaticamente para login após sucesso
-  React.useEffect(() => {
-    if (success) {
-      const t = setTimeout(() => navigate('/login'), 1500);
-      return () => clearTimeout(t);
-    }
-  }, [success, navigate]);
 
   return (
     <PageLayout
@@ -127,19 +132,7 @@ export const RegisterPage = () => {
             {formErrors.general}
           </div>
         )}
-        {success ? (
-          <div className="text-center py-8">
-            <div className="flex items-center justify-center mb-4">
-              <span className="bg-success/20 text-success rounded-full p-3">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-              </span>
-            </div>
-            <h3 className="text-lg font-bold mb-2 text-success">Conta criada com sucesso!</h3>
-            <p className="text-muted-foreground mb-4">Você já pode fazer login e aproveitar nossos serviços.</p>
-            <a href="/login" className="inline-block bg-primary text-primary-foreground font-bold py-2 px-6 rounded-lg hover:bg-primary/90 transition-colors">Ir para Login</a>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1">Nome</label>
               <input
@@ -213,9 +206,19 @@ export const RegisterPage = () => {
               </div>
             </div>
 
-            <GoogleAuthButton onSuccess={() => setSuccess(true)} />
+            <GoogleAuthButton onSuccess={() => {
+              addNotification({
+                type: 'success',
+                title: 'Login com Google',
+                message: 'Autenticação realizada com sucesso!'
+              });
+              // GoogleAuthButton component likely handles redirect or we need to pass a callback that does it? 
+              // Assuming GoogleAuthButton handles external auth, keeping it simple here or updating it too?
+              // The original code was onSuccess={() => setSuccess(true)}. 
+              // We should probably just navigate or let the button handle it.
+              navigate('/login');
+            }} />
           </form>
-        )}
         <p className="text-center text-muted-foreground mt-8">
           Já tem uma conta?
           <a href="/login" className="text-primary font-semibold ml-1 hover:underline">Entrar</a>

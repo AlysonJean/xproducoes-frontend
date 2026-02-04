@@ -1,6 +1,7 @@
 // src/pages/admin/CategoryListPage.tsx
 
 import { useState, useEffect } from 'react';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import { Category } from '../../types/types';
@@ -13,6 +14,7 @@ import CategoryForm from '../../components/forms/CategoryFormPage';
 import { Modal } from '@/components/ui/StandardComponents';
 
 export const CategoryListPage = () => {
+  const { addNotification } = useNotifications();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,14 +47,21 @@ export const CategoryListPage = () => {
       try {
         await apiFetch(`/categories/${id}`, { method: 'DELETE' });
         fetchCategories();
+        addNotification({
+          type: 'success',
+          title: 'Sucesso',
+          message: 'Categoria apagada com sucesso.'
+        });
       } catch (err: unknown) {
-        alert(
-          `Erro ao apagar categoria: ${
+        addNotification({
+          type: 'error',
+          title: 'Erro',
+          message: `Erro ao apagar categoria: ${
             typeof err === 'object' && err !== null && 'message' in err
               ? String((err as { message?: unknown }).message)
               : 'Erro desconhecido.'
           }`
-        );
+        });
       }
     }
   };
@@ -119,10 +128,18 @@ export const CategoryListPage = () => {
                   <tr key={category.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-                          <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                          </svg>
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden">
+                          {category.imageUrl ? (
+                            <img 
+                              src={category.imageUrl} 
+                              alt={category.name} 
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                          )}
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-foreground">{category.name}</p>

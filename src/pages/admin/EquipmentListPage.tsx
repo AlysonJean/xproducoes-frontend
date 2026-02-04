@@ -1,6 +1,7 @@
 // src/pages/admin/EquipmentListPage.tsx
 
 import { useState, useEffect } from 'react';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import type { Equipment } from '../../types/types';
@@ -14,6 +15,7 @@ import EquipmentForm from '../../components/forms/EquipmentFormPage';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 
 export const EquipmentListPage = () => {
+  const { addNotification } = useNotifications();
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,14 +52,21 @@ export const EquipmentListPage = () => {
         await apiFetch(`/equipments/${id}`, { method: 'DELETE' });
         // Atualiza a lista após apagar
         fetchEquipments();
+        addNotification({
+          type: 'success',
+          title: 'Sucesso',
+          message: 'Equipamento apagado com sucesso.'
+        });
       } catch (err: unknown) {
-        alert(
-          `Erro ao apagar equipamento: ${
+        addNotification({
+          type: 'error',
+          title: 'Erro',
+          message: `Erro ao apagar equipamento: ${
             typeof err === 'object' && err !== null && 'message' in err
               ? String((err as { message?: unknown }).message)
               : 'Erro desconhecido.'
           }`
-        );
+        });
       }
     }
   };

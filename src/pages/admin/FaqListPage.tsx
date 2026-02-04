@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import type { FaqItem } from '../../types/types';
@@ -11,6 +12,7 @@ import FaqForm from '../../components/forms/FaqFormPage';
 import { Plus, Edit2, Trash2, HelpCircle } from 'lucide-react';
 
 export const FaqListPage = () => {
+  const { addNotification } = useNotifications();
   const [faqs, setFaqs] = useState<FaqItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,12 +42,19 @@ export const FaqListPage = () => {
       try {
         await apiFetch(`/faq/${id}`, { method: 'DELETE' });
         fetchFaqs(); // Atualiza a lista
+        addNotification({
+          type: 'success',
+          title: 'Sucesso',
+          message: 'Pergunta apagada com sucesso.'
+        });
       } catch (err: unknown) {
-        alert(
-          `Erro ao apagar pergunta: ${
+        addNotification({
+          type: 'error',
+          title: 'Erro',
+          message: `Erro ao apagar pergunta: ${
             err instanceof Error ? err.message : 'Erro desconhecido.'
           }`
-        );
+        });
       }
     }
   };

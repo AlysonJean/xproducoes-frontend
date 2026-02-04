@@ -440,7 +440,10 @@ export interface ContactModalProps extends BaseModalProps {
 // ReviewModalProps removido
 
 export interface WhatsAppModalProps extends BaseModalProps {
-  // Props específicas se necessário
+  phoneNumber?: string;
+  message?: string;
+  subject?: string;
+  isLoading?: boolean;
 }
 
 export interface GalleryImage {

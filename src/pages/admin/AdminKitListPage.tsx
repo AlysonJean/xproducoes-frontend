@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import { formatPrice } from '../../utils/typeSafeFormatters';
@@ -12,6 +13,7 @@ import { Plus, Edit2, Trash2, Package } from 'lucide-react';
 import { Modal } from '@/components/ui/StandardComponents';
 
 export const AdminKitListPage = () => {
+  const { addNotification } = useNotifications();
   const [kits, setKits] = useState<Kit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,9 +46,18 @@ export const AdminKitListPage = () => {
           method: 'DELETE',
         });
         await fetchKits();
+        addNotification({
+          type: 'success',
+          title: 'Sucesso',
+          message: 'Kit excluído com sucesso!'
+        });
       } catch (err) {
         console.error('Erro ao excluir kit:', err);
-        alert('Erro ao excluir kit.');
+        addNotification({
+          type: 'error',
+          title: 'Erro',
+          message: 'Erro ao excluir kit.'
+        });
       }
     }
   };

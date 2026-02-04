@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PageLayout } from '../../components/layouts/PageLayout';
 import { authAPI } from '../../services/api';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -9,13 +10,13 @@ export const RegisterFromInvitePage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
   const prefilledEmail = searchParams.get('email') || '';
+  const { addNotification } = useNotifications();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState(prefilledEmail);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
 
   const navigate = useNavigate();
 
@@ -26,18 +27,49 @@ export const RegisterFromInvitePage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!token) return setError('Token de convite ausente.');
-    if (!validateEmail(email)) return setError('E-mail inválido.');
-    if (!name.trim()) return setError('Nome é obrigatório.');
-    if (!password || password.length < 6) return setError('Senha deve ter ao menos 6 caracteres.');
+    
+    if (!token) {
+        const msg = 'Token de convite ausente.';
+        setError(msg);
+        addNotification({ type: 'error', title: 'Erro', message: msg });
+        return;
+    }
+    if (!validateEmail(email)) {
+        const msg = 'E-mail inválido.';
+        setError(msg);
+        addNotification({ type: 'warning', title: 'Atenção', message: msg });
+        return;
+    }
+    if (!name.trim()) {
+        const msg = 'Nome é obrigatório.';
+        setError(msg);
+        addNotification({ type: 'warning', title: 'Atenção', message: msg });
+        return;
+    }
+    if (!password || password.length < 6) {
+        const msg = 'Senha deve ter ao menos 6 caracteres.';
+        setError(msg);
+        addNotification({ type: 'warning', title: 'Atenção', message: msg });
+        return;
+    }
 
     setLoading(true);
     try {
       await authAPI.registerFromInvite({ token, email, name, password });
-      setSuccess(true);
+      addNotification({
+        type: 'success',
+        title: 'Registro concluído',
+        message: 'Sua conta foi criada! Redirecionando para login...'
+      });
       setTimeout(() => navigate('/login'), 1500);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Falha ao completar registro');
+      const msg = err instanceof Error ? err.message : 'Falha ao completar registro';
+      setError(msg);
+      addNotification({
+        type: 'error',
+        title: 'Erro no registro',
+        message: msg
+      });
     } finally {
       setLoading(false);
     }
@@ -48,10 +80,7 @@ export const RegisterFromInvitePage: React.FC = () => {
       <div className="w-full max-w-md mx-auto bg-card p-8 rounded-2xl shadow-lg border border-border">
         <h2 className="text-2xl font-bold text-center mb-6 text-primary">Aceitar Convite</h2>
         {error && <div className="text-destructive mb-4">{error}</div>}
-        {success ? (
-          <div className="text-center text-success">Registro concluído. Redirecionando para login...</div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1">Nome</label>
               <input id="name" placeholder="Seu nome" value={name} onChange={(e) => setName(e.target.value)} className="w-full border rounded px-3 py-2" />
@@ -69,8 +98,7 @@ export const RegisterFromInvitePage: React.FC = () => {
                 {loading ? 'Processando...' : 'Completar Registro'}
               </button>
             </div>
-          </form>
-        )}
+        </form>
       </div>
     </PageLayout>
   );

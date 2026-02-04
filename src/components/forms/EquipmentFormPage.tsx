@@ -1,5 +1,6 @@
 // src/components/forms/EquipmentFormPage.tsx
 import { useEffect, useState } from 'react';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -40,6 +41,7 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const isEditing = Boolean(initialData);
+  const { addNotification } = useNotifications();
 
   const {
     register,
@@ -129,7 +131,11 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
 
       onSuccess();
     } catch (err) {
-      alert('Erro ao salvar equipamento. Tente novamente.');
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: 'Erro ao salvar equipamento. Tente novamente.'
+      });
       console.error(err);
     } finally {
       setSubmitLoading(false);

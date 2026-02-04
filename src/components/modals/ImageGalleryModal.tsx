@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { createAndClickAnchor, sanitizeFilename, isSafeUrl } from '../../utils/dom';
 import { normalizeString } from '../../utils/string';
 import { BaseModal } from './BaseModal';
@@ -76,6 +77,8 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
     allowShare = true,
     title = 'Galeria de Imagens',
   } = props;
+
+  const { addNotification } = useNotifications();
 
   // Input validation and sanitization
   const validatedInitialIndex = Math.max(0, Math.min(initialIndex || 0, (images?.length || 1) - 1));
@@ -173,13 +176,13 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
 
     // Rate limiting check
     if (isRateLimited()) {
-      alert('Por favor, aguarde um momento antes de fazer outro download.');
+      addNotification({ type: 'warning', title: 'Atenção', message: 'Por favor, aguarde um momento antes de fazer outro download.' });
       return;
     }
 
     // Validação de segurança: só permite download de imagens de domínios/extensões confiáveis
     if (!isSafeImageUrl(currentImage.url)) {
-      alert('Download bloqueado por segurança: domínio ou extensão de imagem não permitidos.');
+      addNotification({ type: 'error', title: 'Segurança', message: 'Download bloqueado por segurança: domínio ou extensão de imagem não permitidos.' });
       return;
     }
 
@@ -197,14 +200,14 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
 
       const contentType = normalizeString(response.headers.get('content-type') || '');
       if (!contentType.startsWith('image/')) {
-        alert('Download bloqueado: o recurso remoto não é uma imagem.');
+        addNotification({ type: 'error', title: 'Erro', message: 'Download bloqueado: o recurso remoto não é uma imagem.' });
         return;
       }
 
       // Additional security: check content length to prevent DoS
       const contentLength = response.headers.get('content-length');
       if (contentLength && parseInt(contentLength) > 50 * 1024 * 1024) { // 50MB limit
-        alert('Download bloqueado: arquivo muito grande.');
+        addNotification({ type: 'error', title: 'Erro', message: 'Download bloqueado: arquivo muito grande.' });
         return;
       }
 
@@ -260,7 +263,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
     } catch (err) {
       // Log minimally and keep UX silent for users - don't expose internal errors
       console.warn('Erro no download de imagem:', err instanceof Error ? err.message : 'Erro desconhecido');
-      alert('Erro ao fazer download da imagem. Tente novamente.');
+      addNotification({ type: 'error', title: 'Erro', message: 'Erro ao fazer download da imagem. Tente novamente.' });
     } finally {
       setIsLoading(false);
     }
@@ -271,7 +274,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
 
     // Validação de segurança: só permite compartilhar imagens de domínios/extensões confiáveis
     if (!isSafeImageUrl(currentImage.url)) {
-      alert('Compartilhamento bloqueado por segurança: domínio ou extensão de imagem não permitidos.');
+      addNotification({ type: 'error', title: 'Segurança', message: 'Compartilhamento bloqueado por segurança: domínio ou extensão de imagem não permitidos.' });
       return;
     }
 
@@ -296,13 +299,13 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
         // Additional validation before clipboard access
         if (typeof currentImage.url === 'string' && currentImage.url.length < 2048) {
           await navigator.clipboard.writeText(currentImage.url);
-          alert('Link da imagem copiado para a área de transferência!');
+          addNotification({ type: 'success', title: 'Sucesso', message: 'Link da imagem copiado para a área de transferência!' });
         } else {
-          alert('Erro: URL da imagem inválida.');
+          addNotification({ type: 'error', title: 'Erro', message: 'Erro: URL da imagem inválida.' });
         }
       } catch (err) {
         console.warn('Erro ao copiar para área de transferência:', err instanceof Error ? err.message : 'Erro desconhecido');
-        alert('Erro ao copiar link. Tente novamente.');
+        addNotification({ type: 'error', title: 'Erro', message: 'Erro ao copiar link. Tente novamente.' });
       }
     }
   };
