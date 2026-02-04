@@ -109,6 +109,8 @@ export interface Category {
   name: string;
   description?: string;
   image?: string;
+  imageUrl?: string;
+  imageAlt?: string;
   isActive?: boolean;
   createdAt?: Date | string;
   updatedAt?: Date | string;
