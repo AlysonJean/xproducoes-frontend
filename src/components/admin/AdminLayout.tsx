@@ -1,6 +1,6 @@
 import React from 'react';
 import { AdminSidebar } from './AdminSidebar';
-import { ErrorBoundary } from '../ui/ErrorBoundary';
+
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -15,9 +15,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 }) => {
   return (
     <div className="flex min-h-screen bg-background">
-      <ErrorBoundary location="AdminSidebar">
-        <AdminSidebar />
-      </ErrorBoundary>
+      <AdminSidebar />
       
       <div className="flex-1 md:ml-0 min-h-screen">
         {/* Header */}
