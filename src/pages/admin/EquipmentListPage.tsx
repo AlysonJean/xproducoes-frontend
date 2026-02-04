@@ -5,7 +5,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import type { Equipment } from '../../types/types';
-import { formatPrice } from '../../utils/typeSafeFormatters'; 
+import { formatMoney } from '../../utils/typeSafeFormatters'; 
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import BrandLoader from '../../components/ui/BrandLoader';
 import { Button } from '../../components/ui/Button';
@@ -172,7 +172,7 @@ export const EquipmentListPage = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm font-semibold text-foreground">
-                      {formatPrice(item.pricePerHour || 0)}
+                      {formatMoney(item.pricePerHour || 0)}
                     </span>
                   </td>
                   <td className="px-6 py-4">
