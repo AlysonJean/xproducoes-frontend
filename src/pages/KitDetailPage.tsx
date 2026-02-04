@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { ChevronRight, ChevronLeft } from 'lucide-react';
 import ReactGA from 'react-ga4';
 import { apiFetch } from '../services/api';
 import { useCart } from '@/hooks/useCart';
@@ -90,6 +91,26 @@ export const KitDetailPage = () => {
         description={kit.description || `Aluguel de ${kit.name} em Belo Horizonte. Kit completo para festas e eventos.`}
         image={kit.imageUrl}
       />
+      {/* Navigation Arrows (Desktop) */}
+      {kit.prevSlug && (
+        <Link
+          to={`/kits/${kit.prevSlug}`}
+          className="fixed left-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-primary hover:text-primary-foreground p-3 rounded-full shadow-lg border border-border backdrop-blur-sm transition-all z-50 hidden lg:flex items-center justify-center group"
+          title="Kit Anterior"
+        >
+          <ChevronLeft className="w-8 h-8 group-hover:-translate-x-0.5 transition-transform" />
+        </Link>
+      )}
+      {kit.nextSlug && (
+        <Link
+          to={`/kits/${kit.nextSlug}`}
+          className="fixed right-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-primary hover:text-primary-foreground p-3 rounded-full shadow-lg border border-border backdrop-blur-sm transition-all z-50 hidden lg:flex items-center justify-center group"
+          title="Próximo Kit"
+        >
+          <ChevronRight className="w-8 h-8 group-hover:translate-x-0.5 transition-transform" />
+        </Link>
+      )}
+
       {/* Breadcrumb */}
       <nav className="text-sm text-muted-foreground">
         <Link to="/" className="hover:text-primary">Início</Link>
@@ -135,7 +156,7 @@ export const KitDetailPage = () => {
                   <span className="text-2xl font-bold text-foreground">Preço do Kit</span>
                   <span className="text-3xl font-extrabold text-foreground">
                     <span className="text-lg font-normal mr-2">a partir de</span>
-                    {formatPrice(Number(kit.price ?? 0))}
+                    {formatPrice(Number(kit.price ?? 0))} / hora
                   </span>
                 </div>
                 {savings > 0 && (
