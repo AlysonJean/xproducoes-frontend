@@ -144,7 +144,7 @@ export const EquipmentDetailPage = () => {
           <h1 ref={titleRef} className="text-4xl lg:text-5xl font-bold text-primary mb-4 heading-elegant">
             {equipment.name}
           </h1>
-          <p className="text-muted-foreground text-lg mb-6 flex-grow">
+          <p className="text-muted-foreground text-lg mb-6 flex-grow whitespace-pre-wrap">
             {equipment.description}
           </p>
 
