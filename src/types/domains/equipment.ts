@@ -19,7 +19,7 @@ export interface Equipment {
   image?: string;
   imageUrl?: string;
   categoryId?: string;
-  category?: string;
+  category?: string | Category;
   isAvailable?: boolean;
   brand?: string;
   model?: string;
