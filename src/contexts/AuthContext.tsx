@@ -3,7 +3,15 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useNavigate } from 'react-router-dom';
 import { secureStorage } from '../utils/secureStorage';
 import { logger } from '../utils/logger';
-import { sentry } from '../main';
+
+// Lazy sentry getter to avoid circular dependency with main.tsx
+const getSentry = () => {
+  try {
+    return (window as any).__SENTRY__;
+  } catch {
+    return null;
+  }
+};
 
 // Helper para garantir URL consistente
 const getApiBaseUrl = () => {
@@ -490,6 +498,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logger.info('User logout initiated', 'AuthContext', { userId: user?.id });
 
     // Clear user context in Sentry
+    const sentry = getSentry();
     if (sentry?.setUserContext) {
       sentry.setUserContext(null);
     }

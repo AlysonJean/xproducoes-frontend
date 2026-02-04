@@ -1,6 +1,15 @@
 // ✅ PRODUCTION-SAFE LOGGING SYSTEM
 import type { LogLevel, LogEntry } from '@/types';
-import { sentry } from '../main';
+
+// Lazy sentry getter to avoid circular dependency with main.tsx
+const getSentry = () => {
+  try {
+    // Dynamic import to avoid circular dependency
+    return (window as any).__SENTRY__;
+  } catch {
+    return null;
+  }
+};
 
 class Logger {
   private isDevelopment = (import.meta as any).env?.MODE === 'development';
@@ -24,37 +33,34 @@ class Logger {
 
     const formattedMessage = this.formatMessage(level, message, context);
 
-    switch (level) {
-      case 'debug':
-        console.debug(formattedMessage, data || '');
-        break;
-      case 'info':
-        console.info(formattedMessage, data || '');
-        break;
-      case 'warn':
-        console.warn(formattedMessage, data || '');
-        // Send to Sentry as breadcrumb
-        if (sentry?.addBreadcrumb) {
-          sentry.addBreadcrumb({
-            message: formattedMessage,
-            level: 'warning',
-            data: data ? { data } : undefined,
-            category: context || 'logger',
-          });
-        }
-        break;
-      case 'error':
-        console.error(formattedMessage, data || '');
-        // Send to Sentry as exception
-        if (sentry?.captureException && data instanceof Error) {
-          sentry.captureException(data, {
-            tags: { context },
-            extra: { message, formattedMessage },
-          });
-        } else if (sentry?.captureMessage) {
-          sentry.captureMessage(formattedMessage, 'error');
-        }
-        break;
+    if (level === 'debug') {
+      console.debug(formattedMessage, data || '');
+    } else if (level === 'info') {
+      console.info(formattedMessage, data || '');
+    } else if (level === 'warn') {
+      console.warn(formattedMessage, data || '');
+      // Send to Sentry as breadcrumb
+      const sentry = getSentry();
+      if (sentry?.addBreadcrumb) {
+        sentry.addBreadcrumb({
+          message: formattedMessage,
+          level: 'warning',
+          data: data ? { data } : undefined,
+          category: context || 'logger',
+        });
+      }
+    } else if (level === 'error') {
+      console.error(formattedMessage, data || '');
+      // Send to Sentry as exception
+      const sentry = getSentry();
+      if (sentry?.captureException && data instanceof Error) {
+        sentry.captureException(data, {
+          tags: { context },
+          extra: { message, formattedMessage },
+        });
+      } else if (sentry?.captureMessage) {
+        sentry.captureMessage(formattedMessage, 'error');
+      }
     }
 
     // Em produção, enviar para serviço de monitoramento adicional

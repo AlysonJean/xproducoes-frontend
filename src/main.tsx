@@ -13,6 +13,10 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 // Initialize Sentry for error monitoring
 const sentry = initSentry();
+// Expose sentry globally to avoid circular dependency issues
+if (typeof window !== 'undefined') {
+  (window as any).__SENTRY__ = sentry;
+}
 // Use ErrorBoundary from sentry init (it will be a no-op when Sentry is disabled)
 const SentryErrorBoundary = (sentry && (sentry as any).ErrorBoundary) || (({ children }: any) => children);
 
