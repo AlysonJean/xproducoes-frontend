@@ -103,6 +103,8 @@ export interface Equipment {
   quantity?: number;
   createdAt?: Date | string;
   updatedAt?: Date | string;
+  prevSlug?: string | null;
+  nextSlug?: string | null;
 }
 
 export interface Category {
