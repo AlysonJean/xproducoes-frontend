@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../services/api';
 import { asArray } from '../utils/normalize';
 import type { PortfolioItem, PortfolioFilters } from '@/types';
@@ -8,6 +9,8 @@ import { SearchAndFilters, Grid } from '../components/ui/StandardComponents';
 import { SEO } from '../components/SEO';
 
 export const PortfolioPage: React.FC = () => {
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
   // error state removed to prevent blocking UI
@@ -20,8 +23,14 @@ export const PortfolioPage: React.FC = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-  const portfolioData = await apiFetch('/portfolio');
-  setPortfolio(asArray<PortfolioItem>(portfolioData));
+        const portfolioData = await apiFetch('/portfolio');
+        const items = asArray<PortfolioItem>(portfolioData);
+        setPortfolio(items);
+
+        if (slug) {
+          const item = items.find(i => i.slug === slug);
+          if (item) setSelectedItem(item);
+        }
       } catch (err) {
         console.error('Erro ao carregar portfolio:', err);
         // Não trava a tela, apenas loga o erro e deixa a lista vazia
@@ -32,7 +41,7 @@ export const PortfolioPage: React.FC = () => {
     };
 
     fetchData();
-  }, []);
+  }, [slug]);
 
   // Filter logic
   const filteredPortfolio = useMemo(() => {
@@ -53,8 +62,16 @@ export const PortfolioPage: React.FC = () => {
   };
 
   const clearFilters = () => setFilters({});
-  const openModal = (item: PortfolioItem) => setSelectedItem(item);
-  const closeModal = () => setSelectedItem(null);
+  
+  const openModal = (item: PortfolioItem) => {
+    setSelectedItem(item);
+    navigate(`/portfolio/${item.slug || ''}`);
+  };
+
+  const closeModal = () => {
+    setSelectedItem(null);
+    navigate('/portfolio');
+  };
 
   // UX: fechar modal com Esc e travar scroll do body
   useEffect(() => {

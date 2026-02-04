@@ -14,7 +14,7 @@ export const KitCard: React.FC<KitCardProps> = ({ kit, showCompare = true, showF
   return (
     <Link
       {...rest}
-      to={`/kits/${kit.id}`}
+      to={`/kits/${kit.slug || kit.id}`}
   className="relative block bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
     >
   <div className="relative">
