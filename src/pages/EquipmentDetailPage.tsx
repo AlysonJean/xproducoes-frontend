@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRevealOnView } from '../hooks/useRevealOnView';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import ReactGA from 'react-ga4';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { apiFetch } from '../services/api';
 import { useCart } from '@/hooks/useCart';
 import BrandLoader from '../components/ui/BrandLoader';
@@ -126,7 +127,28 @@ export const EquipmentDetailPage = () => {
           }
         }}
       />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+      {/* Navigation Arrows (Desktop) */}
+      {equipment.prevSlug && (
+        <Link
+          to={`/equipamentos/${equipment.prevSlug}`}
+          className="fixed left-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-primary hover:text-primary-foreground p-3 rounded-full shadow-lg border border-border backdrop-blur-sm transition-all z-50 hidden lg:flex items-center justify-center group"
+          title="Equipamento Anterior"
+        >
+          <ChevronLeft className="w-8 h-8 group-hover:-translate-x-0.5 transition-transform" />
+        </Link>
+      )}
+      {equipment.nextSlug && (
+        <Link
+          to={`/equipamentos/${equipment.nextSlug}`}
+          className="fixed right-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-primary hover:text-primary-foreground p-3 rounded-full shadow-lg border border-border backdrop-blur-sm transition-all z-50 hidden lg:flex items-center justify-center group"
+          title="Próximo Equipamento"
+        >
+          <ChevronRight className="w-8 h-8 group-hover:translate-x-0.5 transition-transform" />
+        </Link>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
         <div>
           <img
             src={
