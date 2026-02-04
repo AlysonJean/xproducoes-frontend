@@ -12,7 +12,7 @@ import type { Kit } from '../types/types';
 import { SEO } from '../components/SEO';
 
 export const KitDetailPage = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const { addItem, cart } = useCart();
   const { addNotification } = useNotifications();
   const [kit, setKit] = useState<Kit | null>(null);
@@ -21,11 +21,11 @@ export const KitDetailPage = () => {
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    if (!slug) return;
     const fetchKit = async () => {
       try {
         setLoading(true);
-        const data = await apiFetch(`/kits/${id}`);
+        const data = await apiFetch(`/kits/${slug}`);
         setKit(data as Kit);
         
         // GA Tracking - View Kit
@@ -44,7 +44,7 @@ export const KitDetailPage = () => {
       }
     };
     fetchKit();
-  }, [id]);
+  }, [slug]);
 
   // Estados de carregamento/erro
   if (loading) {

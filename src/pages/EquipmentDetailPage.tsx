@@ -16,7 +16,7 @@ import { useNotifications } from '../contexts/NotificationContext';
 
 export const EquipmentDetailPage = () => {
   const { ref: titleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const { addItem } = useCart();
   const [equipment, setEquipment] = useState<Equipment | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,26 +26,26 @@ export const EquipmentDetailPage = () => {
   // Recommendations hooks - MUST be at component top level
   const similarRecommendations = useRecommendations({
     type: 'similar',
-    itemId: id || '',
+    itemId: slug || '',
     itemType: 'equipment',
     limit: 4,
-    autoFetch: !!id  // Only fetch if we have an ID
+    autoFetch: !!slug  // Only fetch if we have an ID
   });
 
   const frequentlyBoughtRecommendations = useRecommendations({
     type: 'frequently-bought',
-    itemId: id || '',
+    itemId: slug || '',
     itemType: 'equipment',
     limit: 4,
-    autoFetch: !!id  // Only fetch if we have an ID
+    autoFetch: !!slug  // Only fetch if we have an ID
   });
 
   useEffect(() => {
-    if (!id) return;
+    if (!slug) return;
     const fetchEquipment = async () => {
       try {
         setLoading(true);
-        const data = await apiFetch(`/equipments/${id}`);
+        const data = await apiFetch(`/equipments/${slug}`);
         setEquipment(data as Equipment);
 
         // GA Tracking - View Item
@@ -70,7 +70,7 @@ export const EquipmentDetailPage = () => {
       }
     };
     fetchEquipment();
-  }, [id]);
+  }, [slug]);
 
   const { addNotification } = useNotifications();
 

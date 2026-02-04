@@ -115,6 +115,16 @@ export const ComparePage = () => {
           </thead>
           <tbody>
     <tr className="border-t border-border">
+              <td className="p-4 font-medium">Descrição</td>
+              {compareItems.map((item) => (
+                <td key={item.id} className="p-4 text-center text-sm text-muted-foreground">
+                  <p className="line-clamp-3 hover:line-clamp-none transition-all duration-300">
+                    {item.description || <span className="italic">Sem descrição</span>}
+                  </p>
+                </td>
+              ))}
+            </tr>
+            <tr className="border-t border-border bg-muted">
               <td className="p-4 font-medium">Preço</td>
               {compareItems.map((item) => (
                 <td key={item.id} className="p-4 text-center">

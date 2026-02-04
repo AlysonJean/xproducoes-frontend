@@ -80,6 +80,7 @@ export interface User {
 export interface Equipment {
   id: string;
   name: string;
+  slug?: string;
   description?: string;
   dailyPrice?: number;
   weeklyPrice?: number;
@@ -119,6 +120,7 @@ export interface Category {
 export interface Kit {
   id: string;
   name: string;
+  slug?: string;
   equipments: Equipment[];
   imageUrl?: string;
   description?: string;
