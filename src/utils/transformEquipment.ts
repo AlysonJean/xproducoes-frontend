@@ -18,15 +18,19 @@ function sanitizeImageUrl(url?: string): string {
   }
 }
 
+import { toNumber } from './typeSafeFormatters';
+
 export function transformEquipment(equipment: Equipment): Equipment {
   // Validação e transformação robusta
   return {
     ...equipment,
     name: equipment.name ?? 'Equipamento sem nome',
-    price: typeof equipment.price === 'number' ? equipment.price : 0,
-    pricePerHour: typeof equipment.pricePerHour === 'number' ? equipment.pricePerHour : 0,
+    price: toNumber(equipment.price),
+    // Usa dailyPrice como fallback se pricePerHour for 0 ou indefinido
+    pricePerHour: toNumber(equipment.pricePerHour) || toNumber(equipment.dailyPrice) || 0,
+    dailyPrice: toNumber(equipment.dailyPrice),
     isAvailable: typeof equipment.isAvailable === 'boolean' ? equipment.isAvailable : false,
-  imageUrl: sanitizeImageUrl(equipment.imageUrl),
+    imageUrl: sanitizeImageUrl(equipment.imageUrl),
     description: equipment.description ?? '',
     brand: equipment.brand ?? '',
     model: equipment.model ?? '',
