@@ -672,6 +672,7 @@ export interface PortfolioItem {
   imageUrl: string;
   description: string;
   images?: string[];
+  sortOrder?: number;
 }
 
 // ================================
