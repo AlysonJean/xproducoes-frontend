@@ -7,10 +7,12 @@ import { BrandLoader } from '@/components/ui/BrandLoader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import type { User } from '../../types/types';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 export const ClientEditPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { addNotification } = useNotifications();
 
   const [client, setClient] = useState<{ name: string; email: string; phone: string }>({
     name: '',
@@ -19,7 +21,6 @@ export const ClientEditPage = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -49,7 +50,7 @@ export const ClientEditPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccess('');
+
     if (!client.name || !client.email) {
       setError('Nome e e-mail são obrigatórios.');
       return;
@@ -60,10 +61,20 @@ export const ClientEditPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(client),
       });
-      setSuccess('Dados do cliente atualizados com sucesso!');
+      addNotification({
+        type: 'success',
+        title: 'Sucesso',
+        message: 'Dados do cliente atualizados com sucesso!'
+      });
   setTimeout(() => navigate('/admin/clientes'), 1500);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Falha ao atualizar os dados.');
+      const msg = err instanceof Error ? err.message : 'Falha ao atualizar os dados.';
+      setError(msg);
+      addNotification({
+        type: 'error',
+        title: 'Erro no salvamento',
+        message: msg
+      });
     }
   };
 
@@ -76,11 +87,6 @@ export const ClientEditPage = () => {
       {error && (
         <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-4 border border-destructive">
           {error}
-        </div>
-      )}
-      {success && (
-        <div className="bg-success/10 text-success p-3 rounded-md mb-4 border border-success">
-          {success}
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-6">

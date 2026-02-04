@@ -20,6 +20,8 @@ import { useCompare } from '@/contexts/CompareContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { ThemeToggle } from './ui/ThemeToggle';
 import ThemedLogo from './ui/ThemedLogo';
+import RequestQuoteButton from './RequestQuoteButton';
+import { useWhatsAppModal } from './modals/ModalContext';
 
 export const Header = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -27,6 +29,7 @@ export const Header = () => {
   const { items: compareItems } = useCompare();
   const { companyName } = useSettings();
   const navigate = useNavigate();
+  const { openWhatsAppModal } = useWhatsAppModal();
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -104,6 +107,10 @@ export const Header = () => {
 
           {/* Ações */}
           <div className="flex items-center space-x-2 lg:space-x-4">
+            {/* Request Quote CTA (desktop/tablet) */}
+            <div className="hidden md:block">
+              <RequestQuoteButton />
+            </div>
             {/* Theme Toggle */}
             <div className="hidden lg:block">
               <ThemeToggle showLabel={false} />
@@ -227,15 +234,35 @@ export const Header = () => {
 
             {/* Links de Ação Mobile */}
             <div className="space-y-2">
-              {/* Favoritos */}
-              <Link
-                to="/favoritos"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center space-x-4 p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
-              >
-                <HeartIcon className="w-6 h-6" strokeWidth={1.75} />
-                <span>Favoritos</span>
-              </Link>
+                {/* Solicitar Orçamento (mobile) */}
+                <button
+                  onClick={() => {
+                    openWhatsAppModal({
+                      phoneNumber: '+55 31 98925 2272',
+                      title: 'Pedir Orçamento',
+                      subject: 'Pedido de Orçamento',
+                      message:
+                        'Olá! Gostaria de receber um orçamento para o meu evento.\n- Tipo de evento: \n- Data (aprox.): \n- Cidade: Belo Horizonte, MG\n- Número aproximado de pessoas: \n- Observações / referências (link ou breve descrição): ',
+                    });
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="flex items-center space-x-4 p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  <span>Solicitar Orçamento</span>
+                </button>
+
+                {/* Favoritos */}
+                <Link
+                  to="/favoritos"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center space-x-4 p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
+                >
+                  <HeartIcon className="w-6 h-6" strokeWidth={1.75} />
+                  <span>Favoritos</span>
+                </Link>
 
               {/* Comparar */}
               <Link

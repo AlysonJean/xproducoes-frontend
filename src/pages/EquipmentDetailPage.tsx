@@ -10,6 +10,9 @@ import BrandLoader from '../components/ui/BrandLoader';
 import type { Equipment } from '../types/types';
 import { formatPrice } from '../utils/formatPrice';
 import { SEO } from '../components/SEO';
+import { RecommendationSection } from '../components/ui/RecommendationSection';
+import { useRecommendations } from '../hooks/useRecommendations';
+import { useNotifications } from '../contexts/NotificationContext';
 
 export const EquipmentDetailPage = () => {
   const { ref: titleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
@@ -19,7 +22,23 @@ export const EquipmentDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quantityToAdd, setQuantityToAdd] = useState(1);
-  const [addedMessage, setAddedMessage] = useState(false);
+
+  // Recommendations hooks - MUST be at component top level
+  const similarRecommendations = useRecommendations({
+    type: 'similar',
+    itemId: id || '',
+    itemType: 'equipment',
+    limit: 4,
+    autoFetch: !!id  // Only fetch if we have an ID
+  });
+
+  const frequentlyBoughtRecommendations = useRecommendations({
+    type: 'frequently-bought',
+    itemId: id || '',
+    itemType: 'equipment',
+    limit: 4,
+    autoFetch: !!id  // Only fetch if we have an ID
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -28,7 +47,7 @@ export const EquipmentDetailPage = () => {
         setLoading(true);
         const data = await apiFetch(`/equipments/${id}`);
         setEquipment(data as Equipment);
-        
+
         // GA Tracking - View Item
         if (data) {
           ReactGA.event({
@@ -46,7 +65,6 @@ export const EquipmentDetailPage = () => {
         } else {
           setError('Não foi possível carregar os detalhes do equipamento.');
         }
-        // console.error(err); // Removido para evitar warning de lint
       } finally {
         setLoading(false);
       }
@@ -54,11 +72,17 @@ export const EquipmentDetailPage = () => {
     fetchEquipment();
   }, [id]);
 
+  const { addNotification } = useNotifications();
+
+  // ... (inside handleAddToCart)
   const handleAddToCart = () => {
     if (equipment) {
       addItem(equipment, 'equipment');
-      setAddedMessage(true);
-      setTimeout(() => setAddedMessage(false), 2000);
+      addNotification({
+        type: 'success',
+        title: 'Adicionado ao Carrinho',
+        message: `${equipment.name} foi adicionado ao seu carrinho.`
+      });
     }
   };
 
@@ -71,15 +95,15 @@ export const EquipmentDetailPage = () => {
     );
   if (!equipment)
     return (
-  <div className="text-center text-xl text-destructive">
+      <div className="text-center text-xl text-destructive">
         Equipamento não encontrado.
       </div>
     );
 
   return (
-  <div className="bg-card p-6 md:p-8 rounded-lg shadow-2xl border border-border">
-      <SEO 
-        title={equipment.name} 
+    <div className="bg-card p-6 md:p-8 rounded-lg shadow-2xl border border-border">
+      <SEO
+        title={equipment.name}
         description={equipment.description || `Aluguel de ${equipment.name} em Belo Horizonte e região. Confira preço e disponibilidade.`}
         image={equipment.imageUrl}
         jsonLd={{
@@ -124,16 +148,16 @@ export const EquipmentDetailPage = () => {
             {equipment.description}
           </p>
 
-        <div className="bg-muted/30 p-4 rounded-lg mb-6 border border-border">
+          <div className="bg-muted/30 p-4 rounded-lg mb-6 border border-border">
             <div className="flex justify-between items-center">
-        <span className="text-muted-foreground">Preço por hora</span>
-        <span className="text-3xl font-extrabold text-foreground">
+              <span className="text-muted-foreground">Preço por hora</span>
+              <span className="text-3xl font-extrabold text-foreground">
                 <span className="text-lg font-normal mr-2">a partir de</span>
                 {formatPrice(equipment.pricePerHour || 0)}
               </span>
             </div>
             <div className="flex justify-between items-center mt-2">
-        <span className="text-muted-foreground">Status</span>
+              <span className="text-muted-foreground">Status</span>
               <span className="text-xl font-semibold">
                 {equipment.isAvailable ? 'Disponível' : 'Indisponível'}
               </span>
@@ -163,13 +187,41 @@ export const EquipmentDetailPage = () => {
           >
             Adicionar ao Carrinho
           </button>
-          {addedMessage && (
-            <div className="text-center mt-4 text-success font-semibold">
-              Item adicionado com sucesso!
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Recomendações - Produtos Similares */}
+      {similarRecommendations.recommendations.length > 0 && (
+        <div className="mt-12">
+          <RecommendationSection
+            type="similar"
+            items={similarRecommendations.recommendations}
+            maxItems={4}
+            loading={similarRecommendations.loading}
+            viewAllLink="/equipamentos"
+            viewAllText="Ver Mais Equipamentos"
+            columns={{ sm: 1, md: 2, lg: 4 }}
+          />
+        </div>
+      )}
+
+      {/* Recomendações - Frequentemente Reservados Juntos */}
+      {frequentlyBoughtRecommendations.recommendations.length > 0 && (
+        <div className="mt-8">
+          <RecommendationSection
+            type="frequently-bought"
+            items={frequentlyBoughtRecommendations.recommendations}
+            maxItems={4}
+            loading={frequentlyBoughtRecommendations.loading}
+            viewAllLink="/equipamentos"
+            viewAllText="Ver Mais"
+            columns={{ sm: 1, md: 2, lg: 4 }}
+          />
+        </div>
+      )}
     </div>
   );
 };
+
+// Export both named and default for compatibility
+export default EquipmentDetailPage;

@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../services/api';
 import { BrandLoader } from '@/components/ui/BrandLoader';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { StatsCard, SimpleCard } from '../../components/ui/Cards';
 import { QuickActionCard } from '../../components/ui/QuickActionCard';
@@ -258,6 +259,7 @@ const PerformanceOverview = ({ stats }: { stats: AdminDashboardStats | null }) =
 export const AdminDashboardPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { addNotification } = useNotifications();
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -307,6 +309,11 @@ export const AdminDashboardPage = () => {
         } catch {}
       } catch (error) {
         console.error('Erro ao carregar dados do dashboard:', error);
+        addNotification({
+          type: 'error',
+          title: 'Erro de Carregamento',
+          message: 'Não foi possível carregar os dados do dashboard.',
+        });
       } finally {
         setLoading(false);
       }

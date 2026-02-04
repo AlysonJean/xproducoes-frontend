@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { 
   Button, 
   Card, 
-  Alert, 
   Grid,
   Badge
 } from '../../components/ui/StandardComponents';
@@ -39,6 +39,7 @@ import { isSafeWebsite, openWebsite } from '../../utils/url';
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
+  const { addNotification } = useNotifications();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const baseId = useId();
   const nameId = `${baseId}-name`;
@@ -68,8 +69,6 @@ export const ProfilePage = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'preferences'>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -86,7 +85,7 @@ export const ProfilePage = () => {
     const loadProfile = async () => {
       try {
         setLoading(true);
-        setError(null);
+        // setError(null) removed
         
         const [profileResponse, statsResponse] = await Promise.allSettled([
           apiFetch('/user/profile'),
@@ -123,8 +122,11 @@ export const ProfilePage = () => {
               if (!profileData.isVip && computedIsVip) {
                 // ✅ Mostrar loading durante promoção VIP
                 await apiFetch('/user/promote-vip', { method: 'POST' });
-                setSuccess('Parabéns — você agora é cliente VIP!');
-                setTimeout(() => setSuccess(null), 4000);
+                addNotification({
+                  type: 'success',
+                  title: 'Parabéns!',
+                  message: 'Você agora é um cliente VIP!'
+                });
               }
             } catch (e) {
               // Endpoint pode não existir — não bloquear a experiência
@@ -147,14 +149,18 @@ export const ProfilePage = () => {
           });
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro ao carregar perfil');
+        addNotification({
+          type: 'error',
+          title: 'Erro',
+          message: err instanceof Error ? err.message : 'Erro ao carregar perfil'
+        });
       } finally {
         setLoading(false);
       }
     };
 
     loadProfile();
-  }, []);
+  }, [addNotification]);
 
   // Atualizar avatar
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,18 +169,26 @@ export const ProfilePage = () => {
 
     // Validar arquivo
     if (!file.type.startsWith('image/')) {
-      setError('Por favor, selecione uma imagem válida.');
+      addNotification({
+        type: 'error',
+        title: 'Arquivo inválido',
+        message: 'Por favor, selecione uma imagem válida.'
+      });
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setError('A imagem deve ter no máximo 5MB.');
+      addNotification({
+        type: 'error',
+        title: 'Arquivo muito grande',
+        message: 'A imagem deve ter no máximo 5MB.'
+      });
       return;
     }
 
     try {
       setUploadingAvatar(true);
-      setError(null);
+      // setError(null) removed
 
       const formData = new FormData();
       formData.append('avatar', file);
@@ -194,11 +208,17 @@ export const ProfilePage = () => {
 
       const updatedProfile = await response.json();
       setProfile(prev => prev ? { ...prev, avatarUrl: updatedProfile.avatarUrl } : null);
-      setSuccess('Foto atualizada com sucesso!');
-      
-      setTimeout(() => setSuccess(null), 3000);
+      addNotification({
+        type: 'success',
+        title: 'Foto atualizada',
+        message: 'Sua foto de perfil foi atualizada com sucesso!'
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao atualizar foto');
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: err instanceof Error ? err.message : 'Erro ao atualizar foto'
+      });
     } finally {
       setUploadingAvatar(false);
     }
@@ -208,7 +228,7 @@ export const ProfilePage = () => {
   const handleSaveProfile = async () => {
     try {
       setSaving(true);
-      setError(null);
+      // setError(null) removed
 
   await apiFetch('/user/profile', {
         method: 'PUT',
@@ -220,11 +240,17 @@ export const ProfilePage = () => {
 
       setProfile(prev => prev ? { ...prev, ...formData } : null);
       setEditMode(false);
-      setSuccess('Perfil atualizado com sucesso!');
-      
-      setTimeout(() => setSuccess(null), 3000);
+      addNotification({
+        type: 'success',
+        title: 'Perfil atualizado',
+        message: 'Suas informações foram salvas com sucesso!'
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao salvar perfil');
+      addNotification({
+        type: 'error',
+        title: 'Erro ao salvar',
+        message: err instanceof Error ? err.message : 'Erro ao salvar perfil'
+      });
     } finally {
       setSaving(false);
     }
@@ -233,18 +259,26 @@ export const ProfilePage = () => {
   // Alterar senha
   const handleChangePassword = async () => {
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setError('As senhas não coincidem');
+      addNotification({
+        type: 'error',
+        title: 'Erro na validação',
+        message: 'As senhas não coincidem'
+      });
       return;
     }
 
     if (passwordForm.newPassword.length < 6) {
-      setError('A nova senha deve ter pelo menos 6 caracteres');
+      addNotification({
+        type: 'error',
+        title: 'Senha muito curta',
+        message: 'A nova senha deve ter pelo menos 6 caracteres'
+      });
       return;
     }
 
     try {
       setSaving(true);
-      setError(null);
+      // setError(null) removed
 
   await apiFetch('/user/change-password', {
         method: 'POST',
@@ -258,11 +292,17 @@ export const ProfilePage = () => {
       });
 
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      setSuccess('Senha alterada com sucesso!');
-      
-      setTimeout(() => setSuccess(null), 3000);
+      addNotification({
+        type: 'success',
+        title: 'Senha alterada',
+        message: 'Sua senha foi atualizada com sucesso!'
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao alterar senha');
+      addNotification({
+        type: 'error',
+        title: 'Erro ao alterar senha',
+        message: err instanceof Error ? err.message : 'Erro ao alterar senha'
+      });
     } finally {
       setSaving(false);
     }
@@ -297,9 +337,10 @@ export const ProfilePage = () => {
     return (
       <div className="min-h-screen bg-background">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Alert variant="error" title="Erro">
-            Não foi possível carregar o perfil.
-          </Alert>
+          <div className="p-4 bg-destructive/10 text-destructive rounded-md border border-destructive">
+            <h3 className="font-bold">Erro</h3>
+            <p>Não foi possível carregar o perfil.</p>
+          </div>
         </div>
       </div>
     );
@@ -328,18 +369,7 @@ export const ProfilePage = () => {
           </div>
         </div>
 
-        {/* Alertas */}
-        {error && (
-          <Alert variant="error" title="Erro" className="mb-6">
-            {error}
-          </Alert>
-        )}
-        
-        {success && (
-          <Alert variant="success" title="Sucesso" className="mb-6">
-            {success}
-          </Alert>
-        )}
+
 
         {/* Cover Photo & Profile Header */}
         <Card className="mb-8 overflow-hidden">

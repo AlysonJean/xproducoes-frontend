@@ -22,9 +22,7 @@ export default defineConfig({
         { find: '@/utils', replacement: resolve(__dirname, 'src/utils') },
         { find: '@/components', replacement: resolve(__dirname, 'src/components') },
         { find: '@/pages', replacement: resolve(__dirname, 'src/pages') }
-      ],
-      // Ensure we resolve TypeScript/JS extensions
-      resolve: ['.ts', '.tsx', '.js', '.jsx', '.json']
+        ]
     }),
     // Resolve paths defined in tsconfig.json (ensures aliases like @/services resolve in CI)
     tsconfigPaths(),
@@ -92,17 +90,24 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        // Use a function to reliably split chunks by module id
+        // Refina divisão de chunks para dependências pesadas e páginas grandes
         manualChunks(id) {
           if (!id) return null;
 
           // Node modules -> vendor groups
           if (id.includes('node_modules')) {
-            if (id.includes('recharts') || id.includes('date-fns')) return 'charts-vendor';
+            if (id.includes('recharts') || id.includes('date-fns') || id.includes('chart.js')) return 'charts-vendor';
             if (id.includes('react-big-calendar')) return 'calendar-vendor';
-            if (id.includes('xlsx-js-style')) return 'xlsx-vendor';
-            if (id.includes('lucide-react') || id.includes('@heroicons')) return 'ui-vendor';
-            // Put React and most libraries into a single vendor chunk to avoid circular chunk dependencies
+            if (id.includes('xlsx-js-style') || id.includes('xlsx')) return 'xlsx-vendor';
+            if (id.includes('@mui/material') || id.includes('react-icons') || id.includes('lucide-react') || id.includes('@heroicons')) return 'ui-vendor';
+            if (id.includes('axios')) return 'network-vendor';
+            // React e libs principais agora ficam só no vendor
+            if (
+              id.includes('react') ||
+              id.includes('react-dom') ||
+              id.includes('react-router-dom')
+            ) return 'vendor';
+            // Outras libs pesadas podem ser agrupadas aqui
             return 'vendor';
           }
 
@@ -115,6 +120,8 @@ export default defineConfig({
             id.includes('src\\pages\\client\\')
           )
             return 'dashboard-chunk';
+
+          // Outras páginas grandes podem ser separadas aqui
 
           return null;
         }
@@ -131,8 +138,8 @@ export default defineConfig({
     },
     // Code splitting
     cssCodeSplit: true,
-    // Chunk size warnings
-    chunkSizeWarningLimit: 1000
+      // Chunk size warnings
+      chunkSizeWarningLimit: 2000
   },
   resolve: {
     alias: {
@@ -160,9 +167,5 @@ export default defineConfig({
       'clsx'
     ]
   },
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**', '**/playwright/**'],
-  }
 })
+

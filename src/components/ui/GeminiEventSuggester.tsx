@@ -5,24 +5,32 @@ import { useState } from 'react';
 import { apiFetch } from '../../services/api';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import type { GeminiSuggestionResponse } from '../../types/types';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 export const GeminiEventSuggester = () => {
+  const { addNotification } = useNotifications();
   const [suggestion, setSuggestion] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
 
   const fetchSuggestion = async () => {
     setIsLoading(true);
-    setError('');
     setSuggestion('');
     try {
       const response = await apiFetch('/gemini/suggest-theme');
       setSuggestion((response as GeminiSuggestionResponse).suggestion);
     } catch (err: unknown) {
       if (err instanceof Error) {
-        setError(err.message);
+        addNotification({
+          type: 'error',
+          title: 'Erro na sugestão',
+          message: err.message
+        });
       } else {
-        setError('Não foi possível gerar uma sugestão. Tente novamente mais tarde.');
+         addNotification({
+          type: 'error',
+          title: 'Erro na sugestão',
+          message: 'Não foi possível gerar uma sugestão. Tente novamente mais tarde.'
+        });
       }
     } finally {
       setIsLoading(false);
@@ -49,7 +57,7 @@ export const GeminiEventSuggester = () => {
         </div>
       )}
 
-      {error && <p className="mt-6 text-yellow-300 bg-yellow-900/50 p-3 rounded-md">{error}</p>}
+
 
       {suggestion && (
         <div className="mt-6 p-6 bg-card/20 border border-border/30 rounded-lg animate-fade-in">

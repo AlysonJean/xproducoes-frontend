@@ -29,17 +29,26 @@ export const BookingDetailPage = () => {
     if (!booking?.id) return;
     if (!window.confirm('Tem certeza que deseja deletar esta reserva?')) return;
     try {
-  await bookingAPI.delete(booking.id);
-  navigate('/admin/reservas');
+      await bookingAPI.delete(booking.id);
+      addNotification({
+        type: 'success',
+        title: 'Sucesso',
+        message: 'Reserva deletada com sucesso.'
+      });
+      navigate('/admin/reservas');
     } catch (err: unknown) {
-      alert('Erro ao deletar reserva: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: 'Erro ao deletar reserva: ' + (err instanceof Error ? err.message : 'Erro desconhecido')
+      });
     }
   };
 
   // Função para alterar reserva
   const handleEditBooking = () => {
     if (!booking?.id) return;
-  navigate(`/admin/reservas/${booking.id}/editar`);
+    navigate(`/admin/reservas/${booking.id}/editar`);
   };
   const { id } = useParams<{ id: string }>();
   const [booking, setBooking] = useState<BookingDetails | null>(null);
@@ -78,7 +87,7 @@ export const BookingDetailPage = () => {
       if (!id) return;
       setLoading(true);
       try {
-  const res = await bookingAPI.getById(id);
+        const res = await bookingAPI.getById(id);
         setBooking((res.data && (res.data as any).data) as BookingDetails);
       } catch (err: unknown) {
         setError(
@@ -98,7 +107,11 @@ export const BookingDetailPage = () => {
   ) => {
     const contact = getClientContact();
     if (!contact) {
-      alert('Este cliente não possui um número de contato registado.');
+      addNotification({
+        type: 'warning',
+        title: 'Atenção',
+        message: 'Este cliente não possui um número de contato registado.'
+      });
       return;
     }
 

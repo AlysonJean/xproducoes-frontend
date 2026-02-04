@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { SimpleCard, StatsCard } from '@/components/ui/Cards';
 import { useAuth } from '../../contexts/AuthContext';
 import { SentryTestButton } from '../../components/SentryTestButton';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { 
   MonitoringService, 
   IntegrationHealth, 
@@ -23,6 +24,7 @@ export const MonitoringPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const { user } = useAuth();
+  const { addNotification } = useNotifications();
 
   const loadDashboardData = async () => {
     try {
@@ -53,6 +55,11 @@ export const MonitoringPage: React.FC = () => {
       setLastUpdate(new Date());
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error);
+      addNotification({
+        type: 'error',
+        title: 'Monitoramento Offline',
+        message: 'Não foi possível carregar os dados de monitoramento.'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -91,6 +98,11 @@ export const MonitoringPage: React.FC = () => {
       );
     } catch (error) {
       console.error(`Erro ao testar integração ${integrationName}:`, error);
+      addNotification({
+        type: 'error',
+        title: 'Teste Falhou',
+        message: `Falha ao testar a integração ${integrationName}. Tente novamente.`
+      });
     }
   };
 

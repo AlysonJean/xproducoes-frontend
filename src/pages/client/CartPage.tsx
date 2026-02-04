@@ -7,6 +7,8 @@ import { useCart } from '@/hooks/useCart';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { formatPrice } from '../../utils/formatPrice';
 import { apiFetch } from '../../services/api';
+import { RecommendationSection } from '../../components/ui/RecommendationSection';
+import { useRecommendations } from '../../hooks/useRecommendations';
 
 export const CartPage = () => {
   const { cart, removeItem, itemCount, clearCart } = useCart();
@@ -53,6 +55,23 @@ export const CartPage = () => {
 
   const totalItems = items.length;
 
+  // Get recommendations based on first cart item
+  const firstItemId = items[0]?.id;
+  const firstItemType = items[0]?.type;
+
+  const complementaryRecommendations = useRecommendations({
+    type: 'frequently-bought',
+    itemId: firstItemId || '',
+    itemType: firstItemType || 'equipment',
+    limit: 4,
+    autoFetch: !!firstItemId
+  });
+
+  const trendingRecommendations = useRecommendations({
+    type: 'trending',
+    limit: 4,
+    autoFetch: totalItems === 0
+  });
 
   const handleRemoveItem = async (itemId: string, itemName: string, type: 'equipment' | 'kit') => {
     if (type === 'kit') {
@@ -219,6 +238,36 @@ export const CartPage = () => {
           </button>
         </div>
       </div>
+
+      {/* Recomendações - Frequentemente Comprados Juntos */}
+      {complementaryRecommendations.recommendations.length > 0 && (
+        <div className="mt-12">
+          <RecommendationSection
+            type="frequently-bought"
+            items={complementaryRecommendations.recommendations}
+            maxItems={4}
+            loading={complementaryRecommendations.loading}
+            viewAllLink="/equipamentos"
+            viewAllText="Ver Mais Sugestões"
+            columns={{ sm: 1, md: 2, lg: 4 }}
+          />
+        </div>
+      )}
+
+      {/* Recomendações - Trending (apenas quando carrinho vazio) */}
+      {totalItems === 0 && trendingRecommendations.recommendations.length > 0 && (
+        <div className="mt-8">
+          <RecommendationSection
+            type="trending"
+            items={trendingRecommendations.recommendations}
+            maxItems={4}
+            loading={trendingRecommendations.loading}
+            viewAllLink="/equipamentos"
+            viewAllText="Explorar Mais"
+            columns={{ sm: 1, md: 2, lg: 4 }}
+          />
+        </div>
+      )}
     </div>
   );
 };

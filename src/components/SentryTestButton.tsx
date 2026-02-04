@@ -1,6 +1,7 @@
 // src/components/SentryTestButton.tsx
 import React from 'react';
 import * as Sentry from '@sentry/react';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 /**
  * Componente de teste do Sentry
@@ -26,6 +27,8 @@ export const SentryTestButton: React.FC<SentryTestButtonProps> = ({
   variant = 'danger',
   position = 'fixed' 
 }) => {
+  const { addNotification } = useNotifications();
+
   // Apenas mostrar em desenvolvimento
   if (import.meta.env.VITE_NODE_ENV === 'production') {
     return null;
@@ -52,7 +55,13 @@ export const SentryTestButton: React.FC<SentryTestButtonProps> = ({
     } catch (error) {
       Sentry.captureException(error);
       console.error('Erro capturado e enviado para Sentry:', error);
-      alert('✅ Exceção capturada e enviada para Sentry! Verifique o dashboard.');
+      Sentry.captureException(error);
+      console.error('Erro capturado e enviado para Sentry:', error);
+      addNotification({
+        type: 'success',
+        title: 'Sentry Test',
+        message: '✅ Exceção capturada e enviada para Sentry! Verifique o dashboard.'
+      });
     }
   };
 
@@ -66,7 +75,12 @@ export const SentryTestButton: React.FC<SentryTestButtonProps> = ({
       level: 'info',
     });
     
-    alert('✅ Mensagem enviada para Sentry! Verifique o dashboard.');
+    
+    addNotification({
+      type: 'success',
+      title: 'Sentry Test',
+      message: '✅ Mensagem enviada para Sentry! Verifique o dashboard.'
+    });
   };
 
   // Estilos baseados na variante

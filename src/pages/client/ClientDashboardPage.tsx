@@ -6,21 +6,21 @@ import { Link, useNavigate } from 'react-router-dom';
 import { bookingAPI, authAPI, kitAPI } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import { clsx } from 'clsx';
-import { 
-  Button, 
-  Card, 
-  Alert, 
+import {
+  Button,
+  Card,
+  Alert,
   Grid,
   Badge
 } from '../../components/ui/StandardComponents';
 import { BookingListItem } from '../../components/ui/BookingListItem';
 import { ReviewModal } from '../../components/modals/ReviewModal';
 import type { SafeBooking, Kit } from '../../types/types';
-import { 
-  Calendar, 
-  TrendingUp, 
-  Clock, 
-  CheckCircle, 
+import {
+  Calendar,
+  TrendingUp,
+  Clock,
+  CheckCircle,
   Heart,
   ArrowRight,
   BarChart3,
@@ -31,11 +31,14 @@ import {
 } from 'lucide-react';
 
 import { DashboardStats, QuickAction } from '../../types/domains/dashboard';
+import { RecommendationSection } from '../../components/ui/RecommendationSection';
+import { useMultipleRecommendations } from '../../hooks/useRecommendations';
+
 
 export const ClientDashboardPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   // States
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentBookings, setRecentBookings] = useState<SafeBooking[]>([]);
@@ -44,6 +47,10 @@ export const ClientDashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reviewBookingId, setReviewBookingId] = useState<string | null>(null);
+
+  // Recommendations hook
+  const { personalized, trending, newItems } = useMultipleRecommendations();
+
 
   // Quick Actions
   const quickActions: QuickAction[] = [
@@ -162,14 +169,14 @@ export const ClientDashboardPage = () => {
         // Calcular estatísticas localmente como fallback se a API de stats falhar
         if (statsResponse.status === 'rejected' && allBookings.length > 0) {
           const completedBookings = allBookings.filter(b => b.status === 'COMPLETED');
-          const activeBookings = allBookings.filter(b => 
+          const activeBookings = allBookings.filter(b =>
             ['PENDING', 'CONFIRMED', 'IN_PROGRESS'].includes(b.status)
           );
-          
+
           const totalSpent = completedBookings.reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
           const averageValue = completedBookings.length > 0 ? totalSpent / completedBookings.length : 0;
 
-          const sortedBookings = [...allBookings].sort((a, b) => 
+          const sortedBookings = [...allBookings].sort((a, b) =>
             new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime()
           );
 
@@ -256,7 +263,7 @@ export const ClientDashboardPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
         {/* Header com Saudação */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
@@ -384,7 +391,7 @@ export const ClientDashboardPage = () => {
 
         {/* Grid Principal */}
         <Grid columns={{ sm: 1, lg: 3 }} gap={8}>
-          
+
           {/* Próximas Reservas */}
           <div className="lg:col-span-2">
             <Card>
@@ -397,7 +404,7 @@ export const ClientDashboardPage = () => {
                     </Button>
                   </Link>
                 </div>
-                
+
                 {upcomingBookings.length > 0 ? (
                   <div className="space-y-4">
                     {upcomingBookings.slice(0, 3).map((booking) => (
@@ -409,7 +416,7 @@ export const ClientDashboardPage = () => {
                               <span className="font-medium text-foreground">
                                 {formatDate(booking.eventDate)}
                               </span>
-                              <Badge 
+                              <Badge
                                 variant={getStatusColor(booking.status)}
                                 size="sm"
                               >
@@ -447,7 +454,7 @@ export const ClientDashboardPage = () => {
           <Card>
             <div className="p-6">
               <h2 className="text-xl font-semibold text-foreground mb-6">Resumo da Conta</h2>
-              
+
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <span className="text-sm text-muted-foreground">Valor Médio por Reserva</span>
@@ -455,14 +462,14 @@ export const ClientDashboardPage = () => {
                     {formatCurrency(stats?.averageBookingValue || 0)}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <span className="text-sm text-muted-foreground">Equipamentos Favoritos</span>
                   <span className="font-medium text-foreground">
                     {stats?.favoriteEquipments || 0}
                   </span>
                 </div>
-                
+
                 {stats?.lastBookingDate && (
                   <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <span className="text-sm text-muted-foreground">Última Reserva</span>
@@ -485,7 +492,7 @@ export const ClientDashboardPage = () => {
                     <p className="text-sm text-foreground">{user?.phone || 'Não informado'}</p>
                   </div>
                 </div>
-                
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -513,14 +520,14 @@ export const ClientDashboardPage = () => {
                   </Button>
                 </Link>
               </div>
-              
+
               <div className="space-y-4">
                 {recentBookings.map((booking) => (
-                    <BookingListItem
-                      key={booking.id}
-                      booking={booking}
-                      onReviewClick={(id) => setReviewBookingId(id)}
-                    />
+                  <BookingListItem
+                    key={booking.id}
+                    booking={booking}
+                    onReviewClick={(id) => setReviewBookingId(id)}
+                  />
                 ))}
               </div>
             </div>
@@ -539,15 +546,15 @@ export const ClientDashboardPage = () => {
                   </Button>
                 </Link>
               </div>
-              
+
               <Grid columns={{ sm: 1, md: 2, lg: 3 }} gap={6}>
                 {recommendedKits.map((kit) => (
                   <Link key={kit.id} to={`/kits/${kit.id}`} className="group">
                     <div className="border border-border rounded-lg overflow-hidden hover:border-primary/50 transition-colors">
                       {kit.imageUrl && (
                         <div className="aspect-video bg-muted">
-                          <img 
-                            src={kit.imageUrl} 
+                          <img
+                            src={kit.imageUrl}
                             alt={kit.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                           />
@@ -611,6 +618,51 @@ export const ClientDashboardPage = () => {
               </div>
             </div>
           </Card>
+        )}
+
+        {/* Recomendações Personalizadas */}
+        {personalized.recommendations.length > 0 && (
+          <div className="mt-8">
+            <RecommendationSection
+              type="personalized"
+              items={personalized.recommendations}
+              maxItems={4}
+              loading={personalized.loading}
+              viewAllLink="/equipamentos"
+              viewAllText="Ver Mais Recomendações"
+              columns={{ sm: 1, md: 2, lg: 4 }}
+            />
+          </div>
+        )}
+
+        {/* Tendências */}
+        {trending.recommendations.length > 0 && (
+          <div className="mt-8">
+            <RecommendationSection
+              type="trending"
+              items={trending.recommendations}
+              maxItems={4}
+              loading={trending.loading}
+              viewAllLink="/equipamentos"
+              viewAllText="Ver Todos os Populares"
+              columns={{ sm: 1, md: 2, lg: 4 }}
+            />
+          </div>
+        )}
+
+        {/* Novidades */}
+        {newItems.recommendations.length > 0 && (
+          <div className="mt-8">
+            <RecommendationSection
+              type="new"
+              items={newItems.recommendations}
+              maxItems={4}
+              loading={newItems.loading}
+              viewAllLink="/equipamentos"
+              viewAllText="Ver Todas as Novidades"
+              columns={{ sm: 1, md: 2, lg: 4 }}
+            />
+          </div>
         )}
       </div>
       {reviewBookingId && (

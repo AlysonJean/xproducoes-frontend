@@ -4,6 +4,8 @@ import BrandLoader from '../../components/ui/BrandLoader';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import { apiFetch } from '../../services/api';
 import type { Equipment } from '../../types/types';
+import { RecommendationSection } from '../../components/ui/RecommendationSection';
+import { useRecommendations } from '../../hooks/useRecommendations';
 
 export const FavoritesPage = () => {
   const { favorites } = useFavorites();
@@ -57,6 +59,13 @@ export const FavoritesPage = () => {
 
     fetchFavoriteEquipments();
   }, [favorites]);
+
+  // Get trending recommendations when no favorites
+  const trendingRecommendations = useRecommendations({
+    type: 'trending',
+    limit: 8,
+    autoFetch: favorites.length === 0
+  });
 
   if (loading) {
     return <BrandLoader fullScreen size={140} label="Carregando favoritos..." />;
@@ -120,6 +129,23 @@ export const FavoritesPage = () => {
               <EquipmentCard equipment={equipment} />
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Recomendações quando não há favoritos */}
+      {favorites.length === 0 && trendingRecommendations.recommendations.length > 0 && (
+        <div className="mt-12">
+          <RecommendationSection
+            type="trending"
+            title="Talvez você goste destes"
+            subtitle="Explore nossos equipamentos mais populares"
+            items={trendingRecommendations.recommendations}
+            maxItems={8}
+            loading={trendingRecommendations.loading}
+            viewAllLink="/equipamentos"
+            viewAllText="Ver Todos"
+            columns={{ sm: 1, md: 2, lg: 4 }}
+          />
         </div>
       )}
     </div>

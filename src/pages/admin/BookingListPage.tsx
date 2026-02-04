@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import { formatPrice } from '../../utils/formatPrice';
@@ -21,6 +22,7 @@ const safeParsePrice = (value: string | undefined): number => {
 };
 
 export const BookingListPage = () => {
+  const { addNotification } = useNotifications();
   const [bookings, setBookings] = useState<BookingListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,9 +107,17 @@ export const BookingListPage = () => {
       );
     } catch (err: unknown) {
       if (err instanceof Error) {
-        alert(`Erro ao atualizar o status: ${err.message}`);
+        addNotification({
+          type: 'error',
+          title: 'Erro',
+          message: `Erro ao atualizar o status: ${err.message}`
+        });
       } else {
-        alert('Ocorreu um erro desconhecido ao atualizar o status.');
+        addNotification({
+          type: 'error',
+          title: 'Erro',
+          message: 'Ocorreu um erro desconhecido ao atualizar o status.'
+        });
       }
     }
   };

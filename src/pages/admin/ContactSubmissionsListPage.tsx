@@ -1,6 +1,7 @@
 // Caminho: frontend/src/pages/admin/ContactSubmissionsListPage.tsx
 
 import { useState, useEffect } from 'react';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import type { ContactSubmission } from '../../types/types';
@@ -10,6 +11,7 @@ import { Button } from '../../components/ui/Button';
 import { SimpleCard } from '../../components/ui/Cards';
 
 export const ContactSubmissionsListPage = () => {
+  const { addNotification } = useNotifications();
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +40,11 @@ export const ContactSubmissionsListPage = () => {
         prev.map((sub) => (sub.id === id ? (updatedSubmission as ContactSubmission) : sub))
       );
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Erro ao marcar como lida.');
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: err instanceof Error ? err.message : 'Erro ao marcar como lida.'
+      });
     }
   };
 
@@ -47,8 +53,17 @@ export const ContactSubmissionsListPage = () => {
       try {
         await apiFetch(`/admin/contacts/${id}`, { method: 'DELETE' });
         setSubmissions((prev) => prev.filter((sub) => sub.id !== id));
+        addNotification({
+          type: 'success',
+          title: 'Sucesso',
+          message: 'Mensagem apagada com sucesso.'
+        });
       } catch (err: unknown) {
-        alert(err instanceof Error ? err.message : 'Erro ao apagar a mensagem.');
+        addNotification({
+          type: 'error',
+          title: 'Erro',
+          message: err instanceof Error ? err.message : 'Erro ao apagar a mensagem.'
+        });
       }
     }
   };

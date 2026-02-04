@@ -55,12 +55,15 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({ initialData, onSucce
            await apiFetch(`/categories/${initialData.id}`, { method: 'PUT', body: JSON.stringify({ name }) });
         }
       } else {
-        // Usando /category no singular para garantir compatibilidade com rotas
-        const endpoint = '/category'; 
+        const endpoint = '/categories'; // Padronização para plural
         if (file) {
           await apiFetch(endpoint, { method: 'POST', body: formData });
         } else {
-          await apiFetch(endpoint, { method: 'POST', body: JSON.stringify({ name }) });
+          await apiFetch(endpoint, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name }) 
+          });
         }
       }
       onSuccess();

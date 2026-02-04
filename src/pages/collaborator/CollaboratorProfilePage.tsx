@@ -17,9 +17,11 @@ import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
 import { collaboratorProfileAPI } from '../../services/api';
 import { BrandLoader } from '@/components/ui/BrandLoader';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 const CollaboratorProfilePage: React.FC = () => {
   const navigate = useNavigate();
+  const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<any>(null);
@@ -58,7 +60,11 @@ const CollaboratorProfilePage: React.FC = () => {
     } catch (error) {
       console.error('Erro ao carregar perfil:', error);
       // manter UX leve: mostra alerta mínimo
-      alert('Não foi possível carregar o perfil.');
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: 'Não foi possível carregar o perfil.'
+      });
     } finally {
       setLoading(false);
     }
@@ -70,10 +76,18 @@ const CollaboratorProfilePage: React.FC = () => {
       await collaboratorProfileAPI.updateProfile(formData);
       await loadProfile();
       setEditMode(false);
-      alert('Perfil atualizado com sucesso!');
+      addNotification({
+        type: 'success',
+        title: 'Sucesso',
+        message: 'Perfil atualizado com sucesso!'
+      });
     } catch (error) {
       console.error('Erro ao salvar perfil:', error);
-      alert('Não foi possível salvar as alterações.');
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: 'Não foi possível salvar as alterações.'
+      });
     } finally {
       setSaving(false);
     }
@@ -90,7 +104,11 @@ const CollaboratorProfilePage: React.FC = () => {
         await loadProfile(); // Recarrega o perfil para mostrar a nova foto
       } catch (error) {
         console.error('Erro no upload:', error);
-        alert('Erro ao atualizar avatar.');
+        addNotification({
+          type: 'error',
+          title: 'Erro',
+          message: 'Erro ao atualizar avatar.'
+        });
       }
     }
   };

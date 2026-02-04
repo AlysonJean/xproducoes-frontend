@@ -18,7 +18,10 @@ import { BrandLoader } from '@/components/ui/BrandLoader';
 
 import { ProfileSettings, SecuritySettings, PrivacySettings, PaymentSettings } from '@/types/types';
 
+import { useNotifications } from '@/contexts/NotificationContext';
+
 const CollaboratorSettingsPage: React.FC = () => {
+  const { addNotification } = useNotifications();
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'privacy' | 'payment'>('profile');
   const [profileSettings, setProfileSettings] = useState<ProfileSettings | null>(null);
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
@@ -35,11 +38,9 @@ const CollaboratorSettingsPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
 
-  const loadSettings = async () => {
+
+  const loadSettings = React.useCallback(async () => {
     try {
       setLoading(true);
       const response = await collaboratorProfileAPI.getMyProfile();
@@ -78,12 +79,19 @@ const CollaboratorSettingsPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
-      // toast.error('Erro ao carregar configurações');
-      alert('Erro ao carregar configurações.');
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: 'Erro ao carregar configurações.'
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [addNotification]);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
 
   const handleSave = async () => {
     try {
@@ -110,10 +118,18 @@ const CollaboratorSettingsPage: React.FC = () => {
          });
       }
 
-      alert('Alterações salvas com sucesso!');
+      addNotification({
+        type: 'success',
+        title: 'Sucesso',
+        message: 'Alterações salvas com sucesso!'
+      });
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      alert('Erro ao salvar alterações');
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: 'Erro ao salvar alterações'
+      });
     } finally {
       setSaving(false);
     }
@@ -130,7 +146,11 @@ const CollaboratorSettingsPage: React.FC = () => {
               loadSettings(); // Recarrega para mostrar nova foto
           } catch (error) {
               console.error('Erro upload:', error);
-              alert('Erro ao atualizar foto');
+              addNotification({
+                type: 'error',
+                title: 'Erro',
+                message: 'Erro ao atualizar foto'
+              });
           }
       }
   };
