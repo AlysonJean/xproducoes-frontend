@@ -7,8 +7,9 @@ import { EquipmentStatus, BookingStatus, UserRole } from '@/types/enums';
 // FORMATADORES DE PREÇO
 // ================================
 
-export function formatPrice(value: number): string {
-  return value.toLocaleString('pt-BR', {
+export function formatPrice(value: number | string | null | undefined): string {
+  const numValue = toNumber(value);
+  return numValue.toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
     minimumFractionDigits: 2,
