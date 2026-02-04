@@ -189,7 +189,13 @@ export const EquipmentListPage = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm text-muted-foreground">
-                      {typeof item.category === 'object' ? item.category?.name : (item.category || 'Sem categoria')}
+                      {(() => {
+                        const cat = item.category;
+                        if (!cat) return 'Sem categoria';
+                        if (typeof cat === 'string') return cat;
+                        if (typeof cat === 'object' && 'name' in cat) return cat.name;
+                        return 'Sem categoria';
+                      })()}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
