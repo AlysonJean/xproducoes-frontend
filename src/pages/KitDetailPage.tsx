@@ -128,8 +128,9 @@ export const KitDetailPage = () => {
                 <h1 className="text-3xl lg:text-4xl font-bold text-primary">{kit.name}</h1>
                 <FavoriteButton equipmentId={kit.id} equipmentName={kit.name} size="lg" />
               </div>
-              <p className="text-muted-foreground text-lg mb-6 leading-relaxed">{kit.description}</p>
-              <div className="bg-muted/30 p-6 rounded-lg mb-6 border border-border">
+              <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
+              {kit.description}
+            </p>  <div className="bg-muted/30 p-6 rounded-lg mb-6 border border-border">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-2xl font-bold text-foreground">Preço do Kit</span>
                   <span className="text-3xl font-extrabold text-foreground">
