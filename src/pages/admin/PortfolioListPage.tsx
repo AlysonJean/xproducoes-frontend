@@ -174,7 +174,7 @@ export const PortfolioListPage = () => {
 
         apiFetch('/portfolio/reorder', {
             method: 'PUT',
-            body: { items: orderPayload }
+            body: JSON.stringify({ items: orderPayload })
         }).catch(err => {
             console.error("Falha ao salvar ordem:", err);
             // Poderíamos reverter, mas por enquanto logamos
