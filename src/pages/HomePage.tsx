@@ -10,6 +10,7 @@ import { Pagination } from '../components/ui/Pagination';
 import { apiFetch } from '../services/api';
 import type { Equipment, Category, Kit, PortfolioItem } from '../types/types';
 import { transformEquipment } from '../utils/transformEquipment';
+import { transformKit } from '../utils/transformKit';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { GeminiEventSuggester } from '../components/ui/GeminiEventSuggester';
 import { PageLoading } from '../components/layouts/PageLayout';
@@ -184,7 +185,10 @@ export const HomePage = () => {
       ]);
 
       setCategories(catsData as Category[]);
-      setKits(kitsData as Kit[]);
+      
+      const transformedKits = (kitsData as Kit[]).map(kit => transformKit(kit));
+      setKits(transformedKits);
+      
       setPortfolio(portfolioData as PortfolioItem[]);
     } catch (err) {
       console.error('Erro detalhado no fetchPageData:', err);
