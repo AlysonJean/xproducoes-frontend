@@ -1,4 +1,4 @@
-import { EquipmentStatus } from '../enums';
+import { EquipmentStatus, ItemStatus } from '../enums';
 
 // ================================
 // INTERFACES DE EQUIPAMENTOS
@@ -13,7 +13,7 @@ export interface Equipment {
   monthlyPrice?: number;
   price?: number;
   pricePerHour?: number;
-  status?: EquipmentStatus;
+  status?: ItemStatus | EquipmentStatus; // Compatibility
   specifications?: Record<string, any>;
   images?: string[];
   image?: string;
@@ -47,7 +47,8 @@ export interface Service {
   description: string;
   price: number;
   duration: number;
-  isActive: boolean;
+  status?: ItemStatus | EquipmentStatus;
+  isActive?: boolean;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
@@ -65,11 +66,12 @@ export interface KitItem {
 export interface Kit {
   id: string;
   name: string;
-  items?: KitItem[];
+  items: KitItem[];
   equipments?: Equipment[];
   imageUrl?: string;
   description?: string;
   price?: number;
+  status?: ItemStatus | EquipmentStatus;
   isActive?: boolean;
   createdAt?: Date | string;
   updatedAt?: Date | string;

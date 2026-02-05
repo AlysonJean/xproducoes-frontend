@@ -61,7 +61,11 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
         description: initialData.description,
         price: initialData.price,
         duration: initialData.duration || 60,
-        status: initialData.status || ItemStatus.ACTIVE,
+        status: (initialData.status === 'AVAILABLE' || initialData.status === 'RENTED' 
+          ? ItemStatus.ACTIVE 
+          : initialData.status === 'UNAVAILABLE' 
+            ? ItemStatus.INACTIVE 
+            : initialData.status as ItemStatus) || ItemStatus.ACTIVE,
       });
     }
   }, [initialData, reset]);

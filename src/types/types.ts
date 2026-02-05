@@ -17,42 +17,11 @@ export interface Banner {
   updatedAt: string;
 }
 
-export enum UserRole {
-  CLIENT = 'CLIENT',
-  ADMIN = 'ADMIN',
-  COLLABORATOR = 'COLLABORATOR',
-  FREELANCER = 'FREELANCER'
-}
+import { ItemStatus, EquipmentStatus, BookingStatus, PaymentStatus, UserRole, ECollaboratorRole, ExperienceLevel } from './enums';
 
-export enum BookingStatus {
-  DRAFT = 'DRAFT',
-  PENDING = 'PENDING',
-  CONFIRMED = 'CONFIRMED',
-  IN_PROGRESS = 'IN_PROGRESS',
-  COMPLETED = 'COMPLETED',
-  CANCELLED = 'CANCELLED'
-}
+export { ItemStatus, EquipmentStatus, BookingStatus, PaymentStatus, UserRole, ECollaboratorRole, ExperienceLevel };
 
-export enum PaymentStatus {
-  PENDING = 'PENDING',
-  PAID = 'PAID',
-  OVERDUE = 'OVERDUE',
-  CANCELLED = 'CANCELLED'
-}
 
-export enum EquipmentStatus {
-  AVAILABLE = 'AVAILABLE',
-  RENTED = 'RENTED',
-  MAINTENANCE = 'MAINTENANCE',
-  UNAVAILABLE = 'UNAVAILABLE'
-}
-
-export enum ECollaboratorRole {
-  PHOTOGRAPHER = 'PHOTOGRAPHER',
-  ASSISTANT = 'ASSISTANT',
-  PRODUCER = 'PRODUCER',
-  OTHER = 'OTHER',
-}
 
 // ================================
 // INTERFACES PRINCIPAIS
@@ -89,7 +58,10 @@ export interface Equipment {
   price?: number;
   pricePerHour?: number;
   category?: string | Category;
-  status?: ItemStatus;
+  categoryId?: string;
+  images?: string[];
+  specifications?: Record<string, any>;
+  status?: ItemStatus | EquipmentStatus;
   isAvailable?: boolean; // Deprecated
   brand?: string;
   model?: string;
@@ -118,11 +90,13 @@ export interface Category {
 export interface Service {
   id: string;
   name: string;
+  slug?: string;
   description: string;
   price: number;
   duration: number;
-  status?: ItemStatus;
+  status?: ItemStatus | EquipmentStatus;
   isActive?: boolean;
+  imageUrl?: string;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
@@ -138,19 +112,10 @@ export interface KitItem {
 }
 
 // Níveis de Experiência para Kits
-export enum ExperienceLevel {
-  SILVER = 'SILVER',     // Self-service
-  GOLD = 'GOLD',         // Com montagem/desmontagem
-  PLATINUM = 'PLATINUM'  // Solução completa
-}
+// Níveis de Experiência para Kits
 
 
-export enum ItemStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-  MAINTENANCE = 'MAINTENANCE',
-  COMING_SOON = 'COMING_SOON'
-}
+
 
 export interface KitExperienceLevel {
   id: string;
@@ -172,7 +137,7 @@ export interface Kit {
   imageUrl?: string;
   description?: string;
   price?: number;
-  status?: ItemStatus;
+  status?: ItemStatus | EquipmentStatus;
   isActive?: boolean; // Deprecated, kept for compatibility
   createdAt?: Date | string;
   updatedAt?: Date | string;

@@ -1,11 +1,18 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 
+export type FavoriteType = 'equipment' | 'kit' | 'service';
+
+export interface FavoriteItem {
+  id: string;
+  type: FavoriteType;
+}
+
 interface FavoritesContextType {
-  favorites: string[];
-  addToFavorites: (equipmentId: string) => void;
-  removeFromFavorites: (equipmentId: string) => void;
-  isFavorite: (equipmentId: string) => boolean;
-  toggleFavorite: (equipmentId: string) => void;
+  favorites: FavoriteItem[];
+  addToFavorites: (id: string, type?: FavoriteType) => void;
+  removeFromFavorites: (id: string) => void;
+  isFavorite: (id: string) => boolean;
+  toggleFavorite: (id: string, type?: FavoriteType) => void;
 }
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
@@ -19,52 +26,62 @@ export const useFavorites = () => {
 };
 
 export const FavoritesProvider = ({ children }: { children: React.ReactNode }) => {
-  const [favorites, setFavorites] = useState<string[]>([]);
-
-  // Carregar favoritos do localStorage na inicialização
-  useEffect(() => {
-  const savedFavorites = localStorage.getItem('xproducoes-favorites');
+  const [favorites, setFavorites] = useState<FavoriteItem[]>(() => {
+    if (typeof window === 'undefined') return [];
+    
+    const savedFavorites = localStorage.getItem('xproducoes-favorites');
     if (savedFavorites) {
       try {
-    // Normalize loaded ids to strings
-    const parsed = JSON.parse(savedFavorites) as Array<string | number>;
-    setFavorites(parsed.map((id) => String(id)));
+        const parsed = JSON.parse(savedFavorites);
+        
+        if (Array.isArray(parsed)) {
+            const migratedStats: FavoriteItem[] = parsed.map(item => {
+                if (typeof item === 'string' || typeof item === 'number') {
+                    return { id: String(item), type: 'equipment' as FavoriteType };
+                }
+                return item as FavoriteItem;
+            });
+            const uniqueMap = new Map();
+            migratedStats.forEach(item => uniqueMap.set(item.id, item));
+            return Array.from(uniqueMap.values());
+        }
       } catch {
-        // TODO: Integrar sistema de notificação de erro para o usuário
-        // Exemplo: notification.error('Erro ao carregar favoritos');
+        return [];
       }
     }
-  }, []);
+    return [];
+  });
 
   // Salvar favoritos no localStorage sempre que mudar
   useEffect(() => {
     localStorage.setItem('xproducoes-favorites', JSON.stringify(favorites));
   }, [favorites]);
 
-  const addToFavorites = (equipmentId: string | number) => {
-    const idStr = String(equipmentId);
+  const addToFavorites = (id: string | number, type: FavoriteType = 'equipment') => {
+    const idStr = String(id);
     setFavorites((prev) => {
-      if (!prev.includes(idStr)) {
-        return [...prev, idStr];
+      if (!prev.some(f => f.id === idStr)) {
+        return [...prev, { id: idStr, type }];
       }
       return prev;
     });
   };
 
-  const removeFromFavorites = (equipmentId: string | number) => {
-    const idStr = String(equipmentId);
-    setFavorites((prev) => prev.filter((id) => id !== idStr));
+  const removeFromFavorites = (id: string | number) => {
+    const idStr = String(id);
+    setFavorites((prev) => prev.filter((item) => item.id !== idStr));
   };
 
-  const isFavorite = (equipmentId: string | number) => {
-    return favorites.includes(String(equipmentId));
+  const isFavorite = (id: string | number) => {
+    return favorites.some(item => item.id === String(id));
   };
 
-  const toggleFavorite = (equipmentId: string | number) => {
-    if (isFavorite(equipmentId)) {
-      removeFromFavorites(equipmentId);
+  // Toggle assumes if it's favorite, we remove it (regardless of type passed, though usually type should match)
+  const toggleFavorite = (id: string | number, type: FavoriteType = 'equipment') => {
+    if (isFavorite(id)) {
+      removeFromFavorites(id);
     } else {
-      addToFavorites(equipmentId);
+      addToFavorites(id, type);
     }
   };
 
@@ -82,3 +99,4 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
     </FavoritesContext.Provider>
   );
 };
+

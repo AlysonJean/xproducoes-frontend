@@ -84,7 +84,11 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
             pricePerHour: initialData.pricePerHour,
             categoryId: initialData.categoryId || '',
             quantity: initialData.quantity || 1,
-            status: initialData.status || ItemStatus.ACTIVE,
+            status: (initialData.status === 'AVAILABLE' || initialData.status === 'RENTED' 
+              ? ItemStatus.ACTIVE 
+              : initialData.status === 'UNAVAILABLE' 
+                ? ItemStatus.INACTIVE 
+                : initialData.status as ItemStatus) || ItemStatus.ACTIVE,
           });
         }
       } catch (err) {
