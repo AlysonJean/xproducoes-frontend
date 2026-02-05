@@ -9,9 +9,10 @@ import BrandLoader from '@/components/ui/BrandLoader';
 import { FavoriteButton } from '../components/ui/FavoriteButton';
 import { formatPrice } from '../utils/typeSafeFormatters';
 import { toNumber, calculateSavingsAmount } from '../utils/typeSafeFormatters';
-import type { Kit } from '../types/types';
+import type { Kit, ExperienceLevel } from '../types/types';
 import { SEO } from '../components/SEO';
 import { transformKit } from '../utils/transformKit';
+import { ExperienceLevelSelector } from '../components/kits/ExperienceLevelSelector';
 
 export const KitDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -21,6 +22,7 @@ export const KitDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [selectedLevel, setSelectedLevel] = useState<ExperienceLevel | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -173,6 +175,18 @@ export const KitDetailPage = () => {
                   </div>
                 )}
               </div>
+
+              {/* Seletor de Nível de Experiência */}
+              {kit.experienceLevels && kit.experienceLevels.length > 0 && (
+                <div className="border-t border-border pt-6">
+                  <ExperienceLevelSelector
+                    levels={kit.experienceLevels}
+                    selected={selectedLevel}
+                    onSelect={setSelectedLevel}
+                    basePrice={kit.experienceLevels.find(l => l.level === 'SILVER')?.price}
+                  />
+                </div>
+              )}
             </div>
             <button
               onClick={handleAddToCart}
