@@ -127,7 +127,8 @@ export const safeTransformKit = (kit: Partial<Kit>): Kit => {
     description: kit.description ?? '',
     price: toNumber(kit.price),
     imageUrl: kit.imageUrl ?? '',
-    equipments: kit.equipments?.map(safeTransformEquipment) || [],
+    equipments: kit.equipments?.map(safeTransformEquipment) || 
+      (Array.isArray(kit.items) ? kit.items.map((i: any) => i.equipment ? safeTransformEquipment(i.equipment) : null).filter(Boolean) as Equipment[] : []),
     isActive: kit.isActive ?? true,
     createdAt: kit.createdAt || new Date(),
     updatedAt: kit.updatedAt || new Date(),

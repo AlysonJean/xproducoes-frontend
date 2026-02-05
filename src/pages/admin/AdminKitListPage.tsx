@@ -120,6 +120,9 @@ export const AdminKitListPage = () => {
                   Preço
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Equipamentos
                 </th>
                 <th className="px-6 py-4 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -148,6 +151,25 @@ export const AdminKitListPage = () => {
                   <td className="px-6 py-4">
                     <span className="text-sm font-semibold text-foreground">
                       {formatPrice(kit.price ?? 0)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      kit.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                      kit.status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                      kit.status === 'COMING_SOON' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                      'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                    }`}>
+                      <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                        kit.status === 'ACTIVE' ? 'bg-emerald-500' :
+                        kit.status === 'MAINTENANCE' ? 'bg-yellow-500' :
+                        kit.status === 'COMING_SOON' ? 'bg-blue-500' :
+                        'bg-red-500'
+                      }`}></div>
+                      {kit.status === 'ACTIVE' ? 'Ativo' : 
+                       kit.status === 'MAINTENANCE' ? 'Manutenção' :
+                       kit.status === 'COMING_SOON' ? 'Em Breve' :
+                       'Inativo'}
                     </span>
                   </td>
                   <td className="px-6 py-4">

@@ -82,19 +82,15 @@ export interface Equipment {
   name: string;
   slug?: string;
   description?: string;
+  imageUrl?: string;
   dailyPrice?: number;
   weeklyPrice?: number;
   monthlyPrice?: number;
   price?: number;
   pricePerHour?: number;
-  status?: EquipmentStatus;
-  specifications?: Record<string, unknown>;
-  images?: string[];
-  image?: string;
-  imageUrl?: string;
-  categoryId?: string;
   category?: string | Category;
-  isAvailable?: boolean;
+  status?: ItemStatus;
+  isAvailable?: boolean; // Deprecated
   brand?: string;
   model?: string;
   tags?: string[];
@@ -125,7 +121,8 @@ export interface Service {
   description: string;
   price: number;
   duration: number;
-  isActive: boolean;
+  status?: ItemStatus;
+  isActive?: boolean;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
@@ -147,6 +144,14 @@ export enum ExperienceLevel {
   PLATINUM = 'PLATINUM'  // Solução completa
 }
 
+
+export enum ItemStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  MAINTENANCE = 'MAINTENANCE',
+  COMING_SOON = 'COMING_SOON'
+}
+
 export interface KitExperienceLevel {
   id: string;
   level: ExperienceLevel;
@@ -161,13 +166,14 @@ export interface Kit {
   id: string;
   name: string;
   slug?: string;
-  items?: KitItem[];
+  items: KitItem[];
   equipments?: Equipment[]; // Deprecated, kept for compatibility check
   experienceLevels?: KitExperienceLevel[];
   imageUrl?: string;
   description?: string;
   price?: number;
-  isActive?: boolean;
+  status?: ItemStatus;
+  isActive?: boolean; // Deprecated, kept for compatibility
   createdAt?: Date | string;
   updatedAt?: Date | string;
   prevSlug?: string | null;

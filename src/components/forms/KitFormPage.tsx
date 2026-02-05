@@ -7,6 +7,7 @@ import { generateSeoFilename } from '../../utils/seoUtils';
 import { apiFetch } from '../../services/api';
 import { formatPrice } from '../../utils/typeSafeFormatters';
 import type { Kit, Equipment, Service, KitExperienceLevel } from '../../types/types';
+import { ItemStatus } from '../../types/types';
 import { BrandLoader } from '../ui/BrandLoader';
 import {
   Form,
@@ -14,7 +15,8 @@ import {
   Input,
   Button,
   Alert,
-  Textarea
+  Textarea,
+  Select
 } from '../ui/StandardComponents';
 import { Search, Plus, Trash2, ShoppingBag, Calculator, Package, User } from 'lucide-react';
 import { ExperienceLevelsEditor } from '../kits/ExperienceLevelsEditor';
@@ -40,6 +42,7 @@ const kitFormSchema = z.object({
   description: z.string().min(1, 'Descrição é obrigatória'),
   price: z.number().positive('Preço deve ser positivo'),
   items: z.array(kitItemSchema).min(1, 'Selecione pelo menos um item'),
+  status: z.nativeEnum(ItemStatus).default(ItemStatus.ACTIVE),
   images: z.any().optional(),
 });
 
@@ -76,6 +79,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
       description: '',
       price: 0,
       items: [],
+      status: ItemStatus.ACTIVE,
     },
   });
 
@@ -328,9 +332,9 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                   if (!item) return null;
 
                   return (
-                    <div key={field.id} className="flex items-center gap-4 p-3 bg-muted/40 rounded-lg border group hover:border-primary/30 transition-colors">
+                    <div key={field.id} className="flex items-center gap-4 p-3 bg-card rounded-lg border shadow-sm group hover:border-primary/50 transition-all">
                       {/* Image Thumbnail or Icon */}
-                      <div className="w-12 h-12 rounded bg-background border flex items-center justify-center overflow-hidden shrink-0">
+                      <div className="w-12 h-12 rounded bg-muted/30 border flex items-center justify-center overflow-hidden shrink-0">
                          {item.imageUrl ? (
                            <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
                          ) : (
@@ -400,6 +404,21 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
 
           {/* === RIGHT COLUMN: PRICING & IMAGE === */}
           <div className="space-y-6">
+              <div className="bg-card p-6 rounded-xl border shadow-sm">
+                <h3 className="font-semibold mb-4">Publicação</h3>
+                <Select
+                  label="Status do Kit"
+                  {...register('status')}
+                  options={[
+                    { value: ItemStatus.ACTIVE, label: 'Ativo' },
+                    { value: ItemStatus.MAINTENANCE, label: 'Em Manutenção' },
+                    { value: ItemStatus.COMING_SOON, label: 'Em Breve' },
+                    { value: ItemStatus.INACTIVE, label: 'Inativo' },
+                  ]}
+                  error={errors.status?.message}
+                />
+              </div>
+
              <FormSection title="Imagem de Capa" description="">
                 <Input
                   type="file"
@@ -418,12 +437,11 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
 
                 <div className="space-y-4">
                   {/* Auto-calc Total */}
-                  <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
+                  <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg border">
                     <span className="text-sm text-muted-foreground">Soma dos Itens:</span>
                     <span className="font-mono font-medium">{formatPrice(totalPriceOfItems)}</span>
                   </div>
 
-                  {/* Manual Price Input */}
                   <Input
                      label="Preço do Kit (Final)"
                      type="number"
