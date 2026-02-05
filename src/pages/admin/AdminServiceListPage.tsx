@@ -11,6 +11,8 @@ import { SimpleCard } from '../../components/ui/Cards';
 import { Modal } from '../../components/ui/StandardComponents';
 import ServiceForm from '../../components/forms/ServiceFormPage';
 import { Plus, Edit2, Trash2, Clock } from 'lucide-react';
+import { StatusSelect } from '../../components/admin/StatusSelect';
+import { ItemStatus } from '../../types/types';
 
 export const AdminServiceListPage = () => {
   const { addNotification } = useNotifications();
@@ -65,6 +67,32 @@ export const AdminServiceListPage = () => {
           }`
         });
       }
+    }
+  };
+
+  const handleStatusChange = async (service: Service, newStatus: ItemStatus) => {
+    try {
+      await apiFetch(`/services/${service.id}`, { 
+        method: 'PUT', 
+        body: JSON.stringify({ status: newStatus }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      fetchServices();
+      addNotification({
+        type: 'success',
+        title: 'Sucesso',
+        message: 'Status atualizado com sucesso.'
+      });
+    } catch (err) {
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: 'Erro ao atualizar status.'
+      });
+      console.error(err);
     }
   };
 
@@ -162,23 +190,10 @@ export const AdminServiceListPage = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      item.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                      item.status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                      item.status === 'COMING_SOON' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                      'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                    }`}>
-                      <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                        item.status === 'ACTIVE' ? 'bg-emerald-500' :
-                        item.status === 'MAINTENANCE' ? 'bg-yellow-500' :
-                        item.status === 'COMING_SOON' ? 'bg-blue-500' :
-                        'bg-red-500'
-                      }`}></div>
-                      {item.status === 'ACTIVE' ? 'Ativo' : 
-                       item.status === 'MAINTENANCE' ? 'Manutenção' :
-                       item.status === 'COMING_SOON' ? 'Em Breve' :
-                       'Inativo'}
-                    </span>
+                    <StatusSelect 
+                      currentStatus={item.status as ItemStatus || ItemStatus.ACTIVE}
+                      onStatusChange={(newStatus) => handleStatusChange(item, newStatus)}
+                    />
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
