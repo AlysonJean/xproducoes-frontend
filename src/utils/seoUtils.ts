@@ -13,7 +13,7 @@ export const normalizeForSeo = (text: string): string => {
 };
 
 export const generateSeoFilename = (
-  folder: 'equipments' | 'banners' | 'portfolio' | 'kits' | 'clients' | 'categories' | 'branding' | 'others',
+  folder: 'equipments' | 'banners' | 'portfolio' | 'kits' | 'clients' | 'categories' | 'branding' | 'services' | 'others',
   name: string,
   categoryOrContext?: string
 ): string => {
@@ -30,6 +30,7 @@ export const generateSeoFilename = (
     case 'portfolio':
     case 'banners':
     case 'kits':
+    case 'services':
     case 'categories':
       return normalizedName;
     case 'branding':
