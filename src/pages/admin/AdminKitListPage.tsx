@@ -11,6 +11,8 @@ import { SimpleCard } from '../../components/ui/Cards';
 import KitForm from '../../components/forms/KitFormPage';
 import { Plus, Edit2, Trash2, Package } from 'lucide-react';
 import { Modal } from '@/components/ui/StandardComponents';
+import { StatusSelect } from '../../components/admin/StatusSelect';
+import { ItemStatus } from '../../types/types';
 
 export const AdminKitListPage = () => {
   const { addNotification } = useNotifications();
@@ -59,6 +61,32 @@ export const AdminKitListPage = () => {
           message: 'Erro ao excluir kit.'
         });
       }
+    }
+  };
+
+  const handleStatusChange = async (kit: Kit, newStatus: ItemStatus) => {
+    try {
+      const formData = new FormData();
+      formData.append('status', newStatus);
+
+      await apiFetch(`/kits/${kit.id}`, {
+        method: 'PUT',
+        body: formData,
+      });
+
+      fetchKits();
+      addNotification({
+        type: 'success',
+        title: 'Sucesso',
+        message: 'Status atualizado com sucesso!'
+      });
+    } catch (err) {
+      console.error('Erro ao atualizar status:', err);
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: 'Erro ao atualizar status.'
+      });
     }
   };
 
@@ -154,23 +182,10 @@ export const AdminKitListPage = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      kit.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                      kit.status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                      kit.status === 'COMING_SOON' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                      'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                    }`}>
-                      <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                        kit.status === 'ACTIVE' ? 'bg-emerald-500' :
-                        kit.status === 'MAINTENANCE' ? 'bg-yellow-500' :
-                        kit.status === 'COMING_SOON' ? 'bg-blue-500' :
-                        'bg-red-500'
-                      }`}></div>
-                      {kit.status === 'ACTIVE' ? 'Ativo' : 
-                       kit.status === 'MAINTENANCE' ? 'Manutenção' :
-                       kit.status === 'COMING_SOON' ? 'Em Breve' :
-                       'Inativo'}
-                    </span>
+                    <StatusSelect 
+                      currentStatus={kit.status as ItemStatus || ItemStatus.ACTIVE}
+                      onStatusChange={(newStatus) => handleStatusChange(kit, newStatus)}
+                    />
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm text-muted-foreground">
