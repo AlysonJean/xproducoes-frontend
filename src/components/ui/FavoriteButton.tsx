@@ -3,15 +3,22 @@ import { useNotifications } from '../../contexts/NotificationContext';
 
 import type { FavoriteButtonProps } from '@/types/ui';
 
+import type { FavoriteType } from '../../contexts/FavoritesContext';
+
 export const FavoriteButton = ({
   equipmentId,
   equipmentName,
   className = '',
   size = 'md',
-}: FavoriteButtonProps) => {
+  type,
+  isService,
+  isKit,
+}: FavoriteButtonProps & { type?: FavoriteType; isService?: boolean; isKit?: boolean }) => {
   const { isFavorite, addToFavorites, removeFromFavorites } = useFavorites();
   const { addNotification } = useNotifications();
   const favorite = isFavorite(equipmentId);
+  
+  const itemType: FavoriteType = type || (isService ? 'service' : isKit ? 'kit' : 'equipment');
 
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault(); // Previne navegação se o botão estiver dentro de um link
@@ -20,7 +27,7 @@ export const FavoriteButton = ({
     if (favorite) {
       removeFromFavorites(equipmentId);
     } else {
-      addToFavorites(equipmentId);
+      addToFavorites(equipmentId, itemType);
     }
 
     if (favorite) {

@@ -32,9 +32,22 @@ export enum EquipmentStatus {
   UNAVAILABLE = 'UNAVAILABLE'
 }
 
+export enum ItemStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  MAINTENANCE = 'MAINTENANCE',
+  COMING_SOON = 'COMING_SOON'
+}
+
 export enum ECollaboratorRole {
   PHOTOGRAPHER = 'PHOTOGRAPHER',
   ASSISTANT = 'ASSISTANT',
   PRODUCER = 'PRODUCER',
   OTHER = 'OTHER',
+}
+
+export enum ExperienceLevel {
+  SILVER = 'SILVER',
+  GOLD = 'GOLD',
+  PLATINUM = 'PLATINUM'
 }
