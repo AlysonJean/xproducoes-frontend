@@ -110,7 +110,7 @@ export const EquipmentListPage = () => {
           </div>
           <div className="text-muted-foreground text-sm">
             Disponíveis: <span className="font-semibold text-emerald-600">
-              {equipments.filter(e => e.isAvailable).length}
+              {equipments.filter(e => e.status === 'ACTIVE').length}
             </span>
           </div>
         </div>
@@ -177,14 +177,21 @@ export const EquipmentListPage = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      item.isAvailable 
-                        ? 'bg-emerald-100 text-emerald-800/20'
-                        : 'bg-destructive/10 text-red-800/20'
+                      item.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                      item.status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                      item.status === 'COMING_SOON' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                      'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                     }`}>
                       <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                        item.isAvailable ? 'bg-emerald-400' : 'bg-red-400'
+                        item.status === 'ACTIVE' ? 'bg-emerald-500' :
+                        item.status === 'MAINTENANCE' ? 'bg-yellow-500' :
+                        item.status === 'COMING_SOON' ? 'bg-blue-500' :
+                        'bg-red-500'
                       }`}></div>
-                      {item.isAvailable ? 'Disponível' : 'Indisponível'}
+                      {item.status === 'ACTIVE' ? 'Disponível' : 
+                       item.status === 'MAINTENANCE' ? 'Manutenção' :
+                       item.status === 'COMING_SOON' ? 'Em Breve' :
+                       'Indisponível'}
                     </span>
                   </td>
                   <td className="px-6 py-4">

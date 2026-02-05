@@ -15,7 +15,7 @@ import {
   Textarea, 
   Button
 } from '../ui/StandardComponents';
-import type { Category, Equipment } from '../../types/types';
+import { ItemStatus, type Category, type Equipment } from '../../types/types';
 import { generateSeoFilename } from '../../utils/seoUtils';
 
 // Schema simplificado para o formulário de equipamento
@@ -25,6 +25,7 @@ const equipmentFormSchema = z.object({
   pricePerHour: z.number().positive('Preço deve ser positivo'),
   categoryId: z.string().min(1, 'Categoria é obrigatória'),
   quantity: z.number().int().positive('Quantidade deve ser positiva').optional(),
+  status: z.nativeEnum(ItemStatus).default(ItemStatus.ACTIVE),
   images: z.any().optional(), // FileList será tratado no submit
 });
 
@@ -57,6 +58,7 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
       pricePerHour: 0,
       categoryId: '',
       quantity: 1,
+      status: ItemStatus.ACTIVE,
     },
   });
 
@@ -82,6 +84,7 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
             pricePerHour: initialData.pricePerHour,
             categoryId: initialData.categoryId || '',
             quantity: initialData.quantity || 1,
+            status: initialData.status || ItemStatus.ACTIVE,
           });
         }
       } catch (err) {
@@ -108,6 +111,7 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
       formData.append('description', data.description);
       formData.append('pricePerHour', data.pricePerHour.toString());
       formData.append('categoryId', data.categoryId);
+      formData.append('status', data.status);
 
       if (data.quantity) {
         formData.append('quantity', data.quantity.toString());
@@ -200,6 +204,18 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
               type="number"
               {...register('quantity', { valueAsNumber: true })}
               error={errors.quantity?.message}
+            />
+
+            <Select
+              label="Status"
+              {...register('status')}
+              options={[
+                { value: ItemStatus.ACTIVE, label: 'Ativo' },
+                { value: ItemStatus.MAINTENANCE, label: 'Em Manutenção' },
+                { value: ItemStatus.COMING_SOON, label: 'Em Breve' },
+                { value: ItemStatus.INACTIVE, label: 'Inativo' },
+              ]}
+              error={errors.status?.message}
             />
           </div>
 

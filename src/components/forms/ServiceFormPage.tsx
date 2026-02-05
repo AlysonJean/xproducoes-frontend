@@ -11,9 +11,9 @@ import {
   Input, 
   Textarea, 
   Button,
-  Checkbox
+  Select
 } from '../ui/StandardComponents';
-import type { Service } from '../../types/types';
+import { ItemStatus, type Service } from '../../types/types';
 
 // Schema para o formulário de serviço
 const serviceFormSchema = z.object({
@@ -21,7 +21,7 @@ const serviceFormSchema = z.object({
   description: z.string().min(1, 'Descrição é obrigatória'),
   price: z.number().positive('Preço deve ser positivo'),
   duration: z.number().int().positive('Duração deve ser positiva').default(60),
-  isActive: z.boolean().default(true),
+  status: z.nativeEnum(ItemStatus).default(ItemStatus.ACTIVE),
 });
 
 type ServiceFormData = z.infer<typeof serviceFormSchema>;
@@ -50,7 +50,7 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
       description: '',
       price: 0,
       duration: 60,
-      isActive: true,
+      status: ItemStatus.ACTIVE,
     },
   });
 
@@ -61,7 +61,7 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
         description: initialData.description,
         price: initialData.price,
         duration: initialData.duration || 60,
-        isActive: initialData.isActive !== false,
+        status: initialData.status || ItemStatus.ACTIVE,
       });
     }
   }, [initialData, reset]);
@@ -149,15 +149,17 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
               helperText="Tempo estimado de duração do serviço"
             />
 
-            <div className="flex items-center space-x-2 pt-8">
-               <Checkbox 
-                id="isActive"
-                {...register('isActive')}
-              />
-              <label htmlFor="isActive" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                Serviço Ativo
-              </label>
-            </div>
+            <Select
+              label="Status"
+              {...register('status')}
+              options={[
+                { value: ItemStatus.ACTIVE, label: 'Ativo' },
+                { value: ItemStatus.MAINTENANCE, label: 'Em Manutenção' },
+                { value: ItemStatus.COMING_SOON, label: 'Em Breve' },
+                { value: ItemStatus.INACTIVE, label: 'Inativo' },
+              ]}
+              error={errors.status?.message}
+            />
           </div>
         </FormSection>
 

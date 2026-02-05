@@ -206,9 +206,10 @@ export function ExperienceLevelsEditor({
                         type="number"
                         step="0.01"
                         min="0"
+                        aria-label="Preço por hora"
                         value={level.price || 0}
                         onChange={(e) => handleUpdateLevel(index, 'price', Number(e.target.value))}
-                        className="w-full pl-10 pr-4 py-2 rounded-lg border bg-background focus:ring-2 focus:ring-primary/20 outline-none"
+                        className="w-full pl-10 pr-4 py-2 rounded-lg border bg-background focus:ring-2 focus:ring-primary/20 outline-none transition-shadow"
                       />
                     </div>
                     {basePrice > 0 && (
@@ -221,23 +222,24 @@ export function ExperienceLevelsEditor({
                     <label className="text-xs font-medium text-muted-foreground">Descrição curta</label>
                     <input
                       type="text"
+                      aria-label="Descrição curta do nível"
                       value={level.description || ''}
                       onChange={(e) => handleUpdateLevel(index, 'description', e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg border bg-background focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+                      className="w-full px-3 py-2 rounded-lg border bg-background focus:ring-2 focus:ring-primary/20 outline-none mt-1 transition-shadow"
                       placeholder="Ex: Self-service"
                     />
                   </div>
                 </div>
 
                 {/* Popular Toggle */}
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-2 cursor-pointer group">
                   <input
                     type="checkbox"
                     checked={level.isPopular || false}
                     onChange={(e) => handleUpdateLevel(index, 'isPopular', e.target.checked)}
                     className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
                   />
-                  <span className="text-sm">Marcar como "Mais Popular"</span>
+                  <span className="text-sm group-hover:text-primary transition-colors">Marcar como "Mais Popular"</span>
                 </label>
 
                 {/* Includes */}
@@ -257,15 +259,18 @@ export function ExperienceLevelsEditor({
                       <div key={incIdx} className="flex items-center gap-2">
                         <input
                           type="text"
+                          aria-label={`Item incluso ${incIdx + 1}`}
                           value={inc}
                           onChange={(e) => handleUpdateIncludes(index, incIdx, e.target.value)}
-                          className="flex-1 px-3 py-1.5 rounded border bg-background focus:ring-2 focus:ring-primary/20 outline-none text-sm"
+                          className="flex-1 px-3 py-1.5 rounded border bg-background focus:ring-2 focus:ring-primary/20 outline-none text-sm transition-shadow"
                           placeholder="Ex: Montagem profissional"
                         />
                         <button
                           type="button"
                           onClick={() => handleRemoveInclude(index, incIdx)}
-                          className="p-1 text-muted-foreground hover:text-destructive"
+                          className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                          title="Remover item"
+                          aria-label="Remover item incluso"
                         >
                           <Trash2 className="w-3 h-3" />
                         </button>
