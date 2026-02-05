@@ -11,6 +11,7 @@ import { formatPrice } from '../utils/typeSafeFormatters';
 import { toNumber, calculateSavingsAmount } from '../utils/typeSafeFormatters';
 import type { Kit } from '../types/types';
 import { SEO } from '../components/SEO';
+import { transformKit } from '../utils/transformKit';
 
 export const KitDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -27,7 +28,7 @@ export const KitDetailPage = () => {
       try {
         setLoading(true);
         const data = await apiFetch(`/kits/${slug}`);
-        setKit(data as Kit);
+        setKit(transformKit(data as Kit));
         
         // GA Tracking - View Kit
         if (data) {
@@ -185,9 +186,9 @@ export const KitDetailPage = () => {
 
         {/* Equipamentos Incluídos */}
         <div className="border-t border-border p-6 md:p-8">
-          <h2 className="text-2xl font-bold text-foreground mb-6">Equipamentos Incluídos ({kit.equipments.length})</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-6">Equipamentos Incluídos ({kit.equipments?.length || kit.items?.length || 0})</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {kit.equipments.map((equipment) => (
+            {(kit.equipments || []).map((equipment) => (
               <div key={equipment.id} className="bg-muted/30 rounded-lg p-4 hover:bg-muted transition-colors border border-border">
                 <div className="flex items-center space-x-4">
                   <img

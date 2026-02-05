@@ -153,6 +153,12 @@ const menuGroups: MenuGroup[] = [
         description: 'Catálogo de equipamentos',
       },
       {
+        name: 'Serviços',
+        href: '/admin/servicos',
+        icon: TagIcon,
+        description: 'Gestão de serviços',
+      },
+      {
         name: 'Kits',
         href: '/admin/kits',
         icon: CollectionIcon,
@@ -363,8 +369,7 @@ export const AdminSidebar: React.FC = () => {
                   )}
 
                   {/* Group Items - Always visible */}
-                  {(searchQuery !== '' || true) && (
-                    <div className="space-y-1 px-2 pb-2">
+                  <div className="space-y-1 px-2 pb-2">
                       {group.items.map((item, itemIndex) => {
                         const isActive = location.pathname === item.href;
                         const Icon = item.icon;
@@ -406,7 +411,7 @@ export const AdminSidebar: React.FC = () => {
                         );
                       })}
                     </div>
-                  )}
+
                 </div>
               );
             })}

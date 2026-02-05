@@ -2,30 +2,7 @@ import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { logDebug } from '../utils/logger';
 import { secureStorage } from '../utils/secureStorage';
 import { normalizeString } from '../utils/string';
-
-
-// Centralização robusta da configuração da URL da API
-function getApiUrl(envVar: string, fallback: string) {
-  // Em produção, verificamos se a variável está definida
-  if (import.meta.env.MODE === 'production') {
-    const value = import.meta.env[envVar];
-    // Apenas usa fallback se o valor não estiver definido ou estiver vazio
-    if (!value) {
-      // Fallback de emergência para produção
-      if (envVar === 'VITE_API_BASE_URL') return 'https://api.xproducoeseeventos.com.br/api/v1';
-      if (envVar === 'VITE_API_URL') return 'https://api.xproducoeseeventos.com.br';
-
-      console.error(`Variável de ambiente ${envVar} não definida corretamente em produção.`);
-      return fallback;
-    }
-    return value;
-  }
-  // Em desenvolvimento, permite fallback
-  return import.meta.env[envVar] || fallback;
-}
-
-export const API_BASE_URL = getApiUrl('VITE_API_BASE_URL', 'http://localhost:4000/api/v1');
-export const API_URL = getApiUrl('VITE_API_URL', 'http://localhost:4000');
+import { API_BASE_URL, API_URL } from '../utils/apiConfig';
 
 // ✅ PRODUCTION-SAFE LOGGING
 logDebug('API Configuration', {
@@ -157,11 +134,6 @@ api.interceptors.response.use(
 );
 
 // ✅ SECURE FETCH UTILITY WITH AUTO REFRESH
-// Log curto para debug de configuração em dev
-if (typeof window !== 'undefined') {
-  // eslint-disable-next-line no-console
-  console.info('API_BASE_URL (runtime):', API_BASE_URL);
-}
 
 export const apiFetch = async <T = unknown>(
   endpoint: string,
@@ -393,6 +365,9 @@ export const collaboratorsAPI = {
 
   // Meus pagamentos
   getMyPayments: () => api.get('/collaborators/me/payments'),
+
+  // Buscar colaboradores disponíveis na data
+  getAvailable: (date: string, role?: string) => api.get('/admin/collaborators/available', { params: { date, role } }),
 };
 
 export const authAPI = {

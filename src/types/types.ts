@@ -88,7 +88,7 @@ export interface Equipment {
   price?: number;
   pricePerHour?: number;
   status?: EquipmentStatus;
-  specifications?: Record<string, any>;
+  specifications?: Record<string, unknown>;
   images?: string[];
   image?: string;
   imageUrl?: string;
@@ -119,11 +119,33 @@ export interface Category {
   updatedAt?: Date | string;
 }
 
+export interface Service {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  duration: number;
+  isActive: boolean;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
+export interface KitItem {
+  id: string;
+  kitId: string;
+  equipmentId?: string;
+  serviceId?: string;
+  quantity: number;
+  equipment?: Equipment;
+  service?: Service;
+}
+
 export interface Kit {
   id: string;
   name: string;
   slug?: string;
-  equipments: Equipment[];
+  items?: KitItem[];
+  equipments?: Equipment[]; // Deprecated, kept for compatibility check
   imageUrl?: string;
   description?: string;
   price?: number;
@@ -584,6 +606,8 @@ export interface BookingDetails {
     role?: string;
     totalHours?: number;
     totalPayment?: number;
+    hourlyRate?: number;
+    fixedRate?: number;
     collaboratorId?: string;
     collaborator?: ICollaborator & { avatar?: string; user?: { id?: string; name?: string; avatarUrl?: string } };
     payments?: CollaboratorPayment[];

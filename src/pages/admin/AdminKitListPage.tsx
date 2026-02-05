@@ -152,7 +152,7 @@ export const AdminKitListPage = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm text-muted-foreground">
-                      {kit.equipments?.length || 0} equipamentos
+                      {(kit.items?.length || kit.equipments?.length) || 0} equipamentos
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">

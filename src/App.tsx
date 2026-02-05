@@ -151,6 +151,9 @@ const ReviewManagementPage = lazy(() =>
 const AdminKitListPage = lazy(() =>
   import('./pages/admin/AdminKitListPage').then((m) => ({ default: m.AdminKitListPage }))
 );
+const AdminServiceListPage = lazy(() =>
+  import('./pages/admin/AdminServiceListPage').then((m) => ({ default: m.AdminServiceListPage }))
+);
 // const KitFormPage = lazy(() =>
 //   import('./components/forms/KitFormPage').then((m) => ({ default: m.KitFormPage }))
 // );
@@ -769,6 +772,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute adminOnly>
             <AdminCollaboratorsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/servicos"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminServiceListPage />
           </ProtectedRoute>
         }
       />
