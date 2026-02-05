@@ -24,7 +24,10 @@ export function transformKit(kit: Kit): Kit {
     // Garante que o preço seja um número, mesmo que venha como string
     price: toNumber(kit.price),
     imageUrl: sanitizeImageUrl(kit.imageUrl),
-    equipments: Array.isArray(kit.equipments) ? kit.equipments : [],
+    equipments: Array.isArray(kit.equipments) 
+      ? kit.equipments 
+      : (Array.isArray(kit.items) ? kit.items.map(i => i.equipment).filter((e): e is NonNullable<typeof e> => !!e) : []),
+    items: Array.isArray(kit.items) ? kit.items : [],
     isActive: typeof kit.isActive === 'boolean' ? kit.isActive : true,
   };
 }

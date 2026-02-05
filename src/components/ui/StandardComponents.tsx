@@ -79,12 +79,56 @@ export const Button = forwardRef<HTMLButtonElement, StandardButtonProps>(
 Button.displayName = 'Button';
 
 // ========================================
+// CHECKBOX COMPONENT
+// ========================================
+
+interface StandardCheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+  label?: string;
+  error?: string;
+}
+
+export const Checkbox = forwardRef<HTMLInputElement, StandardCheckboxProps>(
+  ({ label, error, className, id, ...props }, ref) => {
+    const generatedId = React.useId();
+    const checkboxId = id || generatedId;
+
+    return (
+      <div className="flex items-start space-x-2">
+        <input
+          type="checkbox"
+          ref={ref}
+          id={checkboxId}
+          className={clsx(
+            "h-4 w-4 rounded border-border text-primary ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+            className
+          )}
+          {...props}
+        />
+        <div className="grid gap-1.5 leading-none">
+          {label && (
+            <label
+              htmlFor={checkboxId}
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              {label}
+            </label>
+          )}
+          {error && <p className="text-sm text-destructive">{error}</p>}
+        </div>
+      </div>
+    );
+  }
+);
+Checkbox.displayName = 'Checkbox';
+
+// ========================================
 // INPUT COMPONENT - Sistema de input unificado
 // ========================================
 
 interface StandardInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string;
   description?: string;
+  helperText?: string;
   error?: string;
   success?: string;
   size?: StandardSize;
@@ -106,6 +150,7 @@ export const Input = forwardRef<HTMLInputElement, StandardInputProps>(
   ({ 
     label, 
     description, 
+    helperText,
     error, 
     success, 
     size = 'md', 
@@ -119,7 +164,8 @@ export const Input = forwardRef<HTMLInputElement, StandardInputProps>(
     ...props 
   }, ref) => {
     const [showPassword, setShowPassword] = React.useState(false);
-    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+    const generatedId = React.useId();
+    const inputId = id || generatedId;
     const hasError = !!error;
     const hasSuccess = !!success;
     
@@ -161,6 +207,7 @@ export const Input = forwardRef<HTMLInputElement, StandardInputProps>(
             aria-describedby={(() => {
               const v = [
                 description ? `${inputId}-description` : null,
+                helperText ? `${inputId}-helper` : null,
                 error ? `${inputId}-error` : null,
                 success ? `${inputId}-success` : null,
               ].filter(Boolean).join(' ');
@@ -189,6 +236,12 @@ export const Input = forwardRef<HTMLInputElement, StandardInputProps>(
         {description && (
           <p id={`${inputId}-description`} className="text-sm text-muted-foreground">
             {description}
+          </p>
+        )}
+
+        {helperText && !error && !success && (
+          <p id={`${inputId}-helper`} className="text-sm text-muted-foreground">
+            {helperText}
           </p>
         )}
         
@@ -226,7 +279,8 @@ interface StandardTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAre
 
 export const Textarea = forwardRef<HTMLTextAreaElement, StandardTextareaProps>(
   ({ label, description, error, success, resize = 'vertical', className, id, ...props }, ref) => {
-    const textareaId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`;
+    const generatedId = React.useId();
+    const textareaId = id || generatedId;
     const hasError = !!error;
     const hasSuccess = !!success;
 
@@ -316,7 +370,8 @@ interface StandardSelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelect
 
 export const Select = forwardRef<HTMLSelectElement, StandardSelectProps>(
   ({ label, description, error, success, size = 'md', options, placeholder, className, id, ...props }, ref) => {
-    const selectId = id || `select-${Math.random().toString(36).substr(2, 9)}`;
+    const generatedId = React.useId();
+    const selectId = id || generatedId;
     const hasError = !!error;
     const hasSuccess = !!success;
 

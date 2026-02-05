@@ -1,6 +1,6 @@
 // Caminho: frontend/src/pages/admin/BookingDetailPage.tsx
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 // apiFetch was removed in favor of bookingAPI helpers
 import type { BookingDetails } from '../../types/types';
@@ -14,9 +14,12 @@ import { EventManagement } from '../../components/modals/EventManagement';
 import { bookingAPI, collaboratorsAPI, api } from '../../services/api';
 import { createAndClickAnchor } from '../../utils/dom';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { BookingCollaborators } from '../../components/bookings/BookingCollaborators';
+import { BookingFinancialSummary } from '../../components/bookings/BookingFinancialSummary';
 
 export const BookingDetailPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { addNotification } = useNotifications();
   // Função para exportar reserva
   const handleExportBooking = () => {
@@ -69,7 +72,35 @@ export const BookingDetailPage = () => {
   // EventManagement modal
   const [isEventModalOpen, setEventModalOpen] = useState(false);
   const [availableCollaborators, setAvailableCollaborators] = useState<any[]>([]);
-  const { user } = useAuth();
+  
+  // Memoized values must be declared before conditional returns
+  const requiredServices = useMemo(() => {
+    if (!booking) return [];
+    
+    const services = new Set<string>();
+    const processItems = (items: any[]) => {
+      items.forEach(item => {
+        // Check for nested service object or direct type check
+        if (item.service?.name) {
+          services.add(item.service.name);
+        } else if (item.itemType === 'SERVICE' && item.name) {
+             services.add(item.name);
+        }
+      });
+    };
+
+    if (booking.kit?.items) {
+      processItems(booking.kit.items);
+    }
+    
+    if (booking.kits && Array.isArray(booking.kits)) {
+        booking.kits.forEach((k: any) => {
+            const items = k.items || k.kit?.items;
+            if (items) processItems(items);
+        });
+    }
+    return Array.from(services);
+  }, [booking]);
 
   const fetchAvailableCollaborators = async () => {
     try {
@@ -273,6 +304,8 @@ export const BookingDetailPage = () => {
 
   const isEventToday = isToday(new Date(booking.eventDate));
 
+
+
   return (
     <AdminLayout
       title={`Detalhes da Reserva #${booking.id ? booking.id.substring(0, 8) : ''}`}
@@ -374,10 +407,17 @@ export const BookingDetailPage = () => {
       </div>
 
       {/* Detalhes da Reserva */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Coluna Principal */}
+        <div className="lg:col-span-2 space-y-8">
+          
+          {/* Card Financeiro (Apenas Admin) */}
+          {user?.role === 'ADMIN' && booking && (
+            <BookingFinancialSummary booking={booking} />
+          )}
+
           {/* Attachments / Comprovantes */}
-          <div className="bg-card border border-border rounded-xl p-5">
+          <div className="bg-card border rounded-xl shadow-sm overflow-hidden p-5">
             <h3 className="text-lg font-semibold mb-3 text-primary">Comprovantes</h3>
             {booking.attachments && booking.attachments.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -439,59 +479,14 @@ export const BookingDetailPage = () => {
             ) : (
               <div className="text-muted-foreground text-sm">Sem itens associados.</div>
             )}
-            {/* Colaboradores atribuídos */}
-            {booking.eventCollaborators && booking.eventCollaborators.length > 0 && (
-              <div className="mt-4">
-                <h4 className="text-md font-semibold mb-2">Colaboradores</h4>
-                <ul className="space-y-3">
-                  {booking.eventCollaborators.map((ec: any) => (
-                    <li key={ec.id} className="p-3 border rounded-lg bg-muted/40">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <div className="font-semibold">{ec.collaborator?.user?.name || ec.collaborator?.name || '—'}</div>
-                          <div className="text-sm text-muted-foreground">{ec.role}</div>
-                        </div>
-                        <div className="ml-auto text-sm text-foreground">
-                          <div>Horas: {ec.totalHours ?? '—'}</div>
-                          <div>Pago: R$ {ec.totalPayment ? Number(ec.totalPayment).toFixed(2) : '0.00'}</div>
-                        </div>
-                      </div>
+          </div>
 
-                      {/* Payments for this collaborator */}
-                      {ec.collaborator?.payments && ec.collaborator.payments.length > 0 && (
-                        <div className="mt-3">
-                          <div className="text-sm font-medium">Pagamentos</div>
-                          <ul className="mt-2 space-y-1 text-sm">
-                            {ec.collaborator.payments.map((p: any) => (
-                              <li key={p.id} className="flex justify-between items-center">
-                                <div>
-                                  <div>{p.type} — R$ {Number(p.amount).toFixed(2)}</div>
-                                  <div className="text-xs text-muted-foreground">{p.status}{p.paymentDate ? ` • ${new Date(p.paymentDate).toLocaleDateString()}` : ''}</div>
-                                </div>
-                                <div>
-                                  {user?.role === 'ADMIN' && p.status !== 'PAID' && (
-                                    <button onClick={async () => {
-                                      try {
-                                        await api.put(`/collaborator-payments/${p.id}`, { status: 'PAID' });
-                                        const updated = await bookingAPI.getById(booking.id);
-                                        setBooking((updated.data && (updated.data as any).data) as BookingDetails);
-                                        addNotification({ type: 'success', title: 'Pago', message: 'Pagamento marcado como PAGO.' });
-                                      } catch (err: unknown) {
-                                        addNotification({ type: 'error', title: 'Erro', message: err instanceof Error ? err.message : 'Erro ao atualizar pagamento' });
-                                      }
-                                    }} className="px-3 py-1 bg-success text-success-foreground rounded text-sm">Marcar como pago</button>
-                                  )}
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+          <div className="bg-card border border-border rounded-xl p-5">
+             <BookingCollaborators 
+                bookingId={booking.id} 
+                eventDate={booking.eventDate}
+                requiredServices={requiredServices}
+             />
           </div>
         </div>
         <div className="mt-4">

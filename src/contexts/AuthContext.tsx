@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useNavigate } from 'react-router-dom';
 import { secureStorage } from '../utils/secureStorage';
 import { logger } from '../utils/logger';
+import { getApiBaseUrl } from '../utils/apiConfig';
 
 // Lazy sentry getter to avoid circular dependency with main.tsx
 const getSentry = () => {
@@ -11,25 +12,6 @@ const getSentry = () => {
   } catch {
     return null;
   }
-};
-
-// Helper para garantir URL consistente
-const getApiBaseUrl = () => {
-  // Se definido no ambiente, usa (removendo slash final se existir)
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl) {
-    return envUrl.endsWith('/') ? envUrl.slice(0, -1) : envUrl;
-  }
-
-  // Fallback inteligente para produção (caso a variável de ambiente falhe)
-  if (typeof window !== 'undefined' && 
-     (window.location.hostname === 'xproducoeseeventos.com.br' || 
-      window.location.hostname === 'www.xproducoeseeventos.com.br')) {
-    return 'https://api.xproducoeseeventos.com.br/api/v1';
-  }
-
-  // Fallback padrão alinhado com api.ts
-  return 'http://localhost:4000/api/v1';
 };
 
 export interface AuthUser {
@@ -428,10 +410,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       */
       
       const baseUrl = getApiBaseUrl();
-      
-      // Let's log the attempt for debugging
-      const loginUrl = `${baseUrl}/auth/login`;
-      console.log('Login URL:', loginUrl); 
+      const loginUrl = `${baseUrl}/auth/login`; 
 
       const response = await fetch(loginUrl, {
         method: 'POST',

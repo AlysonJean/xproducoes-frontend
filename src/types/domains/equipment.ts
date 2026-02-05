@@ -41,16 +41,40 @@ export interface Category {
   updatedAt?: Date | string;
 }
 
+export interface Service {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  duration: number;
+  isActive: boolean;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
+export interface KitItem {
+  id: string;
+  kitId: string;
+  equipmentId?: string;
+  serviceId?: string;
+  quantity: number;
+  equipment?: Equipment;
+  service?: Service;
+}
+
 export interface Kit {
   id: string;
   name: string;
-  equipments: Equipment[];
+  items?: KitItem[];
+  equipments?: Equipment[];
   imageUrl?: string;
   description?: string;
   price?: number;
   isActive?: boolean;
   createdAt?: Date | string;
   updatedAt?: Date | string;
+  prevSlug?: string | null;
+  nextSlug?: string | null;
 }
 
 export interface PortfolioItem {
