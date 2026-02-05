@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { generateSeoFilename } from '../../utils/seoUtils';
 import { apiFetch } from '../../services/api';
 import { formatPrice } from '../../utils/typeSafeFormatters';
-import type { Kit, Equipment, Service } from '../../types/types';
+import type { Kit, Equipment, Service, KitExperienceLevel } from '../../types/types';
 import { BrandLoader } from '../ui/BrandLoader';
 import {
   Form,
@@ -17,6 +17,7 @@ import {
   Textarea
 } from '../ui/StandardComponents';
 import { Search, Plus, Trash2, ShoppingBag, Calculator, Package, User } from 'lucide-react';
+import { ExperienceLevelsEditor } from '../kits/ExperienceLevelsEditor';
 
 // Combined item type for UI
 type SearchableItem = {
@@ -57,6 +58,9 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
   const [serverError, setServerError] = useState<string | null>(null);
   const [pageLoading, setPageLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [experienceLevels, setExperienceLevels] = useState<Partial<KitExperienceLevel>[]>(
+    initialData?.experienceLevels || []
+  );
 
   const {
     register,
@@ -201,6 +205,11 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
     
     // Send items as JSON string with type info
     formData.append('items', JSON.stringify(data.items));
+    
+    // Send experience levels
+    if (experienceLevels.length > 0) {
+      formData.append('experienceLevels', JSON.stringify(experienceLevels));
+    }
 
     if (data.images && data.images instanceof FileList && data.images.length > 0) {
       const file = data.images[0];
@@ -376,6 +385,16 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Níveis de Experiência */}
+            <div className="p-6 bg-card rounded-xl border shadow-sm">
+              <ExperienceLevelsEditor
+                kitId={initialData?.id || 'new'}
+                initialLevels={initialData?.experienceLevels}
+                onChange={setExperienceLevels}
+                basePrice={kitPrice || 0}
+              />
             </div>
           </div>
 
