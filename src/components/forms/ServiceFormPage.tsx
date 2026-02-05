@@ -13,6 +13,7 @@ import {
 } from '../ui/StandardComponents';
 import { ItemStatus, type Service } from '../../types/types';
 import { Upload, X } from 'lucide-react';
+import { generateSeoFilename } from '../../utils/seoUtils';
 
 interface ServiceFormProps {
   initialData?: Service | null;
@@ -87,6 +88,12 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
 
     try {
       const formData = new FormData();
+      
+      // Generate SEO-friendly filename
+      const seoFilename = generateSeoFilename('services', name);
+      formData.append('fileName', seoFilename);
+      formData.append('folder', 'services');
+      
       formData.append('name', name);
       formData.append('description', description);
       formData.append('price', String(price));
