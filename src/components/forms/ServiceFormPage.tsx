@@ -30,7 +30,7 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState<number | string>(0);
-  const [duration, setDuration] = useState<number | string>(60);
+  const [duration, setDuration] = useState<number | string>(1); // Store in hours for display
   const [status, setStatus] = useState<ItemStatus>(ItemStatus.ACTIVE);
   
   // Single image state
@@ -42,7 +42,8 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
       setName(initialData.name);
       setDescription(initialData.description);
       setPrice(initialData.price);
-      setDuration(initialData.duration);
+      // Convert minutes from backend to hours for display
+      setDuration(initialData.duration / 60);
       setStatus((initialData.status as ItemStatus) || ItemStatus.ACTIVE);
       
       if (initialData.imageUrl) {
@@ -97,7 +98,8 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
       formData.append('name', name);
       formData.append('description', description);
       formData.append('price', String(price));
-      formData.append('duration', String(duration));
+      // Convert hours to minutes for backend
+      formData.append('duration', String(Number(duration) * 60));
       formData.append('status', status);
 
       if (imageFile) {
@@ -171,11 +173,13 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Duração Padrão (minutos)"
+              label="Duração Padrão (horas)"
               type="number"
+              step="0.5"
+              min="0.5"
               value={duration}
               onChange={e => setDuration(e.target.value)}
-              helperText="Tempo estimado de duração do serviço"
+              helperText="Tempo estimado de duração do serviço (ex: 2, 4.5, 8)"
             />
 
             <Select
