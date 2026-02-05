@@ -686,13 +686,27 @@ export interface Review {
   };
 }
 
+export type MediaType = 'IMAGE' | 'VIDEO';
+
+export interface PortfolioMedia {
+  id: string;
+  portfolioId: string;
+  url: string;
+  type: MediaType;
+  filename?: string;
+  mimeType?: string;
+  isCover: boolean;
+  sortOrder: number;
+}
+
 export interface PortfolioItem {
   id: string;
   title: string;
   slug?: string;
   imageUrl: string;
   description: string;
-  images?: string[];
+  eventDate?: string;
+  media?: PortfolioMedia[];
   sortOrder?: number;
 }
 

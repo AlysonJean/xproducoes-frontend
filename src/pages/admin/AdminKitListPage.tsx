@@ -162,10 +162,18 @@ export const AdminKitListPage = () => {
               {kits.map((kit) => (
                 <tr key={kit.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-                        <Package className="w-5 h-5 text-primary" />
-                      </div>
+                    <div className="flex items-center gap-4">
+                      {kit.imageUrl ? (
+                        <img
+                          src={kit.imageUrl}
+                          alt={kit.name}
+                          className="w-12 h-12 rounded-lg object-cover border"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                          <Package className="w-6 h-6 text-primary" />
+                        </div>
+                      )}
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-foreground">{kit.name}</p>
                         {kit.description && (

@@ -1,8 +1,6 @@
+// src/components/forms/ServiceFormPage.tsx
 import { useEffect, useState } from 'react';
 import { useNotifications } from '@/contexts/NotificationContext';
-import { useForm, type SubmitHandler } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { apiFetch } from '../../services/api';
 import { 
   Form, 
@@ -14,17 +12,7 @@ import {
   Select
 } from '../ui/StandardComponents';
 import { ItemStatus, type Service } from '../../types/types';
-
-// Schema para o formulário de serviço
-const serviceFormSchema = z.object({
-  name: z.string().min(1, 'Nome é obrigatório'),
-  description: z.string().min(1, 'Descrição é obrigatória'),
-  price: z.number().positive('Preço deve ser positivo'),
-  duration: z.number().int().positive('Duração deve ser positiva').default(60),
-  status: z.nativeEnum(ItemStatus).default(ItemStatus.ACTIVE),
-});
-
-type ServiceFormData = z.infer<typeof serviceFormSchema>;
+import { Upload, X } from 'lucide-react';
 
 interface ServiceFormProps {
   initialData?: Service | null;
@@ -37,60 +25,87 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
   const isEditing = Boolean(initialData);
   const { addNotification } = useNotifications();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm<ServiceFormData>({
-    resolver: zodResolver(serviceFormSchema),
-    mode: 'onChange',
-    defaultValues: {
-      name: '',
-      description: '',
-      price: 0,
-      duration: 60,
-      status: ItemStatus.ACTIVE,
-    },
-  });
+  // State
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState<number | string>(0);
+  const [duration, setDuration] = useState<number | string>(60);
+  const [status, setStatus] = useState<ItemStatus>(ItemStatus.ACTIVE);
+  
+  // Single image state
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
 
   useEffect(() => {
     if (initialData) {
-      reset({
-        name: initialData.name,
-        description: initialData.description,
-        price: initialData.price,
-        duration: initialData.duration || 60,
-        status: (initialData.status === 'AVAILABLE' || initialData.status === 'RENTED' 
-          ? ItemStatus.ACTIVE 
-          : initialData.status === 'UNAVAILABLE' 
-            ? ItemStatus.INACTIVE 
-            : initialData.status as ItemStatus) || ItemStatus.ACTIVE,
-      });
+      setName(initialData.name);
+      setDescription(initialData.description);
+      setPrice(initialData.price);
+      setDuration(initialData.duration);
+      setStatus((initialData.status as ItemStatus) || ItemStatus.ACTIVE);
+      
+      if (initialData.imageUrl) {
+        setImagePreview(initialData.imageUrl);
+      }
     }
-  }, [initialData, reset]);
+  }, [initialData]);
 
-  const onSubmit: SubmitHandler<ServiceFormData> = async (data) => {
+  // Clean up object URL
+  useEffect(() => {
+    return () => {
+      if (imagePreview && imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      
+      // Revoke old preview
+      if (imagePreview && imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview);
+      }
+      
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeImage = () => {
+    if (imagePreview && imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setImageFile(null);
+    setImagePreview('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitLoading(true);
+
     try {
-      setSubmitLoading(true);
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('description', description);
+      formData.append('price', String(price));
+      formData.append('duration', String(duration));
+      formData.append('status', status);
 
-      const payload = {
-        ...data,
-        price: Number(data.price),
-        duration: Number(data.duration),
-      };
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
 
       if (isEditing && initialData) {
         await apiFetch(`/services/${initialData.id}`, { 
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: formData 
         });
       } else {
         await apiFetch('/services', { 
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: formData 
         });
       }
 
@@ -114,7 +129,7 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
   };
 
   return (
-    <Form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <Form onSubmit={handleSubmit} className="space-y-6">
       <FormSection 
         title="Dados do Serviço"
         description="Informações sobre o serviço oferecido (Staff, DJ, Mídia, etc)"
@@ -122,48 +137,86 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Nome do Serviço"
-              {...register('name')}
-              error={errors.name?.message}
+              value={name}
+              onChange={e => setName(e.target.value)}
               placeholder="Ex: DJ Profissional"
+              required
             />
             
              <Input
               label="Preço Base (€)"
               type="number"
               step="0.01"
-              {...register('price', { valueAsNumber: true })}
-              error={errors.price?.message}
+              value={price}
+              onChange={e => setPrice(e.target.value)}
+              required
             />
           </div>
 
           <Textarea
             label="Descrição"
-            {...register('description')}
-            error={errors.description?.message}
+            value={description}
+            onChange={e => setDescription(e.target.value)}
             rows={3}
             placeholder="O que está incluso neste serviço?"
+            required
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Duração Padrão (minutos)"
               type="number"
-              {...register('duration', { valueAsNumber: true })}
-              error={errors.duration?.message}
+              value={duration}
+              onChange={e => setDuration(e.target.value)}
               helperText="Tempo estimado de duração do serviço"
             />
 
             <Select
               label="Status"
-              {...register('status')}
+              value={status}
+              onChange={e => setStatus(e.target.value as ItemStatus)}
               options={[
                 { value: ItemStatus.ACTIVE, label: 'Ativo' },
                 { value: ItemStatus.MAINTENANCE, label: 'Em Manutenção' },
                 { value: ItemStatus.COMING_SOON, label: 'Em Breve' },
                 { value: ItemStatus.INACTIVE, label: 'Inativo' },
               ]}
-              error={errors.status?.message}
             />
+          </div>
+
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-foreground">Imagem de Capa</label>
+            
+            {/* Upload Button or Preview */}
+            {!imagePreview ? (
+              <div className="flex items-center justify-center w-full">
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                          <p className="text-sm text-muted-foreground">Clique para adicionar imagem</p>
+                      </div>
+                      <input 
+                          type="file" 
+                          className="hidden" 
+                          accept="image/*"
+                          onChange={handleFileSelect}
+                      />
+                  </label>
+              </div>
+            ) : (
+              <div className="relative w-full max-w-sm">
+                <img src={imagePreview} alt="Preview" className="w-full h-48 object-cover rounded-lg border" />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="absolute top-2 right-2 h-8 w-8 p-0 rounded-full"
+                  onClick={removeImage}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </FormSection>
 
