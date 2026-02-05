@@ -1,34 +1,65 @@
 // Caminho do arquivo: frontend/src/components/PortfolioCard.tsx
 
 import type { PortfolioCardProps } from '../../types/types';
+import { PlayCircle } from 'lucide-react';
 
-function safeImage(urls?: string[], title?: string): string {
-  const invalidHosts = ['via.placeholder.com', 'cdn.exemplo.com'];
-  const first = urls?.find(Boolean) || '';
+function getMediaSource(url?: string, title?: string): { src: string, isVideo: boolean, poster?: string } {
   const fallback = `https://placehold.co/800x450/0f172a/ffffff?text=${encodeURIComponent(title || 'Portf%C3%B3lio')}`;
-  if (!first) return fallback;
+  
+  if (!url) return { src: fallback, isVideo: false };
+
   try {
-    const u = new URL(first, window.location.origin);
-    // Bloquear uploads locais e hosts inválidos
-    if (u.pathname.startsWith('/uploads') || invalidHosts.includes(u.hostname)) return fallback;
-    return u.toString();
+    const isVideo = url.match(/\.(mp4|webm|mov)$/i) !== null;
+    
+    // Cloudinary video thumbnail hack
+    if (isVideo && url.includes('cloudinary.com')) {
+       // Replace extension with .jpg for poster
+       const poster = url.replace(/\.(mp4|webm|mov)$/i, '.jpg');
+       return { src: url, isVideo: true, poster }; 
+    }
+
+    return { src: url, isVideo: false };
   } catch {
-    return fallback;
+    return { src: fallback, isVideo: false };
   }
 }
 
 export const PortfolioCard: React.FC<PortfolioCardProps> = ({ item, ...rest }) => {
+  const { src, isVideo, poster } = getMediaSource(item.imageUrl, item.title);
+
   return (
-    <div {...rest} className="bg-card border border-border rounded-lg overflow-hidden shadow-lg group hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 cursor-pointer">
+    <div {...rest} className="bg-card border border-border rounded-lg overflow-hidden shadow-lg group hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 cursor-pointer h-full">
       <div className="overflow-hidden h-64 sm:h-72 md:h-80 relative">
-        <img
-          src={safeImage(item.images, item.title)}
-          alt={item.title || 'Evento do portfólio'}
-          className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-        />
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-end">
-          <div className="p-4 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-            <h3 className="font-bold text-lg truncate">{item.title}</h3>
+        {isVideo ? (
+            <div className="relative w-full h-full">
+                <video
+                    src={src}
+                    poster={poster}
+                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                    muted
+                    loop
+                    playsInline
+                    onMouseOver={e => e.currentTarget.play()}
+                    onMouseOut={e => e.currentTarget.pause()}
+                />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity duration-300">
+                    <div className="bg-black/40 rounded-full p-3 backdrop-blur-sm">
+                        <PlayCircle className="w-10 h-10 text-white" />
+                    </div>
+                </div>
+            </div>
+        ) : (
+            <img
+            src={src}
+            alt={item.title || 'Evento do portfólio'}
+            className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+            />
+        )}
+        
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-100 transition-opacity duration-300 flex items-end">
+          <div className="p-4 text-white w-full">
+            <h3 className="font-bold text-lg truncate mb-1">{item.title}</h3>
+            {item.description && <p className="text-xs text-white/80 line-clamp-1">{item.description}</p>}
           </div>
         </div>
       </div>

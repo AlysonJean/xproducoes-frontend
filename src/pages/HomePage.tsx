@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { useRevealOnView } from '../hooks/useRevealOnView';
 import { KitCard } from '../components/ui/KitCard';
 import { PortfolioCard } from '../components/ui/PortfolioCard';
+import { ServiceCard } from '../components/ui/ServiceCard';
 import { apiFetch } from '../services/api';
-import type { Category, Kit, PortfolioItem } from '../types/types';
+import type { Category, Kit, PortfolioItem, Service } from '../types/types';
 import { transformKit } from '../utils/transformKit';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { GeminiEventSuggester } from '../components/ui/GeminiEventSuggester';
@@ -46,6 +47,7 @@ export const HomePage = () => {
   // Seção de avaliações/depoimentos
   const { ref: aiTitleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
   const [kits, setKits] = useState<Kit[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   // Estado de avaliações públicas aprovadas
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState<boolean>(false);
@@ -76,10 +78,11 @@ export const HomePage = () => {
 
     try {
       // Usa Promise.all com proteção individual para cada requisição
-      const [catsData, kitsData, portfolioData] = await Promise.all([
+      const [catsData, kitsData, portfolioData, servicesData] = await Promise.all([
         safeFetch(apiFetch('/categories'), []),
         safeFetch(apiFetch('/kits?limit=4'), []),
         safeFetch(apiFetch('/portfolio?limit=3'), []),
+        safeFetch(apiFetch('/services'), []),
       ]);
 
       setCategories(catsData as Category[]);
@@ -88,6 +91,7 @@ export const HomePage = () => {
       setKits(transformedKits);
       
       setPortfolio(portfolioData as PortfolioItem[]);
+      setServices(servicesData as Service[]);
     } catch (err) {
       console.error('Erro detalhado no fetchPageData:', err);
       // Não bloqueia mais a renderização com tela de erro fatal
@@ -227,6 +231,28 @@ export const HomePage = () => {
              )}
           </div>
         </section>
+
+        {/* Services */}
+        {services && services.length > 0 && (
+          <section className="relative">
+            <div className="text-center mb-10 sm:mb-12 lg:mb-14">
+              <div className="inline-flex items-center px-4 py-2 bg-blue-500/10 rounded-full text-blue-600 font-medium text-xs sm:text-sm mb-3">
+                🛠️ Serviços Especializados
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3 heading-elegant">Nossos Serviços</h2>
+              <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto">
+                Complemente seu evento com nossos serviços profissionais
+              </p>
+            </div>
+            <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={8}>
+              {services.map((service) => (
+                <div key={service.id} className="group">
+                  <ServiceCard service={service} />
+                </div>
+              ))}
+            </Grid>
+          </section>
+        )}
 
         {/* Portfólio */}
         {portfolio && portfolio.length > 0 && (

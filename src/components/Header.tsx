@@ -55,6 +55,7 @@ export const Header = () => {
   const navItems: { href: string; label: string; Icon: IconType }[] = [
     { href: '/equipamentos', label: 'Equipamentos', Icon: ClipboardDocumentListIcon },
     { href: '/kits', label: 'Kits', Icon: CubeIcon },
+    { href: '/servicos', label: 'Serviços', Icon: ClipboardDocumentListIcon },
     { href: '/portfolio', label: 'Portfólio', Icon: PhotoIcon },
     { href: '/contato', label: 'Contato', Icon: PhoneIcon },
     { href: '/faq', label: 'FAQ', Icon: QuestionMarkCircleIcon },

@@ -191,15 +191,26 @@ export const PortfolioPage: React.FC = () => {
                 {selectedItem.description}
               </p>
 
-              {selectedItem.images && selectedItem.images.length > 0 && (
+              {selectedItem.media && selectedItem.media.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
-                  {selectedItem.images.map((image, index) => (
-                    <div key={index} className="aspect-square overflow-hidden rounded-lg">
-                      <img
-                        src={image}
-                        alt={`${selectedItem.title} - imagem ${index + 1}`}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                      />
+                  {selectedItem.media.filter(m => !m.isCover).map((media, index) => (
+                    <div key={media.id || index} className="aspect-square overflow-hidden rounded-lg bg-black/5">
+                      {media.type === 'VIDEO' ? (
+                          <video
+                            src={media.url}
+                            className="w-full h-full object-cover"
+                            controls
+                            playsInline
+                            title={media.filename || 'Vídeo do evento'}
+                          />
+                      ) : (
+                          <img
+                            src={media.url}
+                            alt={media.filename || `${selectedItem.title} - imagem ${index + 1}`}
+                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
+                            onClick={() => window.open(media.url, '_blank')}
+                          />
+                      )}
                     </div>
                   ))}
                 </div>
