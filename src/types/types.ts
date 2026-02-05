@@ -140,12 +140,30 @@ export interface KitItem {
   service?: Service;
 }
 
+// Níveis de Experiência para Kits
+export enum ExperienceLevel {
+  SILVER = 'SILVER',     // Self-service
+  GOLD = 'GOLD',         // Com montagem/desmontagem
+  PLATINUM = 'PLATINUM'  // Solução completa
+}
+
+export interface KitExperienceLevel {
+  id: string;
+  level: ExperienceLevel;
+  price: number;
+  description?: string;
+  includes: string[];
+  isPopular?: boolean;
+  kitId: string;
+}
+
 export interface Kit {
   id: string;
   name: string;
   slug?: string;
   items?: KitItem[];
   equipments?: Equipment[]; // Deprecated, kept for compatibility check
+  experienceLevels?: KitExperienceLevel[];
   imageUrl?: string;
   description?: string;
   price?: number;
