@@ -218,7 +218,7 @@ export const KitDetailPage = () => {
                     <p className="text-muted-foreground text-xs mt-1 line-clamp-2">{equipment.description}</p>
                     <div className="flex justify-between items-center mt-2">
                       <span className="text-foreground font-semibold text-sm">{formatPrice(Number(equipment.pricePerHour))}/h</span>
-                      <Link to={`/equipments/${equipment.id}`} className="text-xs text-primary hover:underline">Ver detalhes</Link>
+                      <Link to={`/equipamentos/${equipment.slug || equipment.id}`} className="text-xs text-primary hover:underline">Ver detalhes</Link>
                     </div>
                   </div>
                 </div>

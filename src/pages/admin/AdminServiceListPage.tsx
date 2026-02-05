@@ -201,7 +201,7 @@ export const AdminServiceListPage = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center text-sm text-muted-foreground">
                       <Clock size={14} className="mr-1" />
-                      {item.duration} min
+                      {(item.duration / 60).toFixed(1).replace('.0', '')}h
                     </div>
                   </td>
                   <td className="px-6 py-4">
