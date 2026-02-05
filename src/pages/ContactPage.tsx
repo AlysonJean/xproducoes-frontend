@@ -254,7 +254,7 @@ export const ContactPage = () => {
                   <h3 className="font-semibold text-foreground mb-1">Empresa Registrada</h3>
                   <p className="text-muted-foreground text-sm font-mono">CNPJ: 55.343.824/0001-56</p>
                   <p className="text-xs text-muted-foreground/70 mt-1">
-                    Empresa legal e registrada, com mais de 8 anos de experiência
+                    Empresa legal e registrada, com mais de 10 anos de experiência
                   </p>
                 </div>
               </div>
