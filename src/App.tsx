@@ -250,6 +250,10 @@ const TVPage = lazy(() => import('./pages/tv/TVPage'));
 
 const AdminAnnouncementPage = lazy(() => import('./pages/admin/AdminAnnouncementPage'));
 
+// Social Interaction Pages
+const ParticipatePage = lazy(() => import('./pages/social/ParticipatePage'));
+const UploadSocialPage = lazy(() => import('./pages/social/UploadSocialPage'));
+
 
 // ===== LOADING COMPONENT FOR SUSPENSE =====
 const PageLoadingSpinner = () => (
@@ -380,6 +384,8 @@ const AppRoutes: React.FC = () => {
     <Suspense fallback={<PageLoadingSpinner />}>
       <Routes>
         <Route path="/tv" element={<TVPage />} />
+        <Route path="/participate/:slug" element={<ParticipatePage />} />
+        <Route path="/upload/:slug" element={<UploadSocialPage />} />
         {/* Public Routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/kits" element={<KitListPage />} />

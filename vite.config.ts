@@ -85,7 +85,21 @@ export default defineConfig({
   ],
   server: {
     port: 3000,
-    open: true
+    open: true,
+    proxy: {
+      // Proxy apenas para rotas específicas de API Social Wall e TV
+      '/api/tv/config': {
+        target: 'http://localhost:3001', // Porta do backend
+        changeOrigin: true,
+        secure: false,
+        // Não reescreve path, só redireciona
+      },
+      '/api/admin/social': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   },
   build: {
     outDir: 'dist',

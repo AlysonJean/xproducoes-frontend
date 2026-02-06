@@ -19,8 +19,13 @@ const ParticipatePage = () => {
         const fetchConfig = async () => {
             try {
                 if (slug) {
-                    const res = await apiFetch<WallConfig>(`/public/social/config/${slug}`);
-                    setConfig(res);
+                    const res = await apiFetch<any>(`/tv/config?slug=${slug}`);
+                    if (res.linked) {
+                        setConfig({
+                            name: res.eventName,
+                            hashtag: res.hashtag
+                        });
+                    }
                 }
             } catch (err) {
                 console.error("Erro ao carregar configuração", err);

@@ -39,6 +39,10 @@ interface PostsResponse {
 }
 
 export const socialService = {
+    deleteWall: async (id: string) => {
+      const response = await api.delete<{ success: boolean }>(`/admin/social/walls/${id}`);
+      return response.data;
+    },
   getPosts: async (params: { eventId?: string; settingId?: string; slug?: string; status?: string; page?: number; limit?: number }) => {
     const response = await api.get<PostsResponse>('/admin/social/posts', { params });
     return response.data;
@@ -93,9 +97,17 @@ export const socialService = {
   },
 
   getWallConfig: async (id: string) => {
-    // We can use the public endpoint if we want, or create an admin one. 
-    // The public one is /tv/config (requires slug or query)
     const response = await api.get<any>(`/tv/config?settingId=${id}`);
+    return response.data;
+  },
+
+  getAdminWall: async (id: string) => {
+    const response = await api.get<{ data: any }>(`/admin/social/walls/${id}`);
+    return response.data;
+  },
+
+  updateWall: async (id: string, data: any) => {
+    const response = await api.put<{ data: any }>(`/admin/social/walls/${id}`, data);
     return response.data;
   }
 };
