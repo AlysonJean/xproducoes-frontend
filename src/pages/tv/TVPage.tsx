@@ -1,14 +1,4 @@
-                {/* TESTE VISUAL */}
-                <div style={{background:'red',color:'white',padding:'24px',fontSize:'32px',textAlign:'center',zIndex:99999}}>
-                    TESTE VISUAL - TVPage.tsx
-                </div>
-        {/* Debug visual: mostrar valores principais */}
-        <div style={{position:'absolute',top:0,left:0,zIndex:9999,background:'rgba(0,0,0,0.7)',color:'#fff',padding:'8px',fontSize:'12px'}}>
-            <div>slug: {typeof slug !== 'undefined' ? slug?.toString() : 'N/A'}</div>
-            <div>showQrCode: {typeof showQrCode !== 'undefined' ? (showQrCode ? 'true' : 'false') : 'N/A'}</div>
-            <div>sponsors: {typeof sponsors !== 'undefined' && Array.isArray(sponsors) ? sponsors.length : '0'}</div>
-            <div>imageUrls: {typeof sponsors !== 'undefined' && Array.isArray(sponsors) ? sponsors.map(s => s.imageUrl).join(', ') : 'N/A'}</div>
-        </div>
+
 import React, { useState, useEffect, memo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
