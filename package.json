@@ -7,9 +7,7 @@
     "dev": "tsx server.ts",
     "generate-favicons": "node scripts/generate-favicons.js",
     "prebuild": "npm run generate-favicons",
-    "build": "npm run build:client && npm run build:server",
-    "build:client": "tsc && vite build",
-    "build:server": "tsc && npx -y cross-env BUILD_SSR=true vite build",
+    "build": "tsc && vike build",
     "build:analyze": "tsc && vite build --mode analyze",
     "server": "node server",
     "preview": "npm run build && npm run server",
@@ -19,6 +17,10 @@
     "snyk:test": "snyk test || true",
     "type-check": "tsc --noEmit",
     "seed": "ts-node --esm src/services/seedBackend.ts"
+  },
+  "overrides": {
+    "react": "$react",
+    "react-dom": "$react-dom"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -35,7 +37,7 @@
     "date-fns": "^4.1.0",
     "express": "^5.2.1",
     "lottie-react": "^2.4.1",
-    "lucide-react": "^0.263.1",
+    "lucide-react": "^0.511.0",
     "react": "19.2",
     "react-big-calendar": "^1.8.2",
     "react-dom": "19.2",
