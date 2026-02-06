@@ -84,5 +84,10 @@ export const socialService = {
   deleteAnnouncement: async (id: string) => {
     const response = await api.delete<{ success: boolean }>(`/announcements/${id}`);
     return response.data;
+  },
+
+  pairDevice: async (data: { pairingCode: string; settingId: string; deviceName?: string }) => {
+    const response = await api.post<{ data: any }>('/tv/pair', data);
+    return response.data;
   }
 };

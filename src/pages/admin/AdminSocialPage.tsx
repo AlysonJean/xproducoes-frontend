@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { socialService, SocialPost } from '../../services/socialService';
 import { ModerationGrid } from '../../components/social/ModerationGrid';
 import { Button } from '../../components/ui/Button';
@@ -9,6 +9,8 @@ import { io } from 'socket.io-client';
 
 const AdminSocialPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  
   // Distinguish context based on URL
   const isBookingContext = location.pathname.includes('/reservas/');
   const eventId = isBookingContext ? id : undefined;
@@ -17,8 +19,9 @@ const AdminSocialPage: React.FC = () => {
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string[]>([]);
-  // Use config to store metadata like name/slug if we fetch it? For now just posts.
   const [tab, setTab] = useState<'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
+  const [pairingCode, setPairingCode] = useState('');
+  const [pairingLoading, setPairingLoading] = useState(false);
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -42,8 +45,6 @@ const AdminSocialPage: React.FC = () => {
     fetchPosts();
   }, [id, eventId, settingId, tab]);
   
-  // Real-time updates
-  // Real-time updates
   useEffect(() => {
     if (!id) return;
     
@@ -58,7 +59,6 @@ const AdminSocialPage: React.FC = () => {
     });
 
     socket.on('post:new', (post: SocialPost) => {
-        // Only prepend if we are in the matching tab
         setPosts(prev => {
             if (post.status === tab) {
                  if (prev.find(p => p.id === post.id)) return prev;
@@ -69,8 +69,8 @@ const AdminSocialPage: React.FC = () => {
         });
     });
 
-    socket.on('post:remove', ({ id }: { id: string }) => {
-        setPosts(prev => prev.filter(p => p.id !== id));
+    socket.on('post:remove', ({ id: postId }: { id: string }) => {
+        setPosts(prev => prev.filter(p => p.id !== postId));
     });
 
     return () => {
@@ -78,26 +78,39 @@ const AdminSocialPage: React.FC = () => {
     };
   }, [id, eventId, settingId, tab]);
 
-
-  const handleModerate = async (id: string, status: 'APPROVED' | 'REJECTED') => {
-    // Optimistic Update
-    const originalPosts = [...posts];
-    setProcessing(prev => [...prev, id]);
+  const handlePair = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pairingCode || !settingId) return;
     
-    // Remove from UI immediately for better feel
-    setPosts(prev => prev.filter(p => p.id !== id));
+    try {
+        setPairingLoading(true);
+        await socialService.pairDevice({
+            pairingCode,
+            settingId,
+            deviceName: 'TV Evento'
+        });
+        alert('TV pareada com sucesso!');
+        setPairingCode('');
+    } catch {
+        alert('Erro ao parear TV. Verifique o código.');
+    } finally {
+        setPairingLoading(false);
+    }
+  };
+
+  const handleModerate = async (postId: string, status: 'APPROVED' | 'REJECTED') => {
+    const originalPosts = [...posts];
+    setProcessing(prev => [...prev, postId]);
+    setPosts(prev => prev.filter(p => p.id !== postId));
 
     try {
-      await socialService.moderatePost(id, status);
-      // Success - no need to do anything as optimistic update removed it
-      // And we might get a socket event back validating it
+      await socialService.moderatePost(postId, status);
     } catch (error) {
        console.error(error);
-       // Revert
        setPosts(originalPosts);
        alert('Failed to moderate post');
     } finally {
-       setProcessing(prev => prev.filter(pid => pid !== id));
+       setProcessing(prev => prev.filter(pid => pid !== postId));
     }
   };
 
@@ -120,11 +133,24 @@ const AdminSocialPage: React.FC = () => {
             </h1>
             <p className="text-muted-foreground">Gerencie o feed social do seu evento em tempo real.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+            <form onSubmit={handlePair} className="flex gap-2">
+                <input 
+                    type="text" 
+                    placeholder="Cód. TV (4 dígitos)" 
+                    className="w-32 p-2 border rounded-md"
+                    value={pairingCode}
+                    onChange={e => setPairingCode(e.target.value)}
+                    maxLength={4}
+                />
+                <Button type="submit" disabled={pairingLoading || !pairingCode}>
+                    {pairingLoading ? '...' : 'Parear TV'}
+                </Button>
+            </form>
             <Button variant="outline" onClick={handleManualSync}>
                 <RefreshCw className="mr-2 h-4 w-4" /> Sincronizar Agora
             </Button>
-            <Button variant="outline" onClick={() => window.open(`/tv?code=???`, '_blank')}>
+            <Button variant="outline" onClick={() => window.open(`/tv?settingId=${settingId}`, '_blank')}>
                 <Monitor className="mr-2 h-4 w-4" /> Abrir TV View
             </Button>
             <Button variant="ghost">
@@ -158,8 +184,8 @@ const AdminSocialPage: React.FC = () => {
             ) : (
                 <ModerationGrid 
                     posts={posts} 
-                    onApprove={(id) => handleModerate(id, 'APPROVED')}
-                    onReject={(id) => handleModerate(id, 'REJECTED')}
+                    onApprove={(postId) => handleModerate(postId, 'APPROVED')}
+                    onReject={(postId) => handleModerate(postId, 'REJECTED')}
                     processingIds={processing}
                 />
             )}
