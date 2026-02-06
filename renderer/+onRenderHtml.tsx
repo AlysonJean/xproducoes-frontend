@@ -16,6 +16,13 @@ type PageContext = PageContextServer & {
       image?: string
     }
   }
+  data?: {
+    documentProps?: {
+      title?: string
+      description?: string
+      image?: string
+    }
+  }
 }
 
 export const onRenderHtml: OnRenderHtmlAsync = async (pageContext: PageContext): ReturnType<OnRenderHtmlAsync> => {
@@ -38,7 +45,7 @@ export const onRenderHtml: OnRenderHtmlAsync = async (pageContext: PageContext):
     </PageShell>
   )
 
-  const { documentProps } = pageContext.exports
+  const { documentProps } = pageContext.data || pageContext.exports
   const title = (documentProps && documentProps.title) || 'X-Produções - Aluguel de Equipamentos'
   const desc = (documentProps && documentProps.description) || 'Soluções completas em audiovisuais para seu evento em BH'
   const image = (documentProps && documentProps.image) || '/xproducoes-logo.svg'

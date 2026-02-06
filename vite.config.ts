@@ -15,7 +15,7 @@ const __dirname = dirname(__filename);
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    vike({ prerender: true }),
+    vike(),
     // Rollup alias fallback (adds resilience for some CI environments)
     alias({
       entries: [
