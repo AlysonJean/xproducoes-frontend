@@ -157,21 +157,21 @@ const AdminDashboardPage = lazy(() =>
 const ReviewManagementPage = lazy(() =>
   import('./pages/admin/ReviewManagementPage').then((m) => ({ default: m.default }))
 );
-const AdminKitListPage = lazy(() =>
-  import('./pages/admin/AdminKitListPage').then((m) => ({ default: m.AdminKitListPage }))
-);
-const AdminServiceListPage = lazy(() =>
-  import('./pages/admin/AdminServiceListPage').then((m) => ({ default: m.AdminServiceListPage }))
-);
+// const AdminKitListPage = lazy(() =>
+//   import('./pages/admin/AdminKitListPage').then((m) => ({ default: m.AdminKitListPage }))
+// );
+// const AdminServiceListPage = lazy(() =>
+//   import('./pages/admin/AdminServiceListPage').then((m) => ({ default: m.AdminServiceListPage }))
+// );
 // const KitFormPage = lazy(() =>
 //   import('./components/forms/KitFormPage').then((m) => ({ default: m.KitFormPage }))
 // );
 const BookingListPage = lazy(() =>
   import('./pages/admin/BookingListPage').then((m) => ({ default: m.BookingListPage }))
 );
-const BookingDetailPage = lazy(() =>
-  import('./pages/admin/BookingDetailPage').then((m) => ({ default: m.BookingDetailPage }))
-);
+// const BookingDetailPage = lazy(() =>
+//   import('./pages/admin/BookingDetailPage').then((m) => ({ default: m.BookingDetailPage }))
+// );
 // const BookingFormPage = lazy(() =>
 //   import('./components/forms/BookingFormPage').then((m) => ({ default: m.default }))
 // );
@@ -181,9 +181,9 @@ const BookingCalendarPage = lazy(() =>
 // Calendários alternativos removidos (CalendarTest e CalendarEnterprisePage)
 
 // More Admin Pages - Lazy Loading (Heavy admin components)
-const ClientListPage = lazy(() =>
-  import('./pages/admin/ClientListPage').then((m) => ({ default: m.ClientListPage }))
-);
+// const ClientListPage = lazy(() =>
+//   import('./pages/admin/ClientListPage').then((m) => ({ default: m.ClientListPage }))
+// );
 // const ClientEditPage = lazy(() =>
 //   import('./pages/admin/ClientEditPage').then((m) => ({ default: m.ClientEditPage }))
 // );
@@ -232,9 +232,22 @@ const AdminCollaboratorsPage = lazy(() =>
 // );
 
 const MonitoringPage = lazy(() => import('./pages/admin/MonitoringPage'));
-const NewsletterSubscribersPage = lazy(() => 
+const NewsletterSubscribersPage = lazy(() =>
   import('./pages/admin/NewsletterSubscribersPage').then((m) => ({ default: m.NewsletterSubscribersPage }))
 );
+
+const AdminSocialListPage = lazy(() => import('./pages/admin/AdminSocialListPage'));
+const AdminSocialPage = lazy(() => 
+  import('./pages/admin/AdminSocialPage').then((m) => ({ default: m.default }))
+);
+
+const AdminServiceListPage = lazy(() => import('./pages/admin/AdminServiceListPage').then((m) => ({ default: m.AdminServiceListPage })));
+const AdminKitListPage = lazy(() => import('./pages/admin/AdminKitListPage').then((m) => ({ default: m.AdminKitListPage })));
+
+// TV Page
+const TVPage = lazy(() => import('./pages/tv/TVPage'));
+
+
 // ===== LOADING COMPONENT FOR SUSPENSE =====
 const PageLoadingSpinner = () => (
   <div className="flex flex-col items-center justify-center w-full min-h-[calc(100vh-200px)] py-20">
@@ -331,6 +344,11 @@ function ScrollToTop() {
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const isAdminPage = location.pathname.startsWith('/admin');
+  const isTVPage = location.pathname.startsWith('/tv');
+
+  if (isTVPage) {
+     return <div className="min-h-screen bg-black">{children}</div>;
+  }
 
   return (
     <div className="min-h-screen bg-surface text-primary transition-colors duration-300 flex flex-col">
@@ -358,6 +376,7 @@ const AppRoutes: React.FC = () => {
   return (
     <Suspense fallback={<PageLoadingSpinner />}>
       <Routes>
+        <Route path="/tv" element={<TVPage />} />
         {/* Public Routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/kits" element={<KitListPage />} />
@@ -625,7 +644,15 @@ const AppRoutes: React.FC = () => {
             <BookingFormPage />
           </ProtectedRoute>
         }
-      /> */}
+      />
+      <Route
+        path="/admin/reservas/:id/social"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminSocialPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/admin/reservas/:id"
         element={
@@ -800,6 +827,22 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute adminOnly>
             <AdminServiceListPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/social"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminSocialListPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/social/:id"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminSocialPage />
           </ProtectedRoute>
         }
       />
