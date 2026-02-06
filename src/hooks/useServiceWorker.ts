@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { logger } from '../utils/logger';
 
 interface ServiceWorkerState {
@@ -19,7 +19,7 @@ export const useServiceWorker = () => {
   });
 
   // Registrar Service Worker
-  const register = async (): Promise<void> => {
+  const register = useCallback(async (): Promise<void> => {
     if (!state.isSupported) return;
 
     try {
@@ -62,10 +62,10 @@ export const useServiceWorker = () => {
     } catch (error) {
       logger.error('Service Worker registration failed', 'ServiceWorker', error);
     }
-  };
+  }, [state.isSupported]);
 
   // Desregistrar Service Worker
-  const unregister = async (): Promise<void> => {
+  const unregister = useCallback(async (): Promise<void> => {
     if (state.registration) {
       const unregistered = await state.registration.unregister();
       if (unregistered) {
@@ -77,10 +77,10 @@ export const useServiceWorker = () => {
         }));
       }
     }
-  };
+  }, [state.registration]);
 
   // Atualizar Service Worker
-  const update = async (): Promise<void> => {
+  const update = useCallback(async (): Promise<void> => {
     if (state.registration) {
       try {
         await state.registration.update();
@@ -89,14 +89,14 @@ export const useServiceWorker = () => {
         logger.error('Service Worker update failed', 'ServiceWorker', error);
       }
     }
-  };
+  }, [state.registration]);
 
   // Enviar mensagem para Service Worker
-  const sendMessage = (message: unknown): void => {
+  const sendMessage = useCallback((message: unknown): void => {
     if (state.registration && state.registration.active) {
       state.registration.active.postMessage(message);
     }
-  };
+  }, [state.registration]);
 
   // Monitorar status online/offline
   useEffect(() => {
@@ -117,7 +117,7 @@ export const useServiceWorker = () => {
     if (state.isSupported && !state.isRegistered) {
       register();
     }
-  }, [state.isSupported, state.isRegistered]);
+  }, [state.isSupported, state.isRegistered, register]);
 
   // Enviar métricas de performance para Service Worker
   useEffect(() => {
@@ -147,7 +147,7 @@ export const useServiceWorker = () => {
 
     const timer = setTimeout(sendPerformanceMetrics, 2000);
     return () => clearTimeout(timer);
-  }, [state.isRegistered]);
+  }, [state.isRegistered, sendMessage]);
 
   return {
     ...state,
@@ -158,29 +158,21 @@ export const useServiceWorker = () => {
   };
 }
 
-// Hook para detectar modo offline
+// Hook para detectar modo offline (SSR safe com React 18+)
 export function useOfflineDetector() {
-  const [isOffline, setIsOffline] = useState(false);
-
-  useEffect(() => {
-    // Definir estado inicial correto após montagem no cliente
-    if (typeof navigator !== 'undefined') {
-      setIsOffline(!navigator.onLine);
-    }
-
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
+  const subscribe = useCallback((callback: () => void) => {
+    window.addEventListener('online', callback);
+    window.addEventListener('offline', callback);
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', callback);
+      window.removeEventListener('offline', callback);
     };
   }, []);
 
-  return isOffline;
+  const getSnapshot = () => (typeof navigator !== 'undefined' ? !navigator.onLine : false);
+  const getServerSnapshot = () => false; // No servidor, assumimos online para evitar banner falso
+
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
 interface BeforeInstallPromptEvent extends Event {
