@@ -9,6 +9,11 @@ export type Data = {
     price: number
     slug: string
   }
+  documentProps?: {
+    title?: string
+    description?: string
+    image?: string
+  }
 }
 
 export const data = async (pageContext: PageContextServer): Promise<Data> => {
@@ -21,7 +26,15 @@ export const data = async (pageContext: PageContextServer): Promise<Data> => {
     if (!response.ok) throw new Error('Failed to fetch kit')
     
     const kit = await response.json()
-    return { kit }
+    
+    const priceFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(kit.price)
+    const documentProps = {
+      title: `Aluguel de ${kit.name} - X Produções`,
+      description: `Alugue ${kit.name} por apenas ${priceFormatted}! ${kit.description.slice(0, 150)}...`,
+      image: kit.imageUrl || '/xproducoes-logo.svg'
+    }
+
+    return { kit, documentProps }
   } catch (e) {
     console.error('SSR Data Error:', e)
     // Fallback or let client handle 404
@@ -32,7 +45,11 @@ export const data = async (pageContext: PageContextServer): Promise<Data> => {
             imageUrl: '', 
             price: 0,
             slug: slug || ''
-        } 
+        },
+        documentProps: {
+            title: 'Kit não encontrado - X Produções',
+            description: 'O kit que você procura não está disponível.'
+        }
     }
   }
 }
