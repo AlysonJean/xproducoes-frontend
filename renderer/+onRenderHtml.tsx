@@ -1,3 +1,4 @@
+import React from 'react'
 import ReactDOMServer from 'react-dom/server'
 import { escapeInject, dangerouslySkipEscape } from 'vike/server'
 import type { OnRenderHtmlAsync } from 'vike/types'
@@ -7,8 +8,8 @@ import { StaticRouter } from 'react-router-dom/server'
 import type { PageContextServer } from 'vike/types'
 
 type PageContext = PageContextServer & {
-  Page: any
-  pageProps: any
+  Page: React.ElementType
+  pageProps: Record<string, unknown>
   exports: {
     documentProps?: {
       title?: string
@@ -25,7 +26,8 @@ type PageContext = PageContextServer & {
   }
 }
 
-export const onRenderHtml: OnRenderHtmlAsync = async (pageContext: PageContext): ReturnType<OnRenderHtmlAsync> => {
+export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageContextServer): ReturnType<OnRenderHtmlAsync> => {
+  const pageContext = pageContextServer as unknown as PageContext
   const { Page, pageProps } = pageContext
   // This onRenderHtml() hook only supports SSR, see https://vike.dev/render-modes for how to modify onRenderHtml() to support SPA
   if (!Page) throw new Error('My render() hook expects pageContext.Page to be defined')
