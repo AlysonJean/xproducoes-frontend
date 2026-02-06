@@ -29,7 +29,10 @@ export function transformEquipment(equipment: Equipment): Equipment {
     // Usa dailyPrice como fallback se pricePerHour for 0 ou indefinido
     pricePerHour: toNumber(equipment.pricePerHour) || toNumber(equipment.dailyPrice) || 0,
     dailyPrice: toNumber(equipment.dailyPrice),
-    isAvailable: typeof equipment.isAvailable === 'boolean' ? equipment.isAvailable : false,
+    // Se isAvailable não vier do backend, inferir baseado no status
+    isAvailable: typeof equipment.isAvailable === 'boolean' 
+      ? equipment.isAvailable 
+      : (equipment.status === 'ACTIVE' && (equipment.quantity === undefined || equipment.quantity > 0)),
     imageUrl: sanitizeImageUrl(equipment.imageUrl),
     description: equipment.description ?? '',
     brand: equipment.brand ?? '',
