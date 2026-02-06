@@ -135,7 +135,8 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
       const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
       const blockedExtensions = ['.exe', '.bat', '.cmd', '.scr', '.pif', '.com'];
 
-      const u = new URL(trimmedUrl, window.location.href);
+      const base = typeof window !== 'undefined' ? window.location.href : 'http://localhost:3000';
+      const u = new URL(trimmedUrl, base);
 
       // Only allow http(s) and blob protocols for images
       const proto = u.protocol.toLowerCase();

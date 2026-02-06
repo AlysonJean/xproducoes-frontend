@@ -6,9 +6,15 @@ export function isSafeUrl(u: string): boolean {
   if (!u) return false;
   const trimmed = String(u).trim();
   try {
+    // No servidor, tratamos como seguro se for path relativo ou se for absoluto com protocolo ok
+    if (typeof window === 'undefined') {
+       if (trimmed.startsWith('/') || trimmed.startsWith('./') || trimmed.startsWith('../')) return true;
+       const parsed = new URL(trimmed, 'http://localhost:3000');
+       const proto = (parsed.protocol || '').toLowerCase();
+       return proto === 'http:' || proto === 'https:';
+    }
     const parsed = new URL(trimmed, window.location.href);
     const proto = (parsed.protocol || '').toLowerCase();
-    // Only allow http(s) and blob protocols here; block data:, javascript:, file:, etc.
     return proto === 'http:' || proto === 'https:' || proto === 'blob:';
   } catch (e) {
     return false;
