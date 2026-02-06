@@ -30,8 +30,11 @@ export const useAppSettings = () => {
       // Não mostrar erro ao usuário, apenas usar fallback
       console.info('Using fallback settings (backend unavailable)');
 
-      // Tentar pegar do localStorage
-      const savedCompanyName = localStorage.getItem('companyName');
+      // Tentar pegar do localStorage (apenas no cliente)
+      let savedCompanyName = null;
+      if (typeof window !== 'undefined') {
+        savedCompanyName = localStorage.getItem('companyName');
+      }
       
       const companyName = savedCompanyName || 'X Produções e Eventos';
 
