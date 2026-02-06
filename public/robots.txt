@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /painel
+Disallow: /painel/*
+
+Sitemap: https://xproducoes.com.br/sitemap.xml
