@@ -240,12 +240,15 @@ const AdminSocialListPage = lazy(() => import('./pages/admin/AdminSocialListPage
 const AdminSocialPage = lazy(() => 
   import('./pages/admin/AdminSocialPage').then((m) => ({ default: m.default }))
 );
+const AdminSponsorPage = lazy(() => import('./pages/admin/AdminSponsorPage'));
 
 const AdminServiceListPage = lazy(() => import('./pages/admin/AdminServiceListPage').then((m) => ({ default: m.AdminServiceListPage })));
 const AdminKitListPage = lazy(() => import('./pages/admin/AdminKitListPage').then((m) => ({ default: m.AdminKitListPage })));
 
 // TV Page
 const TVPage = lazy(() => import('./pages/tv/TVPage'));
+
+const AdminAnnouncementPage = lazy(() => import('./pages/admin/AdminAnnouncementPage'));
 
 
 // ===== LOADING COMPONENT FOR SUSPENSE =====
@@ -843,6 +846,22 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute adminOnly>
             <AdminSocialPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/social/sponsors"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminSponsorPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/events/:id/social/announcements"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminAnnouncementPage />
           </ProtectedRoute>
         }
       />
