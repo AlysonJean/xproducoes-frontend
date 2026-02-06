@@ -22,6 +22,7 @@ const AdminSocialPage: React.FC = () => {
   const [tab, setTab] = useState<'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
   const [pairingCode, setPairingCode] = useState('');
   const [pairingLoading, setPairingLoading] = useState(false);
+  const [wall, setWall] = useState<any>(null);
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -35,6 +36,12 @@ const AdminSocialPage: React.FC = () => {
                 limit: 100 
             });
             setPosts(response.data);
+            
+            // Also fetch wall config if we have a settingId or get it from response
+            if (response.settingId) {
+                const configRes = await socialService.getWallConfig(response.settingId);
+                setWall(configRes);
+            }
         } catch (error) {
             console.error('Failed to fetch posts', error);
         } finally {
@@ -48,7 +55,7 @@ const AdminSocialPage: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     
-    const socket = io('/', { path: '/socket.io' }); 
+    const socket = io(window.location.hostname === 'localhost' ? 'http://localhost:4000' : '/', { path: '/socket.io' }); 
 
     socket.on('connect', () => {
         if (settingId) {
@@ -80,18 +87,20 @@ const AdminSocialPage: React.FC = () => {
 
   const handlePair = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pairingCode || !settingId) return;
+    if (!pairingCode || (!settingId && !eventId)) return;
     
     try {
         setPairingLoading(true);
         await socialService.pairDevice({
             pairingCode,
             settingId,
+            eventId,
             deviceName: 'TV Evento'
         });
         alert('TV pareada com sucesso!');
         setPairingCode('');
-    } catch {
+    } catch (error) {
+        console.error('Pairing error:', error);
         alert('Erro ao parear TV. Verifique o código.');
     } finally {
         setPairingLoading(false);
@@ -150,7 +159,10 @@ const AdminSocialPage: React.FC = () => {
             <Button variant="outline" onClick={handleManualSync}>
                 <RefreshCw className="mr-2 h-4 w-4" /> Sincronizar Agora
             </Button>
-            <Button variant="outline" onClick={() => window.open(`/tv?settingId=${settingId}`, '_blank')}>
+            <Button variant="outline" onClick={() => {
+                const url = wall?.slug ? `/tv?slug=${wall.slug}` : `/tv?settingId=${id}`;
+                window.open(url, '_blank');
+            }}>
                 <Monitor className="mr-2 h-4 w-4" /> Abrir TV View
             </Button>
             <Button variant="ghost">
