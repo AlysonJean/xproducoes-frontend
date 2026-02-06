@@ -9,7 +9,10 @@ function sanitizeImageUrl(url?: string): string {
     // Caminhos locais de uploads não são mais servidos: forçar fallback
     if (trimmed.startsWith('/uploads') || trimmed.startsWith('uploads/')) return '';
     if (trimmed.startsWith('blob:') || trimmed.startsWith('data:')) return '';
-    const u = new URL(trimmed, window.location.origin);
+    // Use process.env/meta.env base or just check if it's an absolute URL
+    // No servidor, não temos window.location.origin
+    const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+    const u = new URL(trimmed, base);
     if (invalidHosts.includes(u.hostname)) return '';
     return u.toString();
   } catch {

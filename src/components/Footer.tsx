@@ -18,7 +18,7 @@ export const Footer = () => {
   const { openModal } = useModal();
 
   // Ocultar footer nas páginas admin ou colaborador
-  const path = window.location.pathname;
+  const path = typeof window !== 'undefined' ? window.location.pathname : '';
   const isAdminPage = path.startsWith('/admin');
   const isCollaboratorPage = path.startsWith('/collaborator');
   if (isAdminPage || isCollaboratorPage) return null;

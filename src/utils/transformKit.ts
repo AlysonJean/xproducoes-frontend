@@ -8,7 +8,8 @@ function sanitizeImageUrl(url?: string): string {
   try {
     if (trimmed.startsWith('/uploads') || trimmed.startsWith('uploads/')) return '';
     if (trimmed.startsWith('blob:') || trimmed.startsWith('data:')) return '';
-    const u = new URL(trimmed, window.location.origin);
+    const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+    const u = new URL(trimmed, base);
     if (invalidHosts.includes(u.hostname)) return '';
     return u.toString();
   } catch {
