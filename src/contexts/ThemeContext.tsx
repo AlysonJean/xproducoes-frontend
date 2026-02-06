@@ -29,15 +29,31 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    const saved = localStorage.getItem('theme') as Theme;
-    if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
-    return 'system';
-  });
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
-    if (theme === 'light' || theme === 'dark') return theme;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
+  // SSR-safe initialization
+  const [theme, setThemeState] = useState<Theme>('system');
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light'); // Default seguro para SSR
+
+  // Load saved theme on mount (client-side only)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('theme') as Theme;
+      if (saved === 'light' || saved === 'dark' || saved === 'system') {
+        setThemeState(saved);
+      }
+    }
+  }, []);
+
+  // Update resolved theme based on system perf (client-side only)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (theme === 'light' || theme === 'dark') {
+         setResolvedTheme(theme);
+      } else {
+         const mq = window.matchMedia('(prefers-color-scheme: dark)');
+         setResolvedTheme(mq.matches ? 'dark' : 'light');
+      }
+    }
+  }, [theme]); // Run when theme changes or after initial mount
 
   // Aplica classe dark no HTML e data-theme sempre que resolvedTheme mudar
   useEffect(() => {
