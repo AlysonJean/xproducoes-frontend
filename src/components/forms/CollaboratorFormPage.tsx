@@ -17,9 +17,9 @@ import {
 const collaboratorSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   email: z.string().email('Email inválido'),
-  role: z.enum(['PHOTOGRAPHER', 'VIDEOGRAPHER', 'EDITOR', 'ASSISTANT', 'OTHER']).default('PHOTOGRAPHER'),
-  hourlyRate: z.union([z.number().min(0, 'Valor deve ser positivo'), z.string().transform(v => v === '' ? undefined : Number(v))]).optional(),
-  status: z.enum(['ACTIVE', 'INACTIVE', 'PENDING_APPROVAL', 'SUSPENDED']).default('ACTIVE'),
+  role: z.enum(['PHOTOGRAPHER', 'VIDEOGRAPHER', 'EDITOR', 'ASSISTANT', 'OTHER']),
+  hourlyRate: z.number().min(0, 'Valor deve ser positivo'),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'PENDING_APPROVAL', 'SUSPENDED']),
 });
 
 type CollaboratorFormData = z.infer<typeof collaboratorSchema>;

@@ -26,14 +26,14 @@ const idSchema = z.union([
 
 const bookingFormSchema = z
   .object({
-    clientType: z.enum(['registered', 'manual']).default('registered'),
-    clientId: idSchema.optional(),
-    clientName: z.string().optional(),
-    clientContact: z.string().optional(),
-    clientEmail: z.string().email().optional(),
-    selectionType: z.enum(['kit', 'equipments']).default('kit'),
-    kitId: idSchema.optional(),
-    equipmentIds: z.array(idSchema).optional(),
+    clientType: z.enum(['registered', 'manual']),
+    clientId: idSchema,
+    clientName: z.string(),
+    clientContact: z.string(),
+    clientEmail: z.string().email(),
+    selectionType: z.enum(['kit', 'equipments']),
+    kitId: idSchema,
+    equipmentIds: z.array(idSchema),
     eventDate: z.string().min(1, 'Data do evento é obrigatória'),
     eventEndDate: z.string().min(1, 'Data final do evento é obrigatória'),
     location: z.string().min(1, 'Local é obrigatório'),
@@ -43,13 +43,13 @@ const bookingFormSchema = z
     state: z.string().min(1, 'Estado é obrigatório'),
     zipCode: z.string().min(1, 'CEP é obrigatório'),
     addressNumber: z.string().min(1, 'Número é obrigatório'),
-    addressComplement: z.string().optional(),
-    notes: z.string().optional(),
-    status: z.string().optional(),
-    deliveryStatus: z.string().optional(),
+    addressComplement: z.string(),
+    notes: z.string(),
+    status: z.string(),
+    deliveryStatus: z.string(),
     // Campos admin-only
-    serviceValue: z.number().positive('Valor do serviço deve ser positivo').optional(),
-    paymentProof: z.any().optional(), // FileList será tratado no submit
+    serviceValue: z.number().positive('Valor do serviço deve ser positivo'),
+    paymentProof: z.any(), // FileList será tratado no submit
   })
   .refine(
     (d) =>

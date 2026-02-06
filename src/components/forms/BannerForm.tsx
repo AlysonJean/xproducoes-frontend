@@ -20,12 +20,12 @@ import { BrandLoader } from '../ui/BrandLoader';
 // Schema
 const bannerSchema = z.object({
   title: z.string().min(1, 'Título é obrigatório'),
-  description: z.string().optional(),
+  description: z.string(),
   imageUrl: z.string().min(1, 'URL da imagem é obrigatória'),
-  mobileImageUrl: z.string().optional(),
-  linkUrl: z.string().optional(),
-  sortOrder: z.number().or(z.string().transform((val) => Number(val))).default(0),
-  active: z.boolean().default(true),
+  mobileImageUrl: z.string(),
+  linkUrl: z.string(),
+  sortOrder: z.number(),
+  active: z.boolean(),
 });
 
 type BannerFormData = z.infer<typeof bannerSchema>;

@@ -43,10 +43,7 @@ root.render(
   <React.StrictMode>
     <GoogleWrapper>
       <HelmetProvider>
-        <BrowserRouter future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true
-        }}>
+        <BrowserRouter>
           <SentryErrorBoundary>
             <App />
           </SentryErrorBoundary>
