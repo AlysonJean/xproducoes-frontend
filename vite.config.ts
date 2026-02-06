@@ -89,7 +89,6 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    ssr: process.env.BUILD_SSR === 'true' ? true : undefined,
     sourcemap: true,
     rollupOptions: {
       output: {
