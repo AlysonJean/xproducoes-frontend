@@ -29,6 +29,7 @@ export interface SocialAnnouncement {
 
 interface PostsResponse {
   data: SocialPost[];
+  settingId?: string;
   meta: {
     total: number;
     page: number;
@@ -86,8 +87,15 @@ export const socialService = {
     return response.data;
   },
 
-  pairDevice: async (data: { pairingCode: string; settingId: string; deviceName?: string }) => {
+  pairDevice: async (data: { pairingCode: string; settingId?: string; eventId?: string; deviceName?: string }) => {
     const response = await api.post<{ data: any }>('/tv/pair', data);
+    return response.data;
+  },
+
+  getWallConfig: async (id: string) => {
+    // We can use the public endpoint if we want, or create an admin one. 
+    // The public one is /tv/config (requires slug or query)
+    const response = await api.get<any>(`/tv/config?settingId=${id}`);
     return response.data;
   }
 };

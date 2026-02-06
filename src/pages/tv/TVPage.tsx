@@ -197,15 +197,28 @@ const TVPage: React.FC = () => {
     // 1. Initial Load & Config
     useEffect(() => {
         const slug = searchParams.get('slug');
-        // Pairing code is handled in initial state
         
         const fetchConfig = async () => {
             try {
+                let url = '';
                 if (slug) {
-                    const res = await apiFetch<WallConfig>(`/public/social/config/${slug}`); 
+                    url = `/tv/config?slug=${slug}`;
+                } else if (pairingCode) {
+                    url = `/tv/config?pairingCode=${pairingCode}`;
+                }
+
+                if (!url) return;
+
+                const res = await apiFetch<any>(url);
+                if (res.linked) {
                     setConfig({
-                        ...res,
-                        layoutMode: res.layoutMode || 'LANDSCAPE'
+                        id: res.settingId,
+                        settingId: res.settingId,
+                        eventId: res.eventId,
+                        name: res.eventName,
+                        hashtag: res.hashtag || '',
+                        layoutMode: res.layoutMode || 'LANDSCAPE',
+                        slug: res.slug
                     });
                 }
             } catch (error) {
@@ -214,7 +227,16 @@ const TVPage: React.FC = () => {
         };
 
         fetchConfig();
-    }, [searchParams]);
+
+        // Polling loop if not linked
+        const interval = setInterval(() => {
+            if (!config) {
+                fetchConfig();
+            }
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [searchParams, pairingCode, config]);
 
     // 1.5 Fetch Announcements
     useEffect(() => {
@@ -258,7 +280,7 @@ const TVPage: React.FC = () => {
         if (!config) return;
         
         // Connect to namespace if applicable or default
-        const socket = io('/', { path: '/socket.io' });
+        const socket = io(window.location.hostname === 'localhost' ? 'http://localhost:4000' : '/', { path: '/socket.io' });
         
         const roomId = config.settingId ? `wall:${config.settingId}` : `event:${config.eventId}`;
         
