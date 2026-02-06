@@ -42,8 +42,8 @@ const kitFormSchema = z.object({
   description: z.string().min(1, 'Descrição é obrigatória'),
   price: z.number().positive('Preço deve ser positivo'),
   items: z.array(kitItemSchema).min(1, 'Selecione pelo menos um item'),
-  status: z.nativeEnum(ItemStatus).default(ItemStatus.ACTIVE),
-  images: z.any().optional(),
+  status: z.nativeEnum(ItemStatus),
+  images: z.any(),
 });
 
 type KitFormData = z.infer<typeof kitFormSchema>;

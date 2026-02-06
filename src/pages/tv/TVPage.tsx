@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, memo, useRef } from 'react';
+import React, { useState, useEffect, memo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { apiFetch } from '../../services/api';
@@ -9,7 +8,6 @@ import { socialService, SocialAnnouncement } from '../../services/socialService'
 import { AnnouncementSlide } from '../../components/social/AnnouncementSlide';
 import { MosaicSlide } from '../../components/social/MosaicSlide';
 import { LeaderboardSlide } from '../../components/social/LeaderboardSlide';
-import { useCallback } from 'react';
 
 // Types
 interface SocialPost {
@@ -227,7 +225,7 @@ const TVPage: React.FC = () => {
     });
     
     // Refs for intervals/timeouts
-    const nextSlideTimeout = useRef<NodeJS.Timeout | null>(null);
+    const nextSlideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const fetchConfig = useCallback(async () => {
         try {
@@ -539,6 +537,6 @@ const TVPage: React.FC = () => {
             )}
         </div>
     );
-};
+}
 
 export default TVPage;

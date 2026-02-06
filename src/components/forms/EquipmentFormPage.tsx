@@ -24,9 +24,9 @@ const equipmentFormSchema = z.object({
   description: z.string().min(1, 'Descrição é obrigatória'),
   pricePerHour: z.number().positive('Preço deve ser positivo'),
   categoryId: z.string().min(1, 'Categoria é obrigatória'),
-  quantity: z.number().int().positive('Quantidade deve ser positiva').optional(),
-  status: z.nativeEnum(ItemStatus).default(ItemStatus.ACTIVE),
-  images: z.any().optional(), // FileList será tratado no submit
+  quantity: z.number().int().positive('Quantidade deve ser positiva'),
+  status: z.nativeEnum(ItemStatus),
+  images: z.any(), // FileList será tratado no submit
 });
 
 type EquipmentFormData = z.infer<typeof equipmentFormSchema>;
