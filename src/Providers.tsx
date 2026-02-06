@@ -4,13 +4,12 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import { initSentry } from './utils/sentry'
 import './styles/themes/theme-variables.css'
 import './index.css'
-import './styles/headingReveal'
-import 'react-big-calendar/lib/css/react-big-calendar.css'
-
 // Initialize Sentry
 const sentry = initSentry()
 if (typeof window !== 'undefined') {
   (window as any).__SENTRY__ = sentry
+  // Load heading reveal only on client side
+  import('./styles/headingReveal');
 }
 const SentryErrorBoundary = (sentry && (sentry as any).ErrorBoundary) || (({ children }: any) => children)
 
