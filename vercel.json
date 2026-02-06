@@ -3,7 +3,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install --include=dev",
-  "framework": "vite",
   "regions": ["gru1"],
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
