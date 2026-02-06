@@ -57,16 +57,10 @@ export const AdminSponsorPage = () => {
             formData.append('name', newName);
             formData.append('logo', newFile);
 
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/sponsors`, {
+            await apiFetch('/admin/sponsors', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
                 body: formData
             });
-
-            if (!response.ok) throw new Error('Upload failed');
 
             addNotification({ type: 'success', title: 'Sucesso', message: 'Logo adicionada com sucesso' });
             setIsModalOpen(false);

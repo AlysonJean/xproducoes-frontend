@@ -1,12 +1,25 @@
+                {/* TESTE VISUAL */}
+                <div style={{background:'red',color:'white',padding:'24px',fontSize:'32px',textAlign:'center',zIndex:99999}}>
+                    TESTE VISUAL - TVPage.tsx
+                </div>
+        {/* Debug visual: mostrar valores principais */}
+        <div style={{position:'absolute',top:0,left:0,zIndex:9999,background:'rgba(0,0,0,0.7)',color:'#fff',padding:'8px',fontSize:'12px'}}>
+            <div>slug: {typeof slug !== 'undefined' ? slug?.toString() : 'N/A'}</div>
+            <div>showQrCode: {typeof showQrCode !== 'undefined' ? (showQrCode ? 'true' : 'false') : 'N/A'}</div>
+            <div>sponsors: {typeof sponsors !== 'undefined' && Array.isArray(sponsors) ? sponsors.length : '0'}</div>
+            <div>imageUrls: {typeof sponsors !== 'undefined' && Array.isArray(sponsors) ? sponsors.map(s => s.imageUrl).join(', ') : 'N/A'}</div>
+        </div>
 import React, { useState, useEffect, memo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { apiFetch } from '../../services/api';
+import { API_URL } from '../../utils/apiConfig';
 import QRCode from 'react-qr-code';
 import { socialService, SocialAnnouncement } from '../../services/socialService';
 import { AnnouncementSlide } from '../../components/social/AnnouncementSlide';
 import { MosaicSlide } from '../../components/social/MosaicSlide';
 import { LeaderboardSlide } from '../../components/social/LeaderboardSlide';
+import { useCallback } from 'react';
 
 // Types
 interface SocialPost {
@@ -77,7 +90,8 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
     // 3. Landscape Mode + Horizontal Content -> Full Screen
     
     // For simplicity in this implementation, we assume Landscape Mode + Vertical Content uses Sidebars
-    const showSidebars = isLandscapeMode && isVerticalContent && (sponsors && sponsors.length > 0);
+    // Show sidebars if landscape AND vertical content AND (has sponsors OR has QR enabled)
+    const showSidebars = isLandscapeMode && isVerticalContent && ((sponsors && sponsors.length > 0) || showQrCode);
 
     return (
         <div 
@@ -93,13 +107,43 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
             <div className="z-10 relative flex w-full h-full">
                 
                 {/* Left Sidebar (Sponsors) */}
-                {showSidebars && (
-                    <div className="hidden lg:flex flex-col justify-center items-center w-1/4 bg-black/40 backdrop-blur-sm p-4 gap-4 animate-fade-in-left">
-                        {sponsors?.slice(0, 3).map(s => (
-                            <img key={s.id} src={s.imageUrl} alt={s.name} className="max-w-[80%] max-h-[20%] object-contain drop-shadow-lg" />
-                        ))}
+                    <div className="flex flex-col justify-between items-center w-1/4 bg-black/40 backdrop-blur-sm p-6 gap-6 animate-fade-in-right h-full border-l border-white/10">
+                        {/* Top: Hashtag & CTA */}
+                        <div className="text-white text-center">
+                            <p className="text-sm uppercase tracking-widest mb-1 text-gray-300">Participe</p>
+                            <p className="font-bold text-3xl drop-shadow-md">#{hashtag || 'mural'}</p>
+                        </div>
+                        {/* Middle: QR Code (Dynamic) */}
+                        {showQrCode && slug && (
+                            <div className="bg-white p-3 rounded-xl shadow-2xl">
+                                <QRCode 
+                                    value={`${window.location.origin}/participate/${slug}`}
+                                    size={180}
+                                    level="M"
+                                />
+                                {qrCodeText && (
+                                    <p className="text-black text-xs font-bold text-center mt-2 uppercase tracking-wide">{qrCodeText}</p>
+                                )}
+                            </div>
+                        )}
+                        {/* Bottom: Sponsors or Logo */}
+                        {sponsors && sponsors.length > 0 ? (
+                            <div className="grid grid-cols-1 gap-4 w-full">
+                                {sponsors.slice(0, 3).map(s => (
+                                    <div key={s.id} className="bg-white p-3 rounded-lg shadow-lg flex items-center justify-center">
+                                        <img 
+                                            src={s.imageUrl} 
+                                            alt={s.name} 
+                                            className="h-16 w-full object-contain" 
+                                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="h-20"></div>
+                        )}
                     </div>
-                )}
 
                 {/* Main Content Area */}
                 <div className={`flex-1 flex items-center justify-center relative ${showSidebars ? 'p-4' : 'p-0'}`}>
@@ -122,7 +166,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
 
                 {/* Right Sidebar (Sponsors - mirrored or different) */}
                 {showSidebars && (
-                    <div className="hidden lg:flex flex-col justify-between items-center w-1/4 bg-black/40 backdrop-blur-sm p-6 gap-6 animate-fade-in-right h-full border-l border-white/10">
+                    <div className="flex flex-col justify-between items-center w-1/4 bg-black/40 backdrop-blur-sm p-6 gap-6 animate-fade-in-right h-full border-l border-white/10">
                     
                         {/* Top: Hashtag & CTA */}
                         <div className="text-white text-center">
@@ -131,8 +175,8 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                         </div>
 
                         {/* Middle: QR Code (Dynamic) */}
-                        {showQrCode !== false && slug && (
-                            <div className="bg-white p-3 rounded-xl shadow-2xl transform hover:scale-105 transition-transform duration-500">
+                        {showQrCode && slug && (
+                            <div className="bg-white p-3 rounded-xl shadow-2xl">
                                 <QRCode 
                                     value={`${window.location.origin}/participate/${slug}`}
                                     size={180}
@@ -145,21 +189,22 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                         )}
 
                         {/* Bottom: Sponsors or Logo */}
-                        <div className="flex flex-col gap-4 w-full items-center justify-end flex-1">
-                            {sponsors && sponsors.length > 0 ? (
-                                <div className="grid grid-cols-1 gap-4 w-full">
-                                    {sponsors.slice(0, 3).map(s => (
-                                        <div key={s.id} className="bg-white/90 p-3 rounded-lg shadow-lg">
-                                            <img src={s.imageUrl} alt={s.name} className="h-16 w-full object-contain mix-blend-multiply" />
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                            <div className="opacity-50">
-                                {/* Placeholder or empty */}
+                        {sponsors && sponsors.length > 0 ? (
+                            <div className="grid grid-cols-1 gap-4 w-full">
+                                {sponsors.slice(0, 3).map(s => (
+                                    <div key={s.id} className="bg-white p-3 rounded-lg shadow-lg flex items-center justify-center">
+                                        <img 
+                                            src={s.imageUrl} 
+                                            alt={s.name} 
+                                            className="h-16 w-full object-contain" 
+                                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                                        />
+                                    </div>
+                                ))}
                             </div>
-                            )}
-                        </div>
+                        ) : (
+                            <div className="h-20"></div>
+                        )}
                     </div>
                 )}
             </div>
@@ -194,39 +239,52 @@ const TVPage: React.FC = () => {
     // Refs for intervals/timeouts
     const nextSlideTimeout = useRef<NodeJS.Timeout | null>(null);
 
-    // 1. Initial Load & Config
-    useEffect(() => {
-        const slug = searchParams.get('slug');
-        
-        const fetchConfig = async () => {
-            try {
-                let url = '';
-                if (slug) {
-                    url = `/tv/config?slug=${slug}`;
-                } else if (pairingCode) {
-                    url = `/tv/config?pairingCode=${pairingCode}`;
-                }
-
-                if (!url) return;
-
-                const res = await apiFetch<any>(url);
-                if (res.linked) {
-                    setConfig({
-                        id: res.settingId,
-                        settingId: res.settingId,
-                        eventId: res.eventId,
-                        name: res.eventName,
-                        hashtag: res.hashtag || '',
-                        layoutMode: res.layoutMode || 'LANDSCAPE',
-                        slug: res.slug
-                    });
-                }
-            } catch (error) {
-                console.error("Failed to load config", error);
+    const fetchConfig = useCallback(async () => {
+        try {
+            const slug = searchParams.get('slug');
+            let url = '';
+            if (slug) {
+                url = `/tv/config?slug=${slug}`;
+            } else if (pairingCode) {
+                url = `/tv/config?pairingCode=${pairingCode}`;
             }
-        };
 
-        fetchConfig();
+            if (!url) return;
+
+            const res = await apiFetch<any>(url);
+            if (res.linked) {
+                setConfig({
+                    id: res.settingId,
+                    settingId: res.settingId,
+                    eventId: res.eventId,
+                    name: res.eventName,
+                    hashtag: res.hashtag || '',
+                    layoutMode: res.layoutMode || 'LANDSCAPE',
+                    slug: res.slug,
+                    sponsors: res.sponsors,
+                    enableQrCode: res.enableQrCode,
+                    qrCodeText: res.qrCodeText,
+                    enableMosaic: res.enableMosaic,
+                    mosaicFrequency: res.mosaicFrequency,
+                    enableGamification: res.enableGamification
+                });
+            }
+        } catch (error) {
+            console.error("Failed to load config", error);
+        }
+    }, [searchParams, pairingCode, config]); // Added config to avoid re-fetching if already set
+
+    useEffect(() => {
+        // Initial fetch only if not set
+        if (!config) {
+            fetchConfig();
+        }
+
+        // Log para depuração
+        if (config) {
+            // eslint-disable-next-line no-console
+            console.log('Config carregado:', config);
+        }
 
         // Polling loop if not linked
         const interval = setInterval(() => {
@@ -236,7 +294,7 @@ const TVPage: React.FC = () => {
         }, 5000);
 
         return () => clearInterval(interval);
-    }, [searchParams, pairingCode, config]);
+    }, [fetchConfig, config]);
 
     // 1.5 Fetch Announcements
     useEffect(() => {
@@ -279,13 +337,25 @@ const TVPage: React.FC = () => {
     useEffect(() => {
         if (!config) return;
         
-        // Connect to namespace if applicable or default
-        const socket = io(window.location.hostname === 'localhost' ? 'http://localhost:4000' : '/', { path: '/socket.io' });
+        // Conecta sempre na porta correta do backend
+        const socketUrl = window.location.hostname === 'localhost' ? 'http://localhost:4000' : API_URL;
+        console.log('Connecting to socket at:', socketUrl);
+        const socket = io(socketUrl, {
+            path: '/socket.io',
+            transports: ['websocket', 'polling']
+        });
         
         const roomId = config.settingId ? `wall:${config.settingId}` : `event:${config.eventId}`;
         
-        socket.emit('join', roomId);
-        console.log(`Joined room: ${roomId}`);
+        socket.on('connect', () => {
+            console.log('Connected to WebSocket server');
+            socket.emit('join', roomId);
+            console.log(`Joined room: ${roomId}`);
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Socket connection error:', error);
+        });
 
         socket.on('post:new', (post: SocialPost) => {
             setPosts(prev => {
@@ -302,10 +372,15 @@ const TVPage: React.FC = () => {
             setPosts(prev => prev.filter(p => p.id !== id));
         });
 
+        socket.on('config:update', () => {
+            console.log('Real-time config update received');
+            fetchConfig();
+        });
+
         return () => {
             socket.disconnect();
         };
-    }, [config]);
+    }, [config, fetchConfig]);
 
     // 3. Slideshow Rotation Logic (Dynamic Duration)
     useEffect(() => {
@@ -404,9 +479,11 @@ const TVPage: React.FC = () => {
         );
     }
 
-    // Main Slideshow
+    // Determine if sidebars are currently showing (to avoid double QR codes)
+    const isVerticalContent = true; // Match SlideComponent logic
+    const showSidebarsAtMain = config?.layoutMode === 'LANDSCAPE' && isVerticalContent && ((config?.sponsors && config.sponsors.length > 0) || config?.enableQrCode);
     const currentPost = posts[activeIndex];
-    
+
     return (
         <div className="relative w-screen h-screen bg-black text-white overflow-hidden font-sans selection:bg-pink-500 selection:text-white">
             {/* Background Layer (Blur) */}
@@ -448,13 +525,26 @@ const TVPage: React.FC = () => {
                  )}
             </div>
             
-             {/* Sidebar & Overlay Elements (QR, Sponsors in Portrait, etc.) */}
-             { config?.enableQrCode && !showAnnouncement && !showMosaic && !showLeaderboard && (
-                <div className="absolute bottom-8 right-8 bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 shadow-2xl animate-fade-in-up">
-                    <p className="text-center font-bold mb-2 text-sm uppercase tracking-wider">{config.qrCodeText || 'Participe'}</p>
-                    <div className="bg-white p-2 rounded-lg">
-                        <QRCode value={`${window.location.origin}/participate/${config.slug || ''}`} size={120} />
-                    </div>
+            {/* Sidebar & Overlay Elements (QR, Sponsors em modos sem sidebar) */}
+            { !showSidebarsAtMain && !showAnnouncement && !showMosaic && !showLeaderboard && (
+                <div className="absolute bottom-8 right-8 flex flex-col items-end gap-4">
+                    {/* QR Code flutuante */}
+                    { !!config?.enableQrCode && (
+                        <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 shadow-2xl animate-fade-in-up">
+                            <p className="text-center font-bold mb-2 text-sm uppercase tracking-wider">{config.qrCodeText || 'Participe'}</p>
+                            <div className="bg-white p-2 rounded-lg">
+                                <QRCode value={`${window.location.origin}/participate/${config.slug || ''}`} size={120} />
+                            </div>
+                        </div>
+                    )}
+                    {/* Logos dos patrocinadores flutuantes */}
+                    { config?.sponsors && config.sponsors.length > 0 && (
+                        <div className="flex gap-3 bg-white/10 backdrop-blur-md p-3 rounded-xl border border-white/20 shadow-2xl animate-fade-in-up">
+                            {config.sponsors.slice(0, 3).map(s => (
+                                <img key={s.id} src={s.imageUrl} alt={s.name} className="h-12 w-auto object-contain" onError={e => (e.currentTarget.style.display = 'none')} />
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

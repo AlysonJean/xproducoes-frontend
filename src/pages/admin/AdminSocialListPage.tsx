@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { socialService } from '../../services/socialService';
 import { Plus, ExternalLink, Instagram, Tv } from 'lucide-react';
+import { AdminLayout } from '../../components/admin/AdminLayout';
+import { Button } from '../../components/ui/Button';
 
 interface SocialWall {
     id: string;
@@ -37,29 +39,43 @@ const AdminSocialListPage: React.FC = () => {
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await socialService.createWall(newWall);
+            console.log('Criando mural:', newWall);
+            const response = await socialService.createWall(newWall);
+            console.log('Resposta do backend:', response);
             setIsCreating(false);
             setNewWall({ name: '', hashtag: '', slug: '' });
             fetchWalls();
-        } catch (error) {
-            alert('Erro ao criar mural');
+        } catch (err: any) {
+            console.error('Erro ao criar mural:', err);
+            alert('Erro ao criar mural: ' + (err?.response?.data?.error || err?.message || 'Erro desconhecido'));
+        }
+    };
+
+    // Função para apagar mural
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Tem certeza que deseja apagar este mural? Essa ação não pode ser desfeita.')) return;
+        try {
+            await socialService.deleteWall(id);
+            fetchWalls();
+        } catch {
+            alert('Erro ao apagar mural');
         }
     };
 
     return (
-        <div className="container mx-auto p-6 max-w-6xl">
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Social Walls</h1>
-                    <p className="text-gray-500 mt-1">Gerencie murais de Instagram independentes ou vinculados a eventos.</p>
+        <AdminLayout 
+            title="Social Walls" 
+            breadcrumbs={[{ name: 'Admin', href: '/admin/painel' }, { name: 'Social Walls' }]}
+        >
+            <div className="space-y-6">
+                <div className="flex justify-end mb-4">
+                    <Button 
+                        onClick={() => setIsCreating(true)}
+                        className="flex items-center gap-2"
+                    >
+                        <Plus size={20} /> Novo Mural
+                    </Button>
                 </div>
-                <button 
-                    onClick={() => setIsCreating(true)}
-                    className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
-                >
-                    <Plus size={20} /> Novo Mural
-                </button>
-            </div>
 
             {isCreating && (
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg mb-8 border border-gray-200 dark:border-gray-700 animate-fade-in">
@@ -147,6 +163,13 @@ const AdminSocialListPage: React.FC = () => {
                                     >
                                         <Tv size={18} />
                                     </button>
+                                    <button
+                                        onClick={() => handleDelete(wall.id)}
+                                        className="w-10 flex items-center justify-center border border-red-200 dark:border-red-600 rounded-lg text-red-500 hover:text-white hover:bg-red-500 transition-colors"
+                                        title="Apagar Mural"
+                                    >
+                                        <span className="font-bold">&#10005;</span>
+                                    </button>
                                 </div>
                              </div>
                         </div>
@@ -160,7 +183,8 @@ const AdminSocialListPage: React.FC = () => {
                     )}
                 </div>
             )}
-        </div>
+            </div>
+        </AdminLayout>
     );
 };
 
