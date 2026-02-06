@@ -160,9 +160,14 @@ export const useServiceWorker = () => {
 
 // Hook para detectar modo offline
 export function useOfflineDetector() {
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
+    // Definir estado inicial correto após montagem no cliente
+    if (typeof navigator !== 'undefined') {
+      setIsOffline(!navigator.onLine);
+    }
+
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
 
