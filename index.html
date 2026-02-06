@@ -1,0 +1,147 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Preferred PNG favicons for maximum compatibility -->
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="icon" href="/favicon-64.png" sizes="64x64" type="image/png" />
+    <link rel="icon" href="/favicon-192.png" sizes="192x192" type="image/png" />
+    <link rel="icon" href="/favicon-512.png" sizes="512x512" type="image/png" />
+    <!-- Apple / touch icon -->
+    <link rel="apple-touch-icon" href="/favicon-192.png" />
+    <!-- Legacy shortcut -->
+    <link rel="shortcut icon" href="/favicon-32.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    
+    <!-- Image CDN Optimization -->
+    <link rel="preconnect" href="https://res.cloudinary.com" />
+
+    <!-- 🚨 GLOBAL ERROR HANDLER FOR DEBUGGING 🚨 -->
+    <script>
+      window.onerror = function(msg, url, line, col, error) {
+        // Ignorar erros de ResizeObserver que são inofensivos
+        if (msg && msg.toString().includes('ResizeObserver')) return;
+
+        const container = document.getElementById('global-error-overlay') || document.createElement('div');
+        container.id = 'global-error-overlay';
+        container.style.position = 'fixed';
+        container.style.top = '0';
+        container.style.left = '0';
+        container.style.width = '100%';
+        container.style.height = '100%';
+        container.style.backgroundColor = '#1a0505';
+        container.style.color = '#ff4444';
+        container.style.zIndex = '999999';
+        container.style.padding = '20px';
+        container.style.fontFamily = 'monospace';
+        container.style.overflow = 'auto';
+        container.style.whiteSpace = 'pre-wrap';
+
+        const time = new Date().toLocaleTimeString();
+        container.innerHTML += `\n[${time}] CRITICAL ERROR:\n${msg}\nAt: ${url}:${line}:${col}\n${error?.stack || ''}\n----------------------------------------\n`;
+        
+        if (!document.body.contains(container)) {
+          document.body.appendChild(container);
+        }
+      };
+
+      window.onunhandledrejection = function(event) {
+        // Ignorar erros de ResizeObserver
+        if (event.reason && event.reason.toString().includes('ResizeObserver')) return;
+        
+        window.onerror(
+          'Unhandled Promise Rejection: ' + (event.reason?.message || event.reason),
+          '', 0, 0, event.reason
+        );
+      };
+    </script>
+
+    <!-- SEO Local e Meta Tags Essenciais -->
+    <title>Aluguel de Som, Iluminação e Audiovisual em Belo Horizonte - X Produções</title>
+    <meta name="description" content="Líder em aluguel de som, iluminação, painel de LED e equipamentos audiovisuais em Belo Horizonte e região. Transforme seu evento com a melhor tecnologia da X Produções. Orçamento rápido!" />
+    <meta name="keywords" content="aluguel de som em belo horizonte, iluminação para festas bh, aluguel de painel de led, audiovisual, equipamentos para eventos, X Produções, aluguel de som bh, dj casamento bh" />
+    <meta name="author" content="X Produções e Eventos" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://www.xproduceoseeventos.com.br/" />
+
+    <!-- Open Graph / Facebook / WhatsApp -->
+    <meta property="og:type" content="business.business" />
+    <meta property="og:title" content="Aluguel de Som e Iluminação em Belo Horizonte | X Produções" />
+    <meta property="og:description" content="Precisa de som, luz e imagem para seu evento em BH e região? Conheça a X Produções. Equipamentos de ponta e equipe especializada." />
+    <meta property="og:url" content="https://www.xproduceoseeventos.com.br/" />
+    <meta property="og:image" content="https://www.xproduceoseeventos.com.br/og-image.jpg" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:site_name" content="X Produções e Eventos" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Aluguel de Som e Iluminação em Belo Horizonte | X Produções" />
+    <meta name="twitter:description" content="Soluções completas em audiovisual para eventos em Belo Horizonte. Confira!" />
+    <meta name="twitter:image" content="https://www.xproduceoseeventos.com.br/og-image.jpg" />
+    
+    <!-- Schema Markup (JSON-LD) para Negócio Local -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "X Produções e Eventos",
+        "image": "https://www.xproduceoseeventos.com.br/xproducoes-logo.svg",
+        "@id": "https://www.xproduceoseeventos.com.br",
+        "url": "https://www.xproduceoseeventos.com.br",
+        "telephone": "+55 31 98925-2272",
+        "priceRange": "$$",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "rua flor d'agua 407 Jardim Alvorada",
+          "addressLocality": "Belo Horizonte",
+          "addressRegion": "MG",
+          "postalCode": "30810-310",
+          "addressCountry": "BR"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": "-19.89590557022343",
+          "longitude": "-43.990583269009264"
+        },
+        "openingHoursSpecification": {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday"
+          ],
+          "opens": "09:00",
+          "closes": "18:00"
+        },
+        "sameAs": [
+          "https://www.instagram.com/x_producoeseventos",
+          "https://www.facebook.com/profile.php?id=100089011017681",
+          "https://www.linkedin.com/company/xproducoeseeventos"
+        ]
+      }
+    </script>
+
+    <meta name="msapplication-TileColor" content="#194459" />
+    <meta name="msapplication-TileImage" content="/favicon-192.png" />
+    
+    <link rel="manifest" href="/manifest.webmanifest" />
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Title foi movido para o bloco de SEO acima para melhor priorização -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

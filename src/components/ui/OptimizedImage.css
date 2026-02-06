@@ -1,0 +1,4 @@
+
+.optimized-image-with-ratio {
+  aspect-ratio: var(--img-aspect-ratio, auto);
+}

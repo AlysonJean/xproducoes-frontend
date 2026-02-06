@@ -1,0 +1,61 @@
+# Vercel Ignore File
+# Arquivos que não devem ser incluídos no deploy
+
+# Development
+node_modules
+.env
+.env.local
+.env.development.local
+.env.test.local
+
+# Testing
+coverage
+.nyc_output
+*.log
+
+# Build artifacts que serão recriados
+dist
+dist-ssr
+*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI/CD (já está na Vercel)
+.github
+.gitlab-ci.yml
+
+# Documentation (não necessário no deploy)
+*.md
+!README.md
+
+# Scripts de desenvolvimento
+# manter a maioria dos scripts excluídos, mas permitir o gerador de favicons
+!scripts/generate-favicons.js
+*.ps1
+*.sh
+
+# Configurações locais
+.qodo
+.snykignore
+playwright.config.ts
+playwright-report/
+test-results/
+
+# Cache
+.cache
+.vite
+*.tsbuildinfo
