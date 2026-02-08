@@ -72,7 +72,8 @@ export const socialService = {
 
   // Announcements
   getAnnouncements: async (id: string) => {
-    const response = await api.get<{ data: SocialAnnouncement[] }>(`/events/${id}/social/announcements`);
+    // Use public endpoint so TVs can fetch announcements without authentication
+    const response = await api.get<{ data: SocialAnnouncement[] }>(`/public/events/${id}/social/announcements`);
     return response.data;
   },
 
