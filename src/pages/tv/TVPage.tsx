@@ -81,6 +81,16 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
     // Show sidebars if landscape AND vertical content AND (has sponsors OR has QR enabled)
     const showSidebars = isLandscapeMode && isVerticalContent && ((sponsors && sponsors.length > 0) || showQrCode);
 
+    // eslint-disable-next-line no-console
+    console.debug('SlideComponent - sponsors', sponsors?.map(s => ({ id: s.id, url: s.imageUrl })), 'showSidebars', showSidebars);
+
+    // Inspect DOM for sponsor images when component renders
+    if (typeof document !== 'undefined') {
+        const imgs = Array.from(document.querySelectorAll('.sponsor-debug-img')) as HTMLImageElement[];
+        // eslint-disable-next-line no-console
+        console.debug('SlideComponent - DOM sponsor imgs count:', imgs.length, imgs.map(i => i.src));
+    }
+
     return (
         <div 
             className={`absolute inset-0 flex items-center justify-center transition-opacity duration-1000 ease-in-out will-[opacity,transform] ${active ? 'opacity-100' : 'opacity-0'}`}
@@ -122,8 +132,12 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                         <img 
                                             src={s.imageUrl} 
                                             alt={s.name} 
-                                            className="h-16 w-full object-contain" 
-                                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                                            className="h-16 w-full object-contain sponsor-debug-img" 
+                                            onError={(e) => {
+                                                // eslint-disable-next-line no-console
+                                                console.warn('SlideComponent - Sponsor image failed to load:', s.imageUrl);
+                                                e.currentTarget.style.display = 'none';
+                                            }}
                                         />
                                     </div>
                                 ))}
@@ -184,8 +198,12 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                         <img 
                                             src={s.imageUrl} 
                                             alt={s.name} 
-                                            className="h-16 w-full object-contain" 
-                                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                                            className="h-16 w-full object-contain sponsor-debug-img" 
+                                            onError={(e) => {
+                                                // eslint-disable-next-line no-console
+                                                console.warn('SlideComponent - Sponsor image failed to load:', s.imageUrl);
+                                                e.currentTarget.style.display = 'none';
+                                            }}
                                         />
                                     </div>
                                 ))}
@@ -274,6 +292,15 @@ const TVPage: React.FC = () => {
             console.log('Config carregado:', config);
         }
 
+        // Diagnostic logs when config changes
+        // eslint-disable-next-line no-console
+        console.log('TV Debug - derived:', {
+            sponsorsCount: config?.sponsors?.length ?? 0,
+            enableQr: !!config?.enableQrCode,
+            slug: config?.slug,
+            layoutMode: config?.layoutMode,
+        });
+
         // Polling loop if not linked
         const interval = setInterval(() => {
             if (!config) {
@@ -283,6 +310,14 @@ const TVPage: React.FC = () => {
 
         return () => clearInterval(interval);
     }, [fetchConfig, config]);
+
+    // Warn when QR is enabled but slug is missing (always declared to keep Hooks order stable)
+    useEffect(() => {
+        if (config?.enableQrCode && !config?.slug) {
+            // eslint-disable-next-line no-console
+            console.warn('TV Debug - QR is enabled but config.slug is missing. QR will not be rendered.');
+        }
+    }, [config?.enableQrCode, config?.slug]);
 
     // 1.5 Fetch Announcements
     useEffect(() => {
@@ -454,23 +489,145 @@ const TVPage: React.FC = () => {
     
     if (!config) return <div className="bg-black w-screen h-screen flex items-center justify-center text-white">Carregando...</div>;
 
+    const isVerticalContent = true; // Match SlideComponent logic
+    const showSidebarsAtMain = config?.layoutMode === 'LANDSCAPE' && isVerticalContent && ((config?.sponsors && config.sponsors.length > 0) || config?.enableQrCode);
+
+    // Diagnostic: log why sidebars may or may not display
+    // eslint-disable-next-line no-console
+    console.log('TV Debug - showSidebarsAtMain', { showSidebarsAtMain, layoutMode: config?.layoutMode, sponsorsCount: config?.sponsors?.length ?? 0, enableQr: !!config?.enableQrCode });
+
     if (posts.length === 0) {
+        // Render a placeholder slide so sponsors and QR are visible even when there
+        // are no posts yet. This improves UX for events without published posts.
+        const placeholderPost: SocialPost = {
+            id: 'placeholder',
+            mediaUrl: (config?.sponsors && config.sponsors[0] && config.sponsors[0].imageUrl) || 'https://placehold.co/1200x800/000000/ffffff?text=No+posts+yet',
+            author: config?.name || 'Evento',
+            caption: '',
+            status: 'APPROVED'
+        };
+
         return (
-            <div className="w-screen h-screen bg-black flex flex-col items-center justify-center text-white relative overflow-hidden">
-                <div className="z-10 text-center p-8 bg-black/50 backdrop-blur-md rounded-xl border border-white/10">
-                    <h2 className="text-4xl font-bold mb-2">#{config.hashtag}</h2>
-                    <p className="text-xl text-gray-300">Publique no Instagram para aparecer aqui!</p>
+            <div className="relative w-screen h-screen bg-black text-white overflow-hidden font-sans selection:bg-pink-500 selection:text-white">
+                <div className="absolute inset-0 z-0 opacity-40 scale-110 pointer-events-none">
+                    <img src={placeholderPost.mediaUrl.replace('/upload/', '/upload/w_100,c_scale,q_auto/')} className="w-full h-full object-cover blur-3xl" alt="" />
                 </div>
-                {/* Background animation hint */}
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 to-blue-900/20 animate-pulse"></div>
+
+                <div className="absolute inset-0 z-10 flex items-center justify-center p-8">
+                    <SlideComponent 
+                        post={placeholderPost}
+                        active={true}
+                        isLandscapeMode={config?.layoutMode === 'LANDSCAPE'}
+                        sponsors={config?.sponsors}
+                        hashtag={config?.hashtag}
+                        showQrCode={config?.enableQrCode}
+                        qrCodeText={config?.qrCodeText}
+                        slug={config?.slug}
+                    />
+                </div>
+
+                {/* Sidebar & Overlay Elements (QR, Sponsors em modos sem sidebar) */}
+                { !showSidebarsAtMain && !showAnnouncement && !showMosaic && !showLeaderboard && (
+                    <div className="absolute bottom-8 right-8 flex flex-col items-end gap-4">
+                        {/* QR Code flutuante */}
+                        { !!config?.enableQrCode && (
+                            <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 shadow-2xl animate-fade-in-up">
+                                <p className="text-center font-bold mb-2 text-sm uppercase tracking-wider">{config.qrCodeText || 'Participe'}</p>
+                                <div className="bg-white p-2 rounded-lg">
+                                    <QRCode value={`${window.location.origin}/participate/${config.slug || ''}`} size={120} />
+                                </div>
+                            </div>
+                        )}
+                        {/* Logos dos patrocinadores flutuantes */}
+                        { config?.sponsors && config.sponsors.length > 0 && (
+                            <div className="flex gap-3 bg-white/10 backdrop-blur-md p-3 rounded-xl border border-white/20 shadow-2xl animate-fade-in-up">
+                                {config.sponsors.slice(0, 3).map(s => (
+                                    <img key={s.id} src={s.imageUrl} alt={s.name} className="h-12 w-auto object-contain sponsor-debug-img" height={48} onLoad={() => {
+                                        try {
+                                            // eslint-disable-next-line no-console
+                                            if (typeof window !== 'undefined') {
+                                                // @ts-ignore
+                                                window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
+                                                // @ts-ignore
+                                                if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
+                                            }
+                                        } catch (err) {/* ignore */}
+                                    }} onError={e => {
+                                        // eslint-disable-next-line no-console
+                                        console.warn('TVPage - sponsor overlay failed to load:', s.imageUrl);
+                                        e.currentTarget.style.display = 'none';
+                                    }} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         );
     }
 
-    // Determine if sidebars are currently showing (to avoid double QR codes)
-    const isVerticalContent = true; // Match SlideComponent logic
-    const showSidebarsAtMain = config?.layoutMode === 'LANDSCAPE' && isVerticalContent && ((config?.sponsors && config.sponsors.length > 0) || config?.enableQrCode);
+
+
     const currentPost = posts[activeIndex];
+
+    // Dev-only fallback: allow testing logos/QR without a backend by setting VITE_TV_DEV_FALLBACK=true
+    useEffect(() => {
+        const enabled = (import.meta.env.DEV && import.meta.env.VITE_TV_DEV_FALLBACK === 'true') || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ;
+        if (!enabled) return;
+        if (config) return; // only apply when no config is present
+
+        // eslint-disable-next-line no-console
+        console.info('TV Debug - applying dev fallback config for local testing');
+
+        const sampleConfig: WallConfig = {
+            id: 'dev-sample',
+            name: 'Dev Sample Wall',
+            hashtag: 'muraldev',
+            layoutMode: 'LANDSCAPE',
+            enableQrCode: true,
+            qrCodeText: 'Participe - Dev',
+            slug: 'dev-sample',
+            sponsors: [
+                { id: 'sp1', imageUrl: 'https://via.placeholder.com/200x80?text=Sponsor+1', name: 'Sponsor 1' },
+                { id: 'sp2', imageUrl: 'https://via.placeholder.com/200x80?text=Sponsor+2', name: 'Sponsor 2' }
+            ],
+            enableMosaic: true,
+            mosaicFrequency: 6,
+            enableGamification: false,
+        };
+
+        const samplePosts: SocialPost[] = [
+            { id: 'p1', mediaUrl: 'https://via.placeholder.com/1200x800?text=Post+1', author: 'dev_user', caption: 'post de teste 1', status: 'APPROVED' },
+            { id: 'p2', mediaUrl: 'https://via.placeholder.com/800x1200?text=Post+2', author: 'dev_user2', caption: 'post vertical', status: 'APPROVED' },
+        ];
+
+        setConfig(sampleConfig);
+        setPosts(samplePosts);
+    }, [config]);
+
+    // Debug: Inspect DOM for sponsor images when sponsors or posts change
+    useEffect(() => {
+        // eslint-disable-next-line no-console
+        console.debug('TV Debug - sponsors changed', config?.sponsors);
+
+        const runCheck = (note: string) => {
+            if (typeof document !== 'undefined') {
+                const imgs = Array.from(document.querySelectorAll('.sponsor-debug-img')) as HTMLImageElement[];
+                // eslint-disable-next-line no-console
+                console.log(`DOM sponsor imgs count (${note}):`, imgs.length, imgs.map(i => i.src));
+            }
+        };
+
+        // Run immediate and delayed checks to catch DOM updates after render
+        runCheck('immediate');
+        const t1 = setTimeout(() => runCheck('100ms'), 100);
+        const t2 = setTimeout(() => runCheck('500ms'), 500);
+
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+        };
+    }, [config?.sponsors, posts.length, activeIndex]);
 
     return (
         <div className="relative w-screen h-screen bg-black text-white overflow-hidden font-sans selection:bg-pink-500 selection:text-white">
@@ -529,7 +686,21 @@ const TVPage: React.FC = () => {
                     { config?.sponsors && config.sponsors.length > 0 && (
                         <div className="flex gap-3 bg-white/10 backdrop-blur-md p-3 rounded-xl border border-white/20 shadow-2xl animate-fade-in-up">
                             {config.sponsors.slice(0, 3).map(s => (
-                                <img key={s.id} src={s.imageUrl} alt={s.name} className="h-12 w-auto object-contain" onError={e => (e.currentTarget.style.display = 'none')} />
+                                <img key={s.id} src={s.imageUrl} alt={s.name} className="h-12 w-auto object-contain sponsor-debug-img" height={48} onLoad={() => {
+                                    try {
+                                        // eslint-disable-next-line no-console
+                                        if (typeof window !== 'undefined') {
+                                            // @ts-ignore
+                                            window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
+                                            // @ts-ignore
+                                            if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
+                                        }
+                                    } catch (err) { /* ignore */ }
+                                }} onError={e => {
+                                    // eslint-disable-next-line no-console
+                                    console.warn('TVPage - sponsor overlay failed to load:', s.imageUrl);
+                                    e.currentTarget.style.display = 'none';
+                                }} />
                             ))}
                         </div>
                     )}
