@@ -3,7 +3,7 @@ import ReactDOMServer from 'react-dom/server'
 import { escapeInject, dangerouslySkipEscape } from 'vike/server'
 import type { OnRenderHtmlAsync } from 'vike/types'
 import { PageShell } from './PageShell'
-import { StaticRouter } from 'react-router-dom'
+import { StaticRouter } from 'react-router'
 
 import type { PageContextServer } from 'vike/types'
 

@@ -95,15 +95,10 @@ Sitemap: ${BASE_URL}/sitemap.xml`;
   if (isProduction) {
     app.use(express.static(`${root}/dist/client`))
   } else {
-    // Instantiate Vite's development server and integrate its middleware to our server.
-    // ⚠️ We should instantiate it *only* in development. (It isn't needed in production
-    // and would unnecessarily bloat our production server.)
-    const vite = await import('vite')
-    const viteDevServer = await vite.createServer({
-      root,
-      server: { middlewareMode: true }
-    })
-    app.use(viteDevServer.middlewares)
+    // New Vike standard for development middleware
+    const { createDevMiddleware } = await import('vike/server')
+    const { devMiddleware } = await createDevMiddleware({ root })
+    app.use(devMiddleware)
   }
 
   app.get(/(.*)/, async (req, res, next) => {
@@ -115,7 +110,7 @@ Sitemap: ${BASE_URL}/sitemap.xml`;
     if (!httpResponse) {
       return next()
     } else {
-      const { body,statusCode, headers, earlyHints } = httpResponse
+      const { body, statusCode, earlyHints } = httpResponse
       if (res.writeEarlyHints) res.writeEarlyHints({ link: earlyHints.map((e) => e.earlyHintLink) })
       helpers(httpResponse, res)
       res.status(statusCode).send(body)
@@ -123,9 +118,9 @@ Sitemap: ${BASE_URL}/sitemap.xml`;
   })
 
   // Helper function to set headers
-  const helpers = (httpResponse, res) => {
+  const helpers = (httpResponse: any, res: any) => {
     const { headers } = httpResponse
-    headers.forEach(([name, value]) => res.setHeader(name, value))
+    headers.forEach(([name, value]: [string, string]) => res.setHeader(name, value))
   }
 
   const port = process.env.PORT || 3000
