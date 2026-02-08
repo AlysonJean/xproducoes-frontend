@@ -140,20 +140,38 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                         {/* Bottom: Sponsors or Logo */}
                         {sponsors && sponsors.length > 0 ? (
                             <div className="grid grid-cols-1 gap-4 w-full">
-                                {sponsors.slice(0, 3).map(s => (
-                                    <div key={s.id} className="bg-white p-3 rounded-lg shadow-lg flex items-center justify-center">
-                                        <img 
-                                            src={s.imageUrl} 
-                                            alt={s.name} 
-                                            className="h-16 w-full object-contain sponsor-debug-img" 
-                                            onError={(e) => {
-                                                // eslint-disable-next-line no-console
-                                                console.warn('SlideComponent - Sponsor image failed to load:', s.imageUrl);
-                                                e.currentTarget.style.display = 'none';
-                                            }}
-                                        />
-                                    </div>
-                                ))}
+                                {sponsors.slice(0, 3).map(s => {
+                                    const opt = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_600,c_limit,q_auto/') : s.imageUrl;
+                                    const small = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_300,c_limit/') : s.imageUrl;
+                                    return (
+                                        <div key={s.id} className="bg-white p-3 rounded-lg shadow-lg flex items-center justify-center">
+                                            <img
+                                                src={opt || 'https://placehold.co/300x96?text=Sponsor'}
+                                                srcSet={opt ? `${small} 300w, ${opt} 600w` : undefined}
+                                                alt={s.name || 'Sponsor'}
+                                                className="max-h-28 w-auto mx-auto sponsor-debug-img"
+                                                width={300}
+                                                height={96}
+                                                loading="eager"
+                                                onLoad={() => {
+                                                    try {
+                                                        if (typeof window !== 'undefined') {
+                                                            // @ts-ignore
+                                                            window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
+                                                            // @ts-ignore
+                                                            if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
+                                                        }
+                                                    } catch (err) {/* ignore */}
+                                                }}
+                                                onError={(e) => {
+                                                    // eslint-disable-next-line no-console
+                                                    console.warn('SlideComponent - Sponsor image failed to load, replacing with placeholder:', s.imageUrl);
+                                                    e.currentTarget.src = 'https://placehold.co/300x96?text=Sponsor';
+                                                }}
+                                            />
+                                        </div>
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="h-20"></div>
@@ -210,17 +228,17 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                         {sponsors && sponsors.length > 0 ? (
                             <div className="grid grid-cols-1 gap-4 w-full">
                                 {sponsors.slice(0, 3).map(s => {
-                                    const opt = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_400,c_limit,q_auto/') : s.imageUrl;
-                                    const small = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_200,c_limit/') : s.imageUrl;
+                                    const opt = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_600,c_limit,q_auto/') : s.imageUrl;
+                                    const small = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_300,c_limit/') : s.imageUrl;
                                     return (
                                         <div key={s.id} className="bg-white p-3 rounded-lg shadow-lg flex items-center justify-center">
                                             <img
-                                                src={opt || 'https://placehold.co/200x80?text=Sponsor'}
-                                                srcSet={opt ? `${small} 200w, ${opt} 400w` : undefined}
+                                                src={opt || 'https://placehold.co/300x96?text=Sponsor'}
+                                                srcSet={opt ? `${small} 300w, ${opt} 600w` : undefined}
                                                 alt={s.name || 'Sponsor'}
-                                                className="h-16 w-full object-contain sponsor-debug-img"
-                                                width={200}
-                                                height={64}
+                                                className="max-h-28 w-auto mx-auto sponsor-debug-img"
+                                                width={300}
+                                                height={96}
                                                 loading="eager"
                                                 onLoad={() => {
                                                     try {
@@ -235,7 +253,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                                 onError={(e) => {
                                                     // eslint-disable-next-line no-console
                                                     console.warn('SlideComponent - Sponsor image failed to load, replacing with placeholder:', s.imageUrl);
-                                                    e.currentTarget.src = 'https://placehold.co/200x80?text=Sponsor';
+                                                    e.currentTarget.src = 'https://placehold.co/300x96?text=Sponsor';
                                                 }}
                                             />
                                         </div>
@@ -244,7 +262,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                             </div>
                         ) : (
                             <div className="h-20"></div>
-                        )}
+                        )} 
                     </div>
                 )}
             </div>
@@ -579,10 +597,10 @@ const TVPage: React.FC = () => {
                         { config?.sponsors && config.sponsors.length > 0 && (
                             <div className="flex gap-3 bg-white/10 backdrop-blur-md p-3 rounded-xl border border-white/20 shadow-2xl animate-fade-in-up">
                                 {config.sponsors.slice(0, 3).map(s => {
-                                    const opt = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_300,c_limit,q_auto/') : s.imageUrl;
-                                    const small = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_150,c_limit/') : s.imageUrl;
+                                    const opt = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_480,c_limit,q_auto/') : s.imageUrl;
+                                    const small = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_240,c_limit/') : s.imageUrl;
                                     return (
-                                        <img key={s.id} src={opt || 'https://placehold.co/150x48?text=Sponsor'} alt={s.name || 'Sponsor'} className="h-12 w-auto object-contain sponsor-debug-img" height={48} width={150} srcSet={opt ? `${small} 150w, ${opt} 300w` : undefined} loading="eager" onLoad={() => {
+                                        <img key={s.id} src={opt || 'https://placehold.co/240x80?text=Sponsor'} alt={s.name || 'Sponsor'} className="h-20 w-auto object-contain sponsor-debug-img" height={80} width={240} srcSet={opt ? `${small} 240w, ${opt} 480w` : undefined} loading="eager" onLoad={() => {
                                             try {
                                                 if (typeof window !== 'undefined') {
                                                     // @ts-ignore
@@ -594,7 +612,7 @@ const TVPage: React.FC = () => {
                                         }} onError={e => {
                                             // eslint-disable-next-line no-console
                                             console.warn('TVPage - sponsor overlay failed to load, replacing with placeholder:', s.imageUrl);
-                                            e.currentTarget.src = 'https://placehold.co/150x48?text=Sponsor';
+                                            e.currentTarget.src = 'https://placehold.co/240x80?text=Sponsor';
                                         }} />
                                     );
                                 })}
