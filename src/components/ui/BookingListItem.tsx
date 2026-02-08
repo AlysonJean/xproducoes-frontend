@@ -16,9 +16,9 @@ const formatDate = (dateString: string): string => {
 const getStatusChip = (status: BookingStatus) => {
   const statusConfig = {
     DRAFT: { bg: 'bg-muted/40', text: 'text-muted-foreground', label: 'Rascunho' },
-    PENDING: { bg: 'bg-yellow-500/20', text: 'text-yellow-600', label: 'Pendente' },
-    CONFIRMED: { bg: 'bg-success/100/20', text: 'text-success', label: 'Confirmado' },
-    IN_PROGRESS: { bg: 'bg-primary/100/20', text: 'text-primary', label: 'Em Progresso' },
+    PENDING: { bg: 'bg-warning/20', text: 'text-warning', label: 'Pendente' },
+    CONFIRMED: { bg: 'bg-success/20', text: 'text-success', label: 'Confirmado' },
+    IN_PROGRESS: { bg: 'bg-primary/20', text: 'text-primary', label: 'Em Progresso' },
     COMPLETED: { bg: 'bg-primary/20', text: 'text-primary', label: 'Concluído' },
     CANCELLED: { bg: 'bg-destructive/20', text: 'text-destructive', label: 'Cancelado' },
   };
@@ -105,7 +105,7 @@ export const BookingListItem = ({ booking, onReviewClick, onViewDetails }: Booki
           {booking.status === 'COMPLETED' && onReviewClick && !booking.review && (
             <button
               onClick={() => onReviewClick(booking.id)}
-              className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded-lg transition-colors"
+              className="bg-warning hover:bg-warning/80 text-warning-foreground font-bold py-2 px-4 rounded-lg transition-colors"
             >
               Deixar Avaliação
             </button>

@@ -15,10 +15,10 @@ const STATUS_CONFIG = {
     COMING_SOON: 'Em Breve',
   },
   STYLES: {
-    ACTIVE: 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-50',
+    ACTIVE: 'bg-success text-success-foreground dark:bg-success dark:text-success-foreground',
     INACTIVE: 'bg-destructive text-destructive-foreground',
-    MAINTENANCE: 'bg-yellow-500 text-black',
-    COMING_SOON: 'bg-blue-500 text-white',
+    MAINTENANCE: 'bg-warning text-warning-foreground',
+    COMING_SOON: 'bg-info text-info-foreground',
   },
 } as const;
 

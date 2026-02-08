@@ -12,9 +12,9 @@ interface PostCardProps {
 
 const Badge = ({ children, variant }: { children: React.ReactNode, variant: 'default' | 'destructive' | 'secondary' }) => {
     const colors = {
-        default: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-        destructive: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-        secondary: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+      default: 'bg-success/10 text-success bg-success/20 text-success-foreground',
+      destructive: 'bg-destructive/10 text-destructive bg-destructive/20 text-destructive-foreground',
+      secondary: 'bg-muted text-muted-foreground bg-muted/20 text-muted-foreground'
     };
     return (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[variant]}`}>
@@ -26,7 +26,7 @@ const Badge = ({ children, variant }: { children: React.ReactNode, variant: 'def
 export const PostCard: React.FC<PostCardProps> = ({ post, onApprove, onReject, isProcessing }) => {
   return (
     <div className={`bg-card rounded-xl shadow-sm border overflow-hidden transition-all duration-300 flex flex-col ${isProcessing ? 'opacity-50 scale-95' : ''}`}>
-      <div className="relative aspect-square w-full bg-gray-100 dark:bg-gray-800">
+      <div className="relative aspect-square w-full bg-muted">
         <img 
           src={post.mediaUrl} 
           alt={post.caption || 'Instagram Post'} 
@@ -42,7 +42,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onApprove, onReject, i
       
       <div className="p-3 flex-1">
         <div className="flex items-center gap-2 mb-2">
-            <Instagram size={16} className="text-pink-600" />
+            <Instagram size={16} className="text-accent" />
             <span className="font-semibold text-sm truncate">@{post.author}</span>
         </div>
         <p className="text-xs text-muted-foreground line-clamp-2" title={post.caption || ''}>
@@ -65,13 +65,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onApprove, onReject, i
         
         {post.status !== 'APPROVED' && (
              <Button 
-                variant="primary" 
-                size="sm" 
-                className="flex-1 bg-green-600 hover:bg-green-700 hover:text-white"
-                onClick={() => onApprove(post.id)}
-                disabled={isProcessing}
+              variant="primary" 
+              size="sm" 
+              className="flex-1 bg-success hover:bg-success/80 hover:text-success-foreground"
+              onClick={() => onApprove(post.id)}
+              disabled={isProcessing}
             >
-                <Check size={16} className="mr-1" /> Aprovar
+              <Check size={16} className="mr-1" /> Aprovar
             </Button>
         )}
       </div>

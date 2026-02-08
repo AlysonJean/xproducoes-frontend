@@ -58,19 +58,21 @@ const ParticipatePage = () => {
     };
 
     if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Carregando...</div>;
-    if (!config) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Evento não encontrado</div>;
+    if (!config) return <div className="min-h-screen bg-surface flex items-center justify-center text-foreground">Evento não encontrado</div>;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-900 to-black text-white p-6 flex items-center justify-center">
+        <div className="min-h-screen bg-background text-foreground p-6 flex items-center justify-center">
             <div className="max-w-md w-full space-y-8">
                 <div className="text-center space-y-2 animate-fade-in-up">
-                    <h1 className="text-4xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500">
+                    <h1 className="text-4xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
                         {config.name}
                     </h1>
                     <p className="text-xl text-gray-300">
+                                            <p className="text-xl text-muted-foreground">
                         Participe do nosso mural!
                     </p>
                     <div className="inline-block bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm mt-4 border border-white/5">
+                                            <div className="inline-block bg-surface/10 px-4 py-2 rounded-full backdrop-blur-sm mt-4 border border-border/5">
                         <span className="font-mono text-xl font-bold">#{config.hashtag}</span>
                     </div>
                 </div>
@@ -81,12 +83,15 @@ const ParticipatePage = () => {
                         <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
                         <button 
                             onClick={handleInstagram}
-                            className="relative w-full py-6 bg-black rounded-xl border border-white/10 hover:bg-zinc-900 transition-all flex flex-col items-center gap-3 cursor-pointer"
+                            className="relative w-full py-6 bg-surface rounded-xl border border-border/10 hover:bg-muted transition-all flex flex-col items-center gap-3 cursor-pointer"
                         >
                             <Instagram className="w-12 h-12 text-pink-500" />
+                                                        <Instagram className="w-12 h-12 text-primary" />
                             <div className="space-y-1 text-center">
                                 <span className="text-lg font-bold block text-white">Postar no Instagram</span>
+                                                                <span className="text-lg font-bold block text-foreground">Postar no Instagram</span>
                                 <span className="text-xs text-gray-400 block font-normal flex items-center justify-center gap-1">
+                                                                    <span className="text-xs text-muted-foreground block font-normal flex items-center justify-center gap-1">
                                     {copied ? <><Check size={12}/> Hashtag Copiada!</> : "Copia a hashtag e abre o app"}
                                 </span>
                             </div>
@@ -97,18 +102,20 @@ const ParticipatePage = () => {
                     <div className="animate-fade-in-up delay-200">
                         <button 
                             onClick={handleDirectUpload}
-                            className="w-full py-6 bg-transparent border-2 border-dashed border-gray-600 hover:border-gray-400 hover:bg-white/5 rounded-xl flex flex-col items-center gap-3 text-gray-300 transition-all cursor-pointer"
+                            className="w-full py-6 bg-transparent border-2 border-dashed border-border hover:border-muted hover:bg-muted/10 rounded-xl flex flex-col items-center gap-3 text-muted-foreground transition-all cursor-pointer"
                         >
                             <Upload className="w-10 h-10" />
                             <div className="space-y-1 text-center">
                                 <span className="text-lg font-bold block">Enviar direto para o Telão</span>
                                 <span className="text-xs text-gray-500 block font-normal">Não precisa de redes sociais</span>
+                                                            <span className="text-xs text-muted-foreground block font-normal">Não precisa de redes sociais</span>
                             </div>
                         </button>
                     </div>
                 </div>
 
                 <div className="text-center text-xs text-gray-500 mt-12 bg-black/20 p-4 rounded-lg animate-fade-in-up delay-300">
+                                    <div className="text-center text-xs text-muted-foreground mt-12 bg-muted/20 p-4 rounded-lg animate-fade-in-up delay-300">
                     <p className="mb-2 font-bold uppercase tracking-wider">Como funciona?</p>
                     <p>Ao postar no Instagram, sua foto aparecerá automaticamente aqui se seu perfil for público.</p>
                 </div>

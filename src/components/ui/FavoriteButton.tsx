@@ -55,11 +55,11 @@ export const FavoriteButton = ({
   <button
       onClick={handleToggle}
       className={`
-                ${sizeClasses[size]}
-        ${favorite ? 'text-red-500 hover:text-red-600' : 'text-white hover:text-red-300'}
+        ${sizeClasses[size]}
+        ${favorite ? 'text-destructive hover:text-destructive/80' : 'text-foreground hover:text-muted-foreground'}
         drop-shadow-lg hover:drop-shadow-xl
-                ${className}
-            `}
+        ${className}
+      `}
       title={favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
       aria-label={favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
     >

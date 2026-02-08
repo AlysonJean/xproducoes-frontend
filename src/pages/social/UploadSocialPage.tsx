@@ -83,35 +83,35 @@ const UploadSocialPage = () => {
     };
 
     if (loading) return (
-        <div className="min-h-screen bg-black flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+        <div className="min-h-screen bg-surface flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
     );
 
     if (!config) return (
-        <div className="min-h-screen bg-black flex items-center justify-center text-white p-6 text-center">
+        <div className="min-h-screen bg-surface flex items-center justify-center text-foreground p-6 text-center">
             <div>
                 <h2 className="text-2xl font-bold mb-2">Evento não encontrado</h2>
-                <button onClick={() => navigate('/')} className="text-pink-500 underline">Voltar para Início</button>
+                <button onClick={() => navigate('/')} className="text-primary underline">Voltar para Início</button>
             </div>
         </div>
     );
 
     if (success) return (
-        <div className="min-h-screen bg-black flex items-center justify-center text-white p-6 text-center animate-fade-in">
+        <div className="min-h-screen bg-surface flex items-center justify-center text-foreground p-6 text-center animate-fade-in">
             <div className="space-y-6 max-w-sm">
                 <div className="flex justify-center">
-                    <CheckCircle2 className="w-24 h-24 text-green-500 animate-bounce" />
+                    <CheckCircle2 className="w-24 h-24 text-success animate-bounce" />
                 </div>
                 <h2 className="text-3xl font-bold">Foto Enviada!</h2>
-                <p className="text-gray-400">
+                <p className="text-muted-foreground">
                     Sua foto foi enviada com sucesso para o mural. 
                     {config.qrCodeText ? ` Em breve ela aparecerá no telão!` : " Aguarde a moderação para vê-la no telão!"}
                 </p>
                 <div className="pt-8">
                     <button 
                         onClick={() => navigate(`/participate/${slug}`)}
-                        className="w-full py-4 bg-white/10 rounded-xl font-bold hover:bg-white/20 transition-all"
+                        className="w-full py-4 bg-surface/10 rounded-xl font-bold hover:bg-surface/20 transition-all"
                     >
                         Voltar
                     </button>
@@ -121,19 +121,19 @@ const UploadSocialPage = () => {
     );
 
     return (
-        <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
+        <div className="min-h-screen bg-background text-foreground flex flex-col">
             {/* Header */}
             <div className="p-4 flex items-center gap-4 bg-black/50 backdrop-blur-md sticky top-0 z-10 border-b border-white/5">
                 <button 
                     onClick={() => navigate(-1)} 
-                    className="p-2 hover:bg-white/10 rounded-full transition-all"
+                    className="p-2 hover:bg-muted/10 rounded-full transition-all"
                     aria-label="Voltar"
                 >
                     <ChevronLeft size={24} />
                 </button>
                 <div>
                     <h1 className="font-bold text-lg truncate max-w-[200px]">{config.name}</h1>
-                    <p className="text-xs text-gray-400">Enviar para o Mural</p>
+                    <p className="text-xs text-muted-foreground">Enviar para o Mural</p>
                 </div>
             </div>
 
@@ -151,18 +151,19 @@ const UploadSocialPage = () => {
                         {previewUrl ? (
                             <>
                                 <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                    <Camera size={48} className="text-white" />
+                                <div className="absolute inset-0 bg-surface/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                    <Camera size={48} className="text-foreground" />
                                 </div>
                             </>
                         ) : (
                             <div className="text-center p-8 space-y-4">
                                 <div className="w-20 h-20 bg-pink-500/10 rounded-full flex items-center justify-center mx-auto">
-                                    <Camera className="text-pink-500" size={32} />
+                                    <Camera className="text-primary" size={32} />
                                 </div>
                                 <div>
                                     <p className="font-bold text-lg">Tirar uma Foto</p>
                                     <p className="text-sm text-gray-500">ou selecione da sua galeria</p>
+                                                                    <p className="text-sm text-muted-foreground">ou selecione da sua galeria</p>
                                 </div>
                             </div>
                         )}
@@ -180,6 +181,7 @@ const UploadSocialPage = () => {
                     <div className="space-y-4">
                         <div>
                             <label htmlFor="author-input" className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 px-1">Seu Nome / @User</label>
+                                                        <label htmlFor="author-input" className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 px-1">Seu Nome / @User</label>
                             <input 
                                 id="author-input"
                                 type="text"
@@ -187,11 +189,13 @@ const UploadSocialPage = () => {
                                 onChange={(e) => setAuthor(e.target.value)}
                                 placeholder="Como quer ser identificado?"
                                 className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all"
+                                                            className="w-full bg-surface border border-border rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
                             />
                         </div>
 
                         <div>
                             <label htmlFor="caption-input" className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 px-1">Legenda (Opcional)</label>
+                                                        <label htmlFor="caption-input" className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 px-1">Legenda (Opcional)</label>
                             <textarea 
                                 id="caption-input"
                                 value={caption}
@@ -199,6 +203,7 @@ const UploadSocialPage = () => {
                                 placeholder="Escreva algo legal..."
                                 rows={3}
                                 className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all resize-none"
+                                                            className="w-full bg-surface border border-border rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
                             />
                         </div>
                     </div>
@@ -209,13 +214,13 @@ const UploadSocialPage = () => {
                             disabled={!file || uploading}
                             className={`w-full py-5 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-pink-500/20
                                 ${!file || uploading 
-                                    ? 'bg-zinc-800 text-gray-500 cursor-not-allowed' 
-                                    : 'bg-gradient-to-r from-pink-500 to-violet-600 text-white hover:scale-[1.02] active:scale-95'}
+                                    ? 'bg-muted text-muted-foreground cursor-not-allowed' 
+                                    : 'bg-primary text-primary-foreground hover:scale-[1.02] active:scale-95'}
                             `}
                         >
                             {uploading ? (
                                 <>
-                                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
                                     Enviando...
                                 </>
                             ) : (

@@ -61,7 +61,7 @@ export const GeminiEventSuggester = () => {
         )}
 
         {suggestion && (
-          <div className="w-full mt-4 p-8 bg-white/5 border border-white/10 rounded-3xl animate-in slide-in-from-bottom-4 fade-in duration-700">
+          <div className="w-full mt-4 p-8 bg-surface/5 border border-border/10 rounded-3xl animate-in slide-in-from-bottom-4 fade-in duration-700">
             <p className="text-xl md:text-2xl font-serif italic leading-relaxed text-foreground">
               "{suggestion}"
             </p>

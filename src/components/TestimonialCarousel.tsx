@@ -54,7 +54,7 @@ export const TestimonialCarousel = () => {
             <div key={review.id} className="bg-card border border-border rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center gap-1 mb-4 text-amber-500">
                 {[...Array(5)].map((_, i) => (
-                  <StarIcon key={i} className={`w-5 h-5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} />
+                  <StarIcon key={i} className={`w-5 h-5 ${i < review.rating ? 'fill-current' : 'text-muted-foreground'}`} />
                 ))}
               </div>
               <p className="text-foreground/90 italic mb-6 line-clamp-4 min-h-[5rem]">"{review.comment}"</p>

@@ -165,11 +165,11 @@ export const PortfolioPage: React.FC = () => {
 
       {selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeModal} />
+          <div className="absolute inset-0 bg-surface/60 backdrop-blur-sm" onClick={closeModal} />
           <div className="relative bg-card border border-border rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-auto shadow-2xl">
             <button
               onClick={closeModal}
-              className="absolute top-4 right-4 z-10 w-10 h-10 bg-black/20 hover:bg-black/40 rounded-full flex items-center justify-center text-white transition-colors"
+              className="absolute top-4 right-4 z-10 w-10 h-10 bg-surface/20 hover:bg-surface/40 rounded-full flex items-center justify-center text-foreground transition-colors"
               aria-label="Fechar modal"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -194,7 +194,7 @@ export const PortfolioPage: React.FC = () => {
               {selectedItem.media && selectedItem.media.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
                   {selectedItem.media.filter(m => !m.isCover).map((media, index) => (
-                    <div key={media.id || index} className="aspect-square overflow-hidden rounded-lg bg-black/5">
+                    <div key={media.id || index} className="aspect-square overflow-hidden rounded-lg bg-surface/5">
                       {media.type === 'VIDEO' ? (
                           <video
                             src={media.url}
