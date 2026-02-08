@@ -27,7 +27,6 @@ const UploadSocialPage = () => {
         const fetchConfig = async () => {
             try {
                 if (slug) {
-                    // Usando o endpoint de config da TV que já aceita slug
                     const res = await apiFetch<any>(`/tv/config?slug=${slug}`);
                     if (res.linked) {
                         setConfig({
@@ -162,8 +161,7 @@ const UploadSocialPage = () => {
                                 </div>
                                 <div>
                                     <p className="font-bold text-lg">Tirar uma Foto</p>
-                                    <p className="text-sm text-gray-500">ou selecione da sua galeria</p>
-                                                                    <p className="text-sm text-muted-foreground">ou selecione da sua galeria</p>
+                                    <p className="text-sm text-muted-foreground">ou selecione da sua galeria</p>
                                 </div>
                             </div>
                         )}
@@ -180,30 +178,26 @@ const UploadSocialPage = () => {
 
                     <div className="space-y-4">
                         <div>
-                            <label htmlFor="author-input" className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 px-1">Seu Nome / @User</label>
-                                                        <label htmlFor="author-input" className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 px-1">Seu Nome / @User</label>
+                            <label htmlFor="author-input" className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 px-1">Seu Nome / @User</label>
                             <input 
                                 id="author-input"
                                 type="text"
                                 value={author}
                                 onChange={(e) => setAuthor(e.target.value)}
                                 placeholder="Como quer ser identificado?"
-                                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all"
-                                                            className="w-full bg-surface border border-border rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                                className="w-full bg-surface border border-border rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
                             />
                         </div>
 
                         <div>
-                            <label htmlFor="caption-input" className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 px-1">Legenda (Opcional)</label>
-                                                        <label htmlFor="caption-input" className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 px-1">Legenda (Opcional)</label>
+                            <label htmlFor="caption-input" className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 px-1">Legenda (Opcional)</label>
                             <textarea 
                                 id="caption-input"
                                 value={caption}
                                 onChange={(e) => setCaption(e.target.value)}
                                 placeholder="Escreva algo legal..."
                                 rows={3}
-                                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all resize-none"
-                                                            className="w-full bg-surface border border-border rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
+                                className="w-full bg-surface border border-border rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
                             />
                         </div>
                     </div>
@@ -230,7 +224,7 @@ const UploadSocialPage = () => {
                                 </>
                             )}
                         </button>
-                        <p className="text-center text-[10px] text-gray-600 mt-4 px-8 uppercase tracking-widest font-bold">
+                        <p className="text-center text-[10px] text-muted-foreground mt-4 px-8 uppercase tracking-widest font-bold">
                             #{config.hashtag} • X-Produções Social
                         </p>
                     </div>
