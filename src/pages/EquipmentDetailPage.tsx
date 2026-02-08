@@ -11,6 +11,7 @@ import BrandLoader from '../components/ui/BrandLoader';
 import type { Equipment } from '../types/types';
 import { formatPrice } from '../utils/formatPrice';
 import { SEO } from '../components/SEO';
+import { transformEquipment } from '../utils/transformEquipment';
 import { RecommendationSection } from '../components/ui/RecommendationSection';
 import { useRecommendations } from '../hooks/useRecommendations';
 import { useNotifications } from '../contexts/NotificationContext';
@@ -49,7 +50,7 @@ export const EquipmentDetailPage = () => {
       try {
         setLoading(true);
         const data = await apiFetch(`/equipments/${slug}`);
-        setEquipment(data as Equipment);
+        setEquipment(transformEquipment(data as Equipment));
 
         // GA Tracking - View Item
         if (data) {
@@ -174,8 +175,14 @@ export const EquipmentDetailPage = () => {
             </div>
             <div className="flex justify-between items-center mt-2">
               <span className="text-muted-foreground">Status</span>
-              <span className="text-xl font-semibold">
-                {equipment.isAvailable ? 'Disponível' : 'Indisponível'}
+              <span className={`text-xl font-semibold ${
+                equipment.status === 'MAINTENANCE' ? 'text-orange-500' : 
+                equipment.status === 'COMING_SOON' ? 'text-blue-500' : 
+                equipment.isAvailable ? 'text-success' : 'text-danger'
+              }`}>
+                {equipment.status === 'MAINTENANCE' ? 'Em Manutenção' : 
+                 equipment.status === 'COMING_SOON' ? 'Em Breve' : 
+                 equipment.isAvailable ? 'Disponível' : 'Indisponível'}
               </span>
             </div>
           </div>
@@ -199,9 +206,16 @@ export const EquipmentDetailPage = () => {
 
           <button
             onClick={handleAddToCart}
-            className="w-full bg-primary hover:bg-primary text-primary-foreground font-bold py-3 px-4 rounded-lg text-lg transition-transform transform hover:scale-105"
+            disabled={!equipment.isAvailable}
+            className={`w-full font-bold py-3 px-4 rounded-lg text-lg transition-transform transform ${
+              equipment.isAvailable 
+                ? 'bg-primary hover:bg-primary text-primary-foreground hover:scale-105' 
+                : 'bg-muted text-muted-foreground cursor-not-allowed opacity-70'
+            }`}
           >
-            Adicionar ao Carrinho
+            {equipment.status === 'MAINTENANCE' ? 'Indisponível para Locação' : 
+             equipment.status === 'COMING_SOON' ? 'Lançamento em Breve' : 
+             equipment.isAvailable ? 'Adicionar ao Carrinho' : 'Indisponível'}
           </button>
         </div>
       </div>

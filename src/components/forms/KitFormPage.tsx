@@ -29,6 +29,7 @@ type SearchableItem = {
   description?: string;
   imageUrl?: string;
   type: 'EQUIPMENT' | 'SERVICE';
+  status?: string;
 };
 
 const kitItemSchema = z.object({
@@ -106,7 +107,8 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
           price: e.pricePerHour || e.price || 0,
           description: e.description,
           imageUrl: e.imageUrl,
-          type: 'EQUIPMENT' as const
+          type: 'EQUIPMENT' as const,
+          status: e.status
         }));
 
         const services = (serviceData as Service[]).map(s => ({
@@ -115,7 +117,8 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
           price: s.price,
           description: s.description,
           imageUrl: undefined,
-          type: 'SERVICE' as const
+          type: 'SERVICE' as const,
+          status: s.status
         }));
 
         setAllItems([...equipments, ...services]);
@@ -311,7 +314,14 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                              <User className="w-4 h-4 text-purple-500" />
                            )}
                            <div>
-                             <p className="font-medium text-sm">{item.name}</p>
+                             <div className="flex items-center gap-2">
+                               <p className="font-medium text-sm">{item.name}</p>
+                               {item.status && item.status !== 'ACTIVE' && (
+                                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold border border-orange-200">
+                                   {item.status}
+                                 </span>
+                               )}
+                             </div>
                              <p className="text-xs text-muted-foreground">{formatPrice(item.price)}</p>
                            </div>
                         </div>

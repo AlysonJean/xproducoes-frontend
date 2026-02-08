@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { EquipmentCard } from '../components/ui/EquipmentCard';
 import { apiFetch } from '../services/api';
 import { asArray } from '../utils/normalize';
+import { transformEquipment } from '../utils/transformEquipment';
 import { normalizeString } from '../utils/string';
 import type { Equipment, Category, EquipmentFilters } from '@/types/types';
 import { PageLayout, PageLoading, PageEmpty } from '../components/layouts/PageLayout';
@@ -9,13 +11,15 @@ import { SearchAndFilters, FilterSelect, Grid } from '../components/ui/StandardC
 import { SEO } from '../components/SEO';
 
 export const EquipmentListPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   // const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<EquipmentFilters>({
-    availability: true
-  });
+  const [filters, setFilters] = useState<EquipmentFilters>(() => ({
+    availability: undefined,
+    category: searchParams.get('categoryId') || undefined
+  }));
 
   // Fetch data
   useEffect(() => {
@@ -27,8 +31,8 @@ export const EquipmentListPage: React.FC = () => {
           apiFetch('/categories')
         ]);
         
-  setEquipments(asArray<Equipment>(equipmentsData));
-  setCategories(asArray<Category>(categoriesData));
+        setEquipments(asArray<Equipment>(equipmentsData).map(transformEquipment));
+        setCategories(asArray<Category>(categoriesData));
       } catch (err) {
         console.error('Erro ao carregar dados:', err);
         // setError('Erro ao carregar equipamentos. Tente novamente.');
@@ -83,7 +87,7 @@ export const EquipmentListPage: React.FC = () => {
   };
 
   const clearFilters = () => {
-    setFilters({ availability: true });
+    setFilters({ availability: undefined });
   };
 
   if (loading) {
@@ -126,9 +130,12 @@ export const EquipmentListPage: React.FC = () => {
             />
             <FilterSelect
               label="Disponibilidade"
-              value={filters.availability?.toString() || 'true'}
-              onChange={(value) => handleFilterChange({ availability: value === 'true' })}
+              value={filters.availability === undefined ? 'all' : filters.availability.toString()}
+              onChange={(value) => handleFilterChange({ 
+                availability: value === 'all' ? undefined : value === 'true' 
+              })}
               options={[
+                { value: 'all', label: 'Todos' },
                 { value: 'true', label: 'Disponível' },
                 { value: 'false', label: 'Indisponível' }
               ]}
