@@ -17,6 +17,14 @@ import { BannerCarousel } from '../components/ui/BannerCarousel';
 import { CategoryEquipmentRow } from '../components/ui/CategoryEquipmentRow';
 import { SEO } from '../components/SEO';
 
+const FloatingGlow = () => (
+  <div className="absolute inset-0 -z-20 overflow-hidden pointer-events-none">
+    <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full animate-pulse-slow"></div>
+    <div className="absolute bottom-[20%] right-[-5%] w-[30%] h-[30%] bg-purple-500/10 blur-[100px] rounded-full animate-pulse-slow delay-700"></div>
+    <div className="absolute top-[40%] left-[60%] w-[25%] h-[25%] bg-blue-500/10 blur-[80px] rounded-full animate-pulse-slow delay-1000"></div>
+  </div>
+);
+
 // Componente isolado para evitar rerenders e uso de style inline no pai
 const SoundBar = memo(() => {
   const barRef = useRef<HTMLDivElement>(null);
@@ -33,7 +41,7 @@ const SoundBar = memo(() => {
   return (
     <div
       ref={barRef}
-      className="sound-bar bg-primary/5 flex-1 rounded-full transition-all duration-300"
+      className="sound-bar bg-gradient-to-t from-primary/20 to-primary/5 flex-1 rounded-full transition-all duration-300"
     />
   );
 });
@@ -136,67 +144,62 @@ export const HomePage = () => {
   // if (error) return <PageError message={error} onRetry={() => window.location.reload()} />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="min-h-screen bg-slate-950 text-slate-100 relative overflow-hidden">
+      <FloatingGlow />
       <SEO 
         title="Aluguel de Som, Luz e LED" 
         description="A melhor empresa de aluguel de som, iluminação e painel de LED em Belo Horizonte. Equipamentos profissionais para casamentos, festas e eventos corporativos."
       />
       
       {/* Dynamic Banner Carousel */}
-      <BannerCarousel />
+      <div className="relative">
+        <BannerCarousel />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none" />
+      </div>
 
-      {/* Hero Section - Reduced Size */}
-      <div className="relative py-8 sm:py-10 lg:py-12 mb-8 sm:mb-12 overflow-hidden">
-        <div className="absolute inset-0 -z-10 pointer-events-none bg-gradient-to-r from-primary/10 via-primary/5 to-transparent"></div>
+      {/* Hero Section - Elevated premium feel */}
+      <div className="relative py-12 sm:py-16 lg:py-20 mb-12 overflow-hidden">
+        <div className="absolute inset-0 -z-10 pointer-events-none opacity-20">
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/30 blur-[150px] rounded-full" />
+        </div>
+        
         <div 
           className="relative text-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
-          onMouseMove={(e) => {
-            const el = e.currentTarget;
-            el.style.setProperty('--mouse-x', `${e.clientX}px`);
-            el.style.setProperty('--mouse-y', `${e.clientY}px`);
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget;
-            el.style.setProperty('--mouse-x', '-9999px');
-            el.style.setProperty('--mouse-y', '-9999px');
-          }}
         >
-          {/* Animated Sound Wave Background - Reduced Height */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-            <div className="flex items-center justify-between gap-0.5 h-16 sm:h-20 lg:h-24 z-0 w-full px-2">
+          {/* Sound Wave with more presence */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden opacity-30">
+            <div className="flex items-center justify-between gap-0.5 h-32 z-0 w-full px-2">
               {[...Array(120)].map((_, i) => (
                 <SoundBar key={i} />
               ))}
             </div>
           </div>
 
-          <div className="relative z-10 pointer-events-none">
-            <h1 ref={heroTitleRef} className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 heading-elegant pointer-events-auto">
-              Equipamentos Profissionais
+          <div className="relative z-10">
+            <h1 ref={heroTitleRef} className="text-4xl sm:text-5xl lg:text-7xl font-extrabold mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-white/90 to-white/70">
+              Eleve seu Evento
             </h1>
-            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground mb-4 max-w-3xl mx-auto pointer-events-auto">
-              Transforme seus eventos em experiências inesquecíveis com nossa tecnologia de ponta
+            <p className="text-lg sm:text-xl lg:text-2xl text-slate-400 mb-8 max-w-3xl mx-auto font-light leading-relaxed">
+              Equipamentos de alta performance e tecnologia de ponta para experiências sensoriais inesquecíveis.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 md:px-6 lg:px-8 space-y-16 sm:space-y-20 lg:space-y-24 xl:space-y-28 2xl:space-y-32">
+      <div className="container mx-auto px-4 md:px-6 lg:px-8 space-y-24 sm:space-y-32">
         {/* Kits em Destaque */}
         {kits && kits.length > 0 && (
           <section className="relative">
-            <div className="text-center mb-12 sm:mb-14 lg:mb-16 xl:mb-18 2xl:mb-20">
-              <div className="inline-flex items-center px-4 py-2 bg-primary/10 rounded-full text-primary font-medium text-xs sm:text-sm mb-3">
-                ⭐ Soluções Completas
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center px-4 py-2 bg-primary/10 border border-primary/20 backdrop-blur-md rounded-full text-primary font-semibold text-xs uppercase tracking-widest mb-4">
+                👑 Premium Selection
               </div>
-              <h2 ref={kitsTitleRef} className="text-2xl sm:text-3xl font-bold text-foreground mb-3 heading-elegant">Kits em Destaque</h2>
-              <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto">
-                Pacotes completos que combinam os melhores equipamentos para diferentes tipos de eventos
-              </p>
+              <h2 ref={kitsTitleRef} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Kits em Destaque</h2>
+              <div className="w-24 h-1 bg-primary mx-auto rounded-full mb-6" />
             </div>
-            <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 4, '2xl': 4, '3xl': 5, '4xl': 6 }} gap={8}>
+            <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={8}>
               {kits.map((kit) => (
-                <div key={kit.id} className="group">
+                <div key={kit.id} className="group h-full">
                   <KitCard kit={kit} />
                 </div>
               ))}
@@ -206,20 +209,18 @@ export const HomePage = () => {
 
         {/* Equipamentos por Categoria */}
         <section className="relative">
-          <div className="text-center mb-10 sm:mb-12 lg:mb-14">
-            <div className="inline-flex items-center px-4 py-2 bg-primary/10 rounded-full text-primary font-medium text-xs sm:text-sm mb-3">
-              🎯 Catálogo Completo
-            </div>
-            <h2 ref={equipmentsTitleRef} className="text-2xl sm:text-3xl font-bold text-foreground mb-3 heading-elegant">Nossos Equipamentos</h2>
-            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto">
-              Explore nossa coleção completa dividida por categorias
-            </p>
+          <div className="text-center mb-16">
+             <div className="inline-flex items-center px-4 py-2 bg-blue-500/10 border border-blue-500/20 backdrop-blur-md rounded-full text-blue-400 font-semibold text-xs uppercase tracking-widest mb-4">
+                💎 Unlimited Possibilities
+              </div>
+            <h2 ref={equipmentsTitleRef} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Arquitetura Sonora & Visual</h2>
+            <div className="w-24 h-1 bg-blue-500 mx-auto rounded-full mb-6" />
           </div>
 
-          <div className="space-y-4">
+          <div className="grid gap-12">
              {loading ? (
-                <div className="flex justify-center py-12">
-                   <BrandLoader size={60} label="Carregando categorias..." />
+                <div className="flex justify-center py-24">
+                   <BrandLoader size={80} label="Sincronizando catálogo..." />
                 </div>
              ) : (
                 categories.map((category) => (
@@ -230,23 +231,21 @@ export const HomePage = () => {
         </section>
 
         {/* Services */}
-        <section className="relative">
+        <section className="relative py-12">
           <ServiceRow />
         </section>
 
         {/* Portfólio */}
         {portfolio && portfolio.length > 0 && (
           <section className="relative">
-            <div className="text-center mb-10 sm:mb-12 lg:mb-14">
-              <div className="inline-flex items-center px-4 py-2 bg-success/10 rounded-full text-success font-medium text-xs sm:text-sm mb-3">
-                📸 Galeria de Eventos
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md rounded-full text-emerald-400 font-semibold text-xs uppercase tracking-widest mb-4">
+                ✨ Success Stories
               </div>
-              <h2 ref={portfolioTitleRef} className="text-2xl sm:text-3xl font-bold text-foreground mb-3 heading-elegant">Galeria de Eventos</h2>
-              <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto">
-                Confira alguns dos eventos realizados com nossos equipamentos
-              </p>
+              <h2 ref={portfolioTitleRef} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Galeria de Experiências</h2>
+              <div className="w-24 h-1 bg-emerald-500 mx-auto rounded-full mb-6" />
             </div>
-            <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 3, '2xl': 4, '3xl': 4, '4xl': 5 }} gap={8}>
+            <Grid columns={{ sm: 1, md: 2, lg: 3 }} gap={10}>
               {portfolio.map((item) => (
                 <div key={item.id} className="group">
                   <PortfolioCard item={item} />
@@ -256,43 +255,41 @@ export const HomePage = () => {
           </section>
         )}
 
-        {/* Depoimentos (Avaliações aprovadas) */}
+        {/* Depoimentos */}
         {(!reviewsLoading && reviews && reviews.length > 0) && (
           <section className="relative">
-            <div className="text-center mb-10 sm:mb-12 lg:mb-14">
-              <div className="inline-flex items-center px-4 py-2 bg-amber-500/10 rounded-full text-amber-600 font-medium text-xs sm:text-sm mb-3">
-                💬 Clientes Satisfeitos
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center px-4 py-2 bg-amber-500/10 border border-amber-500/20 backdrop-blur-md rounded-full text-amber-400 font-semibold text-xs uppercase tracking-widest mb-4">
+                ⭐ Trusted by Leaders
               </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3 heading-elegant">O que dizem sobre nós</h2>
-              <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto">
-                Depoimentos reais de clientes que alugaram nossos equipamentos e aprovaram a experiência
-              </p>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Vozes da Nossa Comunidade</h2>
+              <div className="w-24 h-1 bg-amber-500 mx-auto rounded-full mb-6" />
             </div>
-            <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 3, '2xl': 3, '3xl': 4, '4xl': 5 }} gap={8}>
+            <Grid columns={{ sm: 1, md: 2, lg: 3 }} gap={8}>
               {reviews.map((review) => (
                 <TestimonialCard key={review.id} review={review} />
               ))}
             </Grid>
           </section>
         )}
-        {reviewsLoading && (
-          <div className="flex justify-center items-center py-6 sm:py-7 lg:py-8 xl:py-9 2xl:py-10">
-            <BrandLoader size={80} label="Carregando depoimentos..." />
-          </div>
-        )}
 
-        {/* Gemini Event Suggester */}
-        <section className="relative">
-          <div className="text-center mb-10 sm:mb-12 lg:mb-14">
-            <div className="inline-flex items-center px-4 py-2 bg-purple-500/10 rounded-full text-purple-600 font-medium text-xs sm:text-sm mb-3">
-              🤖 IA Personalizada
+        {/* Gemini Event Suggester - THE AI FEATURE */}
+        <section className="relative pb-32">
+          <div className="absolute inset-0 -z-10 flex items-center justify-center pointer-events-none opacity-40">
+              <div className="w-[1000px] h-[600px] bg-purple-600/20 blur-[180px] rounded-full" />
+          </div>
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center px-4 py-2 bg-purple-500/10 border border-purple-500/20 backdrop-blur-md rounded-full text-purple-400 font-semibold text-xs uppercase tracking-widest mb-4">
+              � Neural Suggestion Engine
             </div>
-            <h2 ref={aiTitleRef} className="text-2xl sm:text-3xl font-bold text-foreground mb-3 heading-elegant">Sugestões Inteligentes</h2>
-            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto">
-              Nossa IA analisa suas necessidades e sugere os equipamentos ideais para seu evento
+            <h2 ref={aiTitleRef} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Inteligência Criativa</h2>
+            <p className="text-slate-400 max-w-2xl mx-auto text-lg">
+              Deixe nossa inteligência artificial planejar a configuração ideal para sua visão única.
             </p>
           </div>
-          <GeminiEventSuggester />
+          <div className="max-w-4xl mx-auto">
+             <GeminiEventSuggester />
+          </div>
         </section>
       </div>
     </div>
