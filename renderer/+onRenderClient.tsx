@@ -3,8 +3,13 @@ import { PageShell } from './PageShell'
 import type { OnRenderClientAsync } from 'vike/types'
 import { BrowserRouter } from 'react-router-dom'
 
+interface PageContext {
+  Page: React.ComponentType<any>
+  pageProps: Record<string, unknown>
+}
+
 export const onRenderClient: OnRenderClientAsync = async (pageContext): ReturnType<OnRenderClientAsync> => {
-  const { Page, pageProps } = pageContext
+  const { Page, pageProps } = pageContext as unknown as PageContext
   if (!Page) throw new Error('Client-side render() hook expects pageContext.Page to be defined')
   
   const root = document.getElementById('root')
@@ -13,10 +18,7 @@ export const onRenderClient: OnRenderClientAsync = async (pageContext): ReturnTy
   ReactDOM.hydrateRoot(
     root,
     <PageShell pageContext={pageContext}>
-      <BrowserRouter future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true
-      }}>
+      <BrowserRouter>
         <Page {...pageProps} />
       </BrowserRouter>
     </PageShell>

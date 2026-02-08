@@ -34,6 +34,6 @@
       "@/types/*": ["./src/types/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "renderer", "pages", "api"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

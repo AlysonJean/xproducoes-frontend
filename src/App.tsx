@@ -157,61 +157,26 @@ const AdminDashboardPage = lazy(() =>
 const ReviewManagementPage = lazy(() =>
   import('./pages/admin/ReviewManagementPage').then((m) => ({ default: m.default }))
 );
-// const AdminKitListPage = lazy(() =>
-//   import('./pages/admin/AdminKitListPage').then((m) => ({ default: m.AdminKitListPage }))
-// );
-// const AdminServiceListPage = lazy(() =>
-//   import('./pages/admin/AdminServiceListPage').then((m) => ({ default: m.AdminServiceListPage }))
-// );
-// const KitFormPage = lazy(() =>
-//   import('./components/forms/KitFormPage').then((m) => ({ default: m.KitFormPage }))
-// );
 const BookingListPage = lazy(() =>
   import('./pages/admin/BookingListPage').then((m) => ({ default: m.BookingListPage }))
 );
-// const BookingDetailPage = lazy(() =>
-//   import('./pages/admin/BookingDetailPage').then((m) => ({ default: m.BookingDetailPage }))
-// );
-// const BookingFormPage = lazy(() =>
-//   import('./components/forms/BookingFormPage').then((m) => ({ default: m.default }))
-// );
 const BookingCalendarPage = lazy(() =>
   import('./pages/admin/BookingCalendarPage').then((m) => ({ default: m.BookingCalendarPage }))
 );
-// Calendários alternativos removidos (CalendarTest e CalendarEnterprisePage)
 
 // More Admin Pages - Lazy Loading (Heavy admin components)
-// const ClientListPage = lazy(() =>
-//   import('./pages/admin/ClientListPage').then((m) => ({ default: m.ClientListPage }))
-// );
-// const ClientEditPage = lazy(() =>
-//   import('./pages/admin/ClientEditPage').then((m) => ({ default: m.ClientEditPage }))
-// );
-// const ClientFormPage = lazy(() =>
-//   import('./components/forms/ClientFormPage').then((m) => ({ default: m.ClientFormPage }))
-// );
 const EquipmentListPage = lazy(() =>
   import('./pages/admin/EquipmentListPage').then((m) => ({ default: m.EquipmentListPage }))
 );
-// const EquipmentFormPage = lazy(() => import('./components/forms/EquipmentFormPage'));
 const CategoryListPage = lazy(() =>
   import('./pages/admin/CategoryListPage').then((m) => ({ default: m.CategoryListPage }))
 );
-// const CategoryFormPage = lazy(() =>
-//   import('./components/forms/CategoryFormPage').then((m) => ({ default: m.CategoryFormPage }))
-// );
 const FaqListPage = lazy(() =>
   import('./pages/admin/FaqListPage').then((m) => ({ default: m.FaqListPage }))
 );
-// const FaqFormPage = lazy(() =>
-//   import('./components/forms/FaqFormPage').then((m) => ({ default: m.FaqFormPage }))
-// );
 const PortfolioListPage = lazy(() =>
   import('./pages/admin/PortfolioListPage').then((m) => ({ default: m.PortfolioListPage }))
 );
-// const PortfolioFormPage = lazy(() =>
-//   import('./components/forms/PortfolioFormPage').then((m) => ({ default: m.PortfolioFormPage }))
-// );
 // lazy load banner page
 const BannerManagementPage = lazy(() =>
   import('./pages/admin/BannerManagementPage').then((m) => ({ default: m.BannerManagementPage }))
@@ -227,9 +192,6 @@ const AdminCollaboratorsPage = lazy(() =>
     default: m.AdminCollaboratorsPage,
   }))
 );
-// const CollaboratorFormPage = lazy(() =>
-//   import('./components/forms/CollaboratorFormPage').then((m) => ({ default: m.CollaboratorFormPage }))
-// );
 
 const MonitoringPage = lazy(() => import('./pages/admin/MonitoringPage'));
 const NewsletterSubscribersPage = lazy(() =>
@@ -638,70 +600,6 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
-      {/* <Route
-        path="/admin/reservas/nova"
-        element={
-          <ProtectedRoute adminOnly>
-            <BookingFormPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/reservas/:id/editar"
-        element={
-          <ProtectedRoute adminOnly>
-            <BookingFormPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/reservas/:id/social"
-        element={
-          <ProtectedRoute adminOnly>
-            <AdminSocialPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/reservas/:id"
-        element={
-          <ProtectedRoute adminOnly>
-            <BookingDetailPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/calendario"
-        element={
-          <ProtectedRoute adminOnly>
-            <BookingCalendarPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-  path="/admin/clientes"
-        element={
-          <ProtectedRoute adminOnly>
-            <ClientListPage />
-          </ProtectedRoute>
-        }
-      />
-      {/* <Route
-  path="/admin/clientes/:id/editar"
-        element={
-          <ProtectedRoute adminOnly>
-            <ClientEditPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-  path="/admin/clientes/novo"
-        element={
-          <ProtectedRoute adminOnly>
-            <ClientFormPage />
-          </ProtectedRoute>
-        }
-      /> */}
       <Route
         path="/admin/equipamentos"
         element={
@@ -710,22 +608,6 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
-      {/* <Route
-        path="/admin/equipamentos/novo"
-        element={
-          <ProtectedRoute adminOnly>
-            <EquipmentFormPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/equipamentos/:id/editar"
-        element={
-          <ProtectedRoute adminOnly>
-            <EquipmentFormPage />
-          </ProtectedRoute>
-        }
-      /> */}
       <Route
         path="/admin/categorias"
         element={
@@ -734,22 +616,6 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
-      {/* <Route
-        path="/admin/categorias/nova"
-        element={
-          <ProtectedRoute adminOnly>
-            <CategoryFormPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/categorias/:id/editar"
-        element={
-          <ProtectedRoute adminOnly>
-            <CategoryFormPage />
-          </ProtectedRoute>
-        }
-      /> */}
       <Route
         path="/admin/faq"
         element={
@@ -767,22 +633,6 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
-      {/* <Route
-        path="/admin/faq/nova"
-        element={
-          <ProtectedRoute adminOnly>
-            <FaqFormPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/faq/:id/editar"
-        element={
-          <ProtectedRoute adminOnly>
-            <FaqFormPage />
-          </ProtectedRoute>
-        }
-      /> */}
       <Route
         path="/admin/portfolio"
         element={
@@ -791,22 +641,6 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
-      {/* <Route
-        path="/admin/portfolio/novo"
-        element={
-          <ProtectedRoute adminOnly>
-            <PortfolioFormPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/portfolio/:id/editar"
-        element={
-          <ProtectedRoute adminOnly>
-            <PortfolioFormPage />
-          </ProtectedRoute>
-        }
-      /> */}
       <Route
         path="/admin/contatos"
         element={
@@ -871,15 +705,6 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
-      {/* <Route
-        path="/admin/colaboradores/novo"
-        element={
-          <ProtectedRoute adminOnly>
-            <CollaboratorFormPage />
-          </ProtectedRoute>
-        }
-      /> */}
-
       
       <Route
         path="/admin/banners"
