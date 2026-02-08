@@ -67,12 +67,10 @@ const ParticipatePage = () => {
                     <h1 className="text-4xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
                         {config.name}
                     </h1>
-                    <p className="text-xl text-gray-300">
-                                            <p className="text-xl text-muted-foreground">
+                    <p className="text-xl text-muted-foreground">
                         Participe do nosso mural!
                     </p>
-                    <div className="inline-block bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm mt-4 border border-white/5">
-                                            <div className="inline-block bg-surface/10 px-4 py-2 rounded-full backdrop-blur-sm mt-4 border border-border/5">
+                    <div className="inline-block bg-surface/10 px-4 py-2 rounded-full backdrop-blur-sm mt-4 border border-border/5">
                         <span className="font-mono text-xl font-bold">#{config.hashtag}</span>
                     </div>
                 </div>
@@ -85,13 +83,10 @@ const ParticipatePage = () => {
                             onClick={handleInstagram}
                             className="relative w-full py-6 bg-surface rounded-xl border border-border/10 hover:bg-muted transition-all flex flex-col items-center gap-3 cursor-pointer"
                         >
-                            <Instagram className="w-12 h-12 text-pink-500" />
-                                                        <Instagram className="w-12 h-12 text-primary" />
+                            <Instagram className="w-12 h-12 text-primary" />
                             <div className="space-y-1 text-center">
-                                <span className="text-lg font-bold block text-white">Postar no Instagram</span>
-                                                                <span className="text-lg font-bold block text-foreground">Postar no Instagram</span>
-                                <span className="text-xs text-gray-400 block font-normal flex items-center justify-center gap-1">
-                                                                    <span className="text-xs text-muted-foreground block font-normal flex items-center justify-center gap-1">
+                                <span className="text-lg font-bold block text-foreground">Postar no Instagram</span>
+                                <span className="text-xs text-muted-foreground block font-normal flex items-center justify-center gap-1">
                                     {copied ? <><Check size={12}/> Hashtag Copiada!</> : "Copia a hashtag e abre o app"}
                                 </span>
                             </div>
@@ -107,15 +102,13 @@ const ParticipatePage = () => {
                             <Upload className="w-10 h-10" />
                             <div className="space-y-1 text-center">
                                 <span className="text-lg font-bold block">Enviar direto para o Telão</span>
-                                <span className="text-xs text-gray-500 block font-normal">Não precisa de redes sociais</span>
-                                                            <span className="text-xs text-muted-foreground block font-normal">Não precisa de redes sociais</span>
+                                <span className="text-xs text-muted-foreground block font-normal">Não precisa de redes sociais</span>
                             </div>
                         </button>
                     </div>
                 </div>
 
-                <div className="text-center text-xs text-gray-500 mt-12 bg-black/20 p-4 rounded-lg animate-fade-in-up delay-300">
-                                    <div className="text-center text-xs text-muted-foreground mt-12 bg-muted/20 p-4 rounded-lg animate-fade-in-up delay-300">
+                <div className="text-center text-xs text-muted-foreground mt-12 bg-muted/20 p-4 rounded-lg animate-fade-in-up delay-300">
                     <p className="mb-2 font-bold uppercase tracking-wider">Como funciona?</p>
                     <p>Ao postar no Instagram, sua foto aparecerá automaticamente aqui se seu perfil for público.</p>
                 </div>

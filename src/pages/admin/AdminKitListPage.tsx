@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
+import { transformKit } from '../../utils/transformKit';
 import { formatPrice } from '../../utils/typeSafeFormatters';
 import type { Kit } from '../../types/types';
 import { BrandLoader } from '@/components/ui/BrandLoader';
@@ -28,7 +29,7 @@ export const AdminKitListPage = () => {
     try {
       setLoading(true);
       const data = await apiFetch('/kits');
-      setKits(asArray<Kit>(data));
+      setKits(asArray<Kit>(data).map(transformKit));
     } catch (err) {
       setError('Erro ao carregar kits.');
       console.error('Erro ao carregar kits:', err);

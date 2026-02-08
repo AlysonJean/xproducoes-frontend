@@ -10,15 +10,31 @@ import CompareButton from '../../components/ui/CompareButton';
 import { memo, useCallback, useState } from 'react';
 
 // Constantes para disponibilidade
-const AVAILABILITY_CONFIG = {
-  MESSAGES: {
-    AVAILABLE: 'Disponível',
-    UNAVAILABLE: 'Indisponível',
+const STATUS_CONFIG = {
+  ACTIVE: {
+    label: 'Disponível',
+    badge: 'bg-success text-success-foreground',
+    overlay: null,
+    btnClass: 'bg-success text-success-foreground hover:bg-success/90'
   },
-  STYLES: {
-    AVAILABLE: 'bg-success text-success-foreground',
-    UNAVAILABLE: 'bg-destructive text-destructive-foreground',
+  MAINTENANCE: {
+    label: 'Em Manutenção',
+    badge: 'bg-orange-500 text-white',
+    overlay: 'EM MANUTENÇÃO',
+    btnClass: 'bg-muted text-muted-foreground cursor-not-allowed'
   },
+  COMING_SOON: {
+    label: 'Em Breve',
+    badge: 'bg-blue-500 text-white',
+    overlay: 'EM BREVE',
+    btnClass: 'bg-muted text-muted-foreground cursor-not-allowed'
+  },
+  UNAVAILABLE: {
+    label: 'Indisponível',
+    badge: 'bg-destructive text-destructive-foreground',
+    overlay: 'INDISPONÍVEL',
+    btnClass: 'bg-muted text-muted-foreground cursor-not-allowed'
+  }
 } as const;
 
 interface EquipmentCardProps {
@@ -31,7 +47,7 @@ interface EquipmentCardProps {
 
 // Componente de imagem com tratamento de erro otimizado
 const EquipmentImage = memo(
-  ({ imageUrl, name, isAvailable }: { imageUrl?: string; name: string; isAvailable: boolean }) => {
+  ({ imageUrl, name, status, isAvailable }: { imageUrl?: string; name: string; status?: string; isAvailable: boolean }) => {
     const [imageError, setImageError] = useState(false);
 
     const handleImageError = useCallback(() => {
@@ -42,6 +58,15 @@ const EquipmentImage = memo(
     const normalizedUrl = normalizeImageUrl(imageUrl);
     const fallbackUrl = getPlaceholderUrl(name);
     const errorUrl = getPlaceholderUrl('Imagem Indisponível');
+
+    // Determinar configuração de status
+    const getStatusConfig = () => {
+      if (status === 'MAINTENANCE') return STATUS_CONFIG.MAINTENANCE;
+      if (status === 'COMING_SOON') return STATUS_CONFIG.COMING_SOON;
+      return isAvailable ? STATUS_CONFIG.ACTIVE : STATUS_CONFIG.UNAVAILABLE;
+    };
+
+    const config = getStatusConfig();
 
     return (
       <div className="relative">
@@ -58,24 +83,19 @@ const EquipmentImage = memo(
         
         {/* Badge de disponibilidade */}
         <div className="absolute top-2 left-2">
-          <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-            isAvailable 
-              ? AVAILABILITY_CONFIG.STYLES.AVAILABLE 
-              : AVAILABILITY_CONFIG.STYLES.UNAVAILABLE
-          }`}>
-            {isAvailable 
-              ? AVAILABILITY_CONFIG.MESSAGES.AVAILABLE 
-              : AVAILABILITY_CONFIG.MESSAGES.UNAVAILABLE
-            }
+          <span className={`px-2 py-1 rounded-full text-xs font-bold ${config.badge}`}>
+            {config.label}
           </span>
         </div>
         
-        {!isAvailable && (
+        {config.overlay && (
           <div
-            className="absolute inset-0 bg-surface/80 flex items-center justify-center"
-            aria-label="Equipamento indisponível"
+            className="absolute inset-0 bg-surface/80 flex items-center justify-center p-4 text-center"
+            aria-label={`Equipamento ${config.label}`}
           >
-            <span className="text-danger font-bold text-lg">INDISPONÍVEL</span>
+            <span className={`${status === 'MAINTENANCE' ? 'text-orange-500' : status === 'COMING_SOON' ? 'text-blue-500' : 'text-danger'} font-bold text-lg uppercase`}>
+              {config.overlay}
+            </span>
           </div>
         )}
       </div>
@@ -108,6 +128,7 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
         <EquipmentImage
           imageUrl={equipment.imageUrl}
           name={equipment.name}
+          status={equipment.status}
           isAvailable={equipment.isAvailable ?? true}
         />
 
@@ -161,12 +182,14 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
           </span>
           <div
             className={`font-bold py-2 px-4 rounded transition-colors ${
-              equipment.isAvailable
-    ? 'bg-success text-success-foreground hover:bg-success/90'
-                : 'bg-muted text-muted-foreground cursor-not-allowed'
+              (equipment.status === 'MAINTENANCE' || equipment.status === 'COMING_SOON')
+                ? STATUS_CONFIG[equipment.status as 'MAINTENANCE' | 'COMING_SOON'].btnClass
+                : equipment.isAvailable
+                  ? STATUS_CONFIG.ACTIVE.btnClass
+                  : STATUS_CONFIG.UNAVAILABLE.btnClass
             }`}
             aria-label={
-              equipment.isAvailable ? 'Adicionar ao carrinho' : 'Equipamento indisponível'
+              equipment.isAvailable ? 'Adicionar ao carrinho' : `Equipamento ${equipment.status}`
             }
           >
             {equipment.isAvailable ? '+' : '−'}
