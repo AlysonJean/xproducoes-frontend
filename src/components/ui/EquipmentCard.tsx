@@ -16,8 +16,7 @@ const AVAILABILITY_CONFIG = {
     UNAVAILABLE: 'Indisponível',
   },
   STYLES: {
-  // Verde consistente em ambos temas
-  AVAILABLE: 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-50',
+    AVAILABLE: 'bg-success text-success-foreground',
     UNAVAILABLE: 'bg-destructive text-destructive-foreground',
   },
 } as const;

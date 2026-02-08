@@ -44,8 +44,8 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({ item, ...rest }) =
                     onMouseOut={e => e.currentTarget.pause()}
                 />
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity duration-300">
-                    <div className="bg-black/40 rounded-full p-3 backdrop-blur-sm">
-                        <PlayCircle className="w-10 h-10 text-white" />
+                    <div className="bg-surface/40 rounded-full p-3 backdrop-blur-sm">
+                      <PlayCircle className="w-10 h-10 text-foreground" />
                     </div>
                 </div>
             </div>
@@ -60,10 +60,10 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({ item, ...rest }) =
             />
         )}
         
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-100 transition-opacity duration-300 flex items-end">
-          <div className="p-4 text-white w-full">
+        <div className="absolute inset-0 bg-gradient-to-t from-surface/80 via-surface/20 to-transparent opacity-100 transition-opacity duration-300 flex items-end">
+          <div className="p-4 text-foreground w-full">
             <h3 className="font-bold text-lg truncate mb-1">{item.title}</h3>
-            {item.description && <p className="text-xs text-white/80 line-clamp-1">{item.description}</p>}
+            {item.description && <p className="text-xs text-muted-foreground line-clamp-1">{item.description}</p>}
           </div>
         </div>
       </div>

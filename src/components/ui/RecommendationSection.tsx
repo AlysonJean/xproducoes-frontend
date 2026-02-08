@@ -307,7 +307,7 @@ export const RecommendationSection = ({
                     {/* Rating */}
                     {item.rating && (
                       <div className="flex items-center mt-2">
-                        <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                        <Star className="h-4 w-4 text-warning fill-warning" />
                         <span className="text-sm font-medium text-foreground ml-1">
                           {item.rating.toFixed(1)}
                         </span>

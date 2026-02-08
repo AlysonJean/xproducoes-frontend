@@ -20,8 +20,8 @@ import { SEO } from '../components/SEO';
 const FloatingGlow = () => (
   <div className="absolute inset-0 -z-20 overflow-hidden pointer-events-none">
     <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full animate-pulse-slow"></div>
-    <div className="absolute bottom-[20%] right-[-5%] w-[30%] h-[30%] bg-purple-500/10 blur-[100px] rounded-full animate-pulse-slow delay-700"></div>
-    <div className="absolute top-[40%] left-[60%] w-[25%] h-[25%] bg-blue-500/10 blur-[80px] rounded-full animate-pulse-slow delay-1000"></div>
+    <div className="absolute bottom-[20%] right-[-5%] w-[30%] h-[30%] bg-secondary/10 blur-[100px] rounded-full animate-pulse-slow delay-700"></div>
+    <div className="absolute top-[40%] left-[60%] w-[25%] h-[25%] bg-muted/10 blur-[80px] rounded-full animate-pulse-slow delay-1000"></div>
   </div>
 );
 
@@ -144,7 +144,7 @@ export const HomePage = () => {
   // if (error) return <PageError message={error} onRetry={() => window.location.reload()} />;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 relative overflow-hidden">
+    <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
       <FloatingGlow />
       <SEO 
         title="Aluguel de Som, Luz e LED" 
@@ -154,7 +154,7 @@ export const HomePage = () => {
       {/* Dynamic Banner Carousel */}
       <div className="relative">
         <BannerCarousel />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background to-transparent pointer-events-none" />
       </div>
 
       {/* Hero Section - Elevated premium feel */}
@@ -176,10 +176,10 @@ export const HomePage = () => {
           </div>
 
           <div className="relative z-10">
-            <h1 ref={heroTitleRef} className="text-4xl sm:text-5xl lg:text-7xl font-extrabold mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-white/90 to-white/70">
+            <h1 ref={heroTitleRef} className="text-4xl sm:text-5xl lg:text-7xl font-extrabold mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70">
               Eleve seu Evento
             </h1>
-            <p className="text-lg sm:text-xl lg:text-2xl text-slate-400 mb-8 max-w-3xl mx-auto font-light leading-relaxed">
+            <p className="text-lg sm:text-xl lg:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto font-light leading-relaxed">
               Equipamentos de alta performance e tecnologia de ponta para experiências sensoriais inesquecíveis.
             </p>
           </div>

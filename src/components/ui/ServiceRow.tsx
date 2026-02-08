@@ -39,7 +39,7 @@ export const ServiceRow = () => {
         <div className="h-8 w-48 bg-muted/30 rounded animate-pulse mb-4"></div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
            {[...Array(4)].map((_, i) => (
-             <div key={i} className="h-[300px] bg-muted/20 rounded-lg animate-pulse"></div>
+             <div key={i} className="h-75 bg-muted/20 rounded-lg animate-pulse"></div>
            ))}
         </div>
       </div>
@@ -53,7 +53,7 @@ export const ServiceRow = () => {
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-2xl font-bold heading-elegant flex items-center gap-2">
           Nossos Serviços
-          <span className="w-2 h-2 rounded-full bg-blue-500/40 inline-block ml-2"></span>
+            <span className="w-2 h-2 rounded-full bg-info/40 inline-block ml-2"></span>
         </h3>
         <Link 
           to="/servicos" 
@@ -68,7 +68,7 @@ export const ServiceRow = () => {
         {/* Horizontal Scroll Container */}
         <div className="flex overflow-x-auto pb-6 gap-6 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-primary/10 scrollbar-track-transparent hover:scrollbar-thumb-primary/30 transition-colors">
           {services.map((service) => (
-            <div key={service.id} className="min-w-[280px] w-[280px] md:min-w-[320px] md:w-[320px] snap-start">
+            <div key={service.id} className="min-w-70 w-70 md:min-w-80 md:w-80 snap-start">
               <ServiceCard service={service} />
             </div>
           ))}

@@ -2,17 +2,17 @@ import { useNotifications, Notification } from '../../contexts/NotificationConte
 import { XMarkIcon, CheckCircleIcon, ExclamationTriangleIcon, InformationCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline'; // Assumindo heroic-icons, se nao tiver uso svg
 
 const icons = {
-  success: <CheckCircleIcon className="w-6 h-6 text-green-500" />,
-  error: <ExclamationCircleIcon className="w-6 h-6 text-red-500" />,
-  warning: <ExclamationTriangleIcon className="w-6 h-6 text-yellow-500" />,
-  info: <InformationCircleIcon className="w-6 h-6 text-blue-500" />
+    success: <CheckCircleIcon className="w-6 h-6 text-success" />,
+    error: <ExclamationCircleIcon className="w-6 h-6 text-destructive" />,
+    warning: <ExclamationTriangleIcon className="w-6 h-6 text-warning" />,
+    info: <InformationCircleIcon className="w-6 h-6 text-info" />
 };
 
 const bgColors = {
-    success: 'bg-green-50 border-green-200',
-    error: 'bg-red-50 border-red-200',
-    warning: 'bg-yellow-50 border-yellow-200',
-    info: 'bg-blue-50 border-blue-200'
+    success: 'bg-success/10 border-success',
+    error: 'bg-destructive/10 border-destructive',
+    warning: 'bg-warning/10 border-warning',
+    info: 'bg-info/10 border-info'
 };
 
 const NotificationItem = ({ notification }: { notification: Notification }) => {
@@ -28,12 +28,12 @@ const NotificationItem = ({ notification }: { notification: Notification }) => {
                 {Icon}
             </div>
             <div className="flex-1">
-                <h4 className="text-sm font-medium text-gray-900">{notification.title}</h4>
-                <p className="mt-1 text-sm text-gray-600 break-words">{notification.message}</p>
+                <h4 className="text-sm font-medium text-foreground">{notification.title}</h4>
+                <p className="mt-1 text-sm text-muted-foreground break-words">{notification.message}</p>
             </div>
             <button 
                 onClick={() => removeNotification(notification.id)}
-                className="ml-3 flex-shrink-0 text-gray-400 hover:text-gray-500 focus:outline-none"
+                className="ml-3 flex-shrink-0 text-muted-foreground hover:text-foreground focus:outline-none"
                 aria-label="Fechar notificação"
                 title="Fechar"
             >

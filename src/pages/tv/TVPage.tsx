@@ -105,7 +105,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
             className={`absolute inset-0 flex items-center justify-center transition-opacity duration-1000 ease-in-out will-[opacity,transform] ${active ? 'opacity-100' : 'opacity-0'}`}
         >
             {/* Background Layer (Blurred if sidebars) */}
-            <div className="absolute inset-0 bg-black overflow-hidden z-0">
+            <div className="absolute inset-0 bg-surface overflow-hidden z-0">
                  {/* Blurred Background for aesthetic fill */}
                  <img src={optimizedUrl} className="w-full h-full object-cover opacity-30 blur-xl scale-110" alt="" />
             </div>
@@ -114,26 +114,26 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
             <div className="z-10 relative flex w-full h-full">
                 
                 {/* Left Sidebar (Sponsors) */}
-                    <div className="flex flex-col justify-between items-center w-1/4 bg-black/40 backdrop-blur-sm p-6 gap-6 animate-fade-in-right h-full border-l border-white/10">
+                    <div className="flex flex-col justify-between items-center w-1/4 bg-surface/40 backdrop-blur-sm p-6 gap-6 animate-fade-in-right h-full border-l border-border/10">
                         {/* Top: Hashtag & CTA */}
-                        <div className="text-white text-center">
-                            <p className="text-sm uppercase tracking-widest mb-1 text-gray-300">Participe</p>
+                        <div className="text-foreground text-center">
+                            <p className="text-sm uppercase tracking-widest mb-1 text-muted-foreground">Participe</p>
                             <p className="font-bold text-3xl drop-shadow-md">#{hashtag || 'mural'}</p>
                         </div>
                         {/* Middle: QR Code (Dynamic) */}
                         {showQrCode && slug && (
-                            <div className="bg-white p-3 rounded-xl shadow-2xl">
+                            <div className="bg-transparent p-0 rounded-none shadow-none">
                                 <QRCode 
                                     value={`${getPublicBase()}/participate/${slug}`}
                                     size={180}
                                     level="M"
                                 />
                                 {qrCodeText && (
-                                    <p className="text-black text-xs font-bold text-center mt-2 uppercase tracking-wide">{qrCodeText}</p>
+                                    <p className="text-foreground text-xs font-bold text-center mt-2 uppercase tracking-wide">{qrCodeText}</p>
                                 )}
                                 {/* Debug: show resolved QR value when debugging */}
                                 {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
-                                    <p className="text-xs text-gray-600 mt-2 break-all">{`${getPublicBase()}/participate/${slug}`}</p>
+                                    <p className="text-xs text-muted-foreground mt-2 break-all">{`${getPublicBase()}/participate/${slug}`}</p>
                                 )}
                             </div>
                         )}
@@ -143,34 +143,33 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                 {sponsors.slice(0, 3).map(s => {
                                     const opt = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_600,c_limit,q_auto/') : s.imageUrl;
                                     const small = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_300,c_limit/') : s.imageUrl;
-                                    return (
-                                        <div key={s.id} className="bg-white p-3 rounded-lg shadow-lg flex items-center justify-center">
-                                            <img
-                                                src={opt || 'https://placehold.co/300x96?text=Sponsor'}
-                                                srcSet={opt ? `${small} 300w, ${opt} 600w` : undefined}
-                                                alt={s.name || 'Sponsor'}
-                                                className="max-h-28 w-auto mx-auto sponsor-debug-img"
-                                                width={300}
-                                                height={96}
-                                                loading="eager"
-                                                onLoad={() => {
-                                                    try {
-                                                        if (typeof window !== 'undefined') {
-                                                            // @ts-ignore
-                                                            window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
-                                                            // @ts-ignore
-                                                            if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
-                                                        }
-                                                    } catch (err) {/* ignore */}
-                                                }}
-                                                onError={(e) => {
-                                                    // eslint-disable-next-line no-console
-                                                    console.warn('SlideComponent - Sponsor image failed to load, replacing with placeholder:', s.imageUrl);
-                                                    e.currentTarget.src = 'https://placehold.co/300x96?text=Sponsor';
-                                                }}
-                                            />
-                                        </div>
-                                    );
+                                        return (
+                                            <div key={s.id} className="w-full flex items-center justify-center bg-transparent p-0">
+                                                <img
+                                                    src={opt || 'https://placehold.co/240x80?text=Sponsor'}
+                                                    srcSet={opt ? `${small} 240w, ${opt} 480w` : undefined}
+                                                    alt={s.name || 'Sponsor'}
+                                                    className="w-full h-full object-cover sponsor-debug-img"
+                                                    style={{ minHeight: 0, minWidth: 0, maxHeight: '100%', maxWidth: '100%' }}
+                                                    loading="eager"
+                                                    onLoad={() => {
+                                                        try {
+                                                            if (typeof window !== 'undefined') {
+                                                                // @ts-ignore
+                                                                window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
+                                                                // @ts-ignore
+                                                                if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
+                                                            }
+                                                        } catch (err) {/* ignore */}
+                                                    }}
+                                                    onError={(e) => {
+                                                        // eslint-disable-next-line no-console
+                                                        console.warn('SlideComponent - Sponsor image failed to load, replacing with placeholder:', s.imageUrl);
+                                                        e.currentTarget.src = 'https://placehold.co/240x80?text=Sponsor';
+                                                    }}
+                                                />
+                                            </div>
+                                        );
                                 })}
                             </div>
                         ) : (
@@ -189,8 +188,8 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                     {/* Caption Overlay */}
                     {post.caption && (
                         <div className="absolute bottom-10 left-0 right-0 text-center">
-                            <div className="bg-black/60 backdrop-blur-md inline-block px-6 py-3 rounded-full text-white text-xl font-medium max-w-[80%] truncate">
-                                <span className="text-pink-500 font-bold mr-2">@{post.author}</span>
+                            <div className="bg-surface/60 backdrop-blur-md inline-block px-6 py-3 rounded-full text-foreground text-xl font-medium max-w-[80%] truncate">
+                                <span className="text-primary font-bold mr-2">@{post.author}</span>
                                 {post.caption}
                             </div>
                         </div>
@@ -199,28 +198,28 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
 
                 {/* Right Sidebar (Sponsors - mirrored or different) */}
                 {showSidebars && (
-                    <div className="flex flex-col justify-between items-center w-1/4 bg-black/40 backdrop-blur-sm p-6 gap-6 animate-fade-in-right h-full border-l border-white/10">
+                    <div className="flex flex-col justify-between items-center w-1/4 bg-surface/40 backdrop-blur-sm p-6 gap-6 animate-fade-in-right h-full border-l border-border/10">
                     
                         {/* Top: Hashtag & CTA */}
-                        <div className="text-white text-center">
-                            <p className="text-sm uppercase tracking-widest mb-1 text-gray-300">Participe</p>
+                        <div className="text-foreground text-center">
+                            <p className="text-sm uppercase tracking-widest mb-1 text-muted-foreground">Participe</p>
                             <p className="font-bold text-3xl drop-shadow-md">#{hashtag || 'mural'}</p>
                         </div>
 
                         {/* Middle: QR Code (Dynamic) */}
                         {showQrCode && slug && (
-                            <div className="bg-white p-3 rounded-xl shadow-2xl">
+                            <div className="bg-transparent p-0 rounded-none shadow-none">
                                 <QRCode 
                                     value={`${getPublicBase()}/participate/${slug}`}
                                     size={180}
                                     level="M"
                                 />
                                 {qrCodeText && (
-                                    <p className="text-black text-xs font-bold text-center mt-2 uppercase tracking-wide">{qrCodeText}</p>
+                                    <p className="text-foreground text-xs font-bold text-center mt-2 uppercase tracking-wide">{qrCodeText}</p>
                                 )}
                                 {/* Debug: show resolved QR value when debugging */}
                                 {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
-                                    <p className="text-xs text-gray-600 mt-2 break-all">{`${getPublicBase()}/participate/${slug}`}</p>
+                                    <p className="text-xs text-muted-foreground mt-2 break-all">{`${getPublicBase()}/participate/${slug}`}</p>
                                 )}
                             </div>
                         )}
@@ -231,14 +230,13 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                     const opt = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_600,c_limit,q_auto/') : s.imageUrl;
                                     const small = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_300,c_limit/') : s.imageUrl;
                                     return (
-                                        <div key={s.id} className="bg-white p-3 rounded-lg shadow-lg flex items-center justify-center">
+                                        <div key={s.id} className="w-full flex items-center justify-center bg-transparent p-0">
                                             <img
                                                 src={opt || 'https://placehold.co/300x96?text=Sponsor'}
                                                 srcSet={opt ? `${small} 300w, ${opt} 600w` : undefined}
                                                 alt={s.name || 'Sponsor'}
-                                                className="max-h-28 w-auto mx-auto sponsor-debug-img"
-                                                width={300}
-                                                height={96}
+                                                className="w-full h-full object-cover sponsor-debug-img"
+                                                style={{ minHeight: 0, minWidth: 0, maxHeight: '100%', maxWidth: '100%' }}
                                                 loading="eager"
                                                 onLoad={() => {
                                                     try {
@@ -532,14 +530,14 @@ const TVPage: React.FC = () => {
     // Render Loading / Pairing / Error states
     if (!config && pairingCode) {
         return (
-            <div className="w-screen h-screen bg-black text-white flex flex-col items-center justify-center">
+            <div className="w-screen h-screen bg-surface text-foreground flex flex-col items-center justify-center">
                 <h1 className="text-6xl font-bold mb-4">{pairingCode}</h1>
-                <p className="text-2xl text-gray-400">Entre em admin/social para parear esta TV</p>
+                <p className="text-2xl text-muted-foreground">Entre em admin/social para parear esta TV</p>
             </div>
         );
     }
     
-    if (!config) return <div className="bg-black w-screen h-screen flex items-center justify-center text-white">Carregando...</div>;
+    if (!config) return <div className="bg-surface w-screen h-screen flex items-center justify-center text-foreground">Carregando...</div>;
 
     const isVerticalContent = true; // Match SlideComponent logic
     const showSidebarsAtMain = config?.layoutMode === 'LANDSCAPE' && isVerticalContent && ((config?.sponsors && config.sponsors.length > 0) || config?.enableQrCode);
@@ -560,7 +558,7 @@ const TVPage: React.FC = () => {
         };
 
         return (
-            <div className="relative w-screen h-screen bg-black text-white overflow-hidden font-sans selection:bg-pink-500 selection:text-white">
+            <div className="relative w-screen h-screen bg-surface text-foreground overflow-hidden font-sans selection:bg-primary selection:text-primary-foreground">
                 <div className="absolute inset-0 z-0 opacity-40 scale-110 pointer-events-none">
                     <img src={placeholderPost.mediaUrl.replace('/upload/', '/upload/w_100,c_scale,q_auto/')} className="w-full h-full object-cover blur-3xl" alt="" />
                 </div>
@@ -583,9 +581,9 @@ const TVPage: React.FC = () => {
                     <div className="absolute bottom-8 right-8 flex flex-col items-end gap-4">
                         {/* QR Code flutuante */}
                         { !!config?.enableQrCode && (
-                            <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 shadow-2xl animate-fade-in-up">
+                            <div className="bg-transparent p-4 rounded-xl animate-fade-in-up">
                                 <p className="text-center font-bold mb-2 text-sm uppercase tracking-wider">{config.qrCodeText || 'Participe'}</p>
-                                <div className="bg-white p-2 rounded-lg">
+                                <div className="p-2 rounded-lg bg-transparent">
                                     <QRCode value={`${getPublicBase()}/participate/${config.slug || ''}`} size={120} />
                                 </div>
                                 {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
@@ -595,25 +593,27 @@ const TVPage: React.FC = () => {
                         )}
                         {/* Logos dos patrocinadores flutuantes */}
                         { config?.sponsors && config.sponsors.length > 0 && (
-                            <div className="flex gap-3 bg-white/10 backdrop-blur-md p-3 rounded-xl border border-white/20 shadow-2xl animate-fade-in-up">
+                            <div className="flex gap-3 bg-transparent p-0 rounded-xl animate-fade-in-up">
                                 {config.sponsors.slice(0, 3).map(s => {
                                     const opt = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_480,c_limit,q_auto/') : s.imageUrl;
                                     const small = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_240,c_limit/') : s.imageUrl;
                                     return (
-                                        <img key={s.id} src={opt || 'https://placehold.co/240x80?text=Sponsor'} alt={s.name || 'Sponsor'} className="h-20 w-auto object-contain sponsor-debug-img" height={80} width={240} srcSet={opt ? `${small} 240w, ${opt} 480w` : undefined} loading="eager" onLoad={() => {
-                                            try {
-                                                if (typeof window !== 'undefined') {
-                                                    // @ts-ignore
-                                                    window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
-                                                    // @ts-ignore
-                                                    if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
-                                                }
-                                            } catch (err) {/* ignore */}
-                                        }} onError={e => {
-                                            // eslint-disable-next-line no-console
-                                            console.warn('TVPage - sponsor overlay failed to load, replacing with placeholder:', s.imageUrl);
-                                            e.currentTarget.src = 'https://placehold.co/240x80?text=Sponsor';
-                                        }} />
+                                        <div key={s.id} className="w-40 flex items-center justify-center">
+                                            <img src={opt || 'https://placehold.co/240x80?text=Sponsor'} alt={s.name || 'Sponsor'} className="w-full h-auto object-contain sponsor-debug-img" height={80} width={240} srcSet={opt ? `${small} 240w, ${opt} 480w` : undefined} loading="eager" onLoad={() => {
+                                                try {
+                                                    if (typeof window !== 'undefined') {
+                                                        // @ts-ignore
+                                                        window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
+                                                        // @ts-ignore
+                                                        if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
+                                                    }
+                                                } catch (err) {/* ignore */}
+                                            }} onError={e => {
+                                                // eslint-disable-next-line no-console
+                                                console.warn('TVPage - sponsor overlay failed to load, replacing with placeholder:', s.imageUrl);
+                                                e.currentTarget.src = 'https://placehold.co/240x80?text=Sponsor';
+                                            }} />
+                                        </div>
                                     );
                                 })}
                             </div>
@@ -733,32 +733,34 @@ const TVPage: React.FC = () => {
                 <div className="absolute bottom-8 right-8 flex flex-col items-end gap-4">
                     {/* QR Code flutuante */}
                     { !!config?.enableQrCode && (
-                        <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 shadow-2xl animate-fade-in-up">
+                        <div className="bg-transparent p-4 rounded-xl animate-fade-in-up">
                             <p className="text-center font-bold mb-2 text-sm uppercase tracking-wider">{config.qrCodeText || 'Participe'}</p>
-                            <div className="bg-white p-2 rounded-lg">
+                            <div className="p-2 rounded-lg bg-transparent">
                                 <QRCode value={`${window.location.origin}/participate/${config.slug || ''}`} size={120} />
                             </div>
                         </div>
                     )}
                     {/* Logos dos patrocinadores flutuantes */}
                     { config?.sponsors && config.sponsors.length > 0 && (
-                        <div className="flex gap-3 bg-white/10 backdrop-blur-md p-3 rounded-xl border border-white/20 shadow-2xl animate-fade-in-up">
+                        <div className="flex gap-3 bg-transparent p-0 rounded-xl animate-fade-in-up">
                             {config.sponsors.slice(0, 3).map(s => (
-                                <img key={s.id} src={s.imageUrl} alt={s.name} className="h-12 w-auto object-contain sponsor-debug-img" height={48} onLoad={() => {
-                                    try {
+                                <div key={s.id} className="w-40 flex items-center justify-center">
+                                    <img src={s.imageUrl} alt={s.name} className="w-full h-auto object-contain sponsor-debug-img" height={80} width={240} onLoad={() => {
+                                        try {
+                                            // eslint-disable-next-line no-console
+                                            if (typeof window !== 'undefined') {
+                                                // @ts-ignore
+                                                window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
+                                                // @ts-ignore
+                                                if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
+                                            }
+                                        } catch (err) { /* ignore */ }
+                                    }} onError={e => {
                                         // eslint-disable-next-line no-console
-                                        if (typeof window !== 'undefined') {
-                                            // @ts-ignore
-                                            window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
-                                            // @ts-ignore
-                                            if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
-                                        }
-                                    } catch (err) { /* ignore */ }
-                                }} onError={e => {
-                                    // eslint-disable-next-line no-console
-                                    console.warn('TVPage - sponsor overlay failed to load:', s.imageUrl);
-                                    e.currentTarget.style.display = 'none';
-                                }} />
+                                        console.warn('TVPage - sponsor overlay failed to load:', s.imageUrl);
+                                        e.currentTarget.style.display = 'none';
+                                    }} />
+                                </div>
                             ))}
                         </div>
                     )}

@@ -55,12 +55,12 @@ const CompareButton = ({ equipment, className = '', size = 'md' }: CompareButton
       onClick={handleToggle}
       disabled={!inCompare && !canAddMore}
       className={`
-                ${sizeClasses[size]}
+        ${sizeClasses[size]}
         disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
-        ${inCompare ? 'text-blue-500 hover:text-blue-600' : 'text-white hover:text-blue-300'}
+        ${inCompare ? 'text-info hover:text-info/80' : 'text-foreground hover:text-muted-foreground'}
         drop-shadow-lg hover:drop-shadow-xl
-                ${className}
-            `}
+        ${className}
+      `}
       title={inCompare ? 'Remover da comparação' : 'Adicionar à comparação'}
       aria-label={inCompare ? 'Remover da comparação' : 'Adicionar à comparação'}
     >
