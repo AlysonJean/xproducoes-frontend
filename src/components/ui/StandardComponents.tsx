@@ -31,13 +31,13 @@ interface StandardButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEleme
 }
 
 const buttonVariants: Record<StandardVariant, string> = {
-  primary: 'bg-primary hover:bg-primary/90 text-primary-foreground focus:ring-primary shadow-lg hover:shadow-xl transform hover:scale-105',
-  secondary: 'bg-secondary hover:bg-secondary/90 text-secondary-foreground focus:ring-secondary',
-  outline: 'border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground focus:ring-primary',
-  ghost: 'text-primary hover:bg-primary/10 focus:ring-primary',
-  destructive: 'bg-destructive hover:bg-destructive/90 text-destructive-foreground focus:ring-destructive',
-  success: 'bg-success hover:bg-success/90 text-success-foreground focus:ring-success shadow-sm',
-  warning: 'bg-warning hover:bg-warning/90 text-warning-foreground focus:ring-warning shadow-sm',
+  primary: 'bg-gradient-to-br from-primary via-primary to-primary/80 hover:from-primary/90 hover:to-primary text-white shadow-[0_4px_14px_0_rgb(var(--primary-rgb)/0.39)] hover:shadow-[0_6px_20px_rgba(var(--primary-rgb)/0.23)] active:scale-95 transition-all duration-300',
+  secondary: 'bg-secondary hover:bg-secondary/90 text-secondary-foreground focus:ring-secondary active:scale-95 transition-all duration-300',
+  outline: 'border-2 border-primary text-primary hover:bg-primary/5 hover:border-primary/80 focus:ring-primary active:scale-95 transition-all duration-300',
+  ghost: 'text-primary hover:bg-primary/10 focus:ring-primary active:scale-95 transition-all duration-300',
+  destructive: 'bg-gradient-to-br from-destructive to-destructive/80 hover:from-destructive hover:to-destructive text-destructive-foreground focus:ring-destructive transition-all duration-300',
+  success: 'bg-gradient-to-br from-success to-success/80 hover:from-success hover:to-success text-success-foreground focus:ring-success shadow-md transition-all duration-300',
+  warning: 'bg-gradient-to-br from-warning to-warning/80 hover:from-warning hover:to-warning text-warning-foreground focus:ring-warning shadow-md transition-all duration-300',
 };
 
 const buttonSizes: Record<StandardSize, string> = {
@@ -139,11 +139,11 @@ interface StandardInputProps extends Omit<React.InputHTMLAttributes<HTMLInputEle
 }
 
 const inputSizes: Record<StandardSize, string> = {
-  xs: 'h-7 px-2 text-xs',
-  sm: 'h-8 px-3 text-sm',
-  md: 'h-9 px-3 text-sm',
-  lg: 'h-10 px-4 text-base',
-  xl: 'h-12 px-4 text-lg',
+  xs: 'h-8 px-2 text-xs',
+  sm: 'h-10 px-3 text-sm',
+  md: 'h-12 px-4 text-sm font-medium',
+  lg: 'h-14 px-5 text-base font-medium',
+  xl: 'h-16 px-6 text-lg font-medium',
 };
 
 export const Input = forwardRef<HTMLInputElement, StandardInputProps>(
@@ -512,8 +512,8 @@ export const Modal: React.FC<StandardModalProps> = ({
       {/* Modal */}
       <div
         className={clsx(
-          'relative bg-card text-card-foreground rounded-lg shadow-xl border',
-          'max-h-[85vh] overflow-auto',
+          'relative bg-card/60 backdrop-blur-xl text-card-foreground rounded-2xl shadow-2xl border border-white/20',
+          'max-h-[85vh] overflow-auto animate-in fade-in zoom-in duration-300',
           modalSizes[size],
           'w-full mx-4',
           className
@@ -746,17 +746,17 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Search Bar */}
-      <div className="relative max-w-2xl mx-auto">
+      <div className="relative max-w-2xl mx-auto group">
         <div className="relative">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
-            className="w-full pl-12 pr-4 py-4 bg-card border-2 border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 shadow-sm hover:shadow-md"
+            className="w-full pl-14 pr-4 py-5 bg-card/40 backdrop-blur-md border border-white/20 rounded-2xl text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 shadow-xl group-hover:shadow-2xl group-hover:-translate-y-1"
           />
-          <div className="absolute inset-y-0 left-0 flex items-center pl-4">
-            <svg className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="absolute inset-y-0 left-0 flex items-center pl-5">
+            <svg className="h-6 w-6 text-primary group-hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
           </div>
@@ -953,6 +953,35 @@ export const Badge: React.FC<StandardBadgeProps> = ({
     )}>
       {children}
     </span>
+  );
+};
+
+// ========================================
+// GLASS CARD COMPONENT
+// ========================================
+
+interface GlassCardProps {
+  children: ReactNode;
+  className?: string;
+  hoverEffect?: boolean;
+}
+
+export const GlassCard: React.FC<GlassCardProps> = ({ children, className, hoverEffect = true }) => {
+  return (
+    <div className={clsx(
+      'relative bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl overflow-hidden shadow-2xl',
+      'transition-all duration-500',
+      hoverEffect && 'hover:bg-white/15 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]',
+      className
+    )}>
+      {/* Subtle Glow inside */}
+      <div className="absolute -top-24 -left-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-secondary/10 rounded-full blur-3xl pointer-events-none" />
+      
+      <div className="relative z-10 p-6">
+        {children}
+      </div>
+    </div>
   );
 };
 
