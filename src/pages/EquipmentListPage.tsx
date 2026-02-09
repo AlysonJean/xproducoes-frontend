@@ -6,7 +6,7 @@ import { asArray } from '../utils/normalize';
 import { transformEquipment } from '../utils/transformEquipment';
 import { normalizeString } from '../utils/string';
 import type { Equipment, Category, EquipmentFilters } from '@/types/types';
-import { PageLayout, PageLoading, PageEmpty } from '../components/layouts/PageLayout';
+import { PageLayout, PageEmpty } from '../components/layouts/PageLayout';
 import { SearchAndFilters, FilterSelect, Grid, Skeleton, ListSkeleton } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
 

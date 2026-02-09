@@ -10,7 +10,7 @@ import type { Category, Kit, PortfolioItem } from '../types/types';
 import { transformKit } from '../utils/transformKit';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { GeminiEventSuggester } from '../components/ui/GeminiEventSuggester';
-import { PageLoading } from '../components/layouts/PageLayout';
+
 import { Grid, Skeleton, CardSkeleton } from '../components/ui/StandardComponents';
 import { TestimonialCard } from '../components/ui/TestimonialCard';
 import { BannerCarousel } from '../components/ui/BannerCarousel';

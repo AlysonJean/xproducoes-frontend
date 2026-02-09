@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../services/api';
 import { asArray } from '../utils/normalize';
 import type { PortfolioItem, PortfolioFilters } from '@/types';
-import { PageLayout, PageLoading, PageEmpty } from '../components/layouts/PageLayout';
+import { PageLayout, PageEmpty } from '../components/layouts/PageLayout';
 import { normalizeString } from '../utils/string';
 import { SearchAndFilters, Grid, Skeleton, ListSkeleton } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';

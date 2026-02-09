@@ -4,8 +4,8 @@ import { apiFetch } from '../services/api';
 import { asArray } from '../utils/normalize';
 import { normalizeString } from '../utils/string';
 import type { Service } from '@/types/types';
-import { PageLayout, PageLoading, PageEmpty } from '../components/layouts/PageLayout';
-import { SearchAndFilters, FilterSelect, Grid, Skeleton, ListSkeleton } from '../components/ui/StandardComponents';
+import { PageLayout, PageEmpty } from '../components/layouts/PageLayout';
+import { SearchAndFilters, Grid, Skeleton, ListSkeleton } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
 
 const ServiceListSkeleton = () => (
