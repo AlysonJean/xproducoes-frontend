@@ -160,7 +160,14 @@ export default defineConfig({
     chunkSizeWarningLimit: 2000
   },
   ssr: {
-    noExternal: ['react-helmet-async', '@mui/material', '@mui/system', '@mui/base', '@mui/utils']
+    noExternal: [
+      'react-helmet-async', 
+      '@mui/material', 
+      '@mui/system', 
+      '@mui/base', 
+      '@mui/utils',
+      '@lottiefiles/dotlottie-react'
+    ]
   },
   resolve: {
     alias: {
@@ -185,7 +192,8 @@ export default defineConfig({
       'axios',
       'lucide-react',
       'date-fns',
-      'clsx'
+      'clsx',
+      '@lottiefiles/dotlottie-react'
     ]
   },
 })
