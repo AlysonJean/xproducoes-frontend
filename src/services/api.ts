@@ -370,6 +370,14 @@ export const collaboratorsAPI = {
   getAvailable: (date: string, role?: string) => api.get('/admin/collaborators/available', { params: { date, role } }),
 };
 
+export const collaboratorFunctionsAPI = {
+  getAll: () => api.get('/collaborator-functions'),
+  getById: (id: string) => api.get(`/collaborator-functions/${id}`),
+  create: (data: { name: string; description?: string }) => api.post('/collaborator-functions', data),
+  update: (id: string, data: { name?: string; description?: string; active?: boolean }) => api.put(`/collaborator-functions/${id}`, data),
+  delete: (id: string) => api.delete(`/collaborator-functions/${id}`),
+};
+
 export const authAPI = {
   login: (email: string, password: string) => api.post('/auth/login', { email, password }),
   register: (userData: Record<string, unknown>) => api.post('/auth/register', userData),

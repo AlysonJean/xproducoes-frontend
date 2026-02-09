@@ -201,6 +201,15 @@ export interface Booking {
 export type Collaborator = ICollaborator;
 export type EventCollaborator = ICollaborator;
 
+export interface CollaboratorFunction {
+  id: string;
+  name: string;
+  description?: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CollaboratorAvailability {
   id: string;
   collaboratorId: string;

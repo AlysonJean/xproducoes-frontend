@@ -1,10 +1,12 @@
 // src/components/forms/CollaboratorFormPage.tsx
-import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useEffect, useState } from 'react';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { apiFetch } from '@/services/api';
+import { asArray } from '@/utils/normalize';
+import { apiFetch, collaboratorFunctionsAPI } from '@/services/api';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { CollaboratorFunction } from '@/types/types';
 import {
   Form,
   FormSection,
@@ -17,9 +19,10 @@ import {
 const collaboratorSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   email: z.string().email('Email inválido'),
-  role: z.enum(['PHOTOGRAPHER', 'VIDEOGRAPHER', 'EDITOR', 'ASSISTANT', 'OTHER']),
-  hourlyRate: z.number().min(0, 'Valor deve ser positivo'),
-  status: z.enum(['ACTIVE', 'INACTIVE', 'PENDING_APPROVAL', 'SUSPENDED']),
+  role: z.enum(['PHOTOGRAPHER', 'VIDEOGRAPHER', 'EDITOR', 'ASSISTANT', 'OTHER'] as const).optional(),
+  functionId: z.string().optional().or(z.literal('')),
+  hourlyRate: z.coerce.number().min(0, 'Valor deve ser positivo').optional().or(z.literal('')),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'PENDING_APPROVAL', 'SUSPENDED'] as const),
 });
 
 type CollaboratorFormData = z.infer<typeof collaboratorSchema>;
@@ -37,6 +40,7 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
 }) => {
   const { addNotification } = useNotifications();
   const isEditing = Boolean(initialData);
+  const [functions, setFunctions] = useState<CollaboratorFunction[]>([]);
 
   const {
     register,
@@ -48,39 +52,53 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
     defaultValues: {
       name: '',
       email: '',
-      role: 'PHOTOGRAPHER',
+      role: 'OTHER',
+      functionId: '',
       hourlyRate: undefined,
       status: 'ACTIVE',
     },
   });
 
   useEffect(() => {
+    const loadFunctions = async () => {
+      try {
+        const resp = await collaboratorFunctionsAPI.getAll();
+        setFunctions(asArray(resp.data));
+      } catch (err) {
+        console.error('Falha ao carregar funções:', err);
+      }
+    };
+    loadFunctions();
+  }, []);
+
+  useEffect(() => {
     if (initialData) {
       reset({
         name: initialData.name || '',
         email: initialData.email || '',
-        role: initialData.role || 'PHOTOGRAPHER',
-        hourlyRate: initialData.hourlyRate,
+        role: initialData.role || 'OTHER',
+        functionId: initialData.functionId || '',
+        hourlyRate: initialData.hourlyRate || '',
         status: initialData.status || 'ACTIVE',
       });
     }
   }, [initialData, reset]);
 
-  const onSubmit = async (data: CollaboratorFormData) => {
+  const onSubmit: SubmitHandler<CollaboratorFormData> = async (data) => {
     try {
       const payload = {
         ...data,
-        hourlyRate: Number(data.hourlyRate) || undefined,
+        hourlyRate: data.hourlyRate === '' ? undefined : Number(data.hourlyRate),
       };
 
       if (isEditing && initialData?.id) {
-        await apiFetch(`/collaborators/${initialData.id}`, {
+        await apiFetch(`/admin/collaborators/${initialData.id}`, {
           method: 'PUT',
           body: JSON.stringify(payload),
         });
         addNotification({ type: 'success', title: 'Sucesso', message: 'Colaborador atualizado!' });
       } else {
-        await apiFetch('/collaborators', {
+        await apiFetch('/admin/collaborators', {
           method: 'POST',
           body: JSON.stringify(payload),
         });
@@ -116,7 +134,16 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
       <FormSection title="Dados Profissionais" description="Função e remuneração">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Select
-            label="Função"
+            label="Função (Personalizada)"
+            {...register('functionId')}
+            error={errors.functionId?.message}
+            options={[
+              { value: '', label: 'Selecione uma função...' },
+              ...functions.map(f => ({ value: f.id, label: f.name }))
+            ]}
+          />
+          <Select
+            label="Papel (Sistema)"
             {...register('role')}
             error={errors.role?.message}
             options={[
@@ -153,8 +180,8 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit" variant="primary" disabled={isSubmitting}>
-          {isSubmitting ? 'Salvando...' : isEditing ? 'Salvar Alterações' : 'Criar Colaborador'}
+        <Button type="submit" variant="primary" isLoading={isSubmitting}>
+          {isEditing ? 'Salvar Alterações' : 'Criar Colaborador'}
         </Button>
       </FormActions>
     </Form>
