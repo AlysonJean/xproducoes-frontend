@@ -264,7 +264,7 @@ export const ServiceDetailPage = () => {
             <div className="flex justify-between items-center mt-2">
                 <span className="text-muted-foreground">Duração</span>
                 <span className="text-xl font-semibold">
-                    {service.duration ? `${service.duration} min` : 'A combinar'}
+                    {service.duration ? `${(service.duration / 60).toFixed(1).replace('.0', '')}h` : 'A combinar'}
                 </span>
             </div>
             <div className="flex justify-between items-center mt-2">
