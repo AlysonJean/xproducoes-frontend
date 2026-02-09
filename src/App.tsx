@@ -206,10 +206,12 @@ const AdminSponsorPage = lazy(() => import('./pages/admin/AdminSponsorPage'));
 
 const AdminServiceListPage = lazy(() => import('./pages/admin/AdminServiceListPage').then((m) => ({ default: m.AdminServiceListPage })));
 const AdminKitListPage = lazy(() => import('./pages/admin/AdminKitListPage').then((m) => ({ default: m.AdminKitListPage })));
+const ClientListPage = lazy(() => import('./pages/admin/ClientListPage').then((m) => ({ default: m.ClientListPage })));
+const ClientEditPage = lazy(() => import('./pages/admin/ClientEditPage').then((m) => ({ default: m.ClientEditPage })));
 
 // TV Page
 const TVPage = lazy(() => import('./pages/tv/TVPage'));
-
+const AdminBookingDetailPage = lazy(() => import('./pages/admin/BookingDetailPage').then((m) => ({ default: m.BookingDetailPage })));
 const AdminAnnouncementPage = lazy(() => import('./pages/admin/AdminAnnouncementPage'));
 
 // Social Interaction Pages
@@ -591,6 +593,14 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admin/reservas/:id"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminBookingDetailPage />
+          </ProtectedRoute>
+        }
+      />
       {/* Alias para calendário dentro de bookings */}
       <Route
         path="/admin/reservas/calendario"
@@ -662,6 +672,22 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute adminOnly>
             <AdminCollaboratorsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/clientes"
+        element={
+          <ProtectedRoute adminOnly>
+            <ClientListPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/clientes/:id"
+        element={
+          <ProtectedRoute adminOnly>
+            <ClientEditPage />
           </ProtectedRoute>
         }
       />
