@@ -131,7 +131,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
         
         if (initialData) {
           // Map initial data to form structure
-          let formItems: { id: string; quantity: number; type: 'EQUIPMENT' | 'SERVICE' }[] = [];
+          let formItems: { itemId: string; quantity: number; type: 'EQUIPMENT' | 'SERVICE' }[] = [];
           
           if (initialData.items && initialData.items.length > 0) {
             formItems = initialData.items.map(item => ({
