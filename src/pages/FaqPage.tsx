@@ -4,9 +4,23 @@ import { useState, useEffect } from 'react';
 import type { FaqItem } from '../types/types';
 import { apiFetch } from '../services/api';
 import { asArray } from '../utils/normalize';
-import { Card, Grid } from '../components/ui/StandardComponents';
-import { PageLayout, PageLoading, PageError, PageEmpty } from '../components/layouts/PageLayout';
+import { Card, Grid, Skeleton } from '../components/ui/StandardComponents';
+import { BrandLoader } from '../components/ui/BrandLoader';
+import { PageLayout, PageError, PageEmpty } from '../components/layouts/PageLayout';
 import { SEO } from '../components/SEO';
+
+const FaqSkeleton = () => (
+  <PageLayout
+    title="Perguntas Frequentes"
+    description="Preparando respostas para você."
+  >
+    <div className="w-full max-w-3xl mx-auto space-y-6">
+      {[1, 2, 3, 4, 5].map(i => (
+        <Skeleton key={i} className="h-20 w-full rounded-xl" />
+      ))}
+    </div>
+  </PageLayout>
+);
 
 // AccordionItem com visual de Card, igual ao portfólio
 const AccordionItem = ({ faq }: { faq: FaqItem }) => {
@@ -44,7 +58,7 @@ export const FaqPage = () => {
       try {
   const data = await apiFetch('/faq');
   setFaqs(asArray<FaqItem>(data));
-      } catch (err) {
+      } catch {
         setError('Erro ao carregar perguntas frequentes. Tente novamente mais tarde.');
       } finally {
         setLoading(false);
@@ -54,7 +68,12 @@ export const FaqPage = () => {
   }, []);
 
   if (loading) {
-    return <PageLoading message="A carregar perguntas..." />;
+    return (
+      <div className="relative">
+        <BrandLoader fullScreen size={140} label="Carregando FAQ..." />
+        <FaqSkeleton />
+      </div>
+    );
   }
 
   if (error) {

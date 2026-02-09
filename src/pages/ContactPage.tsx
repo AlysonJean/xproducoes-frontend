@@ -5,8 +5,47 @@ import { apiFetch } from '../services/api';
 import { useNotifications } from '../contexts/NotificationContext';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { PageLayout } from '../components/layouts/PageLayout';
-import { Button } from '../components/ui/StandardComponents';
+import { Button, Skeleton } from '../components/ui/StandardComponents';
+import { BrandLoader } from '../components/ui/BrandLoader';
 import { SEO } from '../components/SEO';
+
+const ContactSkeleton = () => (
+  <PageLayout
+    title="Carregando..."
+    description="Preparando canais de atendimento."
+  >
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <div className="lg:col-span-1">
+        <div className="bg-card border border-border p-8 rounded-xl h-full shadow-sm space-y-8">
+          <Skeleton className="h-8 w-48 mb-4" />
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="flex items-start space-x-4">
+              <Skeleton className="w-12 h-12 rounded-xl flex-shrink-0" />
+              <div className="space-y-2 flex-1">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="lg:col-span-2">
+        <div className="bg-card border border-border p-8 rounded-xl shadow-sm space-y-8">
+          <Skeleton className="h-8 w-48 mb-4" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Skeleton className="h-12 w-full rounded-xl" />
+            <Skeleton className="h-12 w-full rounded-xl" />
+          </div>
+          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <div className="flex justify-end">
+            <Skeleton className="h-14 w-48 rounded-lg" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </PageLayout>
+);
 
 export const ContactPage = () => {
   const { ref: infoTitleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
@@ -25,6 +64,13 @@ export const ContactPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { addNotification } = useNotifications();
+  const [loading, setLoading] = useState(true);
+
+  // Simular carregamento inicial para mostrar skeleton
+  useState(() => {
+    const timer = setTimeout(() => setLoading(false), 800);
+    return () => clearTimeout(timer);
+  });
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -114,6 +160,15 @@ export const ContactPage = () => {
       setIsSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="relative">
+        <BrandLoader fullScreen size={140} label="Preparando contato..." />
+        <ContactSkeleton />
+      </div>
+    );
+  }
 
   return (
     <PageLayout

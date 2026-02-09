@@ -3,8 +3,59 @@ import { PageLayout } from '../components/layouts/PageLayout';
 import { GUIDES } from '../data/guides';
 import { SEO } from '../components/SEO';
 import { ClockIcon } from 'lucide-react';
+import { useState } from 'react';
+import { Skeleton } from '../components/ui/StandardComponents';
+import { BrandLoader } from '../components/ui/BrandLoader';
+
+const GuideListSkeleton = () => (
+  <PageLayout 
+    title="Guias & Dicas"
+    description="Preparando os melhores artigos para você."
+  >
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {[1, 2, 3, 4, 5, 6].map(i => (
+        <div key={i} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+          <Skeleton className="h-48 w-full rounded-none" />
+          <div className="p-6 space-y-4">
+            <div className="flex gap-2">
+              <Skeleton className="h-4 w-16 rounded-full" />
+              <Skeleton className="h-4 w-16 rounded-full" />
+            </div>
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <div className="flex items-center gap-2 pt-4 border-t border-border">
+              <Skeleton className="w-8 h-8 rounded-full" />
+              <div className="space-y-1">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </PageLayout>
+);
 
 export const GuideListPage = () => {
+  const [loading, setLoading] = useState(true);
+
+  // Simular carregamento inicial
+  useState(() => {
+    const timer = setTimeout(() => setLoading(false), 600);
+    return () => clearTimeout(timer);
+  });
+
+  if (loading) {
+    return (
+      <div className="relative">
+        <BrandLoader fullScreen size={140} label="Carregando guias..." />
+        <GuideListSkeleton />
+      </div>
+    );
+  }
+
   return (
     <PageLayout 
       title="Guias & Dicas para Eventos"
