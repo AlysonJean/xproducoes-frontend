@@ -4,13 +4,61 @@ import { PageLayout } from '../components/layouts/PageLayout';
 import { GUIDES } from '../data/guides';
 import { SEO } from '../components/SEO';
 import { ChevronLeft, CalendarIcon } from 'lucide-react';
+import { useState } from 'react';
+import { Skeleton } from '../components/ui/StandardComponents';
+import { BrandLoader } from '../components/ui/BrandLoader';
+
+const GuideDetailSkeleton = () => (
+  <PageLayout title="Carregando...">
+    <div className="max-w-4xl mx-auto space-y-8">
+      <Skeleton className="h-4 w-32" />
+      <header className="space-y-6">
+        <div className="flex gap-2">
+          <Skeleton className="h-6 w-20 rounded-full" />
+          <Skeleton className="h-6 w-20 rounded-full" />
+        </div>
+        <Skeleton className="h-16 w-full" />
+        <div className="flex items-center gap-6 pb-8 border-b border-border">
+          <Skeleton className="h-10 w-10 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+        </div>
+      </header>
+      <Skeleton className="h-[400px] w-full rounded-2xl" />
+      <div className="space-y-4">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-3/4" />
+      </div>
+    </div>
+  </PageLayout>
+);
 
 export const GuideDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const [loading, setLoading] = useState(true);
   const guide = GUIDES.find(g => g.slug === slug);
+
+  // Simular carregamento inicial
+  useState(() => {
+    const timer = setTimeout(() => setLoading(false), 600);
+    return () => clearTimeout(timer);
+  });
 
   if (!guide) {
     return <Navigate to="/404" />;
+  }
+
+  if (loading) {
+    return (
+      <div className="relative">
+        <BrandLoader fullScreen size={140} label="Abrindo guia..." />
+        <GuideDetailSkeleton />
+      </div>
+    );
   }
 
   // Schema for Article

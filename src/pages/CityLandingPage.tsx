@@ -13,34 +13,83 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { TestimonialCarousel } from '../components/TestimonialCarousel';
 import { apiFetch } from '../services/api';
 import { useState, useEffect } from 'react';
+import { Skeleton } from '../components/ui/StandardComponents';
+import { BrandLoader } from '../components/ui/BrandLoader';
+
+const CityLandingSkeleton = () => (
+  <PageLayout title="Carregando..." description="Sincronizando serviços locais.">
+    {/* Hero Skeleton */}
+    <div className="relative overflow-hidden rounded-3xl bg-primary/5 border border-primary/10 px-6 py-16 md:py-24 mb-16">
+      <div className="max-w-4xl mx-auto text-center space-y-6">
+        <Skeleton className="h-8 w-48 mx-auto rounded-full" />
+        <Skeleton className="h-16 w-3/4 mx-auto" />
+        <Skeleton className="h-8 w-1/2 mx-auto" />
+        <div className="flex justify-center gap-4">
+          <Skeleton className="h-14 w-48 rounded-lg" />
+          <Skeleton className="h-14 w-48 rounded-lg" />
+        </div>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-20">
+      <div className="lg:col-span-8 space-y-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+        </div>
+      </div>
+      <div className="lg:col-span-4">
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    </div>
+  </PageLayout>
+);
 
 export const CityLandingPage = () => {
   const { serviceSlug, citySlug } = useParams<{ serviceSlug: string; citySlug: string }>();
   const [reviewStats, setReviewStats] = useState<{ total: number; averageRating: number } | null>(null);
+  const [loading, setLoading] = useState(true);
   
   const city = TARGET_CITIES.find(c => c.slug === citySlug);
   const service = TARGET_SERVICES.find(s => s.slug === serviceSlug);
 
   useEffect(() => {
-    apiFetch('/reviews/stats')
+    const statsPromise = apiFetch('/reviews/stats')
       .then((data: any) => setReviewStats(data))
       .catch(err => console.error('Failed to fetch stats', err));
+
+    const minTimer = new Promise(resolve => setTimeout(resolve, 800));
+
+    Promise.all([statsPromise, minTimer]).finally(() => setLoading(false));
   }, []);
 
   // If invalid service or city, redirect to 404
-  if (!city || !service) {
-    return <Navigate to="/404" replace />;
-  }
-
-  const title = `${service.name} em ${city.name}, ${city.uf} | X-Produções`;
-  const description = `${service.name} profissional para eventos em ${city.name}. ${service.description} Entrega e montagem rápida em ${city.name} e região. Peça seu orçamento!`;
-
   const recommendations = useRecommendations({
     type: 'similar',
     itemType: 'equipment',
     limit: 4,
     autoFetch: true
   });
+
+  if (!city || !service) {
+    return <Navigate to="/404" replace />;
+  }
+
+  if (loading) {
+    return (
+      <div className="relative">
+        <BrandLoader fullScreen size={140} label={`Chegando em ${city.name}...`} />
+        <CityLandingSkeleton />
+      </div>
+    );
+  }
+
+  const title = `${service.name} em ${city.name}, ${city.uf} | X-Produções`;
+  const description = `${service.name} profissional para eventos em ${city.name}. ${service.description} Entrega e montagem rápida em ${city.name} e região. Peça seu orçamento!`;
 
   // Base FAQ Schema
   const faqSchema = service.faq ? {

@@ -1,12 +1,13 @@
 // src/components/forms/KitFormPage.tsx
 import { useEffect, useState, useMemo } from 'react';
 import { useForm, type SubmitHandler, useFieldArray } from 'react-hook-form';
+import { clsx } from 'clsx';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { generateSeoFilename } from '../../utils/seoUtils';
 import { apiFetch } from '../../services/api';
 import { formatPrice } from '../../utils/typeSafeFormatters';
-import type { Kit, Equipment, Service, KitExperienceLevel } from '../../types/types';
+import type { Kit, Equipment, Service, KitExperienceLevel, Category } from '../../types/types';
 import { ItemStatus } from '../../types/types';
 import { BrandLoader } from '../ui/BrandLoader';
 import {
@@ -30,13 +31,16 @@ type SearchableItem = {
   imageUrl?: string;
   type: 'EQUIPMENT' | 'SERVICE';
   status?: string;
+  category?: string;
 };
 
 const kitItemSchema = z.object({
-  id: z.string(),
+  itemId: z.string(),
   quantity: z.number().min(1, 'Quantidade mínima é 1'),
   type: z.enum(['EQUIPMENT', 'SERVICE']),
 });
+
+type KitItemField = z.infer<typeof kitItemSchema> & { id: string };
 
 const kitFormSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
@@ -108,7 +112,8 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
           description: e.description,
           imageUrl: e.imageUrl,
           type: 'EQUIPMENT' as const,
-          status: e.status
+          status: e.status,
+          category: typeof e.category === 'object' ? (e.category as Category)?.name : e.category
         }));
 
         const services = (serviceData as Service[]).map(s => ({
@@ -118,7 +123,8 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
           description: s.description,
           imageUrl: undefined,
           type: 'SERVICE' as const,
-          status: s.status
+          status: s.status,
+          category: 'Serviço'
         }));
 
         setAllItems([...equipments, ...services]);
@@ -129,14 +135,14 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
           
           if (initialData.items && initialData.items.length > 0) {
             formItems = initialData.items.map(item => ({
-              id: item.equipmentId || item.serviceId || '',
+              itemId: item.equipmentId || item.serviceId || '',
               quantity: item.quantity,
               type: item.serviceId ? 'SERVICE' : 'EQUIPMENT'
             }));
           } else if (initialData.equipments && initialData.equipments.length > 0) {
             // Legacy fallback
             formItems = initialData.equipments.map(eq => ({
-              id: eq.id,
+              itemId: eq.id,
               quantity: 1,
               type: 'EQUIPMENT'
             }));
@@ -166,7 +172,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
   const totalPriceOfItems = useMemo(() => {
     if (!watchedItems) return 0;
     return watchedItems.reduce((acc, item) => {
-      const found = allItems.find(i => i.id === item.id && i.type === item.type);
+      const found = allItems.find(i => i.id === item.itemId && i.type === item.type);
       return acc + ((found?.price || 0) * item.quantity);
     }, 0);
   }, [watchedItems, allItems]);
@@ -187,14 +193,14 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
     if (!searchTerm) return [];
     const lower = searchTerm.toLowerCase();
     return allItems.filter(item => 
-      !fields.some(f => f.id === item.id) && // Exclude already selected
+      !fields.some(f => (f as unknown as KitItemField).itemId === item.id) && // Exclude already selected
       (item.name.toLowerCase().includes(lower) || 
        item.description?.toLowerCase().includes(lower))
     ).slice(0, 5); // Limit suggestions
   }, [searchTerm, allItems, fields]);
 
   const handleAddItem = (item: SearchableItem) => {
-    append({ id: item.id, quantity: 1, type: item.type });
+    append({ itemId: item.id, quantity: 1, type: item.type });
     setSearchTerm(''); // Clear search after adding
   };
 
@@ -210,8 +216,13 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
     formData.append('description', data.description);
     formData.append('price', String(data.price));
     
-    // Send items as JSON string with type info
-    formData.append('items', JSON.stringify(data.items));
+    // Send items as JSON string with type info, converting back to 'id' for backend
+    const mappedItems = data.items.map(item => ({
+      id: item.itemId,
+      quantity: item.quantity,
+      type: item.type
+    }));
+    formData.append('items', JSON.stringify(mappedItems));
     
     // Send experience levels
     if (experienceLevels.length > 0) {
@@ -251,259 +262,351 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
       )}
 
       <Form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        
-        {/* === LEFT COLUMN / TOP SECTION === */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <FormSection title="Detalhes do Kit" description="Informações básicas">
-              <Input
-                label="Nome do Kit"
-                {...register('name')}
-                error={errors.name?.message}
-                placeholder="Ex: Kit Festa Completa"
-                required
-              />
-              <Textarea
-                label="Descrição"
-                {...register('description')}
-                error={errors.description?.message}
-                placeholder="Descreva o que compõe este kit..."
-                rows={3}
-                required
-              />
-            </FormSection>
-
-            <div className="p-6 bg-card rounded-xl border shadow-sm space-y-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <ShoppingBag className="w-5 h-5 text-primary" />
-                  Composição do Kit
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          
+          {/* Main Content: Details & Items */}
+          <div className="xl:col-span-2 space-y-8">
+            
+            {/* 1. Basic Details Card */}
+            <div className="bg-card border rounded-2xl shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b bg-muted/30">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Package className="w-5 h-5 text-primary" />
+                  Informações Básicas
                 </h3>
-                <span className="text-sm text-muted-foreground">
-                  {fields.length} itens adicionados
-                </span>
               </div>
-
-              {/* Search Area */}
-              <div className="relative">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Busque equipamentos ou serviços..."
-                    className="w-full pl-10 pr-4 py-2 rounded-lg border bg-background focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                  />
-                </div>
-                
-                {/* Search Results Dropdown */}
-                {searchTerm && filteredItems.length > 0 && (
-                  <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-popover border rounded-lg shadow-lg overflow-hidden">
-                    {filteredItems.map(item => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => handleAddItem(item)}
-                        className="w-full flex items-center justify-between p-3 hover:bg-muted text-left transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                           {item.type === 'EQUIPMENT' ? (
-                             <Package className="w-4 h-4 text-blue-500" />
-                           ) : (
-                             <User className="w-4 h-4 text-purple-500" />
-                           )}
-                           <div>
-                             <div className="flex items-center gap-2">
-                               <p className="font-medium text-sm">{item.name}</p>
-                               {item.status && item.status !== 'ACTIVE' && (
-                                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold border border-orange-200">
-                                   {item.status}
-                                 </span>
-                               )}
-                             </div>
-                             <p className="text-xs text-muted-foreground">{formatPrice(item.price)}</p>
-                           </div>
-                        </div>
-                        <Plus className="w-4 h-4 text-primary" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {errors.items && (
-                 <p className="text-sm text-destructive mt-2">{errors.items.message}</p>
-              )}
-
-              {/* Selected Items List */}
-              <div className="space-y-3 mt-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                {fields.map((field, index) => {
-                  const item = allItems.find(i => i.id === field.id);
-                  if (!item) return null;
-
-                  return (
-                    <div key={field.id} className="flex items-center gap-4 p-3 bg-card rounded-lg border shadow-sm group hover:border-primary/50 transition-all">
-                      {/* Image Thumbnail or Icon */}
-                      <div className="w-12 h-12 rounded bg-muted/30 border flex items-center justify-center overflow-hidden shrink-0">
-                         {item.imageUrl ? (
-                           <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                         ) : (
-                           item.type === 'EQUIPMENT' ? (
-                             <Package className="w-5 h-5 text-blue-500" />
-                           ) : (
-                             <User className="w-5 h-5 text-purple-500" />
-                           )
-                         )}
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                           <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${item.type === 'SERVICE' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                              {item.type === 'SERVICE' ? 'Serviço' : 'Equip.'}
-                           </span>
-                           <p className="font-medium text-sm truncate">{item.name}</p>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{formatPrice(item.price)} un.</p>
-                      </div>
-
-                      {/* Quantity Input */}
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs text-muted-foreground">Qtd:</label>
-                        <input
-                          type="number"
-                          min="1"
-                          className="w-16 p-1 text-center text-sm border rounded bg-background"
-                          {...register(`items.${index}.quantity`, { valueAsNumber: true, min: 1 })}
-                        />
-                      </div>
-
-                      {/* Remove Button */}
-                      <button
-                        type="button"
-                        onClick={() => remove(index)}
-                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-colors"
-                        title="Remover item"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  );
-                })}
-                
-                {fields.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                    <ShoppingBag className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                    <p>Nenhum item adicionado ainda.</p>
-                    <p className="text-xs">Use a busca acima para adicionar equipamentos ou serviços.</p>
-                  </div>
-                )}
+              <div className="p-6 space-y-6">
+                <Input
+                  label="Nome do Kit"
+                  {...register('name')}
+                  error={errors.name?.message}
+                  placeholder="Ex: Kit Festa Completa"
+                  className="text-lg font-semibold"
+                  required
+                />
+                <Textarea
+                  label="Descrição Detalhada"
+                  {...register('description')}
+                  error={errors.description?.message}
+                  placeholder="Descreva o que compõe este kit e seus benefícios..."
+                  rows={3}
+                  required
+                />
               </div>
             </div>
 
-            {/* Níveis de Experiência */}
-            <div className="p-6 bg-card rounded-xl border shadow-sm">
-              <ExperienceLevelsEditor
-                kitId={initialData?.id || 'new'}
-                initialLevels={initialData?.experienceLevels}
-                onChange={setExperienceLevels}
-                basePrice={kitPrice || 0}
-              />
+            {/* 2. Composition Section */}
+            <div className="bg-card border rounded-2xl shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b bg-muted/30 flex items-center justify-between">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <ShoppingBag className="w-5 h-5 text-primary" />
+                  Equipamentos & Serviços
+                </h3>
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  {fields.length} itens
+                </span>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                {/* Enhanced Search */}
+                <div className="relative group">
+                  <label className="text-xs font-bold uppercase text-muted-foreground mb-1.5 block">Adicionar Itens</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Busque por equipamentos ou serviços..."
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-background focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm"
+                    />
+                  </div>
+                  
+                  {/* Results with better visual separation */}
+                  {searchTerm && (
+                    <div className="absolute z-20 top-full left-0 right-0 mt-2 bg-popover border-2 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                      {filteredItems.length > 0 ? (
+                        filteredItems.map(item => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleAddItem(item)}
+                            className="w-full flex items-center justify-between p-4 hover:bg-muted/50 text-left border-b last:border-0 transition-colors group/item"
+                          >
+                            <div className="flex items-center gap-4">
+                               <div className={clsx(
+                                 "w-12 h-12 rounded-lg flex items-center justify-center border shrink-0",
+                                 item.type === 'EQUIPMENT' ? "bg-blue-50 border-blue-100" : "bg-purple-50 border-purple-100"
+                               )}>
+                                 {item.type === 'EQUIPMENT' ? (
+                                   <Package className="w-6 h-6 text-blue-500" />
+                                 ) : (
+                                   <User className="w-6 h-6 text-purple-500" />
+                                 )}
+                               </div>
+                               <div>
+                                 <div className="flex items-center gap-2">
+                                   <p className="font-bold text-foreground group-hover/item:text-primary transition-colors">{item.name}</p>
+                                   <span className={clsx(
+                                     "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider",
+                                     item.type === 'EQUIPMENT' ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"
+                                   )}>
+                                     {item.type === 'EQUIPMENT' ? 'Equipamento' : 'Serviço'}
+                                   </span>
+                                 </div>
+                                 <p className="text-sm text-muted-foreground line-clamp-1">{item.description || 'Sem descrição'}</p>
+                               </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <span className="font-mono font-bold text-primary">{formatPrice(item.price)}</span>
+                              <div className="p-1 rounded-md bg-primary/10 text-primary group-hover/item:bg-primary group-hover/item:text-white transition-all">
+                                <Plus className="w-5 h-5" />
+                              </div>
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="p-8 text-center text-muted-foreground">
+                          Nenhum {searchTerm.length < 3 ? 'item' : 'resultado'} encontrado para "{searchTerm}"
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Grid of Selected Items */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(fields as unknown as KitItemField[]).map((field, index) => {
+                    const item = allItems.find(i => i.id === field.itemId);
+                    if (!item) return null;
+
+                    return (
+                      <div key={field.id} className="flex items-start gap-4 p-4 bg-muted/20 hover:bg-muted/40 rounded-2xl border-2 border-transparent hover:border-primary/20 transition-all group relative">
+                        {/* Image/Icon */}
+                        <div className="w-16 h-16 rounded-xl bg-card border shadow-sm flex items-center justify-center overflow-hidden shrink-0">
+                           {item.imageUrl ? (
+                             <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                           ) : (
+                             item.type === 'EQUIPMENT' ? <Package className="w-8 h-8 text-blue-400" /> : <User className="w-8 h-8 text-purple-400" />
+                           )}
+                        </div>
+
+                        {/* Text Content */}
+                        <div className="flex-1 min-w-0 pr-8">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className={clsx(
+                              "w-2 h-2 rounded-full",
+                              item.type === 'EQUIPMENT' ? "bg-blue-500" : "bg-purple-500"
+                            )} />
+                            <p className="font-bold text-sm truncate uppercase tracking-tight">{item.name}</p>
+                          </div>
+                          <p className="text-xs text-muted-foreground mb-3">{formatPrice(item.price)} / unidade</p>
+                          
+                          {/* Quantity Controls inside the card */}
+                          <div className="flex items-center gap-3">
+                            <label className="text-[10px] font-bold uppercase text-muted-foreground">Quantidade</label>
+                            <div className="flex items-center border rounded-lg bg-card overflow-hidden">
+                              <button 
+                                type="button"
+                                title="Diminuir quantidade"
+                                onClick={() => {
+                                  const currentVal = watch(`items.${index}.quantity`);
+                                  if (currentVal > 1) {
+                                    register(`items.${index}.quantity`).onChange({ target: { value: currentVal - 1, name: `items.${index}.quantity` } });
+                                  }
+                                }}
+                                className="px-2 py-1 hover:bg-muted transition-colors border-r"
+                              >-</button>
+                              <input
+                                type="number"
+                                min="1"
+                                className="w-10 text-center text-sm font-bold bg-transparent no-spinners"
+                                {...register(`items.${index}.quantity`, { valueAsNumber: true, min: 1 })}
+                              />
+                               <button 
+                                type="button"
+                                title="Aumentar quantidade"
+                                onClick={() => {
+                                  const currentVal = watch(`items.${index}.quantity`);
+                                  register(`items.${index}.quantity`).onChange({ target: { value: currentVal + 1, name: `items.${index}.quantity` } });
+                                }}
+                                className="px-2 py-1 hover:bg-muted transition-colors border-l"
+                              >+</button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Detach Action */}
+                        <button
+                          type="button"
+                          title="Remover item do kit"
+                          onClick={() => remove(index)}
+                          className="absolute top-2 right-2 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  
+                  {fields.length === 0 && (
+                    <div className="md:col-span-2 text-center py-16 text-muted-foreground border-2 border-dashed rounded-3xl bg-muted/5">
+                      <ShoppingBag className="w-12 h-12 mx-auto mb-4 opacity-10" />
+                      <p className="text-lg font-medium">Kit Vazio</p>
+                      <p className="text-sm max-w-xs mx-auto">Use o campo de busca acima para incluir equipamentos e serviços na composição deste kit.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Experience Levels - Agora mais integrado */}
+            <div className="bg-card border rounded-2xl shadow-sm overflow-hidden">
+              <div className="p-6">
+                <ExperienceLevelsEditor
+                  kitId={initialData?.id || 'new'}
+                  initialLevels={initialData?.experienceLevels}
+                  onChange={setExperienceLevels}
+                  basePrice={kitPrice || 0}
+                />
+              </div>
             </div>
           </div>
 
-          {/* === RIGHT COLUMN: PRICING & IMAGE === */}
-          <div className="space-y-6">
-              <div className="bg-card p-6 rounded-xl border shadow-sm">
-                <h3 className="font-semibold mb-4">Publicação</h3>
-                <Select
-                  label="Status do Kit"
-                  {...register('status')}
-                  options={[
-                    { value: ItemStatus.ACTIVE, label: 'Ativo' },
-                    { value: ItemStatus.MAINTENANCE, label: 'Em Manutenção' },
-                    { value: ItemStatus.COMING_SOON, label: 'Em Breve' },
-                    { value: ItemStatus.INACTIVE, label: 'Inativo' },
-                  ]}
-                  error={errors.status?.message}
-                />
+          {/* SIDEBAR: Actions, Pricing & Image */}
+          <div className="xl:col-span-1 space-y-8">
+            {/* Publication & Status */}
+            <div className="bg-card p-5 rounded-2xl border shadow-sm space-y-5">
+              <h3 className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Status & Visibilidade</h3>
+              <Select
+                label="Status Atual"
+                {...register('status')}
+                size="sm"
+                options={[
+                  { value: ItemStatus.ACTIVE, label: '🟢 Ativo' },
+                  { value: ItemStatus.COMING_SOON, label: '🔵 Em Breve' },
+                  { value: ItemStatus.MAINTENANCE, label: '🟠 Manutenção' },
+                  { value: ItemStatus.INACTIVE, label: '🔴 Inativo' },
+                ]}
+                error={errors.status?.message}
+              />
+              
+              <div className="pt-4 border-t">
+                 <FormSection title="Imagem" description="Capa do kit" className="space-y-2">
+                    <Input
+                      type="file"
+                      label=""
+                      size="sm"
+                      {...register('images')}
+                      accept="image/*"
+                      className="cursor-pointer"
+                      error={errors.images ? String(errors.images.message) : undefined}
+                    />
+                 </FormSection>
+                 {initialData?.imageUrl && (
+                   <div className="mt-4 rounded-xl overflow-hidden border aspect-video">
+                     <img src={initialData.imageUrl} alt="Atual" className="w-full h-full object-cover" />
+                     <div className="p-2 bg-muted text-[10px] text-center font-bold">IMAGEM ATUAL</div>
+                   </div>
+                 )}
               </div>
+            </div>
 
-             <FormSection title="Imagem de Capa" description="">
-                <Input
-                  type="file"
-                  label="Upload"
-                  {...register('images')}
-                  accept="image/*"
-                  error={errors.images ? String(errors.images.message) : undefined}
-                />
-             </FormSection>
+            {/* Pricing Card */}
+            <div className="bg-primary/5 p-6 rounded-2xl border-2 border-primary/20 shadow-lg sticky top-6 space-y-6">
+              <h3 className="font-bold flex items-center gap-2 text-primary tracking-tight text-lg">
+                <Calculator className="w-5 h-5" />
+                Precificação
+              </h3>
 
-             <div className="bg-card p-6 rounded-xl border shadow-sm sticky top-6">
-                <h3 className="font-semibold flex items-center gap-2 mb-6">
-                  <Calculator className="w-5 h-5 text-primary" />
-                  Precificação
-                </h3>
+              <div className="space-y-6">
+                {/* Auto-calc Summary */}
+                <div className="space-y-2">
+                   <div className="flex justify-between items-center text-sm font-medium">
+                      <span className="text-muted-foreground">Soma dos Itens Individuais:</span>
+                      <span className="font-mono">{formatPrice(totalPriceOfItems)}</span>
+                   </div>
+                   <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary/40 animate-pulse w-full" />
+                   </div>
+                </div>
 
-                <div className="space-y-4">
-                  {/* Auto-calc Total */}
-                  <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg border">
-                    <span className="text-sm text-muted-foreground">Soma dos Itens:</span>
-                    <span className="font-mono font-medium">{formatPrice(totalPriceOfItems)}</span>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">Preço de Venda do Kit</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-primary">R$</span>
+                    <input
+                       type="number"
+                       step="0.01"
+                       {...register('price', { valueAsNumber: true })}
+                       className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-primary bg-background text-xl font-bold focus:ring-4 focus:ring-primary/20 outline-none transition-all"
+                       placeholder="0.00"
+                    />
                   </div>
+                  {errors.price && <p className="text-xs text-destructive font-semibold">{errors.price.message}</p>}
+                </div>
 
-                  <Input
-                     label="Preço do Kit (Final)"
-                     type="number"
-                     step="0.01"
-                     {...register('price', { valueAsNumber: true })}
-                     error={errors.price?.message}
-                     placeholder="0.00"
-                  />
-
-                  {/* Discount Badge */}
-                  {discountStats && (
-                    <div className={`p-4 rounded-lg flex flex-col gap-1 border-l-4 ${discountStats.isPositive ? 'bg-green-500/10 border-green-500' : 'bg-red-500/10 border-red-500'}`}>
-                      <span className={`text-xs font-bold uppercase tracking-wider ${discountStats.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                        {discountStats.isPositive ? 'Economia para o cliente' : 'Acréscimo'}
+                {/* Discount Strategy Visualization */}
+                {discountStats && (
+                  <div className={clsx(
+                    "p-5 rounded-2xl border-2 flex flex-col gap-2 transition-all shadow-inner",
+                    discountStats.isPositive ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200"
+                  )}>
+                    <div className="flex justify-between items-center">
+                      <span className={clsx(
+                        "text-[10px] font-black uppercase tracking-widest",
+                        discountStats.isPositive ? "text-green-600" : "text-orange-600"
+                      )}>
+                        {discountStats.isPositive ? 'Vantagem do Kit' : 'Markup do Kit'}
                       </span>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-2xl font-bold">
-                          {discountStats.percentage.toFixed(0)}%
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          ({formatPrice(Math.abs(discountStats.amount))} {discountStats.isPositive ? 'OFF' : 'extra'})
-                        </span>
+                      <div className={clsx(
+                        "px-2 py-0.5 rounded text-xs font-bold",
+                        discountStats.isPositive ? "bg-green-600 text-white" : "bg-orange-600 text-white"
+                      )}>
+                        {discountStats.isPositive ? 'ECONOMIA' : 'PLUS'}
                       </div>
                     </div>
-                  )}
-
-                  <hr className="border-border my-4" />
-
-                  <div className="flex gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={onCancel}
-                      className="flex-1"
-                      disabled={isSubmitting}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button
-                      type="submit"
-                      isLoading={isSubmitting}
-                      disabled={isSubmitting}
-                      className="flex-1"
-                    >
-                      Salvar Kit
-                    </Button>
+                    
+                    <div className="flex items-baseline gap-2">
+                      <span className={clsx(
+                        "text-3xl font-black",
+                        discountStats.isPositive ? "text-green-700" : "text-orange-700"
+                      )}>
+                        {Math.abs(discountStats.percentage).toFixed(0)}%
+                      </span>
+                      <span className="text-sm text-muted-foreground font-medium">
+                        ({formatPrice(Math.abs(discountStats.amount))} de diferença)
+                      </span>
+                    </div>
                   </div>
+                )}
+
+                <div className="flex flex-col gap-2 pt-4">
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="w-full py-6 font-bold shadow-lg"
+                    isLoading={isSubmitting}
+                  >
+                    Salvar Alterações
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="md"
+                    onClick={onCancel}
+                    className="w-full"
+                    disabled={isSubmitting}
+                  >
+                    Descartar
+                  </Button>
                 </div>
-             </div>
+              </div>
+            </div>
           </div>
         </div>
       </Form>
+
     </div>
   );
 };

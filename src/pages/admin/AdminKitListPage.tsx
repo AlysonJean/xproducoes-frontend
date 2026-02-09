@@ -246,18 +246,16 @@ export const AdminKitListPage = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingKit ? 'Editar Kit' : 'Novo Kit'}
-        className="max-w-2xl"
+        className="max-w-[80vw]"
       >
-        <div className="max-h-[80vh]">
-            <KitForm
-            initialData={editingKit}
-            onSuccess={() => {
-                setIsModalOpen(false);
-                fetchKits();
-            }}
-            onCancel={() => setIsModalOpen(false)}
-            />
-        </div>
+        <KitForm
+          initialData={editingKit}
+          onSuccess={() => {
+              setIsModalOpen(false);
+              fetchKits();
+          }}
+          onCancel={() => setIsModalOpen(false)}
+        />
       </Modal>
     </AdminLayout>
   );
