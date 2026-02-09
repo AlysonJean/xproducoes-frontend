@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { ChevronRight, ChevronLeft, User, Package } from 'lucide-react';
 import ReactGA from 'react-ga4';
 import { apiFetch } from '../services/api';
 import { useCart } from '@/hooks/useCart';
@@ -151,10 +151,11 @@ export const KitDetailPage = () => {
     );
   }
 
-  const totalEquipmentPrice = (kit.equipments || []).reduce((sum, e) => {
-    return sum + toNumber((e as any).price ?? (e as any).pricePerHour ?? (e as any).dailyPrice);
+  const totalItemsPrice = (kit.items || []).reduce((sum, item) => {
+    const price = item.equipment?.pricePerHour || item.service?.price || 0;
+    return sum + (toNumber(price) * (item.quantity || 1));
   }, 0);
-  const savings = calculateSavingsAmount(totalEquipmentPrice, kit.price ?? 0);
+  const savings = calculateSavingsAmount(totalItemsPrice, kit.price ?? 0);
 
   const handleAddToCart = async () => {
     if (!kit) return;
@@ -242,7 +243,7 @@ export const KitDetailPage = () => {
           />
           {savings > 0 && (
             <div className="absolute top-4 left-4 bg-success text-success-foreground px-4 py-1.5 rounded-full text-sm font-black shadow-lg">
-              ECONOMIZE {formatPrice(savings)}
+              ECONOMIZE {formatPrice(savings)}/h
             </div>
           )}
           <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -272,11 +273,11 @@ export const KitDetailPage = () => {
               <span className="text-muted-foreground font-semibold">Valor Especial do Kit</span>
               <div className="text-right">
                 <div className="text-sm text-muted-foreground line-through opacity-60">
-                    {formatPrice(totalEquipmentPrice)}
+                    {formatPrice(totalItemsPrice)}
                 </div>
                 <div className="text-4xl font-black text-foreground">
                     {formatPrice(Number(kit.price ?? 0))}
-                    <span className="text-sm font-normal ml-1">/ evento-hora</span>
+                    <span className="text-sm font-normal ml-1">/ hora</span>
                 </div>
               </div>
             </div>
@@ -284,7 +285,7 @@ export const KitDetailPage = () => {
             {savings > 0 && (
                 <div className="flex justify-between items-center text-success font-bold bg-success/5 p-3 rounded-xl border border-success/10">
                     <span>Sua economia imediata:</span>
-                    <span>{formatPrice(savings)}</span>
+                    <span>{formatPrice(savings)} / hora</span>
                 </div>
             )}
           </div>
@@ -322,27 +323,48 @@ export const KitDetailPage = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {(kit.equipments || []).map((equipment) => (
-            <div key={equipment.id} className="group bg-muted/10 rounded-2xl p-5 hover:bg-muted/20 transition-all border border-border hover:border-primary/20 shadow-sm hover:shadow-md">
-              <div className="flex items-center space-x-5">
-                <div className="w-20 h-20 rounded-xl overflow-hidden shadow-inner flex-shrink-0">
-                    <img
-                        src={equipment.imageUrl || `https://placehold.co/100x100/1f2937/ffffff?text=${equipment.name.slice(0, 2)}`}
-                        alt={equipment.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-foreground text-base truncate mb-1">{equipment.name}</h3>
-                  <p className="text-muted-foreground text-xs line-clamp-2 mb-2 leading-relaxed">{equipment.description}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-primary font-bold text-sm">{formatPrice(Number(equipment.pricePerHour))}/h</span>
-                    <Link to={`/equipamentos/${equipment.slug || equipment.id}`} className="text-xs font-bold text-muted-foreground hover:text-primary underline-offset-4 hover:underline transition-colors uppercase tracking-widest">Detalhes</Link>
+          {(kit.items || []).map((item) => {
+            const entity = item.equipment || item.service;
+            if (!entity) return null;
+            const isService = !!item.serviceId;
+            const price = isService ? (entity as any).price : (entity as any).pricePerHour;
+
+            return (
+              <div key={item.id} className="group bg-muted/10 rounded-2xl p-5 hover:bg-muted/20 transition-all border border-border hover:border-primary/20 shadow-sm hover:shadow-md">
+                <div className="flex items-center space-x-5">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden shadow-inner flex-shrink-0 bg-card flex items-center justify-center">
+                      {entity.imageUrl ? (
+                        <img
+                          src={entity.imageUrl}
+                          alt={entity.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                      ) : (
+                        isService ? <User className="w-10 h-10 text-purple-400" /> : <Package className="w-10 h-10 text-blue-400" />
+                      )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className={`w-2 h-2 rounded-full ${isService ? 'bg-purple-500' : 'bg-blue-500'}`} />
+                      <h3 className="font-bold text-foreground text-sm truncate uppercase tracking-tight">{entity.name}</h3>
+                    </div>
+                    {item.quantity > 1 && (
+                       <p className="text-xs font-bold text-primary mb-1">{item.quantity}x Unidades</p>
+                    )}
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-primary font-bold text-sm">{formatPrice(Number(price))}/h</span>
+                      <Link 
+                        to={isService ? `/servicos/${(entity as any).slug}` : `/equipamentos/${(entity as any).slug || entity.id}`} 
+                        className="text-[10px] font-bold text-muted-foreground hover:text-primary underline-offset-4 hover:underline transition-colors uppercase tracking-widest"
+                      >
+                        Detalhes
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
