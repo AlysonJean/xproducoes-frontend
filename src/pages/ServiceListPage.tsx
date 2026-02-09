@@ -93,10 +93,14 @@ export const ServiceListPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="relative">
-        <BrandLoader fullScreen size={140} label="Carregando serviços..." />
-        <ServiceListSkeleton />
-      </div>
+      <PageLayout 
+        title="Carregando serviços..." 
+        description="Preparando as melhores opções de DJ, Som e Luz para você."
+      >
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <BrandLoader size={120} label="Carregando serviços..." />
+        </div>
+      </PageLayout>
     );
   }
 

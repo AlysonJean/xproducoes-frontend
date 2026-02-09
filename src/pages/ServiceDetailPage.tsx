@@ -16,6 +16,7 @@ import CompareButton from '../components/ui/CompareButton';
 import { RecommendationSection } from '../components/ui/RecommendationSection';
 import { useRecommendations } from '../hooks/useRecommendations';
 import { Skeleton } from '../components/ui/StandardComponents';
+import { PageLayout } from '../components/layouts/PageLayout';
 
 const ServiceDetailSkeleton = () => (
   <div className="bg-card p-6 md:p-8 rounded-lg shadow-2xl border border-border">
@@ -137,10 +138,11 @@ export const ServiceDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="relative">
-        <BrandLoader fullScreen size={140} label="Carregando serviço..." />
-        <ServiceDetailSkeleton />
-      </div>
+      <PageLayout title="Carregando..." description="Buscando detalhes do serviço.">
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <BrandLoader size={120} label="Carregando serviço..." />
+        </div>
+      </PageLayout>
     );
   }
   if (error)

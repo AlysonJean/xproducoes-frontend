@@ -1,38 +1,15 @@
+```typescript
 
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiFetch } from '../services/api';
 import { PageLayout } from '../components/layouts/PageLayout';
 import { TestimonialCard } from '../components/ui/TestimonialCard';
-import { Skeleton } from '../components/ui/StandardComponents';
-import { BrandLoader } from '../components/ui/BrandLoader';
+import { Card, Grid } from '../components/ui/StandardComponents';
 import { SEO } from '../components/SEO';
 import type { Review } from '../types/types';
 
-const ReviewDetailSkeleton = () => (
-  <PageLayout title="Carregando..." description="Preparando depoimento.">
-    <div className="max-w-2xl mx-auto py-12 px-4 space-y-8">
-      <div className="bg-card border border-border p-8 rounded-2xl shadow-lg space-y-6">
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-12 w-12 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-3 w-48" />
-          </div>
-        </div>
-        <Skeleton className="h-6 w-32" />
-        <div className="space-y-3">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3" />
-        </div>
-      </div>
-      <div className="flex justify-center">
-        <Skeleton className="h-4 w-48" />
-      </div>
-    </div>
-  </PageLayout>
-);
+
 
 export const ReviewDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -70,10 +47,11 @@ export const ReviewDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="relative">
-        <BrandLoader fullScreen size={140} label="Lendo avaliação..." />
-        <ReviewDetailSkeleton />
-      </div>
+      <PageLayout title="Carregando..." description="Lendo avaliação sobre a X Produções.">
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <BrandLoader size={120} label="Lendo avaliação..." />
+        </div>
+      </PageLayout>
     );
   }
 

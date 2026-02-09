@@ -17,6 +17,7 @@ import { useRecommendations } from '../hooks/useRecommendations';
 import { useNotifications } from '../contexts/NotificationContext';
 import { generateProductSchema } from '../utils/schemaGenerator';
 import { StructuredData } from '../components/seo/StructuredData';
+import { PageLayout } from '../components/layouts/PageLayout';
 import { Skeleton } from '../components/ui/StandardComponents';
 
 const EquipmentDetailSkeleton = () => (
@@ -138,10 +139,11 @@ export const EquipmentDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="relative">
-        <BrandLoader fullScreen size={140} label="Carregando equipamento..." />
-        <EquipmentDetailSkeleton />
-      </div>
+      <PageLayout title="Carregando..." description="Buscando detalhes do equipamento.">
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <BrandLoader size={120} label="Carregando equipamento..." />
+        </div>
+      </PageLayout>
     );
   }
   if (error)

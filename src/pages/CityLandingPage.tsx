@@ -16,38 +16,7 @@ import { useState, useEffect } from 'react';
 import { Skeleton } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
 
-const CityLandingSkeleton = () => (
-  <PageLayout title="Carregando..." description="Sincronizando serviços locais.">
-    {/* Hero Skeleton */}
-    <div className="relative overflow-hidden rounded-3xl bg-primary/5 border border-primary/10 px-6 py-16 md:py-24 mb-16">
-      <div className="max-w-4xl mx-auto text-center space-y-6">
-        <Skeleton className="h-8 w-48 mx-auto rounded-full" />
-        <Skeleton className="h-16 w-3/4 mx-auto" />
-        <Skeleton className="h-8 w-1/2 mx-auto" />
-        <div className="flex justify-center gap-4">
-          <Skeleton className="h-14 w-48 rounded-lg" />
-          <Skeleton className="h-14 w-48 rounded-lg" />
-        </div>
-      </div>
-    </div>
 
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-20">
-      <div className="lg:col-span-8 space-y-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-        </div>
-      </div>
-      <div className="lg:col-span-4">
-        <Skeleton className="h-64 w-full rounded-xl" />
-      </div>
-    </div>
-  </PageLayout>
-);
 
 export const CityLandingPage = () => {
   const { serviceSlug, citySlug } = useParams<{ serviceSlug: string; citySlug: string }>();
@@ -81,10 +50,11 @@ export const CityLandingPage = () => {
 
   if (loading) {
     return (
-      <div className="relative">
-        <BrandLoader fullScreen size={140} label={`Chegando em ${city.name}...`} />
-        <CityLandingSkeleton />
-      </div>
+      <PageLayout title="Carregando..." description={`Sincronizando serviços locais em ${city.name}.`}>
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <BrandLoader size={120} label={`Chegando em ${city.name}...`} />
+        </div>
+      </PageLayout>
     );
   }
 

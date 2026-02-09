@@ -107,10 +107,14 @@ export const PortfolioPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="relative">
-        <BrandLoader fullScreen size={140} label="Revivendo momentos..." />
-        <PortfolioListSkeleton />
-      </div>
+      <PageLayout 
+        title="Nosso Portfólio" 
+        description="Revivendo os melhores momentos produzidos pela X Produções."
+      >
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <BrandLoader size={120} label="Revivendo momentos..." />
+        </div>
+      </PageLayout>
     );
   }
 

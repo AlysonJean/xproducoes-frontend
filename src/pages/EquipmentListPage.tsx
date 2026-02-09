@@ -112,10 +112,14 @@ export const EquipmentListPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="relative">
-        <BrandLoader fullScreen size={140} label="Carregando catálogo..." />
-        <EquipmentListSkeleton />
-      </div>
+      <PageLayout 
+        title="Carregando catálogo..." 
+        description="Preparando os melhores equipamentos para você."
+      >
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <BrandLoader size={140} label="Carregando catálogo..." />
+        </div>
+      </PageLayout>
     );
   }
 
