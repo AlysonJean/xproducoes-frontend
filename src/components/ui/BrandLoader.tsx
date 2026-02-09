@@ -53,27 +53,31 @@ const BrandLoader: React.FC<BrandLoaderProps> = ({
 
   return (
     <div className={`${containerClass} ${className}`}>
+      {/* SVG Filter para colorização dinâmica baseada no canal alfa */}
+      <svg className="absolute w-0 h-0 invisible" aria-hidden="true">
+        <filter id="brand-loader-recolor">
+          <feFlood floodColor="hsl(var(--primary))" result="flood" />
+          <feComposite in="flood" in2="SourceAlpha" operator="in" />
+        </filter>
+      </svg>
+
       <div 
-        className={`brand-loader-animation ${sizeClass} flex items-center justify-center relative overflow-hidden`}
+        className={`brand-loader-animation ${sizeClass} flex items-center justify-center relative`}
         style={sizeStyle}
       >
         {isClient ? (
-          <div 
-            className="w-full h-full relative"
+          <DotLottieReact
+            src="/animations/Logo-xproducoes-eventos.lottie"
+            loop
+            autoplay
+            className="w-full h-full"
             style={{ 
-              filter: 'drop-shadow(1000px 0 0 hsl(var(--primary)))',
-              transform: 'translateX(-1000px)',
-              width: '100%',
-              height: '100%'
+              width: '100%', 
+              height: '100%', 
+              display: 'block',
+              filter: 'url(#brand-loader-recolor)'
             }}
-          >
-            <DotLottieReact
-              src="/animations/Logo-xproducoes-eventos.lottie"
-              loop
-              autoplay
-              style={{ width: '100%', height: '100%', display: 'block' }}
-            />
-          </div>
+          />
         ) : (
           <div className="w-full h-full rounded-full bg-primary/5 animate-pulse" />
         )}

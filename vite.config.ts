@@ -7,8 +7,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { visualizer } from 'rollup-plugin-visualizer'
 import vike from 'vike/plugin'
-// Removido plugin experimental @tailwindcss/vite
-import tailwindcss from '@tailwindcss/vite'
+
 
 // Compat: em ESM não existe __dirname por padrão
 const __filename = fileURLToPath(import.meta.url);

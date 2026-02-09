@@ -1,15 +1,11 @@
-```typescript
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiFetch } from '../services/api';
 import { PageLayout } from '../components/layouts/PageLayout';
 import { TestimonialCard } from '../components/ui/TestimonialCard';
-import { Card, Grid } from '../components/ui/StandardComponents';
 import { SEO } from '../components/SEO';
+import { BrandLoader } from '../components/ui/BrandLoader';
 import type { Review } from '../types/types';
-
-
 
 export const ReviewDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -23,17 +19,7 @@ export const ReviewDetailPage: React.FC = () => {
       try {
         setLoading(true);
         // Assuming we have an endpoint or can search by slug. 
-        // If not, we might need to filter client-side or add endpoint.
-        // For now, let's try a direct fetch if API supports it, or search.
-        // Since we implemented backfill but not explicit 'getBySlug' in repo yet, 
-        // we might rely on the generic 'review' endpoint matching logic or need to update backend?
-        // Wait, task list ID associated with 'Update Repositories' is still pending.
-        // I will assume for now I can fetch by id or slug, OR I need to implement that backend part.
-        // Actually, I haven't updated the backend repository/controller yet to find by slug.
-        // But let's write the frontend assuming it will work or I'll fix backend next.
-        
-        // Let's try to fetch specifically.
-        const response = await apiFetch(`/reviews/${slug}`); // Endpoint needs to support slug
+        const response = await apiFetch(`/reviews/${slug}`); 
         setReview(response as Review);
       } catch (err) {
         console.error('Erro ao carregar avaliação:', err);
@@ -49,7 +35,7 @@ export const ReviewDetailPage: React.FC = () => {
     return (
       <PageLayout title="Carregando..." description="Lendo avaliação sobre a X Produções.">
         <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <BrandLoader size={120} label="Lendo avaliação..." />
+          <BrandLoader size="lg" />
         </div>
       </PageLayout>
     );
@@ -84,3 +70,5 @@ export const ReviewDetailPage: React.FC = () => {
     </PageLayout>
   );
 };
+
+export default ReviewDetailPage;
