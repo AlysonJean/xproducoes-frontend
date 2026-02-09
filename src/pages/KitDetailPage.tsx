@@ -7,6 +7,7 @@ import { useCart } from '@/hooks/useCart';
 import { useNotifications } from '../contexts/NotificationContext';
 import BrandLoader from '@/components/ui/BrandLoader';
 import { FavoriteButton } from '../components/ui/FavoriteButton';
+import CompareButton from '../components/ui/CompareButton';
 import { formatPrice } from '../utils/typeSafeFormatters';
 import { toNumber, calculateSavingsAmount } from '../utils/typeSafeFormatters';
 import type { Kit, ExperienceLevel } from '../types/types';
@@ -18,7 +19,7 @@ export const KitDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { addItem, cart } = useCart();
   const { addNotification } = useNotifications();
-  const [kit, setKit] = useState<Kit | null>(null);
+  const [kit, setKit] = useState<(Kit & { prevSlug?: string | null; nextSlug?: string | null }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -30,9 +31,13 @@ export const KitDetailPage = () => {
       try {
         setLoading(true);
         const data = await apiFetch(`/kits/${slug}`);
-        setKit(transformKit(data as Kit));
+        const transformed = transformKit(data as Kit);
+        setKit({
+            ...transformed,
+            prevSlug: (data as any).prevSlug,
+            nextSlug: (data as any).nextSlug
+        });
         
-        // GA Tracking - View Kit
         if (data) {
           ReactGA.event({
             category: "ecommerce",
@@ -50,14 +55,13 @@ export const KitDetailPage = () => {
     fetchKit();
   }, [slug]);
 
-  // Estados de carregamento/erro
   if (loading) {
-    return <BrandLoader fullScreen size={140} label="Carregando kit..." />;
+    return <BrandLoader fullScreen size={140} label="Preparando kit..." />;
   }
 
   if (error) {
     return (
-      <div className="bg-destructive/10 border border-destructive text-destructive p-4 rounded-lg">
+      <div className="bg-destructive/10 border border-destructive text-destructive p-4 rounded-lg text-center my-10 max-w-2xl mx-auto">
         {error}
       </div>
     );
@@ -65,11 +69,10 @@ export const KitDetailPage = () => {
 
   if (!kit) {
     return (
-      <div className="text-muted-foreground">Kit não encontrado.</div>
+      <div className="text-muted-foreground text-center py-20">Kit não encontrado.</div>
     );
   }
 
-  // Cálculos derivados
   const totalEquipmentPrice = (kit.equipments || []).reduce((sum, e) => {
     return sum + toNumber((e as any).price ?? (e as any).pricePerHour ?? (e as any).dailyPrice);
   }, 0);
@@ -80,25 +83,35 @@ export const KitDetailPage = () => {
     setAdding(true);
     try {
       await addItem(kit, 'kit');
-    } catch (e) {
-      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível adicionar o kit ao carrinho.' });
+      addNotification({ 
+          type: 'success', 
+          title: 'Combo Adicionado', 
+          message: `${kit.name} foi incluído no seu orçamento com desconto.` 
+      });
+    } catch (e: any) {
+      addNotification({ 
+          type: 'error', 
+          title: 'Erro', 
+          message: e.message || 'Não foi possível adicionar o kit.' 
+      });
     } finally {
       setAdding(false);
     }
   };
 
   return (
-    <div className="space-y-8">
+    <div className="bg-card p-6 md:p-8 rounded-lg shadow-2xl border border-border">
       <SEO 
         title={kit.name}
         description={kit.description || `Aluguel de ${kit.name} em Belo Horizonte. Kit completo para festas e eventos.`}
         image={kit.imageUrl}
       />
-      {/* Navigation Arrows (Desktop) */}
+
+      {/* Navigation Arrows (Fixed sides for consistency) */}
       {kit.prevSlug && (
         <Link
           to={`/kits/${kit.prevSlug}`}
-          className="fixed left-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-primary hover:text-primary-foreground p-3 rounded-full shadow-lg border border-border backdrop-blur-sm transition-all z-50 hidden lg:flex items-center justify-center group"
+          className="fixed left-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-primary hover:text-primary-foreground p-3 rounded-full shadow-lg border border-border backdrop-blur-sm transition-all z-50 hidden lg:flex items-center justify-center group text-foreground"
           title="Kit Anterior"
         >
           <ChevronLeft className="w-8 h-8 group-hover:-translate-x-0.5 transition-transform" />
@@ -107,162 +120,188 @@ export const KitDetailPage = () => {
       {kit.nextSlug && (
         <Link
           to={`/kits/${kit.nextSlug}`}
-          className="fixed right-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-primary hover:text-primary-foreground p-3 rounded-full shadow-lg border border-border backdrop-blur-sm transition-all z-50 hidden lg:flex items-center justify-center group"
+          className="fixed right-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-primary hover:text-primary-foreground p-3 rounded-full shadow-lg border border-border backdrop-blur-sm transition-all z-50 hidden lg:flex items-center justify-center group text-foreground"
           title="Próximo Kit"
         >
           <ChevronRight className="w-8 h-8 group-hover:translate-x-0.5 transition-transform" />
         </Link>
       )}
 
-      {/* Breadcrumb */}
-      <nav className="text-sm text-muted-foreground">
-        <Link to="/" className="hover:text-primary">Início</Link>
-        <span className="mx-2">&gt;</span>
-        <Link to="/kits" className="hover:text-primary">Kits</Link>
-        <span className="mx-2">&gt;</span>
-        <span className="text-primary">{kit.name}</span>
-      </nav>
+      {/* Breadcrumb & Navigation */}
+      <div className="flex justify-between items-center mb-6 lg:mb-8">
+        <nav className="text-sm text-muted-foreground">
+            <Link to="/" className="hover:text-primary transition-colors">Início</Link>
+            <span className="mx-2 text-border">&gt;</span>
+            <Link to="/kits" className="hover:text-primary transition-colors">Kits</Link>
+            <span className="mx-2 text-border">&gt;</span>
+            <span className="text-primary font-medium">{kit.name}</span>
+        </nav>
+        
+        <div className="flex lg:hidden gap-2">
+            {kit.prevSlug && (
+                <Link to={`/kits/${kit.prevSlug}`} className="p-2 bg-muted rounded-full">
+                    <ChevronLeft className="w-5 h-5 text-foreground" />
+                </Link>
+            )}
+            {kit.nextSlug && (
+                <Link to={`/kits/${kit.nextSlug}`} className="p-2 bg-muted rounded-full">
+                    <ChevronRight className="w-5 h-5 text-foreground" />
+                </Link>
+            )}
+        </div>
+      </div>
 
-      <div className="bg-card rounded-lg overflow-hidden shadow-2xl border border-border">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-6 md:p-8">
-          {/* Imagem do Kit */}
-          <div className="relative">
-            <img
-              src={
-                kit.imageUrl ||
-                `https://placehold.co/800x600/1a202c/ffffff?text=${kit.name.replace(/\s/g, '+')}`
-              }
-              alt={kit.name}
-              className="w-full h-96 object-cover rounded-lg shadow-lg"
-              onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                e.currentTarget.src = `https://placehold.co/800x600/1a202c/ffffff?text=Kit+Indisponível`;
-              }}
-            />
-            {savings > 0 && (
-              <div className="absolute top-4 left-4 bg-success/10 text-success px-3 py-1 rounded-full text-sm font-bold border border-success/20">
-                Economize {formatPrice(savings)}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative mb-12">
+        {/* Kit Image Section */}
+        <div className="relative group">
+          <img
+            src={
+              kit.imageUrl ||
+              `https://placehold.co/800x600/1a202c/ffffff?text=${kit.name.replace(/\s/g, '+')}`
+            }
+            alt={kit.name}
+            className="w-full h-auto rounded-xl object-cover shadow-lg border border-border"
+          />
+          {savings > 0 && (
+            <div className="absolute top-4 left-4 bg-success text-success-foreground px-4 py-1.5 rounded-full text-sm font-black shadow-lg">
+              ECONOMIZE {formatPrice(savings)}
+            </div>
+          )}
+          <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <FavoriteButton equipmentId={kit.id} equipmentName={kit.name} size="lg" />
+            <CompareButton equipment={{...kit, pricePerHour: kit.price} as any} size="lg" />
+          </div>
+        </div>
+
+        {/* Kit Info Section */}
+        <div className="flex flex-col">
+          <div className="flex justify-between items-start mb-4">
+            <h1 className="text-4xl lg:text-5xl font-bold text-primary heading-elegant leading-tight">
+                {kit.name}
+            </h1>
+            <div className="hidden lg:flex space-x-2">
+                <FavoriteButton equipmentId={kit.id} equipmentName={kit.name} size="lg" />
+                <CompareButton equipment={{...kit, pricePerHour: kit.price} as any} size="lg" />
+            </div>
+          </div>
+
+          <p className="text-muted-foreground text-lg mb-8 leading-relaxed whitespace-pre-wrap">
+            {kit.description}
+          </p>
+
+          <div className="bg-muted/30 p-6 rounded-2xl mb-8 border border-border shadow-inner">
+            <div className="flex justify-between items-baseline mb-4">
+              <span className="text-muted-foreground font-semibold">Valor Especial do Kit</span>
+              <div className="text-right">
+                <div className="text-sm text-muted-foreground line-through opacity-60">
+                    {formatPrice(totalEquipmentPrice)}
+                </div>
+                <div className="text-4xl font-black text-foreground">
+                    {formatPrice(Number(kit.price ?? 0))}
+                    <span className="text-sm font-normal ml-1">/ evento-hora</span>
+                </div>
               </div>
+            </div>
+            
+            {savings > 0 && (
+                <div className="flex justify-between items-center text-success font-bold bg-success/5 p-3 rounded-xl border border-success/10">
+                    <span>Sua economia imediata:</span>
+                    <span>{formatPrice(savings)}</span>
+                </div>
             )}
           </div>
 
-          {/* Informações do Kit */}
-          <div className="flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-start mb-4">
-                <h1 className="text-3xl lg:text-4xl font-bold text-primary">{kit.name}</h1>
-                <FavoriteButton equipmentId={kit.id} equipmentName={kit.name} size="lg" />
-              </div>
-              <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
-              {kit.description}
-            </p>  <div className="bg-muted/30 p-6 rounded-lg mb-6 border border-border">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-2xl font-bold text-foreground">Preço do Kit</span>
-                  <span className="text-3xl font-extrabold text-foreground">
-                    <span className="text-lg font-normal mr-2">a partir de</span>
-                    {formatPrice(Number(kit.price ?? 0))} / hora
-                  </span>
-                </div>
-                {savings > 0 && (
-                  <div className="text-sm text-muted-foreground">
-                    <div className="flex justify-between">
-                      <span>Preço individual dos equipamentos:</span>
-                      <span className="line-through text-muted-foreground">{formatPrice(totalEquipmentPrice)}</span>
-                    </div>
-                    <div className="flex justify-between text-success font-semibold">
-                      <span>Sua economia:</span>
-                      <span>{formatPrice(savings)}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Seletor de Nível de Experiência */}
-              {kit.experienceLevels && kit.experienceLevels.length > 0 && (
-                <div className="border-t border-border pt-6">
-                  <ExperienceLevelSelector
-                    levels={kit.experienceLevels}
-                    selected={selectedLevel}
-                    onSelect={setSelectedLevel}
-                    basePrice={kit.experienceLevels.find(l => l.level === 'SILVER')?.price}
-                  />
-                </div>
-              )}
+          {/* Level Selector if applicable */}
+          {kit.experienceLevels && kit.experienceLevels.length > 0 && (
+            <div className="mb-8 p-4 bg-muted/20 rounded-xl border border-border/50">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4">Configuração do Kit</h3>
+              <ExperienceLevelSelector
+                levels={kit.experienceLevels}
+                selected={selectedLevel}
+                onSelect={setSelectedLevel}
+                basePrice={kit.experienceLevels.find(l => l.level === 'SILVER')?.price}
+              />
             </div>
-            <button
-              onClick={handleAddToCart}
-              className="w-full bg-primary hover:bg-primary text-primary-foreground font-bold py-4 px-6 rounded-lg transition-colors duration-200 text-lg disabled:opacity-60 disabled:cursor-not-allowed"
-              disabled={adding || (cart?.kit && cart.kit.id === kit.id)}
-            >
-              {adding ? 'Adicionando...' : (cart?.kit && cart.kit.id === kit.id ? 'Kit já está no carrinho' : 'Adicionar Kit ao Carrinho')}
-            </button>
-          </div>
-        </div>
+          )}
 
-        {/* Equipamentos Incluídos */}
-        <div className="border-t border-border p-6 md:p-8">
-          <h2 className="text-2xl font-bold text-foreground mb-6">Equipamentos Incluídos ({kit.equipments?.length || kit.items?.length || 0})</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(kit.equipments || []).map((equipment) => (
-              <div key={equipment.id} className="bg-muted/30 rounded-lg p-4 hover:bg-muted transition-colors border border-border">
-                <div className="flex items-center space-x-4">
-                  <img
-                    src={
-                      equipment.imageUrl ||
-                      `https://placehold.co/80x80/1f2937/ffffff?text=${equipment.name.slice(0, 2)}`
-                    }
-                    alt={equipment.name}
-                    className="w-16 h-16 object-cover rounded-lg"
-                  />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-foreground text-sm">{equipment.name}</h3>
-                    <p className="text-muted-foreground text-xs mt-1 line-clamp-2">{equipment.description}</p>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-foreground font-semibold text-sm">{formatPrice(Number(equipment.pricePerHour))}/h</span>
-                      <Link to={`/equipamentos/${equipment.slug || equipment.id}`} className="text-xs text-primary hover:underline">Ver detalhes</Link>
-                    </div>
+          <button
+            onClick={handleAddToCart}
+            className="w-full bg-primary hover:bg-primary text-primary-foreground font-black py-5 px-8 rounded-2xl transition-all duration-300 transform shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 text-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            disabled={adding || (cart?.kit && cart.kit.id === kit.id)}
+          >
+            {adding ? 'ADICIONANDO...' : (cart?.kit && cart.kit.id === kit.id ? 'KIT JÁ NO ORÇAMENTO' : 'ADICIONAR COMBO AO ORÇAMENTO')}
+          </button>
+        </div>
+      </div>
+
+      {/* Included Equipments Grid */}
+      <div className="border-t border-border pt-12">
+        <div className="flex items-center gap-3 mb-8">
+            <h2 className="text-3xl font-black text-foreground">O que vem no Kit?</h2>
+            <span className="bg-muted px-3 py-1 rounded-lg text-sm font-bold text-muted-foreground">
+                {kit.equipments?.length || kit.items?.length || 0} Itens
+            </span>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {(kit.equipments || []).map((equipment) => (
+            <div key={equipment.id} className="group bg-muted/10 rounded-2xl p-5 hover:bg-muted/20 transition-all border border-border hover:border-primary/20 shadow-sm hover:shadow-md">
+              <div className="flex items-center space-x-5">
+                <div className="w-20 h-20 rounded-xl overflow-hidden shadow-inner flex-shrink-0">
+                    <img
+                        src={equipment.imageUrl || `https://placehold.co/100x100/1f2937/ffffff?text=${equipment.name.slice(0, 2)}`}
+                        alt={equipment.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-foreground text-base truncate mb-1">{equipment.name}</h3>
+                  <p className="text-muted-foreground text-xs line-clamp-2 mb-2 leading-relaxed">{equipment.description}</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-primary font-bold text-sm">{formatPrice(Number(equipment.pricePerHour))}/h</span>
+                    <Link to={`/equipamentos/${equipment.slug || equipment.id}`} className="text-xs font-bold text-muted-foreground hover:text-primary underline-offset-4 hover:underline transition-colors uppercase tracking-widest">Detalhes</Link>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
+      </div>
 
-        {/* Seção de Benefícios */}
-        <div className="border-t border-border p-6 md:p-8 bg-card">
-          <h2 className="text-2xl font-bold text-foreground mb-6">Por que escolher este kit?</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-primary/40 rounded-full flex items-center justify-center mx-auto mb-3 border border-primary/50 shadow-sm">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">Economia Garantida</h3>
-              <p className="text-muted-foreground text-sm">Preço especial quando você aluga os equipamentos juntos</p>
+      {/* Benefits Grid (Premium styling) */}
+      <div className="mt-16 bg-muted/10 -mx-6 md:-mx-8 p-12 rounded-b-lg border-t border-border grid grid-cols-1 md:grid-cols-3 gap-10">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 bg-success/10 rounded-3xl flex items-center justify-center border border-success/20 shadow-xl shadow-success/5 rotate-3">
+              <svg className="w-8 h-8 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+              </svg>
             </div>
-
-            <div className="text-center">
-              <div className="w-12 h-12 bg-primary/40 rounded-full flex items-center justify-center mx-auto mb-3 border border-primary/50 shadow-sm">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">Compatibilidade</h3>
-              <p className="text-muted-foreground text-sm">Todos os equipamentos funcionam perfeitamente juntos</p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-12 h-12 bg-primary/40 rounded-full flex items-center justify-center mx-auto mb-3 border border-primary/50 shadow-sm">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">Solução Completa</h3>
-              <p className="text-muted-foreground text-sm">Tudo que você precisa para o seu evento em um só kit</p>
-            </div>
+            <h3 className="text-xl font-black text-foreground">Economia Mínima 15%</h3>
+            <p className="text-muted-foreground text-sm max-w-[200px]">Garantimos um valor inferior à soma das peças individuais.</p>
           </div>
-        </div>
+
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 bg-blue-500/10 rounded-3xl flex items-center justify-center border border-blue-500/20 shadow-xl shadow-blue-500/5 -rotate-3">
+              <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-black text-foreground">Compatibilidade Total</h3>
+            <p className="text-muted-foreground text-sm max-w-[200px]">Curadoria técnica: cabos e acessórios testados para funcionar.</p>
+          </div>
+
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 bg-primary/10 rounded-3xl flex items-center justify-center border border-primary/20 shadow-xl shadow-primary/5 rotate-1">
+              <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-black text-foreground">Montagem Rápida</h3>
+            <p className="text-muted-foreground text-sm max-w-[200px]">Solução plug-and-play pensada para agilizar seu evento.</p>
+          </div>
       </div>
     </div>
   );
 };
+
+export default KitDetailPage;

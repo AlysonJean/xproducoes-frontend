@@ -7,8 +7,8 @@ import type { Service } from '@/types/types';
 import { PageLayout, PageLoading, PageEmpty } from '../components/layouts/PageLayout';
 import { SearchAndFilters, Grid } from '../components/ui/StandardComponents';
 import { SEO } from '../components/SEO';
+import { transformService } from '../utils/transformService';
 
-// Reusing EquipmentFilters for now or simplified version
 interface ServiceFilters {
   searchQuery?: string;
   priceRange?: [number, number];
@@ -22,14 +22,13 @@ export const ServiceListPage: React.FC = () => {
     status: 'ACTIVE'
   });
 
-  // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // Assuming endpoint exists
         const servicesData = await apiFetch('/services');
-        setServices(asArray<Service>(servicesData));
+        const rawServices = asArray<Service>(servicesData);
+        setServices(rawServices.map(transformService));
       } catch (err) {
         console.error('Erro ao carregar serviços:', err);
         setServices([]);
@@ -41,11 +40,9 @@ export const ServiceListPage: React.FC = () => {
     fetchData();
   }, []);
 
-  // Filter and search logic
   const filteredServices = useMemo(() => {
     let result = services;
 
-    // Search filter
     if (filters.searchQuery) {
       const query = normalizeString(filters.searchQuery);
       result = result.filter((service) =>
@@ -54,19 +51,14 @@ export const ServiceListPage: React.FC = () => {
       );
     }
 
-    // Status filter
     if (filters.status && filters.status !== 'ALL') {
-       // Assuming backend returns status field. If not, logic might need adjustment.
-       // Filter logic: if status is ACTIVE, showing only active. 
        if (filters.status === 'ACTIVE') {
-         // Check both status enum and isActive boolean for compatibility
          result = result.filter(s => s.status === 'ACTIVE' || s.isActive === true);
        } else {
          result = result.filter(s => s.status === filters.status);
        }
     }
 
-    // Price range filter
     if (filters.priceRange) {
       const [min, max] = filters.priceRange;
       result = result.filter(service => {
@@ -108,9 +100,7 @@ export const ServiceListPage: React.FC = () => {
         showClearFilters={!!filters.searchQuery}
         onClearFilters={clearFilters}
         className="mb-12"
-        filters={
-           null // No categories for now, maybe add later if Services have categories
-        }
+        filters={null}
       />
 
       {filteredServices.length > 0 ? (
