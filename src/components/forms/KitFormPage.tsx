@@ -1,4 +1,4 @@
-// src/components/forms/KitFormPage.tsx
+// src/components/forms/KitFormPage.tsx (Updated: 2026-02-09)
 import { useEffect, useState, useMemo } from 'react';
 import { useForm, type SubmitHandler, useFieldArray } from 'react-hook-form';
 import { clsx } from 'clsx';
