@@ -121,6 +121,20 @@
   .progress-destructive::-moz-progress-bar { background-color: hsl(var(--destructive)); }
   .progress-info::-moz-progress-bar { background-color: hsl(var(--info)); }
 
+  /* Brand Loader Lottie Theming */
+  .brand-loader-animation svg *,
+  .brand-loader-animation svg path,
+  .brand-loader-animation svg rect,
+  .brand-loader-animation svg circle,
+  .brand-loader-animation svg ellipse,
+  .brand-loader-animation svg polygon,
+  .brand-loader-animation svg polyline,
+  .brand-loader-animation svg line {
+    fill: currentColor !important;
+    stroke: currentColor !important;
+    transition: fill 0.5s ease, stroke 0.5s ease;
+  }
+
   /* Button Components */
   .btn {
     @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;

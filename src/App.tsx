@@ -227,7 +227,7 @@ const UploadSocialPage = lazy(() => import('./pages/social/UploadSocialPage'));
 // ===== LOADING COMPONENT FOR SUSPENSE =====
 const PageLoadingSpinner = () => (
   <div className="flex flex-col items-center justify-center w-full min-h-[calc(100vh-200px)] py-20">
-    <BrandLoader size={120} label="Carregando..." />
+    <BrandLoader size="lg" />
   </div>
 );
 
@@ -244,7 +244,7 @@ const ProtectedRoute: React.FC<{
   const { isAuthenticated, user, isLoading } = useAuth();
 
   if (isLoading) {
-    return <BrandLoader fullScreen size={140} label="Verificando acesso..." />;
+    return <BrandLoader fullScreen size="xl" />;
   }
 
   if (!isAuthenticated) {
@@ -280,7 +280,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const location = useLocation();
 
   if (isLoading) {
-    return <BrandLoader fullScreen size={140} label="Iniciando..." />;
+    return <BrandLoader fullScreen size="xl" />;
   }
 
   // Só redireciona se estiver na página de login ou registro
