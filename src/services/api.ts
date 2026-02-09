@@ -539,11 +539,11 @@ export const recommendationAPI = {
     api.get(`/recommendations/personalized?limit=${limit}`),
 
   // Produtos similares a um equipamento/kit específico
-  getSimilar: (id: string, type: 'equipment' | 'kit' = 'equipment', limit: number = 4) =>
+  getSimilar: (id: string, type: 'equipment' | 'kit' | 'service' = 'equipment', limit: number = 4) =>
     api.get(`/recommendations/similar/${type}/${id}?limit=${limit}`),
 
   // Frequentemente reservados juntos
-  getFrequentlyBought: (id: string, type: 'equipment' | 'kit' = 'equipment', limit: number = 4) =>
+  getFrequentlyBought: (id: string, type: 'equipment' | 'kit' | 'service' = 'equipment', limit: number = 4) =>
     api.get(`/recommendations/frequently-bought/${type}/${id}?limit=${limit}`),
 
   // Trending/Popular agora
