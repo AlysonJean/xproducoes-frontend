@@ -14,6 +14,61 @@ import type { Kit, ExperienceLevel } from '../types/types';
 import { SEO } from '../components/SEO';
 import { transformKit } from '../utils/transformKit';
 import { ExperienceLevelSelector } from '../components/kits/ExperienceLevelSelector';
+import { RecommendationSection } from '../components/ui/RecommendationSection';
+import { useRecommendations } from '../hooks/useRecommendations';
+import { Skeleton } from '../components/ui/StandardComponents';
+
+const KitDetailSkeleton = () => (
+  <div className="bg-card p-6 md:p-8 rounded-lg shadow-2xl border border-border">
+    {/* Breadcrumb Skeleton */}
+    <div className="flex justify-between items-center mb-6 lg:mb-8">
+      <Skeleton className="h-4 w-48" />
+      <div className="flex lg:hidden gap-3">
+        <Skeleton className="h-10 w-10 rounded-full" />
+        <Skeleton className="h-10 w-10 rounded-full" />
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+      {/* Image Skeleton */}
+      <Skeleton className="aspect-[4/3] w-full rounded-xl" />
+      
+      {/* Content Skeleton */}
+      <div className="flex flex-col">
+        <Skeleton className="h-14 w-3/4 mb-6" />
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-2/3 mb-8" />
+
+        <div className="bg-muted/30 p-6 rounded-2xl mb-8 border border-border">
+          <div className="flex justify-between items-baseline mb-4">
+            <Skeleton className="h-4 w-32" />
+            <div className="text-right">
+              <Skeleton className="h-4 w-24 mb-2 ml-auto" />
+              <Skeleton className="h-10 w-48" />
+            </div>
+          </div>
+          <Skeleton className="h-12 w-full rounded-xl" />
+        </div>
+
+        <Skeleton className="h-16 w-full rounded-2xl" />
+      </div>
+    </div>
+
+    {/* Included Items Skeleton */}
+    <div className="border-t border-border pt-12">
+      <div className="flex items-center gap-3 mb-8">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-6 w-20" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[1, 2, 3].map(i => (
+          <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+        ))}
+      </div>
+    </div>
+  </div>
+);
 
 export const KitDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -24,12 +79,30 @@ export const KitDetailPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<ExperienceLevel | null>(null);
+  
+  // Recommendations hooks
+  const similarRecommendations = useRecommendations({
+    type: 'similar',
+    itemId: slug || '',
+    itemType: 'kit',
+    limit: 4,
+    autoFetch: !!slug
+  });
+
+  const frequentlyBoughtRecommendations = useRecommendations({
+    type: 'frequently-bought',
+    itemId: slug || '',
+    itemType: 'kit',
+    limit: 4,
+    autoFetch: !!slug
+  });
 
   useEffect(() => {
     if (!slug) return;
     const fetchKit = async () => {
       try {
         setLoading(true);
+        setKit(null); // Reset before fetch to clear old data
         const data = await apiFetch(`/kits/${slug}`);
         const transformed = transformKit(data as Kit);
         setKit({
@@ -56,7 +129,12 @@ export const KitDetailPage = () => {
   }, [slug]);
 
   if (loading) {
-    return <BrandLoader fullScreen size={140} label="Preparando kit..." />;
+    return (
+      <div className="relative">
+        <BrandLoader fullScreen size={140} label="Preparando kit..." />
+        <KitDetailSkeleton />
+      </div>
+    );
   }
 
   if (error) {
@@ -137,15 +215,15 @@ export const KitDetailPage = () => {
             <span className="text-primary font-medium">{kit.name}</span>
         </nav>
         
-        <div className="flex lg:hidden gap-2">
+        <div className="flex lg:hidden gap-3">
             {kit.prevSlug && (
-                <Link to={`/kits/${kit.prevSlug}`} className="p-2 bg-muted rounded-full">
-                    <ChevronLeft className="w-5 h-5 text-foreground" />
+                <Link to={`/kits/${kit.prevSlug}`} className="p-2.5 bg-muted/80 backdrop-blur-sm rounded-full border border-border shadow-sm active:scale-95 transition-all">
+                    <ChevronLeft className="w-6 h-6 text-primary" />
                 </Link>
             )}
             {kit.nextSlug && (
-                <Link to={`/kits/${kit.nextSlug}`} className="p-2 bg-muted rounded-full">
-                    <ChevronRight className="w-5 h-5 text-foreground" />
+                <Link to={`/kits/${kit.nextSlug}`} className="p-2.5 bg-muted/80 backdrop-blur-sm rounded-full border border-border shadow-sm active:scale-95 transition-all">
+                    <ChevronRight className="w-6 h-6 text-primary" />
                 </Link>
             )}
         </div>
@@ -300,6 +378,37 @@ export const KitDetailPage = () => {
             <p className="text-muted-foreground text-sm max-w-[200px]">Solução plug-and-play pensada para agilizar seu evento.</p>
           </div>
       </div>
+
+      {/* Recommendations */}
+      {similarRecommendations.recommendations.length > 0 && (
+        <div className="mt-12 pt-12 border-t border-border">
+          <RecommendationSection
+            type="similar"
+            title="Kits Similares"
+            items={similarRecommendations.recommendations}
+            maxItems={4}
+            loading={similarRecommendations.loading}
+            viewAllLink="/kits"
+            viewAllText="Ver Mais Kits"
+            columns={{ sm: 1, md: 2, lg: 4 }}
+          />
+        </div>
+      )}
+
+      {frequentlyBoughtRecommendations.recommendations.length > 0 && (
+        <div className="mt-8">
+          <RecommendationSection
+            type="frequently-bought"
+            title="Eventos Similares usaram estes Combos"
+            items={frequentlyBoughtRecommendations.recommendations}
+            maxItems={4}
+            loading={frequentlyBoughtRecommendations.loading}
+            viewAllLink="/kits"
+            viewAllText="Explorar Mais"
+            columns={{ sm: 1, md: 2, lg: 4 }}
+          />
+        </div>
+      )}
     </div>
   );
 };

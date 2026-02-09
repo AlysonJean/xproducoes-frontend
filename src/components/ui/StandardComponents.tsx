@@ -986,3 +986,44 @@ export const GlassCard: React.FC<GlassCardProps> = ({ children, className, hover
 };
 
 
+// ========================================
+// SKELETON COMPONENT
+// ========================================
+
+interface SkeletonProps {
+  className?: string;
+}
+
+export const Skeleton: React.FC<SkeletonProps> = ({ className }) => {
+  return (
+    <div 
+      className={clsx(
+        "animate-pulse rounded-md bg-muted/40",
+        className
+      )} 
+    />
+  );
+};
+
+export const CardSkeleton: React.FC = () => (
+  <div className="bg-card rounded-2xl overflow-hidden border border-border/50">
+    <Skeleton className="aspect-[16/10] w-full rounded-none" />
+    <div className="p-5 space-y-3">
+      <Skeleton className="h-6 w-3/4" />
+      <Skeleton className="h-4 w-full" />
+      <div className="flex justify-between items-center pt-2">
+        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-8 w-20 rounded-lg" />
+      </div>
+    </div>
+  </div>
+);
+
+export const ListSkeleton: React.FC<{ cards?: number }> = ({ cards = 8 }) => (
+  <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={8}>
+    {Array.from({ length: cards }).map((_, i) => (
+      <CardSkeleton key={i} />
+    ))}
+  </Grid>
+);
+

@@ -65,7 +65,7 @@ const BrandLoader: React.FC<BrandLoaderProps> = ({
   if (forceHidden) return null;
 
   const containerClass = fullScreen
-    ? 'fixed inset-0 flex items-center justify-center bg-background z-[9999]'
+    ? 'fixed inset-0 flex items-center justify-center bg-background/60 backdrop-blur-md z-[9999]'
     : 'flex flex-col items-center justify-center';
 
   return (

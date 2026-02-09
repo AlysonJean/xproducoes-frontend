@@ -5,7 +5,20 @@ import { normalizeString } from '../utils/string';
 import type { Kit, KitFilters } from '@/types/types';
 import { KitCard } from '../components/ui/KitCard';
 import { PageLayout, PageLoading, PageEmpty } from '../components/layouts/PageLayout';
-import { SearchAndFilters, FilterSelect, Grid } from '../components/ui/StandardComponents';
+import { SearchAndFilters, FilterSelect, Grid, Skeleton, ListSkeleton } from '../components/ui/StandardComponents';
+import { BrandLoader } from '../components/ui/BrandLoader';
+
+const ListLayoutSkeleton = () => (
+  <PageLayout
+    title="Carregando..."
+    description="Preparando as melhores opções para você."
+  >
+    <div className="mb-12">
+      <Skeleton className="h-16 w-full rounded-xl" />
+    </div>
+    <ListSkeleton cards={8} />
+  </PageLayout>
+);
 import { SEO } from '../components/SEO';
 import { transformKit } from '../utils/transformKit';
 
@@ -97,7 +110,12 @@ export const KitListPage = () => {
   }, []);
 
   if (loading) {
-    return <PageLoading message="Preparando melhores ofertas..." />;
+    return (
+      <div className="relative">
+        <BrandLoader fullScreen size={140} label="Preparando ofertas..." />
+        <ListLayoutSkeleton />
+      </div>
+    );
   }
 
   return (

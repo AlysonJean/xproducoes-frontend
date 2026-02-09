@@ -17,6 +17,51 @@ import { useRecommendations } from '../hooks/useRecommendations';
 import { useNotifications } from '../contexts/NotificationContext';
 import { generateProductSchema } from '../utils/schemaGenerator';
 import { StructuredData } from '../components/seo/StructuredData';
+import { Skeleton } from '../components/ui/StandardComponents';
+
+const EquipmentDetailSkeleton = () => (
+  <div className="bg-card p-6 md:p-8 rounded-lg shadow-2xl border border-border">
+    {/* Breadcrumb Skeleton */}
+    <div className="flex justify-between items-center mb-6 lg:mb-8">
+      <Skeleton className="h-4 w-48" />
+      <div className="flex lg:hidden gap-3">
+        <Skeleton className="h-10 w-10 rounded-full" />
+        <Skeleton className="h-10 w-10 rounded-full" />
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {/* Image Skeleton */}
+      <Skeleton className="aspect-[4/3] w-full rounded-lg" />
+      
+      {/* Content Skeleton */}
+      <div className="flex flex-col">
+        <Skeleton className="h-12 w-3/4 mb-4" />
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-2/3 mb-6" />
+
+        <div className="bg-muted/30 p-4 rounded-lg mb-6 border border-border">
+          <div className="flex justify-between items-center mb-4">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-8 w-32" />
+          </div>
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-6 w-24" />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 mb-4">
+          <Skeleton className="h-6 w-20" />
+          <Skeleton className="h-10 w-20" />
+        </div>
+
+        <Skeleton className="h-14 w-full rounded-lg" />
+      </div>
+    </div>
+  </div>
+);
 
 export const EquipmentDetailPage = () => {
   const { ref: titleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
@@ -49,6 +94,7 @@ export const EquipmentDetailPage = () => {
     const fetchEquipment = async () => {
       try {
         setLoading(true);
+        setEquipment(null); // Reset to ensure clean transition
         const data = await apiFetch(`/equipments/${slug}`);
         setEquipment(transformEquipment(data as Equipment));
 
@@ -90,7 +136,14 @@ export const EquipmentDetailPage = () => {
     }
   };
 
-  if (loading) return <BrandLoader fullScreen size={140} label="Carregando equipamento..." />;
+  if (loading) {
+    return (
+      <div className="relative">
+        <BrandLoader fullScreen size={140} label="Carregando equipamento..." />
+        <EquipmentDetailSkeleton />
+      </div>
+    );
+  }
   if (error)
     return (
       <div className="text-center text-destructive bg-destructive/10 p-4 rounded-md border border-destructive">
@@ -122,6 +175,37 @@ export const EquipmentDetailPage = () => {
           availability: equipment.isAvailable ? 'InStock' : 'OutOfStock'
         })}
       />
+      {/* Breadcrumb & Navigation */}
+      <div className="flex justify-between items-center mb-6 lg:mb-8">
+        <nav className="text-sm text-muted-foreground">
+          <Link to="/" className="hover:text-primary transition-colors">Início</Link>
+          <span className="mx-2 text-border">&gt;</span>
+          <Link to="/equipamentos" className="hover:text-primary transition-colors">Equipamentos</Link>
+          {equipment.category && (
+            <>
+              <span className="mx-2 text-border">&gt;</span>
+              <span className="hover:text-primary transition-colors">
+                {typeof equipment.category === 'string' ? equipment.category : equipment.category.name}
+              </span>
+            </>
+          )}
+          <span className="mx-2 text-border">&gt;</span>
+          <span className="text-primary font-medium truncate">{equipment.name}</span>
+        </nav>
+
+        <div className="flex lg:hidden gap-3">
+          {equipment.prevSlug && (
+            <Link to={`/equipamentos/${equipment.prevSlug}`} className="p-2.5 bg-muted/80 backdrop-blur-sm rounded-full border border-border shadow-sm active:scale-95 transition-all">
+              <ChevronLeft className="w-6 h-6 text-primary" />
+            </Link>
+          )}
+          {equipment.nextSlug && (
+            <Link to={`/equipamentos/${equipment.nextSlug}`} className="p-2.5 bg-muted/80 backdrop-blur-sm rounded-full border border-border shadow-sm active:scale-95 transition-all">
+              <ChevronRight className="w-6 h-6 text-primary" />
+            </Link>
+          )}
+        </div>
+      </div>
 
       {/* Navigation Arrows (Desktop) */}
       {equipment.prevSlug && (
