@@ -11,7 +11,7 @@ import { transformKit } from '../utils/transformKit';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { GeminiEventSuggester } from '../components/ui/GeminiEventSuggester';
 import { PageLoading } from '../components/layouts/PageLayout';
-import { Grid } from '../components/ui/StandardComponents';
+import { Grid, Skeleton, CardSkeleton } from '../components/ui/StandardComponents';
 import { TestimonialCard } from '../components/ui/TestimonialCard';
 import { BannerCarousel } from '../components/ui/BannerCarousel';
 import { CategoryEquipmentRow } from '../components/ui/CategoryEquipmentRow';
@@ -46,6 +46,48 @@ const SoundBar = memo(() => {
   );
 });
 SoundBar.displayName = 'SoundBar';
+
+const HomeSkeleton = () => (
+  <div className="min-h-screen bg-background">
+    {/* Banner Skeleton */}
+    <Skeleton className="h-[60vh] w-full rounded-none mb-12" />
+    
+    <div className="container mx-auto px-4 md:px-6 lg:px-8 space-y-24">
+      {/* Kits Skeleton */}
+      <section>
+        <div className="flex flex-col items-center mb-12">
+          <Skeleton className="h-6 w-32 mb-4 rounded-full" />
+          <Skeleton className="h-12 w-64 mb-4" />
+          <Skeleton className="h-1 w-24 rounded-full" />
+        </div>
+        <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={8}>
+          {[1, 2, 3, 4].map(i => <CardSkeleton key={i} />)}
+        </Grid>
+      </section>
+
+      {/* Categories Skeleton */}
+      <section>
+        <div className="flex flex-col items-center mb-12">
+          <Skeleton className="h-6 w-48 mb-4 rounded-full" />
+          <Skeleton className="h-12 w-80 mb-4" />
+          <Skeleton className="h-1 w-24 rounded-full" />
+        </div>
+        <div className="space-y-12">
+          {[1, 2].map(i => (
+            <div key={i} className="space-y-6">
+              <Skeleton className="h-8 w-48" />
+              <div className="flex gap-4 overflow-hidden">
+                {[1, 2, 3, 4, 5].map(j => (
+                  <Skeleton key={j} className="h-64 min-w-[280px] rounded-xl" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  </div>
+);
 
 export const HomePage = () => {
   const { ref: heroTitleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
@@ -140,7 +182,14 @@ export const HomePage = () => {
   fetchPublicReviews();
   }, [fetchPageData, fetchPublicReviews]);
 
-  if (loading) return <PageLoading message="Carregando página inicial..." />;
+  if (loading) {
+    return (
+      <div className="relative">
+        <BrandLoader fullScreen size={140} label="Carregando experiência..." />
+        <HomeSkeleton />
+      </div>
+    );
+  }
   // if (error) return <PageError message={error} onRetry={() => window.location.reload()} />;
 
   return (

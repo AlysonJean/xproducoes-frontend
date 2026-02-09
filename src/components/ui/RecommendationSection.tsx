@@ -235,14 +235,21 @@ export const RecommendationSection = ({
           )}
         </div>
 
-        {/* Items Grid */}
-        <Grid columns={columns} gap={4}>
-          {displayItems.map((item) => (
-            <div
-              key={item.id}
-              className="group cursor-pointer"
-              onClick={() => onItemClick?.(item)}
-            >
+        {/* Items Grid/Scroll Container */}
+        <div className="relative group/scroll">
+          <div className={clsx(
+            "flex overflow-x-auto pb-4 -mb-4 gap-4 snap-x snap-mandatory scrollbar-hide lg:grid lg:pb-0 lg:mb-0 lg:snap-none",
+            columns.sm === 1 && "lg:grid-cols-1",
+            columns.md === 2 && "md:grid-cols-2",
+            columns.lg === 4 && "lg:grid-cols-4"
+          )}>
+            {displayItems.map((item) => (
+              <div
+                key={item.id}
+                className="min-w-[280px] sm:min-w-[320px] lg:min-w-0 snap-start cursor-pointer transition-all duration-300"
+                onClick={() => onItemClick?.(item)}
+              >
+
               <Link 
                 to={viewAllLink ? `${viewAllLink}/${item.id}` : `/${item.type === 'kit' ? 'kits' : 'equipamentos'}/${item.id}`}
                 className="block"
@@ -358,7 +365,8 @@ export const RecommendationSection = ({
               </Link>
             </div>
           ))}
-        </Grid>
+        </div>
+      </div>
 
         {/* View All Button */}
         {(onViewAll || viewAllLink) && items.length > maxItems && (

@@ -15,6 +15,50 @@ import { FavoriteButton } from '../components/ui/FavoriteButton';
 import CompareButton from '../components/ui/CompareButton';
 import { RecommendationSection } from '../components/ui/RecommendationSection';
 import { useRecommendations } from '../hooks/useRecommendations';
+import { Skeleton } from '../components/ui/StandardComponents';
+
+const ServiceDetailSkeleton = () => (
+  <div className="bg-card p-6 md:p-8 rounded-lg shadow-2xl border border-border">
+    {/* Breadcrumb Skeleton */}
+    <div className="flex justify-between items-center mb-6 lg:mb-8">
+      <Skeleton className="h-4 w-48" />
+      <div className="flex lg:hidden gap-3">
+        <Skeleton className="h-10 w-10 rounded-full" />
+        <Skeleton className="h-10 w-10 rounded-full" />
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {/* Image Skeleton */}
+      <Skeleton className="aspect-[4/3] w-full rounded-lg" />
+      
+      {/* Content Skeleton */}
+      <div className="flex flex-col">
+        <Skeleton className="h-12 w-3/4 mb-4" />
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-2/3 mb-6" />
+
+        <div className="bg-muted/30 p-4 rounded-lg mb-6 border border-border">
+          <div className="flex justify-between items-center mb-4">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-8 w-32" />
+          </div>
+          <div className="flex justify-between items-center mb-2">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-6 w-24" />
+          </div>
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-6 w-24" />
+          </div>
+        </div>
+
+        <Skeleton className="h-14 w-full rounded-lg" />
+      </div>
+    </div>
+  </div>
+);
 
 export const ServiceDetailPage = () => {
   const { ref: titleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
@@ -48,6 +92,7 @@ export const ServiceDetailPage = () => {
     const fetchService = async () => {
       try {
         setLoading(true);
+        setService(null); // Limpar estado anterior para forçar re-renderização e scroll
         const data = await apiFetch(`/services/${slug}`);
         const transformed = transformService(data as Service);
         setService({
@@ -90,7 +135,14 @@ export const ServiceDetailPage = () => {
     }
   };
 
-  if (loading) return <BrandLoader fullScreen size={140} label="Carregando serviço..." />;
+  if (loading) {
+    return (
+      <div className="relative">
+        <BrandLoader fullScreen size={140} label="Carregando serviço..." />
+        <ServiceDetailSkeleton />
+      </div>
+    );
+  }
   if (error)
     return (
       <div className="text-center text-destructive bg-destructive/10 p-4 rounded-md border border-destructive">
@@ -159,15 +211,15 @@ export const ServiceDetailPage = () => {
           <span className="text-primary font-medium">{service.name}</span>
         </nav>
         
-        <div className="flex lg:hidden gap-2">
+        <div className="flex lg:hidden gap-3">
            {service.prevSlug && (
-             <Link to={`/servicos/${service.prevSlug}`} className="p-2 bg-muted rounded-full">
-               <ChevronLeft className="w-5 h-5 text-foreground" />
+             <Link to={`/servicos/${service.prevSlug}`} className="p-2.5 bg-muted/80 backdrop-blur-sm rounded-full border border-border shadow-sm active:scale-95 transition-all">
+               <ChevronLeft className="w-6 h-6 text-primary" />
              </Link>
            )}
            {service.nextSlug && (
-             <Link to={`/servicos/${service.nextSlug}`} className="p-2 bg-muted rounded-full">
-               <ChevronRight className="w-5 h-5 text-foreground" />
+             <Link to={`/servicos/${service.nextSlug}`} className="p-2.5 bg-muted/80 backdrop-blur-sm rounded-full border border-border shadow-sm active:scale-95 transition-all">
+               <ChevronRight className="w-6 h-6 text-primary" />
              </Link>
            )}
         </div>

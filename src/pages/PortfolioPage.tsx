@@ -5,7 +5,20 @@ import { asArray } from '../utils/normalize';
 import type { PortfolioItem, PortfolioFilters } from '@/types';
 import { PageLayout, PageLoading, PageEmpty } from '../components/layouts/PageLayout';
 import { normalizeString } from '../utils/string';
-import { SearchAndFilters, Grid } from '../components/ui/StandardComponents';
+import { SearchAndFilters, Grid, Skeleton, ListSkeleton } from '../components/ui/StandardComponents';
+import { BrandLoader } from '../components/ui/BrandLoader';
+
+const PortfolioListSkeleton = () => (
+  <PageLayout
+    title="Nossos Trabalhos"
+    description="Reviva as melhores experiências que já proporcionamos."
+  >
+    <div className="mb-8">
+      <Skeleton className="h-16 w-full rounded-xl" />
+    </div>
+    <ListSkeleton cards={6} />
+  </PageLayout>
+);
 import { SEO } from '../components/SEO';
 
 export const PortfolioPage: React.FC = () => {
@@ -93,7 +106,12 @@ export const PortfolioPage: React.FC = () => {
   }, [selectedItem]);
 
   if (loading) {
-    return <PageLoading message="Carregando portfólio..." />;
+    return (
+      <div className="relative">
+        <BrandLoader fullScreen size={140} label="Revivendo momentos..." />
+        <PortfolioListSkeleton />
+      </div>
+    );
   }
 
   // Error check removed to prevent blocking UI
