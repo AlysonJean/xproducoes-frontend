@@ -70,15 +70,23 @@ export const CategoryEquipmentRow = ({ category }: CategoryEquipmentRowProps) =>
         </Link>
       </div>
 
-      <div className="relative">
+      <div className="relative group/scroll">
         {/* Horizontal Scroll Container */}
-        <div className="flex overflow-x-auto pb-6 gap-6 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-primary/10 scrollbar-track-transparent hover:scrollbar-thumb-primary/30 transition-colors">
+        <div className="flex overflow-x-auto pb-6 gap-6 snap-x snap-mandatory scrollbar-none hover:scrollbar-thin scrollbar-thumb-primary/10 scrollbar-track-transparent transition-all w-full">
           {equipments.map((equipment) => (
-            <div key={equipment.id} className="min-w-[280px] w-[280px] md:min-w-[320px] md:w-[320px] snap-start">
+            <div 
+              key={equipment.id} 
+              className="min-w-[280px] w-[280px] md:min-w-[320px] md:w-[320px] snap-start flex-shrink-0 transition-transform duration-300 hover:scale-[1.01]"
+            >
               <EquipmentCard equipment={equipment} />
             </div>
           ))}
+          {/* Spacer for better scrolling on mobile */}
+          <div className="min-w-[1px] w-[1px] flex-shrink-0" />
         </div>
+        
+        {/* Shadow/Gradient indicators for scroll */}
+        <div className="absolute right-0 top-0 bottom-6 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none opacity-0 group-hover/scroll:opacity-100 transition-opacity" />
       </div>
     </div>
   );

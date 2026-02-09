@@ -11,7 +11,7 @@ import { transformKit } from '../utils/transformKit';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { GeminiEventSuggester } from '../components/ui/GeminiEventSuggester';
 
-import { Grid, Skeleton, CardSkeleton } from '../components/ui/StandardComponents';
+import { Grid } from '../components/ui/StandardComponents';
 import { TestimonialCard } from '../components/ui/TestimonialCard';
 import { BannerCarousel } from '../components/ui/BannerCarousel';
 import { CategoryEquipmentRow } from '../components/ui/CategoryEquipmentRow';
@@ -47,47 +47,7 @@ const SoundBar = memo(() => {
 });
 SoundBar.displayName = 'SoundBar';
 
-const HomeSkeleton = () => (
-  <div className="min-h-screen bg-background">
-    {/* Banner Skeleton */}
-    <Skeleton className="h-[60vh] w-full rounded-none mb-12" />
-    
-    <div className="container mx-auto px-4 md:px-6 lg:px-8 space-y-24">
-      {/* Kits Skeleton */}
-      <section>
-        <div className="flex flex-col items-center mb-12">
-          <Skeleton className="h-6 w-32 mb-4 rounded-full" />
-          <Skeleton className="h-12 w-64 mb-4" />
-          <Skeleton className="h-1 w-24 rounded-full" />
-        </div>
-        <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={8}>
-          {[1, 2, 3, 4].map(i => <CardSkeleton key={i} />)}
-        </Grid>
-      </section>
 
-      {/* Categories Skeleton */}
-      <section>
-        <div className="flex flex-col items-center mb-12">
-          <Skeleton className="h-6 w-48 mb-4 rounded-full" />
-          <Skeleton className="h-12 w-80 mb-4" />
-          <Skeleton className="h-1 w-24 rounded-full" />
-        </div>
-        <div className="space-y-12">
-          {[1, 2].map(i => (
-            <div key={i} className="space-y-6">
-              <Skeleton className="h-8 w-48" />
-              <div className="flex gap-4 overflow-hidden">
-                {[1, 2, 3, 4, 5].map(j => (
-                  <Skeleton key={j} className="h-64 min-w-[280px] rounded-xl" />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
-  </div>
-);
 
 export const HomePage = () => {
   const { ref: heroTitleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
@@ -245,13 +205,21 @@ export const HomePage = () => {
               <h2 ref={kitsTitleRef} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Kits em Destaque</h2>
               <div className="w-24 h-1 bg-primary mx-auto rounded-full mb-6" />
             </div>
-            <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={8}>
-              {kits.map((kit) => (
-                <div key={kit.id} className="group h-full">
-                  <KitCard kit={kit} />
-                </div>
-              ))}
-            </Grid>
+            
+            <div className="relative group/scroll">
+               <div className="flex overflow-x-auto pb-6 gap-6 snap-x snap-mandatory scrollbar-none hover:scrollbar-thin scrollbar-thumb-primary/10 scrollbar-track-transparent transition-all w-full">
+                  {kits.map((kit) => (
+                    <div 
+                      key={kit.id} 
+                      className="min-w-[280px] w-[280px] md:min-w-[320px] md:w-[320px] snap-start flex-shrink-0 transition-transform duration-300 hover:scale-[1.01]"
+                    >
+                      <KitCard kit={kit} />
+                    </div>
+                  ))}
+                  <div className="min-w-[1px] w-[1px] flex-shrink-0" />
+               </div>
+               <div className="absolute right-0 top-0 bottom-6 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none opacity-0 group-hover/scroll:opacity-100 transition-opacity" />
+            </div>
           </section>
         )}
 
@@ -265,7 +233,7 @@ export const HomePage = () => {
             <div className="w-24 h-1 bg-blue-500 mx-auto rounded-full mb-6" />
           </div>
 
-          <div className="grid gap-12">
+          <div className="flex flex-col gap-12">
              {loading ? (
                 <div className="flex justify-center py-24">
                    <BrandLoader size={80} label="Sincronizando catálogo..." />
