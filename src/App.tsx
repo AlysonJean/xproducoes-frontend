@@ -192,6 +192,11 @@ const AdminCollaboratorsPage = lazy(() =>
     default: m.AdminCollaboratorsPage,
   }))
 );
+const AdminCollaboratorFunctionsPage = lazy(() =>
+  import('./pages/admin/AdminCollaboratorFunctionsPage').then((m) => ({
+    default: m.AdminCollaboratorFunctionsPage,
+  }))
+);
 
 const MonitoringPage = lazy(() => import('./pages/admin/MonitoringPage'));
 const NewsletterSubscribersPage = lazy(() =>
@@ -672,6 +677,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute adminOnly>
             <AdminCollaboratorsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/colaboradores/funcoes"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminCollaboratorFunctionsPage />
           </ProtectedRoute>
         }
       />

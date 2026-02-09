@@ -227,6 +227,7 @@ export const AdminCollaboratorsPage: React.FC = () => {
           </div>
           <div>
             <div className="flex gap-2">
+              <Button variant="outline" onClick={() => window.location.href = '/admin/colaboradores/funcoes'}>Gerenciar Funções</Button>
               <Button variant="primary" onClick={handleCreate}>Novo Colaborador</Button>
               <Button variant="outline" onClick={() => setInviteDialogOpen(true)}>Enviar Convite</Button>
             </div>
