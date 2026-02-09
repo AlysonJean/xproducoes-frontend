@@ -4,31 +4,41 @@ import { normalizeImageUrl, getPlaceholderUrl } from '../../utils/imageUtils';
 import { OptimizedImage } from '../../components/ui/OptimizedImage';
 import type { Service } from '../../types/types';
 import { FavoriteButton } from '../../components/ui/FavoriteButton';
+import CompareButton from '../../components/ui/CompareButton';
 import { memo, useCallback, useState } from 'react';
+import { useCart } from '../../hooks/useCart';
+import { useNotifications } from '../../contexts/NotificationContext';
 
-// Constantes para status (Serviços não têm "disponibilidade" da mesma forma que equipamentos, mas têm status)
 const STATUS_CONFIG = {
-  MESSAGES: {
-    ACTIVE: 'Ativo',
-    INACTIVE: 'Inativo',
-    MAINTENANCE: 'Manutenção',
-    COMING_SOON: 'Em Breve',
+  ACTIVE: {
+    label: 'Ativo',
+    badge: 'bg-success text-success-foreground',
+    btnClass: 'bg-primary text-primary-foreground hover:bg-primary/90'
   },
-  STYLES: {
-    ACTIVE: 'bg-success text-success-foreground dark:bg-success dark:text-success-foreground',
-    INACTIVE: 'bg-destructive text-destructive-foreground',
-    MAINTENANCE: 'bg-warning text-warning-foreground',
-    COMING_SOON: 'bg-info text-info-foreground',
+  INACTIVE: {
+    label: 'Inativo',
+    badge: 'bg-destructive text-destructive-foreground',
+    btnClass: 'bg-muted text-muted-foreground cursor-not-allowed'
+  },
+  MAINTENANCE: {
+    label: 'Manutenção',
+    badge: 'bg-warning text-warning-foreground',
+    btnClass: 'bg-muted text-muted-foreground cursor-not-allowed'
+  },
+  COMING_SOON: {
+    label: 'Em Breve',
+    badge: 'bg-info text-info-foreground',
+    btnClass: 'bg-muted text-muted-foreground cursor-not-allowed'
   },
 } as const;
 
 interface ServiceCardProps {
   service: Service;
+  showCompare?: boolean;
   showFavorite?: boolean;
   className?: string;
 }
 
-// Componente de imagem com tratamento de erro otimizado
 const ServiceImage = memo(
   ({ imageUrl, name, status }: { imageUrl?: string; name: string; status: string }) => {
     const [imageError, setImageError] = useState(false);
@@ -41,8 +51,8 @@ const ServiceImage = memo(
     const fallbackUrl = getPlaceholderUrl(name);
     const errorUrl = getPlaceholderUrl('Imagem Indisponível');
     
-    // Fallback status if somehow missing or invalid
-    const validStatus = (status in STATUS_CONFIG.STYLES) ? status as keyof typeof STATUS_CONFIG.STYLES : 'ACTIVE';
+    const validStatus = (status in STATUS_CONFIG) ? status as keyof typeof STATUS_CONFIG : 'ACTIVE';
+    const config = STATUS_CONFIG[validStatus];
 
     return (
       <div className="relative">
@@ -52,15 +62,14 @@ const ServiceImage = memo(
           className="w-full h-48"
           objectFit="cover"
           onError={handleImageError}
-          priority={false} // Lazy load by default for list items
-          width={400} // Explict width for optimization
-          height={300} // Explicit height for optimization
+          priority={false}
+          width={400}
+          height={300}
         />
         
-        {/* Badge de status */}
         <div className="absolute top-2 left-2">
-          <span className={`px-2 py-1 rounded-full text-xs font-bold ${STATUS_CONFIG.STYLES[validStatus]}`}>
-             {STATUS_CONFIG.MESSAGES[validStatus]}
+          <span className={`px-2 py-1 rounded-full text-xs font-bold ${config.badge}`}>
+             {config.label}
           </span>
         </div>
       </div>
@@ -72,10 +81,30 @@ ServiceImage.displayName = 'ServiceImage';
 
 export const ServiceCard: React.FC<ServiceCardProps> = ({
   service,
+  showCompare = true,
   showFavorite = true,
   className = '',
   ...rest
 }) => {
+  const { addItem } = useCart();
+  const { addNotification } = useNotifications();
+
+  const handleQuickAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (service.status === 'ACTIVE' || !service.status) {
+        addItem(service, 'service');
+        addNotification({
+            type: 'success',
+            title: 'Serviço Adicionado',
+            message: `${service.name} foi adicionado ao orçamento.`
+        });
+    }
+  };
+
+  const currentStatus = service.status || 'ACTIVE';
+  const config = (STATUS_CONFIG as any)[currentStatus] || STATUS_CONFIG.ACTIVE;
+
   return (
     <Link
       {...rest}
@@ -87,12 +116,15 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
         <ServiceImage
           imageUrl={service.imageUrl}
           name={service.name}
-          status={service.status || 'ACTIVE'}
+          status={currentStatus}
         />
 
-        {showFavorite && service.id && (
+        {(showCompare || showFavorite) && (
           <div className="absolute top-2 right-2 flex space-x-2 z-20">
-            <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="sm" isService={true} /> 
+            {showCompare && <CompareButton equipment={service as any} size="sm" />}
+            {showFavorite && service.id && (
+              <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="sm" isService={true} />
+            )}
           </div>
         )}
 
@@ -115,11 +147,18 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
             <span className="text-xs font-normal mr-1">a partir de</span>
             {formatPrice(service.price || 0)}
           </span>
-          <div className="font-bold py-2 px-4 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
-            Ver
-          </div>
+          <button
+            onClick={handleQuickAdd}
+            disabled={currentStatus !== 'ACTIVE'}
+            className={`font-bold py-2 px-4 rounded transition-colors ${config.btnClass}`}
+            aria-label="Adicionar ao carrinho"
+          >
+            {currentStatus === 'ACTIVE' ? '+' : '−'}
+          </button>
         </div>
       </div>
     </Link>
   );
 };
+
+export default memo(ServiceCard);
