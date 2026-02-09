@@ -111,10 +111,14 @@ export const KitListPage = () => {
 
   if (loading) {
     return (
-      <div className="relative">
-        <BrandLoader fullScreen size={140} label="Preparando ofertas..." />
-        <ListLayoutSkeleton />
-      </div>
+      <PageLayout 
+        title="Carregando kits..." 
+        description="Preparando as melhores ofertas para você."
+      >
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <BrandLoader size={120} label="Preparando ofertas..." />
+        </div>
+      </PageLayout>
     );
   }
 

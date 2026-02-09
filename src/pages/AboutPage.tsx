@@ -1,29 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PageLayout } from '../components/layouts/PageLayout';
-import { Skeleton } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
 import { SEO } from '../components/SEO';
-import { useState } from 'react';
-
-const AboutSkeleton = () => (
-  <PageLayout
-    title="Carregando..."
-    description="Descobrindo nossa história."
-  >
-    <div className="max-w-4xl mx-auto">
-      <div className="bg-card rounded-xl shadow-sm border border-border p-8 space-y-12">
-        {[1, 2, 3].map(i => (
-          <section key={i} className="space-y-4">
-            <Skeleton className="h-8 w-48 mb-4" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-          </section>
-        ))}
-      </div>
-    </div>
-  </PageLayout>
-);
 
 export const AboutPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -36,10 +14,11 @@ export const AboutPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="relative">
-        <BrandLoader fullScreen size={140} label="Carregando história..." />
-        <AboutSkeleton />
-      </div>
+      <PageLayout title="Carregando..." description="Descobrindo nossa história.">
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <BrandLoader size={120} label="Carregando história..." />
+        </div>
+      </PageLayout>
     );
   }
 
@@ -98,3 +77,5 @@ export const AboutPage: React.FC = () => {
     </PageLayout>
   );
 };
+
+export default AboutPage;

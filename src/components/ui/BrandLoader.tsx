@@ -43,6 +43,11 @@ const BrandLoader: React.FC<BrandLoaderProps> = ({
 }) => {
   const [showDismiss, setShowDismiss] = useState(false);
   const [forceHidden, setForceHidden] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
   
   // Resolver tamanho para classe CSS
   const sizeClass = useMemo(() => {
@@ -79,13 +84,16 @@ const BrandLoader: React.FC<BrandLoaderProps> = ({
         </button>
       )}
       <div 
-        className={`brand-loader-animation ${sizeClass} transition-all duration-300`}
+        className={`brand-loader-animation ${sizeClass} transition-all duration-300 flex items-center justify-center`}
       >
-        <DotLottieReact
-          src="/animations/Logo-xproducoes-eventos.lottie"
-          loop
-          autoplay
-        />
+        {isClient && (
+          <DotLottieReact
+            src="/animations/Logo-xproducoes-eventos.lottie"
+            loop
+            autoplay
+            style={{ width: '100%', height: '100%' }}
+          />
+        )}
       </div>
       {label && (
         <p className="mt-4 text-base text-muted-foreground animate-pulse font-medium">

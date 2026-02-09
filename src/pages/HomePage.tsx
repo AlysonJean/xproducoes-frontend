@@ -184,9 +184,8 @@ export const HomePage = () => {
 
   if (loading) {
     return (
-      <div className="relative">
-        <BrandLoader fullScreen size={140} label="Carregando experiência..." />
-        <HomeSkeleton />
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <BrandLoader size={140} label="Carregando experiência..." />
       </div>
     );
   }

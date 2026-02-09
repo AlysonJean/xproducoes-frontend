@@ -9,18 +9,7 @@ import { BrandLoader } from '../components/ui/BrandLoader';
 import { PageLayout, PageError, PageEmpty } from '../components/layouts/PageLayout';
 import { SEO } from '../components/SEO';
 
-const FaqSkeleton = () => (
-  <PageLayout
-    title="Perguntas Frequentes"
-    description="Preparando respostas para você."
-  >
-    <div className="w-full max-w-3xl mx-auto space-y-6">
-      {[1, 2, 3, 4, 5].map(i => (
-        <Skeleton key={i} className="h-20 w-full rounded-xl" />
-      ))}
-    </div>
-  </PageLayout>
-);
+
 
 // AccordionItem com visual de Card, igual ao portfólio
 const AccordionItem = ({ faq }: { faq: FaqItem }) => {
@@ -69,10 +58,11 @@ export const FaqPage = () => {
 
   if (loading) {
     return (
-      <div className="relative">
-        <BrandLoader fullScreen size={140} label="Carregando FAQ..." />
-        <FaqSkeleton />
-      </div>
+      <PageLayout title="FAQ" description="Preparando respostas para você.">
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <BrandLoader size={120} label="Carregando FAQ..." />
+        </div>
+      </PageLayout>
     );
   }
 

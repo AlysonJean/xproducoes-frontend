@@ -16,6 +16,7 @@ import { transformKit } from '../utils/transformKit';
 import { ExperienceLevelSelector } from '../components/kits/ExperienceLevelSelector';
 import { RecommendationSection } from '../components/ui/RecommendationSection';
 import { useRecommendations } from '../hooks/useRecommendations';
+import { PageLayout } from '../components/layouts/PageLayout';
 import { Skeleton } from '../components/ui/StandardComponents';
 
 const KitDetailSkeleton = () => (
@@ -130,10 +131,11 @@ export const KitDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="relative">
-        <BrandLoader fullScreen size={140} label="Preparando kit..." />
-        <KitDetailSkeleton />
-      </div>
+      <PageLayout title="Carregando..." description="Preparando o melhor kit para você.">
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <BrandLoader size={120} label="Preparando kit..." />
+        </div>
+      </PageLayout>
     );
   }
 

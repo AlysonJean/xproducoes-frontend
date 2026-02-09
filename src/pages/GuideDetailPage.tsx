@@ -8,34 +8,7 @@ import { useState } from 'react';
 import { Skeleton } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
 
-const GuideDetailSkeleton = () => (
-  <PageLayout title="Carregando...">
-    <div className="max-w-4xl mx-auto space-y-8">
-      <Skeleton className="h-4 w-32" />
-      <header className="space-y-6">
-        <div className="flex gap-2">
-          <Skeleton className="h-6 w-20 rounded-full" />
-          <Skeleton className="h-6 w-20 rounded-full" />
-        </div>
-        <Skeleton className="h-16 w-full" />
-        <div className="flex items-center gap-6 pb-8 border-b border-border">
-          <Skeleton className="h-10 w-10 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-3 w-24" />
-          </div>
-        </div>
-      </header>
-      <Skeleton className="h-[400px] w-full rounded-2xl" />
-      <div className="space-y-4">
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-3/4" />
-      </div>
-    </div>
-  </PageLayout>
-);
+
 
 export const GuideDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -54,10 +27,11 @@ export const GuideDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="relative">
-        <BrandLoader fullScreen size={140} label="Abrindo guia..." />
-        <GuideDetailSkeleton />
-      </div>
+      <PageLayout title="Carregando..." description="Preparando as melhores dicas de especialistas para você.">
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <BrandLoader size={120} label="Preparando dicas..." />
+        </div>
+      </PageLayout>
     );
   }
 
