@@ -1,3 +1,4 @@
+import { ItemStatus } from '@/types/enums';
 import type { Service } from '@/types/types';
 import { toNumber } from './typeSafeFormatters';
 
@@ -23,6 +24,6 @@ export function transformService(service: Service): Service {
     duration: toNumber(service.duration),
     imageUrl: sanitizeImageUrl(service.imageUrl),
     description: service.description ?? '',
-    status: service.status ?? 'ACTIVE',
+    status: service.status ?? ItemStatus.ACTIVE,
   };
 }

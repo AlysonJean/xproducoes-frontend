@@ -9,7 +9,7 @@ interface UseRecommendationsOptions {
     type: RecommendationType;
     limit?: number;
     itemId?: string; // Para recomendações 'similar' ou 'frequently-bought'
-    itemType?: 'equipment' | 'kit';
+    itemType?: 'equipment' | 'kit' | 'service';
     category?: string;
     minPrice?: number;
     maxPrice?: number;
