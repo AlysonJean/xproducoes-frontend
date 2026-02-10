@@ -217,29 +217,65 @@ export const BookingDetailsPage = () => {
             </div>
           </div>
 
-          {/* Equipamentos */}
-          {(booking.kits && booking.kits.length > 0) && (
+          {/* Itens da Reserva */}
+          {((booking.kits && booking.kits.length > 0) || (booking.equipments && booking.equipments.length > 0) || (booking.services && booking.services.length > 0) || booking.kit) && (
             <div className="bg-card rounded-xl p-6 border border-border">
-              <h2 className="text-xl font-semibold mb-4 text-foreground">Equipamentos Reservados</h2>
-              <div className="space-y-3">
-                {booking.kits.map((kitItem, idx) => {
-                  const kitName = 'kit' in kitItem ? kitItem.kit?.name : (kitItem as any).name;
-                  return (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <div>
-                        <p className="font-medium text-foreground">{kitName || 'Kit'}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Kit completo
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium text-primary">
-                          {formatPrice(0)}
-                        </p>
-                      </div>
+              <h2 className="text-xl font-semibold mb-4 text-foreground">Itens da Reserva</h2>
+              <div className="space-y-4">
+                {/* Kits */}
+                {((booking.kits && booking.kits.length > 0) || booking.kit) && (
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">Kits</h3>
+                    <div className="space-y-2">
+                      {booking.kits && booking.kits.length > 0 ? (
+                        booking.kits.map((kitItem, idx) => {
+                          const kitName = 'kit' in kitItem ? kitItem.kit?.name : (kitItem as any).name;
+                          return (
+                            <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                              <p className="font-medium text-foreground">{kitName || 'Kit'}</p>
+                              <p className="text-sm text-primary font-semibold">Incluído no Total</p>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                          <p className="font-medium text-foreground">{booking.kit?.name || 'Kit'}</p>
+                          <p className="text-sm text-primary font-semibold">Incluído no Total</p>
+                        </div>
+                      )}
                     </div>
-                  );
-                })}
+                  </div>
+                )}
+
+                {/* Equipamentos Avulsos */}
+                {booking.equipments && booking.equipments.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">Equipamentos Individuais</h3>
+                    <div className="space-y-2">
+                      {booking.equipments?.map((eq: any, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                          <p className="font-medium text-foreground">{eq.name}</p>
+                          <p className="text-sm text-primary font-semibold">{formatPrice(Number(eq.pricePerHour || 0))}/h</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Serviços */}
+                {booking.services && booking.services.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">Serviços Adicionais</h3>
+                    <div className="space-y-2">
+                      {booking.services?.map((s: any, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                          <p className="font-medium text-foreground">{s.name}</p>
+                          <p className="text-sm text-primary font-semibold">{formatPrice(Number(s.price || 0))}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

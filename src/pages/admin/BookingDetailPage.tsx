@@ -467,18 +467,52 @@ export const BookingDetailPage = () => {
           </div>
 
           <div className="bg-card border border-border rounded-xl p-5">
-            <h3 className="text-lg font-semibold mb-3 text-primary">Itens</h3>
-            {booking.kits && booking.kits.length > 0 ? (
-              <ul className="list-disc pl-5 text-foreground">
-                {booking.kits.map((k: any) => (
-                  <li key={k.id || (k as any).kitId}>{k.name || k.kit?.name || 'Kit'}</li>
-                ))}
-              </ul>
-            ) : booking.kit ? (
-              <div className="text-sm">{booking.kit.name}</div>
-            ) : (
-              <div className="text-muted-foreground text-sm">Sem itens associados.</div>
-            )}
+            <h3 className="text-lg font-semibold mb-3 text-primary">Itens Contratados</h3>
+            <div className="space-y-4">
+              {/* Kits */}
+              {(booking.kits && booking.kits.length > 0) || booking.kit ? (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Kits</h4>
+                  <ul className="list-disc pl-5 text-foreground">
+                    {booking.kits && booking.kits.length > 0 ? (
+                      booking.kits.map((k: any) => (
+                        <li key={k.id || (k as any).kitId}>{k.name || k.kit?.name || 'Kit'}</li>
+                      ))
+                    ) : (
+                      <li>{booking.kit?.name || 'Kit'}</li>
+                    )}
+                  </ul>
+                </div>
+              ) : null}
+
+              {/* Equipamentos Avulsos */}
+              {booking.equipments && booking.equipments.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Equipamentos</h4>
+                  <ul className="list-disc pl-5 text-foreground">
+                    {booking.equipments.map((eq: any) => (
+                      <li key={eq.id}>{eq.name}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Serviços */}
+              {booking.services && booking.services.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Serviços</h4>
+                  <ul className="list-disc pl-5 text-foreground">
+                    {booking.services.map((s: any) => (
+                      <li key={s.id}>{s.name}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {!(booking.kits?.length || booking.kit || booking.equipments?.length || booking.services?.length) && (
+                <div className="text-muted-foreground text-sm">Sem itens associados.</div>
+              )}
+            </div>
           </div>
 
           <div className="bg-card border border-border rounded-xl p-5">

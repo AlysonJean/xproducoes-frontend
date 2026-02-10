@@ -584,7 +584,18 @@ export interface BookingDetails {
   id: string;
   eventDate: string;
   eventEndDate?: string;
-  client?: { name?: string; phone?: string; email?: string };
+  client?: {
+    id?: string;
+    name?: string;
+    phone?: string;
+    email?: string;
+    user?: {
+      id?: string;
+      name?: string;
+      email?: string;
+      avatarUrl?: string;
+    };
+  };
   clientName?: string;
   clientContact?: string;
   clientEmail?: string;
@@ -596,30 +607,63 @@ export interface BookingDetails {
     name?: string;
     kit?: Kit;
   }> | Kit[];
+  equipments?: Equipment[];
+  services?: Service[];
   totalPrice?: number;
   serviceValue?: number;
   paymentProofUrl?: string;
+  eventLocation?: string;
+  location?: string;
+  street?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  addressNumber?: string;
+  addressComplement?: string;
+  requiresStairs?: boolean;
+  isCovered?: boolean;
+  hasParking?: boolean;
+  notes?: string;
+  internalNotes?: string;
+  specialRequests?: string;
+  eventDuration?: number;
+  setupTime?: string;
+  pickupTime?: string;
+  createdAt?: string;
+  updatedAt?: string;
   eventCollaborators?: Array<{
     id?: string;
+    collaboratorId?: string;
     role?: string;
-    totalHours?: number;
-    totalPayment?: number;
+    startTime?: string;
+    endTime?: string;
     hourlyRate?: number;
     fixedRate?: number;
-    collaboratorId?: string;
-    collaborator?: ICollaborator & { avatar?: string; user?: { id?: string; name?: string; avatarUrl?: string } };
-    payments?: CollaboratorPayment[];
+    totalHours?: number;
+    totalPayment?: number;
+    status?: string;
+    notes?: string;
+    collaborator?: {
+      id?: string;
+      name?: string;
+      phone?: string;
+      avatar?: string;
+      user?: {
+        id?: string;
+        name?: string;
+        email?: string;
+        avatarUrl?: string;
+      };
+    };
   }>;
   attachments?: Array<{
-    id?: string;
-    url?: string;
+    id: string;
+    url: string;
     filename?: string;
     mimeType?: string;
     createdAt?: string;
   }>;
-  location?: string;
-  eventLocation?: string;
-  notes?: string;
 }
 
 export interface BookingListItem {

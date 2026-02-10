@@ -56,8 +56,10 @@ export const QuoteRequestPage: React.FC = () => {
     // Construir payload mínimo compatível com backend (juntando data + hora de início)
     const startTimeStr = (data as any).startTime || '00:00';
     const [hh, mm] = startTimeStr.split(':').map((s: string) => Number(s));
-    const eventStart = new Date(data.eventDate);
-    eventStart.setHours(hh || 0, mm || 0, 0, 0);
+    
+    // Parse da data local (YYYY-MM-DD) sem deslocamento UTC
+    const [yyyy, mon, dd] = data.eventDate.split('-').map(Number);
+    const eventStart = new Date(yyyy, mon - 1, dd, hh || 0, mm || 0, 0, 0);
 
     const eventEnd = new Date(eventStart.getTime() + durationNum * 3600 * 1000);
 
@@ -83,15 +85,15 @@ export const QuoteRequestPage: React.FC = () => {
   // enviar também a hora de início separada caso precise (setupTime)
   bookingData.setupTime = eventStart.toISOString();
 
-      if (kit?.id) {
-        bookingData.kitId = kit.id;
-      } else {
-        const equipmentIds = equipments.map((it: any) => it.id || it.equipment?.id).filter(Boolean);
-        const serviceIds = services.map((it: any) => it.id).filter(Boolean);
-        
-        if (equipmentIds.length > 0) bookingData.equipmentIds = equipmentIds;
-        if (serviceIds.length > 0) (bookingData as any).serviceIds = serviceIds;
-      }
+    if (kit?.id) {
+      bookingData.kitId = kit.id;
+    }
+    
+    const equipmentIds = equipments.map((it: any) => it.id || it.equipment?.id).filter(Boolean);
+    const serviceIds = services.map((it: any) => it.id).filter(Boolean);
+    
+    if (equipmentIds.length > 0) bookingData.equipmentIds = equipmentIds;
+    if (serviceIds.length > 0) (bookingData as any).serviceIds = serviceIds;
 
     // Dados do usuário autenticado
     bookingData.userId = user.id;
@@ -120,8 +122,12 @@ export const QuoteRequestPage: React.FC = () => {
         const statePayload = { 
           booking: createdBooking, 
           formData: data,
-          // Passar itens do carrinho explicitamente para garantir que o WhatsApp tenha os nomes corretos
-          cartItems: kit?.id ? [{ name: kit?.name ? `Kit: ${kit.name}` : 'Kit Selecionado' }] : [...equipments, ...services]
+          // Passar todos os itens do carrinho explicitamente para garantir que o WhatsApp tenha os nomes corretos
+          cartItems: [
+            ...(kit?.id ? [{ name: kit?.name ? `Kit: ${kit.name}` : 'Kit Selecionado' }] : []),
+            ...equipments.map((it: any) => ({ name: it.name || it.equipment?.name })),
+            ...services.map((it: any) => ({ name: it.name }))
+          ]
         };
 
       if (createdBooking?.id) {
