@@ -1,14 +1,48 @@
 // Caminho: frontend/src/hooks/useRecommendations.ts
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { recommendationAPI } from '../services/api';
 import { RecommendationItem, RecommendationType } from '../components/ui/RecommendationSection';
 import { asArray } from '../utils/normalize';
 
+interface APIResponse {
+    data?: unknown[];
+}
+
+interface RawRecommendationItem {
+    id?: string;
+    _id?: string;
+    name?: string;
+    title?: string;
+    description?: string;
+    shortDescription?: string;
+    imageUrl?: string;
+    image?: string;
+    thumbnailUrl?: string;
+    price?: number;
+    dailyPrice?: number;
+    rating?: number;
+    averageRating?: number;
+    reviewCount?: number;
+    totalReviews?: number;
+    isPopular?: boolean;
+    popular?: boolean;
+    isNew?: boolean;
+    new?: boolean;
+    isFavorite?: boolean;
+    favorite?: boolean;
+    category?: { name?: string };
+    categoryName?: string;
+    type?: string;
+    equipments?: unknown[];
+    discount?: number;
+    discountPercentage?: number;
+}
+
 interface UseRecommendationsOptions {
     type: RecommendationType;
     limit?: number;
-    itemId?: string; // Para recomendações 'similar' ou 'frequently-bought'
+    itemId?: string;
     itemType?: 'equipment' | 'kit' | 'service';
     category?: string;
     minPrice?: number;
@@ -37,7 +71,7 @@ export const useRecommendations = ({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchRecommendations = async () => {
+    const fetchRecommendations = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
@@ -81,12 +115,12 @@ export const useRecommendations = ({
             }
 
             // Normalizar resposta
-            const data = asArray((response as any)?.data || response);
+            const data = asArray((response as APIResponse)?.data || response);
 
             // Mapear para o formato esperado
-            const mappedData: RecommendationItem[] = data.map((item: any) => ({
-                id: item.id || item._id,
-                name: item.name || item.title,
+            const mappedData: RecommendationItem[] = (data as RawRecommendationItem[]).map((item) => ({
+                id: item.id || item._id || Math.random().toString(36).substr(2, 9),
+                name: item.name || item.title || 'Sem título',
                 description: item.description || item.shortDescription,
                 imageUrl: item.imageUrl || item.image || item.thumbnailUrl,
                 price: item.price || item.dailyPrice || 0,
@@ -96,7 +130,7 @@ export const useRecommendations = ({
                 isNew: item.isNew || item.new || false,
                 isFavorite: item.isFavorite || item.favorite || false,
                 category: item.category?.name || item.categoryName,
-                type: item.type || (item.equipments ? 'kit' : 'equipment'),
+                type: (item.type as any) || (item.equipments ? 'kit' : 'equipment'),
                 discount: item.discount || item.discountPercentage || 0
             }));
 
@@ -110,13 +144,13 @@ export const useRecommendations = ({
         } finally {
             setLoading(false);
         }
-    };
+    }, [type, limit, itemId, itemType, category, minPrice, maxPrice]);
 
     useEffect(() => {
         if (autoFetch) {
             fetchRecommendations();
         }
-    }, [type, limit, itemId, itemType, category, minPrice, maxPrice, autoFetch]);
+    }, [autoFetch, fetchRecommendations]);
 
     return {
         recommendations,

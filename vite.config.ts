@@ -29,7 +29,9 @@ export default defineConfig({
     }),
     // Resolve paths defined in tsconfig.json (ensures aliases like @/services resolve in CI)
     tsconfigPaths(),
-    react(),
+    react({
+      jsxRuntime: 'automatic',
+    }),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'xproducoes-logo.svg'],

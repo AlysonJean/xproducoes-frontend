@@ -3,13 +3,13 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../services/api';
-import { BrandLoader } from '@/components/ui/BrandLoader';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { StatsCard, SimpleCard } from '../../components/ui/Cards';
 import { QuickActionCard } from '../../components/ui/QuickActionCard';
 import type { AdminDashboardStats, Activity } from '../../types/domains/dashboard';
 import type { BookingListItem } from '../../types/types';
+import { Skeleton, SkeletonCard, SkeletonList } from '../../components/ui/Skeleton';
 
 // Função utilitária para formatar valores monetários
 const formatCurrency = (value: number) => {
@@ -32,7 +32,8 @@ const formatRelativeTime = (date: Date) => {
 
 // Ícones otimizados para cards
 const UsersIcon = () => (
-  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} role="img" aria-hidden="true">
+    <title>Ícone de Usuários</title>
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -42,7 +43,8 @@ const UsersIcon = () => (
 );
 
 const CalendarIcon = () => (
-  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} role="img" aria-hidden="true">
+    <title>Ícone de Calendário</title>
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -52,7 +54,8 @@ const CalendarIcon = () => (
 );
 
 const CurrencyIcon = () => (
-  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} role="img" aria-hidden="true">
+    <title>Ícone de Receita</title>
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -62,7 +65,8 @@ const CurrencyIcon = () => (
 );
 
 const CameraIcon = () => (
-  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} role="img" aria-hidden="true">
+    <title>Ícone de Equipamento</title>
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -73,13 +77,15 @@ const CameraIcon = () => (
 );
 
 const PlusIcon = () => (
-  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} role="img" aria-hidden="true">
+    <title>Ícone Mais</title>
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
   </svg>
 );
 
 const AnalyticsIcon = () => (
-  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} role="img" aria-hidden="true">
+    <title>Ícone de Análise</title>
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -89,7 +95,8 @@ const AnalyticsIcon = () => (
 );
 
 const EquipmentIcon = () => (
-  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} role="img" aria-hidden="true">
+    <title>Ícone de Ferramentas</title>
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -99,15 +106,15 @@ const EquipmentIcon = () => (
   </svg>
 );
 
-// `SettingsIcon` removed — não era utilizado e causava erro TS6133
-
 // Componente de Atividade Recente
-const RecentActivity = ({ activities }: { activities: Activity[] }) => {
+const RecentActivity = ({ activities, loading }: { activities: Activity[], loading: boolean }) => {
   const navigate = useNavigate();
   return (
   <SimpleCard title="Atividade Recente">
       <div className="space-y-3">
-        {activities.length > 0 ? (
+        {loading ? (
+          <SkeletonList items={4} />
+        ) : activities.length > 0 ? (
           activities.slice(0, 4).map((activity, index) => {
             const isClickable = activity.type === 'booking' && activity.id;
             const goTo = () => {
@@ -118,7 +125,13 @@ const RecentActivity = ({ activities }: { activities: Activity[] }) => {
             return (
               <div
                 key={activity.id || index}
-                {...(isClickable ? { role: 'button', tabIndex: 0, onClick: goTo, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goTo(); } } } : {})}
+                {...(isClickable ? { 
+                  role: 'button', 
+                  tabIndex: 0, 
+                  onClick: goTo, 
+                  'aria-label': `Ver detalhes da reserva: ${activity.title || activity.description}`,
+                  onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goTo(); } } 
+                } : {})}
                 className={`flex items-start space-x-3 p-2 rounded-lg transition-colors ${
                   isClickable ? 'hover:bg-muted/50 cursor-pointer' : 'hover:bg-muted/30'
                 }`}
@@ -181,80 +194,88 @@ const RecentActivity = ({ activities }: { activities: Activity[] }) => {
 };
 
 // Componente de Performance
-const PerformanceOverview = ({ stats }: { stats: AdminDashboardStats | null }) => {
+const PerformanceOverview = ({ stats, loading }: { stats: AdminDashboardStats | null, loading: boolean }) => {
   return (
     <SimpleCard title="Performance Overview">
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">
-            Taxa de Confirmação
-          </span>
-          <div className="flex items-center space-x-3">
-            <div className="w-24">
-              <progress
-                className="progress progress-green"
-                value={Math.min(
-                  (stats?.confirmedBookings || 0) / Math.max(stats?.totalBookings || 1, 1) * 100,
-                  100
-                )}
-                max={100}
-                aria-label="Taxa de confirmação"
-              />
-            </div>
-            <span className="text-sm font-bold text-foreground min-w-[3rem] text-right">
-              {Math.round(
-                ((stats?.confirmedBookings || 0) / Math.max(stats?.totalBookings || 1, 1)) * 100
-              )}%
-            </span>
+        {loading ? (
+          <div className="space-y-6">
+            <div className="space-y-2"><Skeleton width="40%" height={14} /><Skeleton width="100%" height={8} /></div>
+            <div className="space-y-2"><Skeleton width="40%" height={14} /><Skeleton width="100%" height={8} /></div>
+            <div className="space-y-2"><Skeleton width="40%" height={14} /><Skeleton width="100%" height={8} /></div>
           </div>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">
-            Taxa de Conclusão
-          </span>
-          <div className="flex items-center space-x-3">
-            <div className="w-24">
-              <progress
-                className="progress progress-blue"
-                value={Math.min(
-                  (stats?.completedBookings || 0) / Math.max(stats?.totalBookings || 1, 1) * 100,
-                  100
-                )}
-                max={100}
-                aria-label="Taxa de conclusão"
-              />
+        ) : (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">
+                Taxa de Confirmação
+              </span>
+              <div className="flex items-center space-x-3">
+                <div className="w-24">
+                  <progress
+                    className="progress progress-green"
+                    value={Math.min(
+                      (stats?.confirmedBookings || 0) / Math.max(stats?.totalBookings || 1, 1) * 100,
+                      100
+                    )}
+                    max={100}
+                    aria-label="Taxa de confirmação"
+                  />
+                </div>
+                <span className="text-sm font-bold text-foreground min-w-[3rem] text-right">
+                  {Math.round(
+                    ((stats?.confirmedBookings || 0) / Math.max(stats?.totalBookings || 1, 1)) * 100
+                  )}%
+                </span>
+              </div>
             </div>
-            <span className="text-sm font-bold text-foreground min-w-[3rem] text-right">
-              {Math.round(
-                ((stats?.completedBookings || 0) / Math.max(stats?.totalBookings || 1, 1)) * 100
-              )}%
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">
-            Colaboradores Ativos
-          </span>
-          <div className="flex items-center space-x-3">
-            <div className="w-24">
-              <progress
-                className="progress progress-purple"
-                value={Math.min((stats?.activeCollaborators || 0) * 10, 100)}
-                max={100}
-                aria-label="Colaboradores ativos"
-              />
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">
+                Taxa de Conclusão
+              </span>
+              <div className="flex items-center space-x-3">
+                <div className="w-24">
+                  <progress
+                    className="progress progress-blue"
+                    value={Math.min(
+                      (stats?.completedBookings || 0) / Math.max(stats?.totalBookings || 1, 1) * 100,
+                      100
+                    )}
+                    max={100}
+                    aria-label="Taxa de conclusão"
+                  />
+                </div>
+                <span className="text-sm font-bold text-foreground min-w-[3rem] text-right">
+                  {Math.round(
+                    ((stats?.completedBookings || 0) / Math.max(stats?.totalBookings || 1, 1)) * 100
+                  )}%
+                </span>
+              </div>
             </div>
-            <span className="text-sm font-bold text-foreground min-w-[3rem] text-right">
-              {stats?.activeCollaborators || 0}
-            </span>
-          </div>
-        </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">
+                Eficiência da Equipe
+              </span>
+              <div className="flex items-center space-x-3">
+                <div className="w-24">
+                  <progress
+                    className="progress progress-signal"
+                    value={Math.min((stats?.activeCollaborators || 0) * 10, 100)}
+                    max={100}
+                    aria-label="Eficiência da equipe"
+                  />
+                </div>
+                <span className="text-sm font-bold text-foreground min-w-[3rem] text-right">
+                  {stats?.activeCollaborators || 0}
+                </span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
   </SimpleCard>
   );
 };
-
-// Bloco de colaboradores com avaliações removido por política: colaboradores não têm avaliações
 
 export const AdminDashboardPage = () => {
   const { user } = useAuth();
@@ -267,19 +288,35 @@ export const AdminDashboardPage = () => {
   const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
   const [nextBookings, setNextBookings] = useState<BookingListItem[]>([]);
   const [loadingNext, setLoadingNext] = useState<boolean>(true);
+  const [topEquipment, setTopEquipment] = useState<{ name: string; bookings: number }[]>([]);
+  const [topCollaborators, setTopCollaborators] = useState<{
+    collaborator: { id: string; name: string; role: string };
+    rating: number;
+    eventCount: number;
+  }[]>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-  const response = await apiFetch('/dashboard/stats') as AdminDashboardStats;
-        setStats(response);
-        // Buscar atividades recentes
-  const acts = await apiFetch('/dashboard/recent-activities') as Activity[];
-        setActivities(acts);
-        // Buscar reservas para próximos eventos
+        const [statsRes, actsRes, liveRes, notifsRes, equipRes, collabRes] = await Promise.all([
+          apiFetch('/dashboard/stats'),
+          apiFetch('/dashboard/recent-activities'),
+          apiFetch('/dashboard/live-stats'),
+          apiFetch('/dashboard/notifications'),
+          apiFetch('/dashboard/top-equipment'),
+          apiFetch('/dashboard/top-collaborators')
+        ]);
+
+        setStats(statsRes as AdminDashboardStats);
+        setActivities(actsRes as Activity[]);
+        setLiveStats(liveRes as { todayBookings: number; todayRevenue: number; activeUsers: number });
+        setUnreadNotifications((notifsRes as any[] || []).filter(n => !n.read).length);
+        setTopEquipment(equipRes as { name: string; bookings: number }[] || []);
+        setTopCollaborators(collabRes as any[] || []);
+
+        // Buscar reservas para próximos eventos (mantido separado por ser opcional/pesado)
         try {
-          setLoadingNext(true);
           const resp: any = await apiFetch('/admin/bookings');
           const all = Array.isArray(resp) ? resp : Array.isArray(resp?.data) ? resp.data : [];
           const now = new Date();
@@ -292,21 +329,11 @@ export const AdminDashboardPage = () => {
             .sort((a: BookingListItem, b: BookingListItem) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime())
             .slice(0, 5);
           setNextBookings(upcoming);
-        } catch (e) {
+        } catch {
           setNextBookings([]);
         } finally {
           setLoadingNext(false);
         }
-        // Live stats do dia
-        try {
-          const ls = await apiFetch('/dashboard/live-stats') as { todayBookings: number; todayRevenue: number; activeUsers: number };
-          setLiveStats(ls);
-        } catch {}
-        // Notificações (para possível badge futuro)
-        try {
-          const notifs = await apiFetch('/dashboard/notifications') as Array<{ id: string; read?: boolean }>;
-          setUnreadNotifications((notifs || []).filter(n => !n.read).length);
-        } catch {}
       } catch (error) {
         console.error('Erro ao carregar dados do dashboard:', error);
         addNotification({
@@ -319,29 +346,19 @@ export const AdminDashboardPage = () => {
       }
     };
     fetchDashboardData();
-  }, []);
-
-  if (loading) {
-    return (
-      <AdminLayout title="Dashboard Administrativo" breadcrumbs={[{ name: 'Admin' }, { name: 'Dashboard' }]}>
-        <div className="flex items-center justify-center min-h-96">
-          <BrandLoader size={120} label="Carregando dashboard..." />
-        </div>
-      </AdminLayout>
-    );
-  }
+  }, [addNotification, navigate]);
 
   return (
     <AdminLayout title="Dashboard Administrativo" breadcrumbs={[{ name: 'Admin' }, { name: 'Dashboard' }]}>
       <div className="space-y-8">
         {/* Header de boas-vindas */}
-    <div className="bg-gradient-to-r from-primary to-secondary rounded-xl text-white p-6">
+        <div className="bg-gradient-to-r from-primary to-secondary rounded-xl text-white p-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold mb-2">
                 Bem-vindo de volta, {user?.name}!
               </h1>
-      <p className="text-white/80">Aqui está um resumo das suas atividades recentes</p>
+              <p className="text-white/80">Aqui está um resumo das suas atividades recentes</p>
             </div>
             <div className="hidden md:flex items-center space-x-4">
               <div className="flex items-center space-x-2 text-sm">
@@ -352,211 +369,231 @@ export const AdminDashboardPage = () => {
           </div>
         </div>
 
-        {/* Métricas principais */}
+        {/* Métricas principais / Skeletons */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatsCard
-            title="Total de Clientes"
-            value={stats?.totalClients || 0}
-            icon={<UsersIcon />}
-            description="Clientes cadastrados"
-            onClick={() => navigate('/admin/clientes')}
-          />
-          <StatsCard
-            title="Reservas Ativas"
-            value={stats?.confirmedBookings || 0}
-            icon={<CalendarIcon />}
-            description="Reservas confirmadas"
-            onClick={() => navigate('/admin/reservas')}
-            {...(typeof stats?.bookingsGrowth === 'number'
-              ? {
-                  trend: {
-                    value: stats.bookingsGrowth,
-                    type:
-                      stats.bookingsGrowth > 0
-                        ? 'positive'
-                        : stats.bookingsGrowth < 0
-                        ? 'negative'
-                        : 'neutral',
-                  },
-                }
-              : {})}
-          />
-          <StatsCard
-            title="Receita Total"
-            value={formatCurrency(stats?.totalRevenue || 0)}
-            icon={<CurrencyIcon />}
-            description="Receita acumulada"
-            {...(typeof stats?.revenueGrowth === 'number'
-              ? {
-                  trend: {
-                    value: stats.revenueGrowth,
-                    type:
-                      stats.revenueGrowth > 0
-                        ? 'positive'
-                        : stats.revenueGrowth < 0
-                        ? 'negative'
-                        : 'neutral',
-                  },
-                }
-              : {})}
-          />
-          <StatsCard
-            title="Equipamentos"
-            value={stats?.totalEquipments || 0}
-            icon={<CameraIcon />}
-            description="Equipamentos disponíveis"
-            onClick={() => navigate('/admin/equipamentos')}
-          />
+          {loading ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : (
+            <>
+              <StatsCard
+                title="Total de Clientes"
+                value={stats?.totalClients || 0}
+                icon={<UsersIcon />}
+                description="Clientes cadastrados"
+                onClick={() => navigate('/admin/clientes')}
+              />
+              <StatsCard
+                title="Reservas Ativas"
+                value={stats?.confirmedBookings || 0}
+                icon={<CalendarIcon />}
+                description="Reservas confirmadas"
+                onClick={() => navigate('/admin/reservas')}
+                {...(typeof stats?.bookingsGrowth === 'number'
+                  ? {
+                      trend: {
+                        value: stats.bookingsGrowth,
+                        type:
+                          stats.bookingsGrowth > 0
+                            ? 'positive'
+                            : stats.bookingsGrowth < 0
+                            ? 'negative'
+                            : 'neutral',
+                      },
+                    }
+                  : {})}
+              />
+              <StatsCard
+                title="Receita Total"
+                value={formatCurrency(stats?.totalRevenue || 0)}
+                icon={<CurrencyIcon />}
+                description="Receita acumulada"
+                {...(typeof stats?.revenueGrowth === 'number'
+                  ? {
+                      trend: {
+                        value: stats.revenueGrowth,
+                        type:
+                          stats.revenueGrowth > 0
+                            ? 'positive'
+                            : stats.revenueGrowth < 0
+                            ? 'negative'
+                            : 'neutral',
+                      },
+                    }
+                  : {})}
+              />
+              <StatsCard
+                title="Equipamentos"
+                value={stats?.totalEquipments || 0}
+                icon={<CameraIcon />}
+                description="Equipamentos disponíveis"
+                onClick={() => navigate('/admin/equipamentos')}
+              />
+            </>
+          )}
         </div>
 
         {/* Gráfico de receita mensal */}
         <SimpleCard title="Receita Mensal">
-          <div className="mt-2">
-            <ReceitaMensalChart year={new Date().getFullYear()} />
-          </div>
+          {loading ? (
+            <div className="h-64 flex items-end space-x-2 py-4 px-2">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="flex-1 bg-muted/20 animate-pulse rounded-t-md" style={{ height: `${Math.random() * 100}%` }}></div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-2">
+              <ReceitaMensalChart year={new Date().getFullYear()} />
+            </div>
+          )}
         </SimpleCard>
 
         {/* Grid de conteúdo secundário */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Atividade Recente */}
           <div className="lg:col-span-1">
-          <RecentActivity activities={activities} />
+            <RecentActivity activities={activities} loading={loading} />
           </div>
 
           {/* Performance Overview & Integrations */}
           <div className="lg:col-span-1 space-y-6">
-            <PerformanceOverview stats={stats} />
+            <PerformanceOverview stats={stats} loading={loading} />
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <SimpleCard title="Top Equipamentos">
+                <div className="space-y-4">
+                  {loading ? (
+                    <SkeletonList items={3} />
+                  ) : topEquipment.length > 0 ? (
+                    topEquipment.map((item, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <span className="text-sm font-medium truncate pr-2" title={item.name}>{item.name}</span>
+                        <span className="text-xs font-bold px-2 py-1 bg-primary/10 text-primary rounded-full">
+                          {item.bookings} reservas
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground text-center py-4">Sem dados</p>
+                  )}
+                </div>
+              </SimpleCard>
+
+              <SimpleCard title="Top Colaboradores">
+                <div className="space-y-4">
+                  {loading ? (
+                    <SkeletonList items={3} />
+                  ) : topCollaborators.length > 0 ? (
+                    topCollaborators.map((item, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{item.collaborator.name}</p>
+                          <p className="text-[10px] text-muted-foreground">{item.collaborator.role}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-bold text-accent">★ {item.rating.toFixed(1)}</p>
+                          <p className="text-[10px] text-muted-foreground">{item.eventCount} ev.</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground text-center py-4">Sem dados</p>
+                  )}
+                </div>
+              </SimpleCard>
+            </div>
           </div>
         </div>
 
-        {/* Ações rápidas */}
-        <SimpleCard title="Ações Rápidas" description="Acesso rápido às principais funcionalidades do sistema">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-            <QuickActionCard
-              title="Clientes"
-              description="Gerenciar clientes cadastrados"
-              icon={<UsersIcon />}
-              onClick={() => navigate('/admin/clientes')}
-              color="primary"
-            />
-
-            <QuickActionCard
-              title="Reservas"
-              description="Gerenciar reservas e agendamentos"
-              icon={<CalendarIcon />}
-              onClick={() => navigate('/admin/reservas')}
-              color="info"
-              badge={
-                ((stats?.pendingBookings || 0) > 0 || (liveStats?.todayBookings || 0) > 0)
-                  ? {
-                      content: (stats?.pendingBookings || 0) > 0 ? stats?.pendingBookings || 0 : liveStats?.todayBookings || 0,
-                      variant: 'info'
-                    }
-                  : undefined
-              }
-              hasNotification={unreadNotifications > 0}
-            />
-
-            <QuickActionCard
-              title="Equipamentos"
-              description="Catálogo de equipamentos disponíveis"
-              icon={<EquipmentIcon />}
-              onClick={() => navigate('/admin/equipamentos')}
-              color="success"
-            />
-
-            <QuickActionCard
-              title="Monitoramento"
-              description="Monitoramento Enterprise em tempo real"
-              icon={<AnalyticsIcon />}
-              onClick={() => navigate('/admin/monitoramento')}
-              color="warning"
-              badge={
-                (typeof liveStats?.todayRevenue === 'number' && liveStats.todayRevenue > 0)
-                  ? {
-                      content: formatCurrency(liveStats.todayRevenue),
-                      variant: 'warning'
-                    }
-                  : undefined
-              }
-            />
-
-            <QuickActionCard
-              title="Colaboradores"
-              description="Equipe e parceiros cadastrados"
-              icon={<UsersIcon />}
-              onClick={() => navigate('/admin/colaboradores')}
-              color="secondary"
-            />
-
-            <QuickActionCard
-              title="Nova Reserva"
-              description="Criar novo agendamento"
-              icon={<PlusIcon />}
-              onClick={() => navigate('/admin/reservas/nova')}
-              color="primary"
-            />
-
-            <QuickActionCard
-              title="Calendário"
-              description="Visualizar agenda de reservas"
-              icon={<CalendarIcon />}
-              onClick={() => navigate('/admin/reservas/calendario')}
-              color="info"
-            />
-          </div>
+        {/* Quick Actions (Amostra / Placeholders reais) */}
+        <SimpleCard title="Ações Rápidas">
+           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+             <QuickActionCard
+               title="Nova Reserva"
+               description="Criar novo agendamento rápida"
+               icon={<PlusIcon />}
+               onClick={() => navigate('/admin/reservas/nova')}
+               color="primary"
+             />
+             <QuickActionCard
+               title="Relatórios"
+               description="Ver estatísticas detalhadas"
+               icon={<AnalyticsIcon />}
+               onClick={() => navigate('/admin/relatorios')}
+               color="secondary"
+               badge={unreadNotifications > 0 ? { content: unreadNotifications, variant: 'destructive' } : undefined}
+             />
+             <QuickActionCard
+               title="Gerenciar Estoque"
+               description="Controlar equipamentos e kits"
+               icon={<EquipmentIcon />}
+               onClick={() => navigate('/admin/equipamentos')}
+               color="info"
+             />
+             <QuickActionCard
+               title="Monitorar Live"
+               description={`${liveStats?.activeUsers || 0} usuários online agora`}
+               icon={
+                 <div className="relative">
+                   <AnalyticsIcon />
+                   {liveStats && liveStats.activeUsers > 0 && (
+                     <div className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full border-2 border-card"></div>
+                   )}
+                 </div>
+               }
+               onClick={() => navigate('/admin/monitoramento')}
+               color="destructive"
+             />
+           </div>
         </SimpleCard>
 
-        {/* Próximos eventos */}
-        <SimpleCard
-          title="Próximos eventos"
-          headerRight={
-            <button
-              onClick={() => navigate('/admin/reservas/calendario')}
-              className="text-sm text-primary hover:underline"
-            >
-              Ver calendário
-            </button>
-          }
-        >
+        {/* Próximas Reservas */}
+        <SimpleCard title="Próximas Reservas">
           {loadingNext ? (
-            <div className="flex items-center justify-center py-10"><BrandLoader size={80} /></div>
-          ) : nextBookings.length === 0 ? (
-            <div className="text-sm text-muted-foreground py-6">Nenhum evento agendado para os próximos dias.</div>
+            <SkeletonList items={3} />
+          ) : nextBookings.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-muted-foreground border-b border-border/40">
+                    <th className="pb-3 font-medium">Cliente</th>
+                    <th className="pb-3 font-medium">Data</th>
+                    <th className="pb-3 font-medium">Status</th>
+                    <th className="pb-3 font-medium text-right">Ação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {nextBookings.map((booking: BookingListItem) => (
+                    <tr key={booking.id} className="group hover:bg-muted/30 transition-colors">
+                      <td className="py-4 font-medium">{booking.client?.user?.name || '---'}</td>
+                      <td className="py-4">{new Date(booking.eventDate).toLocaleDateString()}</td>
+                      <td className="py-4">
+                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                          booking.status === 'CONFIRMED' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
+                        }`}>
+                          {booking.status}
+                        </span>
+                      </td>
+                      <td className="py-4 text-right">
+                        <button
+                          onClick={() => navigate(`/admin/reservas/${booking.id}`)}
+                          className="text-primary opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-2 rounded-md hover:bg-primary/10"
+                          aria-label={`Ver detalhes da reserva de ${booking.client?.user?.name || '---'}`}
+                        >
+                          Ver Detalhes
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
-            <ul className="divide-y divide-border">
-              {nextBookings.map((b) => {
-                const d = new Date(b.eventDate);
-                const dateStr = !isNaN(d.getTime())
-                  ? d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
-                  : 'Data inválida';
-                const statusClass = b.status === 'CONFIRMED'
-                  ? 'bg-success/10 text-success'
-                  : b.status === 'PENDING'
-                  ? 'bg-warning/10 text-warning'
-                  : 'bg-info/10 text-info';
-                return (
-                  <li key={b.id} className="py-3">
-                    <button
-                      onClick={() => navigate(`/admin/reservas/${b.id}`)}
-                      className="w-full text-left flex items-center justify-between gap-4 hover:bg-muted/40 p-2 rounded-lg transition-colors"
-                    >
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-foreground truncate">
-                          {b.eventTitle || b.client?.user?.name || 'Reserva'}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {dateStr} • ID: {b.id.slice(0, 8)}...
-                        </div>
-                      </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass}`}>
-                        {b.status}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            <p className="text-muted-foreground text-center py-8">Nenhuma reserva futura encontrada</p>
           )}
         </SimpleCard>
       </div>
