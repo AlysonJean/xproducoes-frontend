@@ -16,8 +16,8 @@ export const BookingSuccessPage = () => {
     try {
       const items = cartItems || (booking?.kit ? [booking.kit] : booking?.equipments || []);
       const userInfo = {
-        name: booking?.client?.name || formData?.name || '-',
-        phone: (booking?.client && (booking.client as any).phone) || formData?.phone || '-',
+        name: booking?.clientName || booking?.client?.user?.name || formData?.name || '-',
+        phone: (booking?.client && (booking.client as any).phone) || booking?.clientContact || formData?.phone || '-',
       };
       const eventDate = booking?.eventDate ? new Date(booking.eventDate) : (formData?.eventDate ? new Date(formData.eventDate) : new Date());
       const address = {

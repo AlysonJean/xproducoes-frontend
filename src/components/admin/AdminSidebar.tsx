@@ -259,17 +259,6 @@ const menuGroups: MenuGroup[] = [
       },
     ],
   },
-  {
-    name: 'Sistema',
-    items: [
-      {
-        name: 'Logo e Marca',
-        href: '/admin/configuracoes/logo',
-        icon: SettingsIcon,
-        description: 'Identidade visual',
-      },
-    ],
-  },
 ];
 
 export const AdminSidebar: React.FC = () => {
