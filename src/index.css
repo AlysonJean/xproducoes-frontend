@@ -104,12 +104,12 @@
     background-color: hsl(var(--primary));
     border-radius: 9999px;
   }
-  .progress-green::-webkit-progress-value { background-color: #22c55e; }
-  .progress-blue::-webkit-progress-value { background-color: #3b82f6; }
-  .progress-purple::-webkit-progress-value { background-color: #9333ea; }
-  .progress-green::-moz-progress-bar { background-color: #22c55e; }
-  .progress-blue::-moz-progress-bar { background-color: #3b82f6; }
-  .progress-purple::-moz-progress-bar { background-color: #9333ea; }
+  .progress-green::-webkit-progress-value { background-color: hsl(var(--success)); }
+  .progress-blue::-webkit-progress-value { background-color: hsl(var(--info)); }
+  .progress-signal::-webkit-progress-value { background-color: hsl(var(--accent)); }
+  .progress-green::-moz-progress-bar { background-color: hsl(var(--success)); }
+  .progress-blue::-moz-progress-bar { background-color: hsl(var(--info)); }
+  .progress-signal::-moz-progress-bar { background-color: hsl(var(--accent)); }
   .progress-primary::-webkit-progress-value { background-color: hsl(var(--primary)); }
   .progress-success::-webkit-progress-value { background-color: hsl(var(--success)); }
   .progress-warning::-webkit-progress-value { background-color: hsl(var(--warning)); }

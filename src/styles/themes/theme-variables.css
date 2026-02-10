@@ -109,62 +109,62 @@
   --chart-5: 199 89% 48%;           /* #0ea5e9 - Sky blue */
 }
 
-/* Dark Theme Colors - Elegante e Tecnológico */
+  /* Dark Theme Colors - Elegante e Tecnológico (Sleek Precision) */
 .dark {
-  /* Primary brand colors - Azul-água elegante para tecnologia */
-  --primary: 210 10% 78%;           /* ~#c9d1d9 - Prata fria e legível no dark */
-  --primary-foreground: 220 25% 8%; /* #0d1117 - Grafite escuro para contraste */
+  /* Primary brand colors - Prata frio tecnológico */
+  --primary: 210 20% 85%;           /* #d1d9e0 - Prata clara e nítida */
+  --primary-foreground: 220 30% 4%;  /* #05070a - Quase preto para contraste máximo */
 
-  /* Secondary colors - Cinza grafite sofisticado */
-  --secondary: 220 25% 12%;         /* #181c25 - Grafite profundo */
-  --secondary-foreground: 210 20% 85%; /* #d1d9e0 - Prata clara */
+  /* Secondary colors - Grafite Profundo */
+  --secondary: 220 25% 10%;         /* #12161f - Grafite escuro */
+  --secondary-foreground: 210 10% 90%; /* #e6e9ed - Prata quase branca */
 
-  /* Muted colors - Tons neutros elegantes */
-  --muted: 220 20% 18%;             /* #252a35 - Cinza escuro elegante */
-  --muted-foreground: 210 15% 65%;  /* #a1aab8 - Prata suave */
+  /* Muted colors */
+  --muted: 220 20% 12%;             /* #181c25 - Cinza neutro sóbrio */
+  --muted-foreground: 215 15% 60%;  /* #94a3b8 - Cinza azulado suave */
 
-  /* Accent colors - Prata fria e minimalista */
-  --accent: 220 20% 16%;            /* #20252c - Grafite/azul petróleo sutil */
-  --accent-foreground: 210 15% 82%; /* ~#d2d9e2 - Prata clara e elegante */
+  /* Accent colors - Signal Orange (Alerta/Destaque tecnológico) */
+  --accent: 25 95% 53%;            /* #ff7849 - Laranja vibrante (Stripe-like) */
+  --accent-foreground: 0 0% 100%;   /* Branco */
 
-  /* Destructive colors - Vermelho elegante */
-  --destructive: 0 75% 45%;         /* #cc2936 - Vermelho sofisticado */
-  --destructive-foreground: 0 0% 98%; /* #fafafa - Branco quase puro */
+  /* Destructive colors */
+  --destructive: 0 84% 60%;         /* #ef4444 */
+  --destructive-foreground: 0 0% 100%;
 
-  /* Success colors - Prata tecnológico (sem verde) */
-  --success: 210 8% 72%;            /* Prata médio para estado de sucesso no dark */
-  --success-foreground: 220 25% 8%; /* #0d1117 - Grafite escuro para contraste */
+  /* Success colors - Emerald Tecnológico */
+  --success: 142 70% 50%;           /* Verde esmeralda nítido */
+  --success-foreground: 220 30% 4%;
 
-  /* Warning colors - Dourado elegante */
-  --warning: 48 95% 65%;            /* #ffd23f - Dourado vibrante */
-  --warning-foreground: 220 25% 8%; /* #0d1117 - Grafite escuro */
+  /* Warning colors */
+  --warning: 45 93% 47%;            /* Ouro tecnológico */
+  --warning-foreground: 220 30% 4%;
 
-  /* Info colors - Azul tecnológico suavizado */
-  --info: 210 90% 62%;              /* Azul frio menos vibrante */
-  --info-foreground: 220 25% 8%;    /* #0d1117 - Grafite escuro */
+  /* Info colors */
+  --info: 199 89% 48%;              /* Sky Blue */
+  --info-foreground: 0 0% 100%;
 
-  /* Border colors - Bordas sutis em grafite */
-  --border: 220 20% 20%;            /* #2a3038 - Cinza grafite para bordas */
-  --input: 220 20% 18%;             /* #252a35 - Fundo input elegante */
-  --ring: 210 10% 72%;              /* Ring prata um pouco menos intenso para elegância */
+  /* Border colors - Linhas finas e nítidas */
+  --border: 220 20% 16%;            /* #2a303c - Grafite nítido */
+  --input: 220 20% 14%;             /* Fundo de input sóbrio */
+  --ring: 25 95% 53%;               /* Ring usa Signal Orange */
 
-  /* Background colors - Azul petróleo */
-  --background: 220 30% 6%;         /* #0a0d14 - Azul petróleo muito escuro */
-  --foreground: 0 0% 98%;           /* #fafafa - Branco quase puro */
-  --primary-rgb: 201, 209, 217;     /* Prata tecnológico */
+  /* Background colors - Deep Space */
+  --background: 222 47% 4%;         /* #020617 - O preto mais profundo */
+  --foreground: 210 20% 98%;        /* #f8fafc - Branco nítido */
+  --primary-rgb: 209, 217, 224;
 
-  /* Card colors - Cards em grafite elegante */
-  --card: 220 25% 8%;               /* #0d1117 - Grafite escuro */
-  --card-foreground: 0 0% 98%;      /* #fafafa - Branco quase puro */
+  /* Card colors - Glassmorphism Sutil com bordas sólidas */
+  --card: 222 47% 6%;               /* Um tom acima do background */
+  --card-foreground: 210 20% 98%;
 
   /* Popover colors */
-  --popover: 220 25% 8%;            /* #0d1117 - Grafite escuro */
-  --popover-foreground: 0 0% 98%;   /* #fafafa - Branco quase puro */
+  --popover: 222 47% 7%;
+  --popover-foreground: 210 20% 98%;
 
-  /* Chart colors - Pratas frios, azuis e grafites (sem dourado) */
-  --chart-1: 210 10% 78%;           /* Prata principal */
-  --chart-2: 220 12% 62%;           /* Prata mais escura */
-  --chart-3: 220 20% 45%;           /* Grafite médio */
-  --chart-4: 200 70% 60%;           /* Azul tecnológico mais suave */
-  --chart-5: 220 25% 30%;           /* Grafite profundo */
+  /* Chart colors - Paleta Monocromática Prata + Signal Orange */
+  --chart-1: 210 20% 85%;           /* Prata Principal */
+  --chart-2: 25 95% 53%;            /* Signal Orange */
+  --chart-3: 215 15% 60%;           /* Cinza Muted */
+  --chart-4: 210 10% 40%;           /* Carvão */
+  --chart-5: 220 25% 20%;           /* Grafite Profundo */
 }

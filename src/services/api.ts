@@ -57,76 +57,33 @@ api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-// ✅ Circuit breaker para evitar loops infinitos de refresh
-let refreshAttempts = 0;
-const MAX_REFRESH_ATTEMPTS = 3;
-const REFRESH_RESET_TIMEOUT = 60000; // 1 minuto
-let lastRefreshAttempt = 0;
+import { authService } from './auth.service';
 
-// ✅ SECURE RESPONSE INTERCEPTOR WITH AUTO REFRESH AND CIRCUIT BREAKER
+// ✅ CIRCUIT BREAKER REMOVED - HANDLED BY AUTH SERVICE QUEUING
+
+// ✅ SECURE RESPONSE INTERCEPTOR WITH AUTO REFRESH
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: any) => {
     const originalRequest = error.config;
 
-    // Reset contador após timeout
-    if (Date.now() - lastRefreshAttempt > REFRESH_RESET_TIMEOUT) {
-      refreshAttempts = 0;
-    }
-
-    // If 401 and we haven't tried to refresh yet and haven't exceeded max attempts
-    if (
-      error.response?.status === 401 &&
-      !originalRequest._retry &&
-      refreshAttempts < MAX_REFRESH_ATTEMPTS
-    ) {
+    // Se erro 401 e ainda não tentamos o retry
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      refreshAttempts++;
-      lastRefreshAttempt = Date.now();
 
       try {
-        // Try to refresh token
-        const refreshToken = secureStorage.get('refreshToken');
-        if (refreshToken) {
-          const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken }),
-          });
-
-          if (refreshResponse.ok) {
-            const data = await refreshResponse.json();
-
-            // Update tokens
-            secureStorage.set('accessToken', data.accessToken);
-            if (data.refreshToken) {
-              secureStorage.set('refreshToken', data.refreshToken);
-            }
-            secureStorage.set('tokenExpiresAt', (Date.now() + (15 * 60 * 1000)).toString());
-
-            // Reset counter on success
-            refreshAttempts = 0;
-
-            // Retry original request with new token
-            originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
-            return api(originalRequest);
-          }
+        const newAccessToken = await authService.refreshToken();
+        
+        if (newAccessToken) {
+          // Retry original request with new token
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          return api(originalRequest);
         }
       } catch (refreshError) {
-        logDebug('Token refresh failed', { refreshError, attempt: refreshAttempts });
+        logDebug('Retry after refresh failed', { refreshError });
       }
 
-      // If max attempts reached or refresh failed, force logout
-      if (refreshAttempts >= MAX_REFRESH_ATTEMPTS) {
-        logDebug('Max refresh attempts reached, forcing logout', { attempts: refreshAttempts });
-      }
-
-      // If refresh failed, redirect to login
-      secureStorage.remove('accessToken');
-      secureStorage.remove('refreshToken');
-      secureStorage.remove('tokenExpiresAt');
-      refreshAttempts = 0; // Reset for next session
-      window.location.href = '/login';
+      // Se falhou o refresh, o authService já tratou o logout
     }
 
     return Promise.reject(error);
@@ -141,7 +98,7 @@ export const apiFetch = async <T = unknown>(
 ): Promise<T> => {
   const makeRequest = async (url: string, config: RequestInit): Promise<Response> => {
     // Add timeout handling
-    const timeout = parseInt(import.meta.env.VITE_API_TIMEOUT || '30000');
+    const timeout = parseInt((import.meta as any).env?.VITE_API_TIMEOUT as string) || 30000;
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
 
@@ -151,46 +108,28 @@ export const apiFetch = async <T = unknown>(
       const response = await fetch(url, config);
       clearTimeout(id);
 
-      // If 401, try to refresh token and retry
+      // If 401, try to refresh token and retry using global authService
       if (response.status === 401) {
-        try {
-          const refreshToken = secureStorage.get('refreshToken');
-          if (refreshToken) {
-            const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ refreshToken }),
-              // Short timeout for refresh
-              signal: AbortSignal.timeout(10000)
-            });
-
-            if (refreshResponse.ok) {
-              const data = await refreshResponse.json();
-
-              // Update tokens
-              secureStorage.set('accessToken', data.accessToken);
-              if (data.refreshToken) {
-                secureStorage.set('refreshToken', data.refreshToken);
-              }
-              secureStorage.set('tokenExpiresAt', (Date.now() + (15 * 60 * 1000)).toString());
-
-              // Retry with new token
-              config.headers = {
-                ...config.headers,
-                Authorization: `Bearer ${data.accessToken}`,
-              };
-              // Create new controller for retry
-              const retryController = new AbortController();
-              const retryId = setTimeout(() => retryController.abort(), timeout);
-              config.signal = retryController.signal;
-
-              const retryResponse = await fetch(url, config);
-              clearTimeout(retryId);
-              return retryResponse;
-            }
-          }
-        } catch (refreshError) {
-          logDebug('Token refresh failed inside makeRequest', { refreshError });
+        const newAccessToken = await authService.refreshToken();
+        if (newAccessToken) {
+          // Update headers for retry
+          const retryHeaders = {
+            ...(config.headers as Record<string, string>),
+            Authorization: `Bearer ${newAccessToken}`,
+          };
+          
+          // Create new controller for retry
+          const retryController = new AbortController();
+          const retryId = setTimeout(() => retryController.abort(), timeout);
+          
+          const retryResponse = await fetch(url, {
+            ...config,
+            headers: retryHeaders,
+            signal: retryController.signal,
+          });
+          
+          clearTimeout(retryId);
+          return retryResponse;
         }
       }
       return response;
