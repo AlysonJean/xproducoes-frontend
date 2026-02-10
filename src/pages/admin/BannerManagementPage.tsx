@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { bannerService } from '../../services/bannerService';
 import { Banner } from '../../types/types';
 import { Trash2, Edit2, Plus } from 'lucide-react';
@@ -15,22 +15,33 @@ export const BannerManagementPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { addNotification } = useNotifications();
 
-  const loadBanners = async () => {
+  const loadBanners = useCallback(async (showLoader = true) => {
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       const data = await bannerService.getAllBanners();
       setBanners(data);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(error);
-      addNotification({ type: 'error', title: 'Erro', message: 'Falha ao carregar banners' });
+      // Evitar notificações repetitivas se for erro de rate limit (429)
+      if (error instanceof Error && error.message.includes('429')) return;
+      
+      addNotification({ 
+        type: 'error', 
+        title: 'Erro', 
+        message: 'Falha ao carregar banners' 
+      });
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
-  };
+  }, [addNotification]);
 
   useEffect(() => {
-    loadBanners();
-  }, []);
+    let isMounted = true;
+    if (isMounted) {
+      loadBanners();
+    }
+    return () => { isMounted = false; };
+  }, [loadBanners]);
 
   const handleEdit = (banner: Banner) => {
     setEditingBanner(banner);

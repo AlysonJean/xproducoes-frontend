@@ -51,7 +51,7 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
              if (response.data.shouldCompleteProfile) {
                window.location.href = '/completar-perfil';
              } else {
-               window.location.href = '/cliente/painel';
+               window.location.href = response.data.redirectTo || '/painel';
              }
            }, 500);
         }

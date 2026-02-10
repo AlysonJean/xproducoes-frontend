@@ -7,7 +7,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { StatsCard, SimpleCard } from '../../components/ui/Cards';
 import { QuickActionCard } from '../../components/ui/QuickActionCard';
-import type { AdminDashboardStats, Activity } from '../../types/domains/dashboard';
+import type { AdminDashboardStats, Activity, AdminNotification } from '../../types/domains/dashboard';
 import type { BookingListItem } from '../../types/types';
 import { Skeleton, SkeletonCard, SkeletonList } from '../../components/ui/Skeleton';
 
@@ -303,9 +303,9 @@ export const AdminDashboardPage = () => {
           apiFetch<AdminDashboardStats>('/dashboard/stats'),
           apiFetch<Activity[]>('/dashboard/recent-activities'),
           apiFetch<{ todayBookings: number; todayRevenue: number; activeUsers: number }>('/dashboard/live-stats'),
-          apiFetch<any[]>('/dashboard/notifications'),
+          apiFetch<AdminNotification[]>('/dashboard/notifications'),
           apiFetch<{ name: string; bookings: number }[]>('/dashboard/top-equipment'),
-          apiFetch<any[]>('/dashboard/top-collaborators')
+          apiFetch<{ collaborator: { id: string; name: string; role: string }; rating: number; eventCount: number }[]>('/dashboard/top-collaborators')
         ]);
 
         setStats(statsRes);

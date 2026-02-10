@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import { Calendar, dateFnsLocalizer, type Event, type SlotInfo, Views, type View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { apiFetch } from '@/services/api';
 import { asArray } from '@/utils/normalize';
-import type { Equipment, Kit, BookingStatus, ICollaborator, CalendarBooking } from '@/types/types';
+import { BookingStatus, ECollaboratorRole } from '@/types/enums';
+import type { Equipment, Kit, ICollaborator, CalendarBooking } from '@/types/types';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/Button';
@@ -15,7 +16,6 @@ import { ManualBookingModal } from '@/components/modals/ManualBookingModal';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import '@/styles/booking-calendar.css';
 // Drag & Drop addon
-// @ts-expect-error - tipos do addon podem não estar presentes dependendo da versão
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useNavigate } from 'react-router-dom';
@@ -25,6 +25,19 @@ const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales
 
 interface CalendarEvent extends Event {
   resource: CalendarBooking;
+}
+
+type FilterStatus = 'ALL' | BookingStatus;
+type FilterBinary = 'ALL' | 'YES' | 'NO';
+type FilterDateRange = 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH';
+
+interface CalendarFilters {
+  status: FilterStatus;
+  search: string;
+  collaboratorId: string;
+  hasCollaborators: FilterBinary;
+  hasItems: FilterBinary;
+  dateRange: FilterDateRange;
 }
 
 const BookingDetailsModal = ({ event, onClose }: { event: CalendarEvent; onClose: () => void }) => {
@@ -178,7 +191,7 @@ const BookingDetailsModal = ({ event, onClose }: { event: CalendarEvent; onClose
               </h3>
               <div className="bg-muted/30 rounded-lg p-4">
                 <div className="space-y-3">
-                  {booking.collaborators.map((eventCollab: any) => (
+                  {booking.collaborators.map((eventCollab) => (
                     <div key={eventCollab.collaborator?.id || eventCollab.collaboratorId} className="flex items-center space-x-3">
                       <img
                         src={eventCollab.collaborator?.avatar || '/default-avatar.png'}
@@ -311,9 +324,8 @@ const safeDate = (input?: string | Date | null): Date | null => {
 };
 
 export const BookingCalendarPage = () => {
-  // Calendar com Drag & Drop
-  // @ts-expect-error - DnDCalendar requires complex generic types
-  const DnDCalendar = withDragAndDrop(Calendar);
+  // Calendar com Drag & Drop - Memoizado para evitar re-montagens custosas do subtree
+  const DnDCalendar = useMemo(() => withDragAndDrop<CalendarEvent>(Calendar as any), []);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<View>(Views.MONTH);
@@ -322,24 +334,34 @@ export const BookingCalendarPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState({
-    status: 'ALL' as 'ALL' | 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'DRAFT',
+  const [filters, setFilters] = useState<CalendarFilters>({
+    status: 'ALL',
     search: '',
     collaboratorId: '',
-    hasCollaborators: 'ALL' as 'ALL' | 'YES' | 'NO',
-    hasItems: 'ALL' as 'ALL' | 'YES' | 'NO',
-    dateRange: 'ALL' as 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH',
+    hasCollaborators: 'ALL',
+    hasItems: 'ALL',
+    dateRange: 'ALL',
   });
   const [collaborators, setCollaborators] = useState<ICollaborator[]>([]);
   const [hovered, setHovered] = useState<CalendarEvent | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (tooltipRef.current && hovered) {
+      const x = Math.min(mousePos.x + 15, window.innerWidth - 340);
+      const y = Math.min(mousePos.y + 15, window.innerHeight - 300);
+      tooltipRef.current.style.left = `${x}px`;
+      tooltipRef.current.style.top = `${y}px`;
+    }
+  }, [mousePos, hovered]);
   // Estado para confirmar com valor e colaborador
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmBookingId, setConfirmBookingId] = useState<string | null>(null);
   const [confirmPrice, setConfirmPrice] = useState<string>('');
   const [confirmCollaboratorId, setConfirmCollaboratorId] = useState<string>('');
-  const [confirmRole, setConfirmRole] = useState<string>('ASSISTANT');
+  const [confirmRole, setConfirmRole] = useState<ECollaboratorRole>(ECollaboratorRole.ASSISTANT);
   const navigate = useNavigate();
 
   // Estatísticas rápidas
@@ -375,13 +397,12 @@ export const BookingCalendarPage = () => {
         const bookings = asArray<CalendarBooking>(data);
         const calendarEvents: CalendarEvent[] = bookings
           .filter((b) => safeDate(b.eventDate))
-          .map((booking) => {
+          .map((booking: CalendarBooking) => {
             const start = safeDate(booking.eventDate)!;
             let end: Date;
 
-            const bAny = booking as any; // Temporary for field check
-            if (bAny.eventEndDate && safeDate(bAny.eventEndDate)) {
-              end = safeDate(bAny.eventEndDate)!;
+            if (booking.eventEndDate && safeDate(booking.eventEndDate)) {
+              end = safeDate(booking.eventEndDate)!;
             } else {
               const durationMs = (booking.duration ?? 4) * 3600 * 1000;
               const calculatedEnd = new Date(start.getTime() + durationMs);
@@ -406,7 +427,7 @@ export const BookingCalendarPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentDate]);
+  }, []);
 
   useEffect(() => {
     fetchCalendarBookings();
@@ -416,7 +437,7 @@ export const BookingCalendarPage = () => {
     // Carregar colaboradores para filtro
     (async () => {
       try {
-  const list = await apiFetch('/collaborators');
+        const list = await apiFetch<ICollaborator[]>('/collaborators');
         setCollaborators(asArray<ICollaborator>(list));
       } catch (err) {
         console.error('Falha ao carregar colaboradores', err);
@@ -473,18 +494,15 @@ export const BookingCalendarPage = () => {
       if (filters.search) {
         const s = filters.search.toLowerCase();
         const client = booking.client?.name?.toLowerCase() || '';
-        const title = (booking as any).eventTitle?.toLowerCase() || '';
-        const notes = (booking as any).internalNotes?.toLowerCase() || '';
+        const title = booking.eventTitle?.toLowerCase() || '';
+        const notes = booking.internalNotes?.toLowerCase() || '';
         const phone = booking.client?.phone?.toLowerCase() || '';
         if (![client, title, notes, phone].some((x) => x.includes(s))) return false;
       }
 
       // collaborator
       if (filters.collaboratorId) {
-        const colls = (booking.collaborators || []) as Array<{
-          collaboratorId?: string;
-          collaborator?: ICollaborator;
-        }>;
+        const colls = booking.collaborators || [];
         if (!colls.some((c) => c.collaborator?.id === filters.collaboratorId || c.collaboratorId === filters.collaboratorId)) {
           return false;
         }
@@ -522,25 +540,18 @@ export const BookingCalendarPage = () => {
   const ActionTooltip = () => {
     if (!hovered) return null;
     const b = hovered.resource;
-    const status = (b.status || 'PENDING') as string;
+    const status = (b.status || BookingStatus.PENDING) as string;
     const venue = [b.venue?.street, b.venue?.city].filter(Boolean).join(', ');
     const equipmentsCount = (b.equipments?.length || 0) + (b.kits?.length || 0);
     const price = b.serviceValue ?? b.totalPrice ?? 0;
-    const collaborators = b.collaborators || [];
+    const collaboratorsList = b.collaborators || [];
     const s = hovered.start ? new Date(hovered.start as Date) : new Date();
     const e = hovered.end ? new Date(hovered.end as Date) : s;
 
-    // Calcular posição do tooltip (evitar que saia da tela)
-    const skStyles = {
-      '--tp-x': `${Math.min(mousePos.x + 15, window.innerWidth - 340)}px`,
-      '--tp-y': `${Math.min(mousePos.y + 15, window.innerHeight - 300)}px`,
-      pointerEvents: 'auto'
-    } as React.CSSProperties;
-
     return (
       <div 
+        ref={tooltipRef}
         className="bc-tooltip" 
-        style={skStyles}
         onMouseEnter={() => setHovered(hovered)}
         onMouseLeave={() => setHovered(null)}
       >
@@ -570,10 +581,10 @@ export const BookingCalendarPage = () => {
               <span className="bc-muted">Itens</span>
               <span>{equipmentsCount > 0 ? `${equipmentsCount} item(ns)` : 'Nenhum'}</span>
             </div>
-            {collaborators.length > 0 && (
+            {collaboratorsList.length > 0 && (
               <div className="bc-tooltip-row">
                 <span className="bc-muted">Equipe</span>
-                <span>{collaborators.length} atribuído(s)</span>
+                <span>{collaboratorsList.length} atribuído(s)</span>
               </div>
             )}
             <div className="bc-tooltip-row">
@@ -586,8 +597,8 @@ export const BookingCalendarPage = () => {
             <div className="action-buttons-grid">
               <button
                 className="btn-ghost btn-small"
-                onClick={(e) => {
-                  e.stopPropagation();
+                onClick={(ev) => {
+                  ev.stopPropagation();
                   navigate(`/admin/reservas/${hovered.resource.id}/editar`);
                 }}
                 disabled={!!actionLoading}
@@ -596,8 +607,8 @@ export const BookingCalendarPage = () => {
               </button>
               <button
                 className="btn-ghost btn-small"
-                onClick={(e) => {
-                  e.stopPropagation();
+                onClick={(ev) => {
+                  ev.stopPropagation();
                   navigate(`/admin/reservas/nova?duplicate=${hovered.resource.id}`);
                 }}
                 disabled={!!actionLoading}
@@ -606,19 +617,19 @@ export const BookingCalendarPage = () => {
               </button>
               <button
                 className="btn-ghost btn-small"
-                onClick={(e) => {
-                  e.stopPropagation();
+                onClick={(ev) => {
+                  ev.stopPropagation();
                   navigate(`/admin/reservas/${hovered.resource.id}`);
                 }}
                 disabled={!!actionLoading}
               >
                 👁️ Ver
               </button>
-              {status !== 'CONFIRMED' && (
+              {b.status !== BookingStatus.CONFIRMED && (
                 <button
                   className="btn-ghost btn-small btn-primary"
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  onClick={(ev) => {
+                    ev.stopPropagation();
                     setConfirmBookingId(hovered.resource.id);
                     setConfirmPrice(String(b.serviceValue || b.totalPrice || ''));
                     setConfirmOpen(true);
@@ -630,9 +641,9 @@ export const BookingCalendarPage = () => {
               )}
               <button
                 className="btn-ghost btn-small btn-success"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  applyStatus(hovered.resource.id, 'COMPLETED');
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  applyStatus(hovered.resource.id, BookingStatus.COMPLETED);
                 }}
                 disabled={!!actionLoading}
               >
@@ -640,9 +651,9 @@ export const BookingCalendarPage = () => {
               </button>
               <button
                 className="btn-ghost btn-small btn-danger"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  applyStatus(hovered.resource.id, 'CANCELLED');
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  applyStatus(hovered.resource.id, BookingStatus.CANCELLED);
                 }}
                 disabled={!!actionLoading}
               >
@@ -655,7 +666,7 @@ export const BookingCalendarPage = () => {
     );
   };
 
-  const applyStatus = async (id: string, status: 'COMPLETED' | 'CANCELLED') => {
+  const applyStatus = async (id: string, status: BookingStatus) => {
     try {
       setActionLoading(id + status);
       // Usa endpoint correto para status admin
@@ -680,12 +691,13 @@ export const BookingCalendarPage = () => {
       const payload: Partial<CalendarBooking> = {};
       if (confirmPrice) payload.totalPrice = Number(confirmPrice);
       if (confirmCollaboratorId) {
-        payload.collaborators = [
+        const collaboratorsArray = [
           {
             collaboratorId: confirmCollaboratorId,
-            role: confirmRole || 'ASSISTANT',
+            role: confirmRole || ECollaboratorRole.ASSISTANT,
           },
         ];
+        payload.collaborators = collaboratorsArray;
       }
       await apiFetch(`/bookings/${confirmBookingId}/confirm-details`, {
         method: 'PUT',
@@ -745,21 +757,25 @@ export const BookingCalendarPage = () => {
     }
   };
 
-  const onEventDrop = async ({ event, start, end }: { event: CalendarEvent; start: Date; end: Date }) => {
+  const onEventDrop = async ({ event, start, end }: { event: CalendarEvent; start: string | Date; end: string | Date }) => {
+    const s = new Date(start);
+    const e = new Date(end);
     const prev = events;
     try {
-      setEvents((curr) => curr.map((e) => (e === event ? { ...e, start, end } : e)));
-      await updateDates(event.resource.id, start, end);
+      setEvents((curr) => curr.map((ev) => (ev === event ? { ...ev, start: s, end: e } : ev)));
+      await updateDates(event.resource.id, s, e);
     } catch {
       setEvents(prev);
     }
   };
 
-  const onEventResize = async ({ event, start, end }: { event: CalendarEvent; start: Date; end: Date }) => {
+  const onEventResize = async ({ event, start, end }: { event: CalendarEvent; start: string | Date; end: string | Date }) => {
+    const s = new Date(start);
+    const e = new Date(end);
     const prev = events;
     try {
-      setEvents((curr) => curr.map((e) => (e === event ? { ...e, start, end } : e)));
-      await updateDates(event.resource.id, start, end);
+      setEvents((curr) => curr.map((ev) => (ev === event ? { ...ev, start: s, end: e } : ev)));
+      await updateDates(event.resource.id, s, e);
     } catch {
       setEvents(prev);
     }
@@ -812,8 +828,8 @@ export const BookingCalendarPage = () => {
         </div>
         <div className="right">
           <label className="sr-only" htmlFor="statusFilter">Filtrar por status</label>
-          <select id="statusFilter" className="toolbar-btn filter" value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value as any }))}>
-            {['ALL','PENDING','CONFIRMED','IN_PROGRESS','COMPLETED','CANCELLED','DRAFT'].map((s) => (
+          <select id="statusFilter" className="toolbar-btn filter" value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value as FilterStatus }))}>
+            {['ALL', ...Object.values(BookingStatus)].map((s) => (
               <option key={s} value={s}>{s === 'ALL' ? 'Todos status' : s.replace('_', ' ')}</option>
             ))}
           </select>
@@ -827,21 +843,21 @@ export const BookingCalendarPage = () => {
           </select>
 
           <label className="sr-only" htmlFor="hasCollabsFilter">Com colaboradores</label>
-          <select id="hasCollabsFilter" className="toolbar-btn filter" value={filters.hasCollaborators} onChange={(e) => setFilters((f) => ({ ...f, hasCollaborators: e.target.value as any }))}>
+          <select id="hasCollabsFilter" className="toolbar-btn filter" value={filters.hasCollaborators} onChange={(e) => setFilters((f) => ({ ...f, hasCollaborators: e.target.value as FilterBinary }))}>
             <option value="ALL">Todos</option>
             <option value="YES">Com colaboradores</option>
             <option value="NO">Sem colaboradores</option>
           </select>
 
           <label className="sr-only" htmlFor="hasItemsFilter">Com itens</label>
-          <select id="hasItemsFilter" className="toolbar-btn filter" value={filters.hasItems} onChange={(e) => setFilters((f) => ({ ...f, hasItems: e.target.value as any }))}>
+          <select id="hasItemsFilter" className="toolbar-btn filter" value={filters.hasItems} onChange={(e) => setFilters((f) => ({ ...f, hasItems: e.target.value as FilterBinary }))}>
             <option value="ALL">Todos</option>
             <option value="YES">Com itens</option>
             <option value="NO">Sem itens</option>
           </select>
 
           <label className="sr-only" htmlFor="dateRangeFilter">Período</label>
-          <select id="dateRangeFilter" className="toolbar-btn filter" value={filters.dateRange} onChange={(e) => setFilters((f) => ({ ...f, dateRange: e.target.value as any }))}>
+          <select id="dateRangeFilter" className="toolbar-btn filter" value={filters.dateRange} onChange={(e) => setFilters((f) => ({ ...f, dateRange: e.target.value as FilterDateRange }))}>
             <option value="ALL">Todo período</option>
             <option value="TODAY">Hoje</option>
             <option value="THIS_WEEK">Esta semana</option>
@@ -957,7 +973,7 @@ export const BookingCalendarPage = () => {
 
                   {collaborators.length > 0 && (
                     <div className="collaborators-avatars flex -space-x-1 mt-1">
-                      {collaborators.slice(0, 2).map((c: any) => (
+                      {collaborators.slice(0, 2).map((c) => (
                         <div
                           key={c.collaboratorId || c.collaborator?.id}
                           className="relative z-10 w-4 h-4 rounded-full bg-primary border border-card flex items-center justify-center"
@@ -1045,7 +1061,7 @@ export const BookingCalendarPage = () => {
                     id="confirm-role"
                     className="w-full px-3 py-2 rounded border bg-background text-foreground"
                     value={confirmRole}
-                    onChange={(e) => setConfirmRole(e.target.value)}
+                    onChange={(e) => setConfirmRole(e.target.value as ECollaboratorRole)}
                   >
                     <option value="PHOTOGRAPHER">Fotógrafo</option>
                     <option value="ASSISTANT">Assistente</option>
