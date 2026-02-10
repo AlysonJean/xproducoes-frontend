@@ -14,8 +14,9 @@ import { CustomQuoteFormData } from '@/types/types';
 
 export const QuoteRequestPage: React.FC = () => {
   const { cart, clearCart } = useCart();
-  const items = (cart as any)?.equipments ?? [];
-  const kitId = (cart as any)?.kit?.id ?? undefined;
+  const equipments = (cart as any)?.equipments ?? [];
+  const services = (cart as any)?.services ?? [];
+  const kit = (cart as any)?.kit;
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addNotification } = useNotifications();
@@ -26,16 +27,16 @@ export const QuoteRequestPage: React.FC = () => {
       requiresStairs: 'no',
       isCovered: 'no',
       hasParking: 'no',
-  // start time padrão
-  startTime: '19:00',
+      // start time padrão
+      startTime: '19:00',
     },
   });
 
   const onSubmit = async (data: CustomQuoteFormData) => {
     setServerError(null);
 
-    if (!items.length && !kitId) {
-      setServerError('Adicione um kit ou equipamento ao carrinho.');
+    if (!equipments.length && !kit?.id && !services.length) {
+      setServerError('Adicione algum item ao carrinho.');
       return;
     }
 
@@ -82,49 +83,51 @@ export const QuoteRequestPage: React.FC = () => {
   // enviar também a hora de início separada caso precise (setupTime)
   bookingData.setupTime = eventStart.toISOString();
 
-    // kitId or equipmentIds
-    if (kitId) {
-      bookingData.kitId = kitId;
-    } else {
-      bookingData.equipmentIds = items.map((it: any) => it.id || it.equipment?.id).filter(Boolean);
-    }
+      if (kit?.id) {
+        bookingData.kitId = kit.id;
+      } else {
+        const equipmentIds = equipments.map((it: any) => it.id || it.equipment?.id).filter(Boolean);
+        const serviceIds = services.map((it: any) => it.id).filter(Boolean);
+        
+        if (equipmentIds.length > 0) bookingData.equipmentIds = equipmentIds;
+        if (serviceIds.length > 0) (bookingData as any).serviceIds = serviceIds;
+      }
 
-  // Dados do usuário autenticado
-  bookingData.userId = user.id;
-  // Enviar também dados de contato do cliente para manter cadastro atualizado
-  bookingData.clientName = (user as any)?.name || data.name || undefined;
-  bookingData.clientContact = (user as any)?.phone || (user as any)?.email || data.phone || data.email || undefined;
-  if (data.email) bookingData.clientEmail = data.email;
+    // Dados do usuário autenticado
+    bookingData.userId = user.id;
+    // Enviar também dados de contato do cliente para manter cadastro atualizado
+    bookingData.clientName = (user as any)?.name || data.name || undefined;
+    bookingData.clientContact = (user as any)?.phone || (user as any)?.email || data.phone || data.email || undefined;
+    if (data.email) bookingData.clientEmail = data.email;
 
-    const idempotencyKey = uuidv4();
-    try {
-      addNotification({ type: 'info', title: 'Enviando pedido', message: 'Salvando seu pedido...' });
-      const resp = await api.post('/bookings', bookingData, { headers: { 'Idempotency-Key': idempotencyKey } });
-      const createdBooking: Booking | null = resp?.data?.data ?? resp?.data ?? null;
+      const idempotencyKey = uuidv4();
+      try {
+        addNotification({ type: 'info', title: 'Enviando pedido', message: 'Salvando seu pedido...' });
+        const resp = await api.post('/bookings', bookingData, { headers: { 'Idempotency-Key': idempotencyKey } });
+        const createdBooking: Booking | null = resp?.data?.data ?? resp?.data ?? null;
 
-      // GA Tracking - Purchase / Lead Generation
-      ReactGA.event({
-        category: "ecommerce",
-        action: "purchase", // or generate_lead
-        label: "quote_request_success",
-        value: 0
-      });
+        // GA Tracking - Purchase / Lead Generation
+        ReactGA.event({
+          category: "ecommerce",
+          action: "purchase", // or generate_lead
+          label: "quote_request_success",
+          value: 0
+        });
 
-      try { await clearCart(); } catch (e) { console.warn('Erro ao limpar carrinho', e); }
-      addNotification({ type: 'success', title: 'Pedido salvo', message: 'O pedido foi salvo como pendente.' });
-      
-      const statePayload = { 
-        booking: createdBooking, 
-        formData: data,
-        // Passar itens do carrinho explicitamente para garantir que o WhatsApp tenha os nomes corretos
-        // pois o retorno da API pode não trazer as relações carregadas
-        cartItems: kitId ? [{ name: (cart as any)?.kit?.name ? `Kit: ${(cart as any)?.kit?.name}` : 'Kit Selecionado' }] : items
-      };
+        try { await clearCart(); } catch (e) { console.warn('Erro ao limpar carrinho', e); }
+        addNotification({ type: 'success', title: 'Pedido salvo', message: 'O pedido foi salvo como pendente.' });
+        
+        const statePayload = { 
+          booking: createdBooking, 
+          formData: data,
+          // Passar itens do carrinho explicitamente para garantir que o WhatsApp tenha os nomes corretos
+          cartItems: kit?.id ? [{ name: kit?.name ? `Kit: ${kit.name}` : 'Kit Selecionado' }] : [...equipments, ...services]
+        };
 
       if (createdBooking?.id) {
-        navigate(`/booking-success/${createdBooking.id}`, { state: statePayload });
+        navigate(`/reserva-sucesso/${createdBooking.id}`, { state: statePayload });
       } else {
-        navigate('/booking-success', { state: statePayload });
+        navigate('/reserva-sucesso', { state: statePayload });
       }
     } catch (err: any) {
       console.error('Erro ao criar booking', err);

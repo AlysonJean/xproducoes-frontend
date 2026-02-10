@@ -17,7 +17,7 @@ interface CartContextType {
   isLoading: boolean;
   fetchCart: () => Promise<void>;
   addItem: (item: Equipment | Kit | Service, type: 'equipment' | 'kit' | 'service') => Promise<void>;
-  removeItem: (itemId: string, type?: 'equipment' | 'service') => Promise<void>;
+  removeItem: (itemId: string, type?: 'equipment' | 'service' | 'kit') => Promise<void>;
   clearCart: () => Promise<void>;
 }
 
@@ -128,12 +128,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const removeItem = async (itemId: string, type: 'equipment' | 'service' = 'equipment') => {
+  const removeItem = async (itemId: string, type: 'equipment' | 'service' | 'kit' = 'equipment') => {
     const previousCart = cart;
     try {
       let updatedCart;
       if (type === 'service') {
         updatedCart = await apiFetch(`/cart/remove-service/${itemId}`, { method: 'DELETE' });
+      } else if (type === 'kit') {
+        updatedCart = await apiFetch(`/cart/remove-kit/${itemId}`, { method: 'DELETE' });
       } else {
         updatedCart = await apiFetch(`/cart/remove/${itemId}`, { method: 'DELETE' });
       }
