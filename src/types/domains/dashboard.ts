@@ -60,7 +60,7 @@ export interface Event {
   description?: string;
 }
 
-export interface DashboardEvent extends Event {}
+export type DashboardEvent = Event;
 
 export interface Project {
   id?: string;
@@ -99,7 +99,7 @@ export interface QuickAction {
 
 export interface CalendarDay {
   date: Date;
-  bookings: any[];
+  bookings: unknown[];
   isCurrentMonth: boolean;
   hasWork: boolean;
   isToday: boolean;
@@ -112,4 +112,14 @@ export interface WorkStats {
   workingDays: number;
   totalRevenue: number;
   averageRating: number;
+}
+
+export interface AdminNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'error' | 'success';
+  read: boolean;
+  createdAt: string;
+  link?: string;
 }

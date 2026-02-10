@@ -60,7 +60,7 @@ export interface Equipment {
   category?: string | Category;
   categoryId?: string;
   images?: string[];
-  specifications?: Record<string, any>;
+  specifications?: Record<string, unknown>;
   status?: ItemStatus | EquipmentStatus;
   isAvailable?: boolean; // Deprecated
   brand?: string;
@@ -564,6 +564,8 @@ export interface SafeBooking {
 export interface CalendarBooking {
   id: string;
   eventDate: string;
+  eventEndDate?: string;
+  eventTitle?: string;
   duration: number;
   status: BookingStatus;
   client?: { name?: string; phone?: string };

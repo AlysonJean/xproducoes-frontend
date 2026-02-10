@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useLayoutEffect } from 'react';
 
 interface SkeletonProps {
   className?: string;
@@ -11,23 +11,29 @@ interface SkeletonProps {
 export const Skeleton: React.FC<SkeletonProps> = ({
   className = '',
   variant = 'rect',
-  width, // Mantido para compatibilidade temporária, mas desencorajado
-  height, // Mantido para compatibilidade temporária, mas desencorajado
+  width,
+  height,
   animated = true,
 }) => {
   const variantClass = variant === 'circle' ? 'skeleton-circle' : 'skeleton-rect';
   const animationClass = animated ? 'animate-pulse' : '';
+  const skRef = useRef<HTMLDivElement>(null);
 
-  // Fallback seguro via variáveis CSS para evitar erro de lint de 'inline styles' diretos
-  const skStyles = {
-    ...(width ? { '--sk-w': typeof width === 'number' ? `${width}px` : width } : {}),
-    ...(height ? { '--sk-h': typeof height === 'number' ? `${height}px` : height } : {}),
-  } as React.CSSProperties;
+  useLayoutEffect(() => {
+    if (skRef.current) {
+      if (width) {
+        skRef.current.style.setProperty('--sk-w', typeof width === 'number' ? `${width}px` : width.toString());
+      }
+      if (height) {
+        skRef.current.style.setProperty('--sk-h', typeof height === 'number' ? `${height}px` : height.toString());
+      }
+    }
+  }, [width, height]);
 
   return (
     <div
+      ref={skRef}
       className={`skeleton-root ${variantClass} ${animationClass} ${className}`}
-      style={Object.keys(skStyles).length > 0 ? skStyles : undefined}
       aria-hidden="true"
     />
   );
