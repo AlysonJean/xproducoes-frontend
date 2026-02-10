@@ -161,15 +161,31 @@ export const Header = () => {
               <div className="flex items-center space-x-3">
                 <Link
                   to="/painel"
-                  className="hidden lg:block text-sm font-medium text-foreground/80 hover:text-foreground transition-colors duration-300"
+                  className="hidden lg:flex items-center space-x-2 text-sm font-medium text-foreground/80 hover:text-foreground transition-all duration-300 group"
                 >
-                  {user?.role === 'ADMIN'
-                    ? '🎛️ Admin'
-                    : user?.role === 'COLLABORATOR'
-                    ? '👥 Colaborador'
-                    : user?.role === 'FREELANCER'
-                    ? '💼 Freelancer'
-                    : '👤 Conta'}
+                  <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-primary/20 group-hover:border-primary transition-all duration-300">
+                    {user?.avatarUrl ? (
+                      <img 
+                        src={user.avatarUrl} 
+                        alt={user.name} 
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                        {user?.name?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                    )}
+                  </div>
+                  <span className="max-w-[100px] truncate">
+                    {user?.role === 'ADMIN'
+                      ? 'Admin'
+                      : user?.role === 'COLLABORATOR'
+                      ? 'Colaborador'
+                      : user?.role === 'FREELANCER'
+                      ? 'Freelancer'
+                      : user?.name.split(' ')[0]}
+                  </span>
                 </Link>
                 <button
                   onClick={handleLogout}
@@ -312,15 +328,20 @@ export const Header = () => {
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center space-x-4 p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
                 >
-                  <span className="text-2xl">
-                    {user?.role === 'ADMIN'
-                      ? '🎛️'
-                      : user?.role === 'COLLABORATOR'
-                      ? '👥'
-                      : user?.role === 'FREELANCER'
-                      ? '💼'
-                      : '👤'}
-                  </span>
+                  <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20">
+                    {user?.avatarUrl ? (
+                      <img 
+                        src={user.avatarUrl} 
+                        alt={user.name} 
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                        {user?.name?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                    )}
+                  </div>
                   <span>
                     {user?.role === 'ADMIN'
                       ? 'Painel Admin'

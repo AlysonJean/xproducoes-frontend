@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { MapPinIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { Button } from './ui/StandardComponents';
 import { useSettings } from '../contexts/SettingsContext';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import ThemedLogo from './ui/ThemedLogo';
 import { getWhatsAppPhone, openWhatsApp } from '../utils/whatsapp';
 import { useModal } from './modals/ModalContext';
@@ -17,10 +17,11 @@ export const Footer = () => {
   const [loading, setLoading] = useState(false);
   const { openModal } = useModal();
 
+  const { pathname } = useLocation();
+
   // Ocultar footer nas páginas admin ou colaborador
-  const path = typeof window !== 'undefined' ? window.location.pathname : '';
-  const isAdminPage = path.startsWith('/admin');
-  const isCollaboratorPage = path.startsWith('/collaborator');
+  const isAdminPage = pathname.startsWith('/admin');
+  const isCollaboratorPage = pathname.startsWith('/collaborator');
   if (isAdminPage || isCollaboratorPage) return null;
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
@@ -38,11 +39,12 @@ export const Footer = () => {
         type: 'success'
       });
       setTimeout(() => setIsSubscribed(false), 3000);
-    } catch (error: any) {
-      console.error('Newsletter error:', error);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } }; message?: string };
+      console.error('Newsletter error:', err);
       openModal('alert', {
         title: 'Atenção',
-        message: error.response?.data?.error || 'Erro ao realizar inscrição. Tente novamente.',
+        message: err.response?.data?.error || err.message || 'Erro ao realizar inscrição. Tente novamente.',
         type: 'warning'
       });
     } finally {

@@ -65,22 +65,22 @@ const BrandLoader: React.FC<BrandLoaderProps> = ({
 
   return (
     <div className={`${containerClass} ${className}`}>
-      {/* SVG Filter para colorização absoluta e agressiva */}
-      <svg width="0" height="0" className="absolute pointer-events-none overflow-hidden h-0 w-0">
-        <filter id="brand-recolor-final" colorInterpolationFilters="sRGB">
-          <feComponentTransfer>
-            <feFuncR type="table" tableValues={`${colors.r} ${colors.r}`} />
-            <feFuncG type="table" tableValues={`${colors.g} ${colors.g}`} />
-            <feFuncB type="table" tableValues={`${colors.b} ${colors.b}`} />
-          </feComponentTransfer>
-        </filter>
-      </svg>
+      {isClient && (
+        <div 
+          className={`brand-loader-animation ${sizeClass} flex items-center justify-center relative`}
+          style={sizeStyle}
+        >
+          {/* SVG Filter para colorização absoluta e agressiva */}
+          <svg width="0" height="0" className="absolute pointer-events-none overflow-hidden h-0 w-0">
+            <filter id="brand-recolor-final" colorInterpolationFilters="sRGB">
+              <feComponentTransfer>
+                <feFuncR type="table" tableValues={`${colors.r} ${colors.r}`} />
+                <feFuncG type="table" tableValues={`${colors.g} ${colors.g}`} />
+                <feFuncB type="table" tableValues={`${colors.b} ${colors.b}`} />
+              </feComponentTransfer>
+            </filter>
+          </svg>
 
-      <div 
-        className={`brand-loader-animation ${sizeClass} flex items-center justify-center relative`}
-        style={sizeStyle}
-      >
-        {isClient ? (
           <div 
             className="w-full h-full transform-gpu"
             style={{ filter: 'url(#brand-recolor-final)' }}
@@ -92,10 +92,8 @@ const BrandLoader: React.FC<BrandLoaderProps> = ({
               className="w-full h-full block"
             />
           </div>
-        ) : (
-          <div className="w-full h-full rounded-full bg-primary/5 animate-pulse" />
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

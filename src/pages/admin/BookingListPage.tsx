@@ -267,7 +267,7 @@ export const BookingListPage = () => {
                             {booking.client?.user?.name || 'N/A'}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            ID: {booking.id ? booking.id.slice(0, 8) : 'N/A'}...
+                            ID: {booking.id?.startsWith('XP-') ? booking.id : (booking.id ? `${booking.id.slice(0, 8)}...` : 'N/A')}
                           </div>
                         </div>
                       </td>

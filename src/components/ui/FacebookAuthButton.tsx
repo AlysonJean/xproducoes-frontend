@@ -113,7 +113,11 @@ const FacebookAuthButton: React.FC<FacebookAuthButtonProps> = ({ onSuccess }) =>
               
               // Aguardar um pouco para o AuthContext detectar o novo token antes de redirecionar
               setTimeout(() => {
-                window.location.href = '/cliente/painel';
+                if (backendResponse.data.shouldCompleteProfile) {
+                  window.location.href = '/completar-perfil';
+                } else {
+                  window.location.href = '/cliente/painel';
+                }
               }, 500);
             }
           } catch (error) {

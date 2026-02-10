@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Search, Edit, Trash2, Users, Download, Plus, Calendar } from 'lucide-react';
@@ -37,6 +38,7 @@ const SORT_OPTIONS = [
 const normalizeRole = (role: unknown) => String(role || '').toUpperCase();
 
 const ClientListPage: React.FC = () => {
+  const navigate = useNavigate();
   const [clients, setClients] = useState<User[]>([]);
   const [totalClients, setTotalClients] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -81,27 +83,28 @@ const ClientListPage: React.FC = () => {
 
   const response = await apiFetch<ClientResponse>(`/admin/clients?${params.toString()}`);
 
-      const mappedRaw = (response?.data || []).map((c: any) => ({
+      const mappedRaw = (response?.data || []).map((c) => ({
         id: c.id,
-        name: c.name || c.fullName || 'Sem nome',
+        name: c.name || (c as any).fullName || 'Sem nome',
         email: c.email,
         role: c.role,
         phone: c.phone,
-        avatar: c.avatar || c.avatarUrl,
+        avatar: c.avatar || (c as any).avatarUrl,
         isActive: c.isActive,
         createdAt: c.createdAt,
-        totalBookings: c.totalBookings ?? c._count?.bookings ?? 0,
+        totalBookings: c.totalBookings ?? (c as any)._count?.bookings ?? 0,
         totalSpent: c.totalSpent ?? 0,
-        status: c.status ?? (c.isActive ? 'ACTIVE' : 'INACTIVE'),
+        status: (c as any).status ?? (c.isActive ? 'ACTIVE' : 'INACTIVE'),
       })) as User[];
 
       const onlyClients = mappedRaw.filter((u) => normalizeRole(u.role) === 'CLIENT');
       setClients(onlyClients);
       setTotalClients(response?.meta?.totalItems ?? onlyClients.length);
       setTotalPages(response?.meta?.totalPages ?? 1);
-    } catch (e: any) {
-      setError(e?.message || 'Erro ao carregar clientes');
-      addNotification({ type: 'error', title: 'Erro', message: e?.message || 'Falha ao carregar' });
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Erro ao carregar clientes';
+      setError(errorMessage);
+      addNotification({ type: 'error', title: 'Erro', message: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -113,8 +116,7 @@ const ClientListPage: React.FC = () => {
   };
 
   const handleEdit = (client: User) => {
-    setEditingClient(client);
-    setIsModalOpen(true);
+    navigate(`/admin/clientes/${client.id}`);
   };
 
   const handleModalSuccess = () => {
@@ -212,10 +214,10 @@ const ClientListPage: React.FC = () => {
 
   const handleExport = async () => {
     try {
-      const csvHeader = 'Nome,Email,Telefone,Status,Reservas,Total,CriadoEm\\n';
+      const csvHeader = 'Nome,Email,Telefone,Status,Reservas,Total,CriadoEm\n';
       const csvBody = clients
         .map((c) => [
-          `\"${c.name}\"`,
+          `"${c.name}"`,
           c.email,
           c.phone || '',
           c.status || '',
@@ -223,7 +225,7 @@ const ClientListPage: React.FC = () => {
           String(c.totalSpent || 0),
           format(new Date(c.createdAt), 'yyyy-MM-dd', { locale: ptBR }),
         ].join(','))
-        .join('\\n');
+        .join('\n');
 
       const blob = new Blob([csvHeader + csvBody], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -447,10 +449,10 @@ const ClientListPage: React.FC = () => {
 
   <ConfirmDialog isOpen={bulkDeleteDialogOpen} onClose={() => setBulkDeleteDialogOpen(false)} onConfirm={confirmBulkDelete} title="Confirmar Exclusão em Massa" message={`Tem certeza que deseja excluir ${selectedClients.size} clientes selecionados? Esta ação não pode ser desfeita.`} confirmText="Excluir selecionados" confirmVariant="danger" isLoading={isBulkDeleting} />
 
-      {(loading || isDeleting) && (
+      {loading && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-card rounded-xl p-6">
-            <BrandLoader size={100} label={isDeleting ? 'Excluindo cliente...' : 'Processando...'} />
+            <BrandLoader size={100} label="Processando..." />
           </div>
         </div>
       )}

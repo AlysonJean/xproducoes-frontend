@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -106,18 +106,18 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
   }, [selectedCollaboratorId, availableCollaborators, setValue, busyCollaboratorIds, addNotification]);
 
   // Fetch data
-  const fetchCollaborators = async () => {
+  const fetchCollaborators = useCallback(async () => {
     try {
-      const data = await apiFetch<EventCollaborator[]>(`/collaborators/events/${bookingId}/collaborators`);
-      setCollaborators(data);
+      const data = await apiFetch<EventCollaborator[] | { success: boolean; data: EventCollaborator[] }>(`/collaborators/events/${bookingId}/collaborators`);
+      setCollaborators(Array.isArray(data) ? data : data?.data || []);
     } catch (error) {
       console.error('Erro ao buscar colaboradores da reserva:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [bookingId]);
 
-  const fetchAvailableOptions = async () => {
+  const fetchAvailableOptions = useCallback(async () => {
     try {
       // Busca todos os colaboradores para listagem
       const allCollaboratorsPromise = apiFetch('/collaborators/search?limit=100'); 
@@ -126,24 +126,19 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
       let availableIds: Set<string> | null = null;
       if (eventDate) {
           try {
-             const availableResponse = await collaboratorsAPI.getAvailable(eventDate);
-             const availableList: any[] = availableResponse.data.data; // Ajuste conforme resposta da API
-             // A resposta do controller é { success: true, data: [...] }
-             // apiFetch retorna direto o json? apiFetch retorna `response.json()`
-             // Se collaboratorsAPI.getAvailable usa api.get, retorna AxiosResponse.
-             // Ops, bookingAPI e collaboratorsAPI em api.ts retornam `api.get(...)` que retorna Promise<AxiosResponse>.
-             // Mas `apiFetch` retorna `Promise<T>`.
-             // Vou usar `collaboratorsAPI.getAvailable` que retorna Axios response.
+             const availableResponse = await collaboratorsAPI.getAvailable(eventDate) as { data: { success: boolean; data: any[] } };
+             const availableList = availableResponse.data.data; // Ajuste conforme resposta da API
+             
              if (availableList && Array.isArray(availableList)) {
-                 availableIds = new Set(availableList.map((c: any) => c.id));
+                 availableIds = new Set(availableList.map((c: { id: string }) => c.id));
              }
           } catch (err) {
               console.error("Erro ao checar disponibilidade", err);
           }
       }
 
-      const response = await allCollaboratorsPromise as any;
-      const allOptions: CollaboratorOption[] = response.data || response || [];
+      const response = await allCollaboratorsPromise as { data?: CollaboratorOption[] } | CollaboratorOption[];
+      const allOptions: CollaboratorOption[] = (response as { data?: CollaboratorOption[] }).data || (response as CollaboratorOption[]) || [];
       
       setAvailableCollaborators(allOptions);
 
@@ -163,17 +158,17 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
     } catch (error) {
        console.error('Erro ao buscar opções de colaboradores:', error);
     }
-  };
+  }, [eventDate]);
 
   useEffect(() => {
     fetchCollaborators();
-  }, [bookingId]);
+  }, [fetchCollaborators]);
 
   useEffect(() => {
     if (isModalOpen) {
       fetchAvailableOptions();
     }
-  }, [isModalOpen, eventDate]);
+  }, [isModalOpen, fetchAvailableOptions]);
 
   // Sort collaborators: Suggested ones first
   const sortedOptions = useMemo(() => {
@@ -237,12 +232,13 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
       
       setIsModalOpen(false);
       fetchCollaborators();
-    } catch (error) {
-      console.error(error);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } };
+      console.error('Newsletter error:', err);
       addNotification({
         type: 'error',
-        title: 'Erro',
-        message: 'Não foi possível atribuir o colaborador.',
+        title: 'Atenção',
+        message: err.response?.data?.error || 'Não foi possível atribuir o colaborador. Tente novamente.',
       });
     } finally {
       setIsSubmitting(false);

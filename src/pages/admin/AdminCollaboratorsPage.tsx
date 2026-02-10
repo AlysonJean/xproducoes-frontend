@@ -66,15 +66,15 @@ export const AdminCollaboratorsPage: React.FC = () => {
 
   useEffect(() => {
     fetchCollaborators();
-  }, []);
+  }, [fetchCollaborators]);
 
   // Melhor prática: usar diretamente se já tem os campos necessários
   const collaborators: CollaboratorDashboard[] = (rawCollaborators ||
     []) as CollaboratorDashboard[];
 
   const totalPages = Math.ceil((collaborators.length || 0) / ITEMS_PER_PAGE);
+  const [isDeleting, setIsDeleting] = useState(false);
   const totalCollaborators = collaborators.length || 0;
-  const isDeleting = false; // Will be implemented with proper state management
 
   // Refetch function
   const refetch = fetchCollaborators;
@@ -135,6 +135,7 @@ export const AdminCollaboratorsPage: React.FC = () => {
     if (!collaboratorToDelete) return;
 
     try {
+      setIsDeleting(true);
       await deleteCollaborator(collaboratorToDelete);
       addNotification({
         type: 'success',
@@ -148,6 +149,7 @@ export const AdminCollaboratorsPage: React.FC = () => {
         message: 'Falha ao remover colaborador',
       });
     } finally {
+      setIsDeleting(false);
       setDeleteDialogOpen(false);
       setCollaboratorToDelete(null);
     }
@@ -618,7 +620,7 @@ export const AdminCollaboratorsPage: React.FC = () => {
                     }
                     setInviteEmail('');
                     setInviteDialogOpen(false);
-                  } catch (err) {
+                  } catch (_) {
                     addNotification({ type: 'error', title: 'Erro', message: 'Falha ao enviar convite' });
                   } finally {
                     setInviteLoading(false);
@@ -633,11 +635,11 @@ export const AdminCollaboratorsPage: React.FC = () => {
         </div>
       </Modal>
       
-      {/* Loading overlay for actions */}
-      {(loading || isDeleting) && (
+      {/* Loading overlay for general fetching */}
+      {loading && !collaborators && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-card rounded-xl p-6">
-            <BrandLoader size={100} label={isDeleting ? 'Excluindo colaborador...' : 'Processando...'} />
+            <BrandLoader size={100} label="Carregando..." />
           </div>
         </div>
       )}

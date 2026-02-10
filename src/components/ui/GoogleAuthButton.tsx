@@ -35,7 +35,7 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
            const expiresAt = Date.now() + 15 * 60 * 1000;
            secureStorage.set('tokenExpiresAt', expiresAt.toString());
            
-           // Salvar dados do usuário
+           // Salvar dados do usuário (incluindo avatarUrl se disponível)
            localStorage.setItem('user', JSON.stringify(response.data.user));
            
            addNotification({
@@ -48,7 +48,11 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
            
            // Aguardar um pouco para o AuthContext detectar o novo token antes de redirecionar
            setTimeout(() => {
-             window.location.href = '/cliente/painel';
+             if (response.data.shouldCompleteProfile) {
+               window.location.href = '/completar-perfil';
+             } else {
+               window.location.href = '/cliente/painel';
+             }
            }, 500);
         }
 

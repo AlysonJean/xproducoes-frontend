@@ -20,7 +20,7 @@ export interface AuthUser {
   name: string;
   email: string;
   phone?: string;
-  avatar?: string;
+  avatarUrl?: string;
   bio?: string;
   location?: string;
 }
