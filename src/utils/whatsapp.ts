@@ -17,7 +17,7 @@ export const getWhatsAppPhone = (opts?: { countryCode?: string }): string => {
   let digits = normalizePhone(raw);
 
   // Se não veio nada, usa fallback conhecido (BR)
-  if (!digits) return '5531975808477';
+  if (!digits) return '5531989252272';
 
   // Se já começa com DDI, mantém
   if (digits.startsWith(ddi)) return digits;

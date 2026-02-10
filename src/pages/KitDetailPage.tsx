@@ -302,7 +302,9 @@ export const KitDetailPage = () => {
                        <p className="text-xs font-bold text-primary mb-1">{item.quantity}x Unidades</p>
                     )}
                     <div className="flex justify-between items-center mt-2">
-                      <span className="text-primary font-bold text-sm">{formatPrice(Number(price))}/h</span>
+                      <span className="text-primary font-bold text-sm">
+                        {formatPrice(Number(price))}{isService ? '/serviço' : '/h'}
+                      </span>
                       <Link 
                         to={isService ? `/servicos/${(entity as any).slug}` : `/equipamentos/${(entity as any).slug || entity.id}`} 
                         className="text-[10px] font-bold text-muted-foreground hover:text-primary underline-offset-4 hover:underline transition-colors uppercase tracking-widest"

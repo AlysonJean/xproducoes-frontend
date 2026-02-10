@@ -80,7 +80,7 @@ export const CartPage = () => {
 
   const handleRemoveItem = async (itemId: string, itemName: string, type: 'equipment' | 'kit' | 'service') => {
     try {
-      await removeItem(itemId, type as any);
+      await removeItem(itemId, type);
       addNotification({
         type: 'success',
         title: 'Item removido',
@@ -111,7 +111,7 @@ export const CartPage = () => {
         message: 'Direcionando para solicitar orçamento',
         duration: 2000,
       });
-      navigate('/quote-request');
+      navigate('/orcamento');
     } else {
       addNotification({
         type: 'warning',
@@ -212,7 +212,7 @@ export const CartPage = () => {
                     </div>
                     <h2 className="font-bold text-2xl text-foreground mb-1">{item.name}</h2>
                     <p className="text-primary font-black text-xl">
-                    {formatPrice(item.price)} {item.type === 'equipment' ? <span className="text-sm font-normal text-muted-foreground">/ hora</span> : ''}
+                    {formatPrice(item.price)} <span className="text-sm font-normal text-muted-foreground">{item.type === 'service' ? '/ serviço' : '/ hora'}</span>
                     </p>
                 </div>
                 </div>
@@ -252,7 +252,7 @@ export const CartPage = () => {
                 {formatPrice(subtotal)}
                 </div>
                 <p className="text-muted-foreground leading-relaxed">
-                Este valor é uma estimativa baseada na seleção atual. Taxas de transporte e duração final serão validadas por nossa equipe.
+                Este valor é uma estimativa parcial. Equipamentos e Kits serão multiplicados pela duração final (horas) do seu evento, enquanto os serviços possuem valor fixo. Taxas de transporte serão validadas por nossa equipe.
                 </p>
             </div>
             

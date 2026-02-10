@@ -66,7 +66,7 @@ const BrandLoader: React.FC<BrandLoaderProps> = ({
   return (
     <div className={`${containerClass} ${className}`}>
       {/* SVG Filter para colorização absoluta e agressiva */}
-      <svg width="0" height="0" style={{ position: 'absolute', pointerEvents: 'none' }}>
+      <svg width="0" height="0" className="absolute pointer-events-none overflow-hidden h-0 w-0">
         <filter id="brand-recolor-final" colorInterpolationFilters="sRGB">
           <feComponentTransfer>
             <feFuncR type="table" tableValues={`${colors.r} ${colors.r}`} />
@@ -82,18 +82,14 @@ const BrandLoader: React.FC<BrandLoaderProps> = ({
       >
         {isClient ? (
           <div 
-            className="w-full h-full"
-            style={{ 
-              filter: 'url(#brand-recolor-final)',
-              transform: 'translateZ(0)' // Forçar layer de composição
-            }}
+            className="w-full h-full transform-gpu"
+            style={{ filter: 'url(#brand-recolor-final)' }}
           >
             <DotLottieReact
               src="/animations/Logo-xproducoes-eventos.lottie"
               loop
               autoplay
-              className="w-full h-full"
-              style={{ width: '100%', height: '100%', display: 'block' }}
+              className="w-full h-full block"
             />
           </div>
         ) : (

@@ -374,7 +374,6 @@ const AppRoutes: React.FC = () => {
       <Route path="/orcamento" element={<QuoteRequestPage />} />
       <Route path="/orcamento-sucesso" element={<QuoteSuccessPage />} />
       <Route path="/reserva-sucesso" element={<BookingSuccessPage />} />
-      <Route path="/reserva-sucesso" element={<BookingSuccessPage />} />
       <Route path="/reserva-sucesso/:id" element={<BookingSuccessPage />} />
 
       {/* Blog / Guides Routes */}

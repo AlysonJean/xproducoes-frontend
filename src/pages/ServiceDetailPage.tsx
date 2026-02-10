@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRevealOnView } from '../hooks/useRevealOnView';
 import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Shield, Zap, Clock } from 'lucide-react';
 import ReactGA from 'react-ga4';
 import { apiFetch } from '../services/api';
 import { useCart } from '@/hooks/useCart';
@@ -15,16 +15,15 @@ import { FavoriteButton } from '../components/ui/FavoriteButton';
 import CompareButton from '../components/ui/CompareButton';
 import { RecommendationSection } from '../components/ui/RecommendationSection';
 import { useRecommendations } from '../hooks/useRecommendations';
-import { PageLayout } from '../components/layouts/PageLayout';
-
 
 export const ServiceDetailPage = () => {
   const { ref: titleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
   const { slug } = useParams<{ slug: string }>();
-  const { addItem } = useCart();
+  const { addItem, cart } = useCart();
   const [service, setService] = useState<(Service & { prevSlug?: string | null; nextSlug?: string | null }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
   
   const { addNotification } = useNotifications();
 
@@ -50,7 +49,7 @@ export const ServiceDetailPage = () => {
     const fetchService = async () => {
       try {
         setLoading(true);
-        setService(null); // Limpar estado anterior para forçar re-renderização e scroll
+        setService(null);
         const data = await apiFetch(`/services/${slug}`);
         const transformed = transformService(data as Service);
         setService({
@@ -70,11 +69,7 @@ export const ServiceDetailPage = () => {
 
         setError(null);
       } catch (err: unknown) {
-        if (err && typeof err === 'object' && 'message' in err) {
-          setError((err as { message: string }).message);
-        } else {
-          setError('Não foi possível carregar os detalhes do serviço.');
-        }
+        setError(err instanceof Error ? err.message : 'Não foi possível carregar os detalhes do serviço.');
       } finally {
         setLoading(false);
       }
@@ -82,38 +77,45 @@ export const ServiceDetailPage = () => {
     fetchService();
   }, [slug]);
 
-  const handleAddToCart = () => {
-    if (service) {
-      addItem(service, 'service'); 
+  const handleAddToCart = async () => {
+    if (!service) return;
+    setAdding(true);
+    try {
+      await addItem(service, 'service'); 
       addNotification({
         type: 'success',
         title: 'Adicionado ao Orçamento',
         message: `${service.name} foi adicionado ao seu orçamento.`
       });
+    } catch (e: any) {
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: e.message || 'Não foi possível adicionar ao orçamento.'
+      });
+    } finally {
+      setAdding(false);
     }
   };
 
   if (loading) {
     return (
-      <PageLayout title="Carregando..." description="Buscando detalhes do serviço.">
-        <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <BrandLoader size={120} label="Carregando serviço..." />
-        </div>
-      </PageLayout>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] bg-background">
+        <BrandLoader size={120} label="Carregando serviço..." />
+      </div>
     );
   }
-  if (error)
+
+  if (error || !service) {
     return (
-      <div className="text-center text-destructive bg-destructive/10 p-4 rounded-md border border-destructive">
-        {error}
+      <div className="max-w-2xl mx-auto my-20 p-8 text-center bg-card border border-border rounded-xl shadow-lg">
+        <h2 className="text-2xl font-bold text-destructive mb-4">{error || 'Serviço não encontrado'}</h2>
+        <Link to="/servicos" className="text-primary hover:underline">Voltar para serviços</Link>
       </div>
     );
-  if (!service)
-    return (
-      <div className="text-center text-xl text-destructive">
-        Serviço não encontrado.
-      </div>
-    );
+  }
+
+  const isAlreadyInCart = cart?.services?.some(s => s.id === service.id);
 
   return (
     <div className="bg-card p-6 md:p-8 rounded-lg shadow-2xl border border-border">
@@ -140,7 +142,7 @@ export const ServiceDetailPage = () => {
         }}
       />
 
-      {/* Navigation Arrows (Fixed sides as per Equipment pattern) */}
+      {/* Navigation Arrows (Sidebar) */}
       {service.prevSlug && (
         <Link
           to={`/servicos/${service.prevSlug}`}
@@ -160,7 +162,7 @@ export const ServiceDetailPage = () => {
         </Link>
       )}
 
-      {/* Mobile Breadcrumb & Nav */}
+      {/* Breadcrumb & Navigation */}
       <div className="flex justify-between items-center mb-6 lg:mb-8">
         <nav className="text-sm text-muted-foreground">
           <Link to="/" className="hover:text-primary transition-colors">Início</Link>
@@ -184,12 +186,13 @@ export const ServiceDetailPage = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative mb-12">
+        {/* Image Section */}
         <div className="relative group">
           <img
             src={service.imageUrl || `https://placehold.co/800x600/1f2937/ffffff?text=${service.name.replace(/\s/g, '+')}`}
             alt={service.name}
-            className="w-full h-auto rounded-lg object-cover shadow-lg"
+            className="w-full h-auto rounded-xl object-cover shadow-lg border border-border"
           />
           <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="lg" isService={true} />
@@ -197,9 +200,10 @@ export const ServiceDetailPage = () => {
           </div>
         </div>
 
+        {/* Info Section */}
         <div className="flex flex-col">
           <div className="flex justify-between items-start mb-4">
-            <h1 ref={titleRef} className="text-4xl lg:text-5xl font-bold text-primary heading-elegant">
+            <h1 ref={titleRef} className="text-4xl lg:text-5xl font-bold text-primary heading-elegant leading-tight">
               {service.name}
             </h1>
             <div className="hidden lg:flex space-x-2">
@@ -208,27 +212,31 @@ export const ServiceDetailPage = () => {
             </div>
           </div>
           
-          <p className="text-muted-foreground text-lg mb-6 flex-grow whitespace-pre-wrap">
+          <p className="text-muted-foreground text-lg mb-8 leading-relaxed whitespace-pre-wrap">
             {service.description}
           </p>
 
-          <div className="bg-muted/30 p-4 rounded-lg mb-6 border border-border">
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Preço Estimado</span>
-              <span className="text-3xl font-extrabold text-foreground">
-                <span className="text-lg font-normal mr-2">a partir de</span>
-                {formatPrice(service.price)}
-              </span>
+          <div className="bg-muted/30 p-6 rounded-2xl mb-8 border border-border shadow-inner">
+            <div className="flex justify-between items-baseline mb-4">
+              <span className="text-muted-foreground font-semibold">Valor Estimado</span>
+              <div className="text-right">
+                <div className="text-4xl font-black text-foreground">
+                    {formatPrice(service.price)}
+                    <span className="text-sm font-normal ml-1">/ serviço</span>
+                </div>
+              </div>
             </div>
-            <div className="flex justify-between items-center mt-2">
-                <span className="text-muted-foreground">Duração</span>
-                <span className="text-xl font-semibold">
+            
+            <div className="flex justify-between items-center mb-2">
+                <span className="text-muted-foreground flex items-center gap-2"><Clock className="w-4 h-4" /> Duração</span>
+                <span className="font-bold">
                     {service.duration ? `${(service.duration / 60).toFixed(1).replace('.0', '')}h` : 'A combinar'}
                 </span>
             </div>
-            <div className="flex justify-between items-center mt-2">
-              <span className="text-muted-foreground">Status</span>
-              <span className={`text-xl font-semibold ${
+
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">Status:</span>
+              <span className={`font-bold ${
                 service.status === 'MAINTENANCE' ? 'text-orange-500' : 
                 service.status === 'COMING_SOON' ? 'text-blue-500' : 
                 'text-success'
@@ -242,18 +250,39 @@ export const ServiceDetailPage = () => {
 
           <button
             onClick={handleAddToCart}
-            disabled={service.status === 'MAINTENANCE'}
-            className={`w-full font-bold py-3 px-4 rounded-lg text-lg transition-transform transform active:scale-95 ${
-              service.status !== 'MAINTENANCE' 
-                ? 'bg-primary hover:bg-primary text-primary-foreground hover:scale-105 shadow-lg shadow-primary/20' 
-                : 'bg-muted text-muted-foreground cursor-not-allowed opacity-70'
-            }`}
+            disabled={adding || service.status === 'MAINTENANCE' || isAlreadyInCart}
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-black py-5 px-8 rounded-2xl transition-all duration-300 transform shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 text-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
-            {service.status === 'MAINTENANCE' ? 'Indisponível' : 
-             service.status === 'COMING_SOON' ? 'Reserve com Antecedência' : 
-             'Adicionar ao Orçamento'}
+            {adding ? 'ADICIONANDO...' : (isAlreadyInCart ? 'JÁ NO ORÇAMENTO' : 'ADICIONAR AO ORÇAMENTO')}
           </button>
         </div>
+      </div>
+
+      {/* Benefits Section (Premium styling) */}
+      <div className="mt-16 bg-muted/10 -mx-6 md:-mx-8 p-12 rounded-b-lg border-t border-border grid grid-cols-1 md:grid-cols-3 gap-10">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 bg-success/10 rounded-3xl flex items-center justify-center border border-success/20 shadow-xl shadow-success/5 rotate-3">
+              <User className="w-8 h-8 text-success" />
+            </div>
+            <h3 className="text-xl font-black text-foreground">Equipe Profissional</h3>
+            <p className="text-muted-foreground text-sm max-w-[200px]">Técnicos especializados e experientes para garantir o sucesso absoluto do seu evento.</p>
+          </div>
+
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 bg-blue-500/10 rounded-3xl flex items-center justify-center border border-blue-500/20 shadow-xl shadow-blue-500/5 -rotate-3">
+              <Shield className="w-8 h-8 text-blue-500" />
+            </div>
+            <h3 className="text-xl font-black text-foreground">Garantia de Qualidade</h3>
+            <p className="text-muted-foreground text-sm max-w-[200px]">Comprometimento total com a entrega do serviço conforme o planejado.</p>
+          </div>
+
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 bg-primary/10 rounded-3xl flex items-center justify-center border border-primary/20 shadow-xl shadow-primary/5 rotate-1">
+              <Zap className="w-8 h-8 text-primary" />
+            </div>
+            <h3 className="text-xl font-black text-foreground">Suporte Integrado</h3>
+            <p className="text-muted-foreground text-sm max-w-[200px]">Serviços pensados para trabalhar em harmonia perfeita com nossos equipamentos.</p>
+          </div>
       </div>
 
       {/* Recommendations */}
@@ -281,7 +310,7 @@ export const ServiceDetailPage = () => {
             maxItems={4}
             loading={frequentlyBoughtRecommendations.loading}
             viewAllLink="/servicos"
-            viewAllText="Ver Mais"
+            viewAllText="Explorar Mais"
             columns={{ sm: 1, md: 2, lg: 4 }}
           />
         </div>
@@ -291,3 +320,4 @@ export const ServiceDetailPage = () => {
 };
 
 export default ServiceDetailPage;
+
