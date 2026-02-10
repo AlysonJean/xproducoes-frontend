@@ -300,24 +300,24 @@ export const AdminDashboardPage = () => {
       try {
         setLoading(true);
         const [statsRes, actsRes, liveRes, notifsRes, equipRes, collabRes] = await Promise.all([
-          apiFetch('/dashboard/stats'),
-          apiFetch('/dashboard/recent-activities'),
-          apiFetch('/dashboard/live-stats'),
-          apiFetch('/dashboard/notifications'),
-          apiFetch('/dashboard/top-equipment'),
-          apiFetch('/dashboard/top-collaborators')
+          apiFetch<AdminDashboardStats>('/dashboard/stats'),
+          apiFetch<Activity[]>('/dashboard/recent-activities'),
+          apiFetch<{ todayBookings: number; todayRevenue: number; activeUsers: number }>('/dashboard/live-stats'),
+          apiFetch<any[]>('/dashboard/notifications'),
+          apiFetch<{ name: string; bookings: number }[]>('/dashboard/top-equipment'),
+          apiFetch<any[]>('/dashboard/top-collaborators')
         ]);
 
-        setStats(statsRes as AdminDashboardStats);
-        setActivities(actsRes as Activity[]);
-        setLiveStats(liveRes as { todayBookings: number; todayRevenue: number; activeUsers: number });
-        setUnreadNotifications((notifsRes as any[] || []).filter(n => !n.read).length);
-        setTopEquipment(equipRes as { name: string; bookings: number }[] || []);
-        setTopCollaborators(collabRes as any[] || []);
+        setStats(statsRes);
+        setActivities(actsRes);
+        setLiveStats(liveRes);
+        setUnreadNotifications((notifsRes || []).filter(n => !n.read).length);
+        setTopEquipment(equipRes || []);
+        setTopCollaborators(collabRes || []);
 
         // Buscar reservas para próximos eventos (mantido separado por ser opcional/pesado)
         try {
-          const resp: any = await apiFetch('/admin/bookings');
+          const resp = await apiFetch<BookingListItem[] | { data: BookingListItem[] }>('/admin/bookings');
           const all = Array.isArray(resp) ? resp : Array.isArray(resp?.data) ? resp.data : [];
           const now = new Date();
           const upcoming = all
@@ -441,8 +441,13 @@ export const AdminDashboardPage = () => {
         <SimpleCard title="Receita Mensal">
           {loading ? (
             <div className="h-64 flex items-end space-x-2 py-4 px-2">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="flex-1 bg-muted/20 animate-pulse rounded-t-md" style={{ height: `${Math.random() * 100}%` }}></div>
+              {[60, 40, 80, 50, 70, 90, 45, 65, 85, 55, 75, 95].map((h, i) => (
+                <div 
+                  key={i} 
+                  className="chart-loading-bar" 
+                  style={{ '--bar-h': `${h}%` } as React.CSSProperties}
+                  data-height={h}
+                ></div>
               ))}
             </div>
           ) : (

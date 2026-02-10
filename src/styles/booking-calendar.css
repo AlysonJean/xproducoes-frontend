@@ -124,8 +124,11 @@
 .bc-tooltip {
   position: fixed;
   z-index: 1000;
-  pointer-events: none;
-  max-width: 320px;
+  pointer-events: auto; /* Permitir clicar nos botões */
+  max-width: 340px;
+  left: var(--tp-x, 0);
+  top: var(--tp-y, 0);
+  transition: opacity 0.2s ease;
 }
 
 .bc-tooltip-card {
