@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import type { FaqItem } from '../types/types';
 import { apiFetch } from '../services/api';
 import { asArray } from '../utils/normalize';
-import { Card, Grid, Skeleton } from '../components/ui/StandardComponents';
+import { Card, Grid } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
 import { PageLayout, PageError, PageEmpty } from '../components/layouts/PageLayout';
 import { SEO } from '../components/SEO';

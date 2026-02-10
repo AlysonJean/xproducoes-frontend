@@ -51,13 +51,28 @@ const BrandLoader: React.FC<BrandLoaderProps> = ({
     height: `${size}px`,
   } : {};
 
+
+
+  // Determinar cores para o filtro baseado no tema (pode-se usar um observador de classe ou apenas checar o documento)
+  const isDarkMode = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+  
+  // Cores alvo em escala 0-1 para o feComponentTransfer
+  // Light: #003049 (0, 0.188, 0.286)
+  // Dark: #c9d1d9 (0.788, 0.820, 0.851)
+  const colors = isDarkMode 
+    ? { r: '0.788', g: '0.820', b: '0.851' } 
+    : { r: '0', g: '0.188', b: '0.286' };
+
   return (
     <div className={`${containerClass} ${className}`}>
-      {/* SVG Filter para colorização dinâmica baseada no canal alfa */}
-      <svg className="absolute w-0 h-0 invisible" aria-hidden="true">
-        <filter id="brand-loader-recolor">
-          <feFlood floodColor="hsl(var(--primary))" result="flood" />
-          <feComposite in="flood" in2="SourceAlpha" operator="in" />
+      {/* SVG Filter para colorização absoluta e agressiva */}
+      <svg width="0" height="0" style={{ position: 'absolute', pointerEvents: 'none' }}>
+        <filter id="brand-recolor-final" colorInterpolationFilters="sRGB">
+          <feComponentTransfer>
+            <feFuncR type="table" tableValues={`${colors.r} ${colors.r}`} />
+            <feFuncG type="table" tableValues={`${colors.g} ${colors.g}`} />
+            <feFuncB type="table" tableValues={`${colors.b} ${colors.b}`} />
+          </feComponentTransfer>
         </filter>
       </svg>
 
@@ -66,18 +81,21 @@ const BrandLoader: React.FC<BrandLoaderProps> = ({
         style={sizeStyle}
       >
         {isClient ? (
-          <DotLottieReact
-            src="/animations/Logo-xproducoes-eventos.lottie"
-            loop
-            autoplay
+          <div 
             className="w-full h-full"
             style={{ 
-              width: '100%', 
-              height: '100%', 
-              display: 'block',
-              filter: 'url(#brand-loader-recolor)'
+              filter: 'url(#brand-recolor-final)',
+              transform: 'translateZ(0)' // Forçar layer de composição
             }}
-          />
+          >
+            <DotLottieReact
+              src="/animations/Logo-xproducoes-eventos.lottie"
+              loop
+              autoplay
+              className="w-full h-full"
+              style={{ width: '100%', height: '100%', display: 'block' }}
+            />
+          </div>
         ) : (
           <div className="w-full h-full rounded-full bg-primary/5 animate-pulse" />
         )}

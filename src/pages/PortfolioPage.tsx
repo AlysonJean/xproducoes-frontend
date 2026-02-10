@@ -5,20 +5,8 @@ import { asArray } from '../utils/normalize';
 import type { PortfolioItem, PortfolioFilters } from '@/types';
 import { PageLayout, PageEmpty } from '../components/layouts/PageLayout';
 import { normalizeString } from '../utils/string';
-import { SearchAndFilters, Grid, Skeleton, ListSkeleton } from '../components/ui/StandardComponents';
+import { SearchAndFilters, Grid } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
-
-const PortfolioListSkeleton = () => (
-  <PageLayout
-    title="Nossos Trabalhos"
-    description="Reviva as melhores experiências que já proporcionamos."
-  >
-    <div className="mb-8">
-      <Skeleton className="h-16 w-full rounded-xl" />
-    </div>
-    <ListSkeleton cards={6} />
-  </PageLayout>
-);
 import { SEO } from '../components/SEO';
 
 export const PortfolioPage: React.FC = () => {
