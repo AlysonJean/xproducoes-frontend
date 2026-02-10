@@ -5,15 +5,12 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 // Service Worker and PWA hooks
 import { useServiceWorker, useOfflineDetector } from './hooks/useServiceWorker';
 
-// Providers
-import { NotificationProvider } from './contexts/NotificationContext';
-import { AllContextsProvider } from './contexts/AllContextsProvider';
-import { ModalProvider } from './components/modals/ModalContext';
-import { ModalManager } from './components/modals/ModalManager';
-
 // Layout Components
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
+import { AllContextsProvider } from './contexts/AllContextsProvider';
+import { ModalProvider } from './components/modals/ModalContext';
+import { ModalManager } from './components/modals/ModalManager';
 import FloatingWhatsApp from './components/FloatingWhatsApp';
 import RoutePrefetch from './components/RoutePrefetch';
 import BrandLoader from './components/ui/BrandLoader';
@@ -61,6 +58,9 @@ const ServiceListPage = lazy(() =>
 );
 const ServiceDetailPage = lazy(() =>
   import('./pages/ServiceDetailPage').then((m) => ({ default: m.ServiceDetailPage }))
+);
+const CompleteProfilePage = lazy(() =>
+  import('./pages/auth/CompleteProfilePage').then((m) => ({ default: m.CompleteProfilePage }))
 );
 const ContactPage = lazy(() =>
   import('./pages/ContactPage').then((m) => ({ default: m.ContactPage }))
@@ -211,7 +211,7 @@ const AdminSponsorPage = lazy(() => import('./pages/admin/AdminSponsorPage'));
 
 const AdminServiceListPage = lazy(() => import('./pages/admin/AdminServiceListPage').then((m) => ({ default: m.AdminServiceListPage })));
 const AdminKitListPage = lazy(() => import('./pages/admin/AdminKitListPage').then((m) => ({ default: m.AdminKitListPage })));
-const ClientListPage = lazy(() => import('./pages/admin/ClientListPage').then((m) => ({ default: m.ClientListPage })));
+const ClientListPage = lazy(() => import('./pages/admin/ClientListPage'));
 const ClientEditPage = lazy(() => import('./pages/admin/ClientEditPage').then((m) => ({ default: m.ClientEditPage })));
 
 // TV Page
@@ -252,7 +252,7 @@ const ProtectedRoute: React.FC<{
   }
 
   if (adminOnly && user?.role !== 'ADMIN') {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/painel" replace />;
   }
 
   // Redirecionamento específico por role
@@ -422,6 +422,14 @@ const AppRoutes: React.FC = () => {
         path="/completar-cadastro"
         element={
           <CompleteRegistrationPage />
+        }
+      />
+      <Route
+        path="/completar-perfil"
+        element={
+          <ProtectedRoute>
+            <CompleteProfilePage />
+          </ProtectedRoute>
         }
       />
       <Route path="/auth/oauth-concluido" element={<OAuthComplete />} />
@@ -696,7 +704,23 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
+        path="/admin/clients"
+        element={
+          <ProtectedRoute adminOnly>
+            <Navigate to="/admin/clientes" replace />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/admin/clientes/:id"
+        element={
+          <ProtectedRoute adminOnly>
+            <ClientEditPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/clients/:id"
         element={
           <ProtectedRoute adminOnly>
             <ClientEditPage />
@@ -831,11 +855,9 @@ const AppWithMonitoring: React.FC = () => {
 const App: React.FC = () => {
   return (
     <AllContextsProvider>
-      <NotificationProvider>
-        <ModalProvider>
-          <AppWithMonitoring />
-        </ModalProvider>
-      </NotificationProvider>
+      <ModalProvider>
+        <AppWithMonitoring />
+      </ModalProvider>
     </AllContextsProvider>
   );
 };

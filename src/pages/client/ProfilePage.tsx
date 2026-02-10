@@ -388,8 +388,10 @@ export const ProfilePage = () => {
                       const allowedDomains = [
                         /^https:\/\/res\.cloudinary\.com\//,
                         /^https:\/\/s3\.[^/]+\.amazonaws\.com\//,
-                        /^https:\/\/cdn\.[^/]+\./, // cdn customizado
-                        /^https:\/\/.*\.yourdomain\.com\//, // ajuste para seu domínio
+                        /^https:\/\/cdn\.[^/]+\./,
+                        /^https:\/\/lh3\.googleusercontent\.com\//, // Google
+                        /^https:\/\/graph\.facebook\.com\//, // Facebook
+                        /^https:\/\/platform-lookaside\.fbsbx\.com\//, // Facebook CDN
                       ];
                       const isSafe = allowedDomains.some((re) => re.test(profile.avatarUrl || ''));
                       if (!isSafe) {

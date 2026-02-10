@@ -5,7 +5,6 @@ import { SimpleCard } from '../../components/ui/Cards';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { formatDate } from '../../utils/typeSafeFormatters';
 import { BrandLoader } from '@/components/ui/BrandLoader';
-import * as XLSX from 'xlsx-js-style';
 import { Download, Mail } from 'lucide-react';
 
 export const NewsletterSubscribersPage = () => {
@@ -27,7 +26,8 @@ export const NewsletterSubscribersPage = () => {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const XLSX = await import('xlsx-js-style');
     const ws = XLSX.utils.json_to_sheet(subscribers.map(s => ({
         ID: s.id,
         Email: s.email,
