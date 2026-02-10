@@ -13,7 +13,6 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { TestimonialCarousel } from '../components/TestimonialCarousel';
 import { apiFetch } from '../services/api';
 import { useState, useEffect } from 'react';
-import { Skeleton } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
 
 

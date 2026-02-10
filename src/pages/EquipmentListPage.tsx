@@ -7,28 +7,9 @@ import { transformEquipment } from '../utils/transformEquipment';
 import { normalizeString } from '../utils/string';
 import type { Equipment, Category, EquipmentFilters } from '@/types/types';
 import { PageLayout, PageEmpty } from '../components/layouts/PageLayout';
-import { SearchAndFilters, FilterSelect, Grid, Skeleton, ListSkeleton } from '../components/ui/StandardComponents';
-import { BrandLoader } from '../components/ui/BrandLoader';
-
-const EquipmentListSkeleton = () => (
-  <PageLayout
-    title="Equipamentos"
-    description="Sincronizando o melhor do som e luz profissional."
-  >
-    <div className="mb-12">
-      <Skeleton className="h-16 w-full rounded-xl" />
-    </div>
-    <div className="space-y-12">
-      {[1, 2].map(i => (
-        <section key={i} className="space-y-6">
-          <Skeleton className="h-8 w-48" />
-          <ListSkeleton cards={4} />
-        </section>
-      ))}
-    </div>
-  </PageLayout>
-);
 import { SEO } from '../components/SEO';
+import { SearchAndFilters, FilterSelect, Grid } from '../components/ui/StandardComponents';
+import { BrandLoader } from '../components/ui/BrandLoader';
 
 export const EquipmentListPage: React.FC = () => {
   const [searchParams] = useSearchParams();

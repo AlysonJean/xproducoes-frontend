@@ -5,20 +5,9 @@ import { asArray } from '../utils/normalize';
 import { normalizeString } from '../utils/string';
 import type { Service } from '@/types/types';
 import { PageLayout, PageEmpty } from '../components/layouts/PageLayout';
-import { SearchAndFilters, Grid, Skeleton, ListSkeleton } from '../components/ui/StandardComponents';
+import { SearchAndFilters, Grid } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
 
-const ServiceListSkeleton = () => (
-  <PageLayout
-    title="Nossos Serviços"
-    description="Preparando os melhores profissionais para você."
-  >
-    <div className="mb-12">
-      <Skeleton className="h-16 w-full rounded-xl" />
-    </div>
-    <ListSkeleton cards={4} />
-  </PageLayout>
-);
 import { SEO } from '../components/SEO';
 import { transformService } from '../utils/transformService';
 

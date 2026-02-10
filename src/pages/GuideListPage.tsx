@@ -4,7 +4,7 @@ import { GUIDES } from '../data/guides';
 import { SEO } from '../components/SEO';
 import { ClockIcon } from 'lucide-react';
 import { useState } from 'react';
-import { Skeleton } from '../components/ui/StandardComponents';
+
 import { BrandLoader } from '../components/ui/BrandLoader';
 
 

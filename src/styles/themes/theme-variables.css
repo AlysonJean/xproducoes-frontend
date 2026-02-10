@@ -83,6 +83,7 @@
   
   /* Background colors */
   --background: 0 0% 100%;          /* #ffffff - Pure white */
+  --primary-rgb: 0, 48, 73;         /* Azul petróleo brand */
   --foreground: 217 33% 17%;        /* #222222 - Deep slate */
   
   /* Card colors */
@@ -147,9 +148,10 @@
   --input: 220 20% 18%;             /* #252a35 - Fundo input elegante */
   --ring: 210 10% 72%;              /* Ring prata um pouco menos intenso para elegância */
 
-  /* Background colors - Azul petróleo profundo */
+  /* Background colors - Azul petróleo */
   --background: 220 30% 6%;         /* #0a0d14 - Azul petróleo muito escuro */
   --foreground: 0 0% 98%;           /* #fafafa - Branco quase puro */
+  --primary-rgb: 201, 209, 217;     /* Prata tecnológico */
 
   /* Card colors - Cards em grafite elegante */
   --card: 220 25% 8%;               /* #0d1117 - Grafite escuro */
