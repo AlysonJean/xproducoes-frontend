@@ -192,6 +192,10 @@ export const QuoteRequestPage: React.FC = () => {
             {errors.addressNumber && <span className="text-destructive">Campo obrigatório</span>}
           </div>
           <div>
+            <label htmlFor="addressComplement">Complemento</label>
+            <input {...register('addressComplement')} id="addressComplement" className="input" placeholder="Ex: Apto 101, fundos, etc." />
+          </div>
+          <div>
             <label htmlFor="neighborhood">Bairro*</label>
             <input {...register('neighborhood', { required: true })} id="neighborhood" className="input" />
             {errors.neighborhood && <span className="text-destructive">Campo obrigatório</span>}
