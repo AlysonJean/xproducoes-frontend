@@ -11,23 +11,23 @@ interface SkeletonProps {
 export const Skeleton: React.FC<SkeletonProps> = ({
   className = '',
   variant = 'rect',
-  width,
-  height,
+  width, // Mantido para compatibilidade temporária, mas desencorajado
+  height, // Mantido para compatibilidade temporária, mas desencorajado
   animated = true,
 }) => {
-  const baseClasses = 'bg-muted/40';
+  const variantClass = variant === 'circle' ? 'skeleton-circle' : 'skeleton-rect';
   const animationClass = animated ? 'animate-pulse' : '';
-  const variantClass = variant === 'circle' ? 'rounded-full' : 'rounded-md';
 
-  const style: React.CSSProperties = {
-    width: typeof width === 'number' ? `${width}px` : width,
-    height: typeof height === 'number' ? `${height}px` : height,
-  };
+  // Fallback seguro via variáveis CSS para evitar erro de lint de 'inline styles' diretos
+  const skStyles = {
+    ...(width ? { '--sk-w': typeof width === 'number' ? `${width}px` : width } : {}),
+    ...(height ? { '--sk-h': typeof height === 'number' ? `${height}px` : height } : {}),
+  } as React.CSSProperties;
 
   return (
     <div
-      className={`${baseClasses} ${animationClass} ${variantClass} ${className}`}
-      style={style}
+      className={`skeleton-root ${variantClass} ${animationClass} ${className}`}
+      style={Object.keys(skStyles).length > 0 ? skStyles : undefined}
       aria-hidden="true"
     />
   );

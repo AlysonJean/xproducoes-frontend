@@ -469,3 +469,29 @@
 .collaborators-avatars {
   margin-top: 2px;
 }
+/* Dashboard Loading Bars */
+.chart-loading-bar {
+  flex: 1;
+  background-color: hsl(var(--muted) / 0.2);
+  border-top-left-radius: var(--radius-md);
+  border-top-right-radius: var(--radius-md);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  transition: height 0.5s ease-in-out;
+  height: var(--bar-h, 50%);
+}
+
+/* Skeleton Utilities */
+.skeleton-root {
+  background-color: hsl(var(--muted) / 0.4);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  width: var(--sk-w, auto);
+  height: var(--sk-h, auto);
+}
+
+.skeleton-circle {
+  border-radius: 9999px;
+}
+
+.skeleton-rect {
+  border-radius: var(--radius-md);
+}

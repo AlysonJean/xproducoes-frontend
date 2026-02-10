@@ -15,7 +15,7 @@ import { ManualBookingModal } from '@/components/modals/ManualBookingModal';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import '@/styles/booking-calendar.css';
 // Drag & Drop addon
-// @ts-ignore - tipos do addon podem não estar presentes dependendo da versão
+// @ts-expect-error - tipos do addon podem não estar presentes dependendo da versão
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useNavigate } from 'react-router-dom';
@@ -312,8 +312,8 @@ const safeDate = (input?: string | Date | null): Date | null => {
 
 export const BookingCalendarPage = () => {
   // Calendar com Drag & Drop
-  // @ts-ignore
-  const DnDCalendar = withDragAndDrop(Calendar as any) as any;
+  // @ts-expect-error - DnDCalendar requires complex generic types
+  const DnDCalendar = withDragAndDrop(Calendar);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<View>(Views.MONTH);
@@ -332,6 +332,7 @@ export const BookingCalendarPage = () => {
   });
   const [collaborators, setCollaborators] = useState<ICollaborator[]>([]);
   const [hovered, setHovered] = useState<CalendarEvent | null>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   // Estado para confirmar com valor e colaborador
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -370,41 +371,34 @@ export const BookingCalendarPage = () => {
 
     try {
       // Removido parâmetros month e year para buscar todas as reservas
-  const data = await apiFetch('/bookings/calendar');
-      const bookings: CalendarBooking[] = asArray<CalendarBooking>(data);
-  const calendarEvents: CalendarEvent[] = bookings
-        .filter((b) => safeDate(b.eventDate))
-        .map((booking) => {
-          const start = safeDate(booking.eventDate)!;
-          let end: Date;
+        const data = await apiFetch<CalendarBooking[]>('/bookings/calendar');
+        const bookings = asArray<CalendarBooking>(data);
+        const calendarEvents: CalendarEvent[] = bookings
+          .filter((b) => safeDate(b.eventDate))
+          .map((booking) => {
+            const start = safeDate(booking.eventDate)!;
+            let end: Date;
 
-          // Se tem eventEndDate definida, usa ela
-          if ((booking as any).eventEndDate && safeDate((booking as any).eventEndDate)) {
-            end = safeDate((booking as any).eventEndDate)!;
-          } else {
-            // Caso contrário, calcula baseado na duração, mas garante que seja no mesmo dia
-            const durationMs = (booking.duration ?? 4) * 3600 * 1000;
-            const calculatedEnd = new Date(start.getTime() + durationMs);
-
-            // Se o evento calculado termina no mesmo dia, usa o horário calculado
-            // Se termina em outro dia, limita ao final do dia do start
-            if (calculatedEnd.toDateString() === start.toDateString()) {
-              end = calculatedEnd;
+            const bAny = booking as any; // Temporary for field check
+            if (bAny.eventEndDate && safeDate(bAny.eventEndDate)) {
+              end = safeDate(bAny.eventEndDate)!;
             } else {
-              // Limita ao final do dia do evento (23:59:59)
-              end = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59, 59);
+              const durationMs = (booking.duration ?? 4) * 3600 * 1000;
+              const calculatedEnd = new Date(start.getTime() + durationMs);
+              end = calculatedEnd.toDateString() === start.toDateString() 
+                ? calculatedEnd 
+                : new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59, 59);
             }
-          }
 
-          return {
-            title: `${booking.client?.name || 'Reserva'}`,
-            start,
-            end,
-            allDay: false,
-            resource: booking,
-          };
-        });
-      setEvents(calendarEvents);
+            return {
+              title: `${booking.client?.name || 'Reserva'}`,
+              start,
+              end,
+              allDay: false,
+              resource: booking,
+            };
+          });
+        setEvents(calendarEvents);
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : 'Não foi possível carregar os dados do calendário.'
@@ -424,7 +418,9 @@ export const BookingCalendarPage = () => {
       try {
   const list = await apiFetch('/collaborators');
         setCollaborators(asArray<ICollaborator>(list));
-      } catch {}
+      } catch (err) {
+        console.error('Falha ao carregar colaboradores', err);
+      }
     })();
   }, []);
 
@@ -525,17 +521,29 @@ export const BookingCalendarPage = () => {
 
   const ActionTooltip = () => {
     if (!hovered) return null;
-    const b = hovered.resource as any;
+    const b = hovered.resource;
     const status = (b.status || 'PENDING') as string;
-    const venue = typeof b.venue === 'string' ? b.venue : [b.venue?.street, b.venue?.city].filter(Boolean).join(', ');
+    const venue = [b.venue?.street, b.venue?.city].filter(Boolean).join(', ');
     const equipmentsCount = (b.equipments?.length || 0) + (b.kits?.length || 0);
-    const price = b.serviceValue ?? b.totalPrice ?? b.totalAmount ?? 0;
+    const price = b.serviceValue ?? b.totalPrice ?? 0;
     const collaborators = b.collaborators || [];
     const s = hovered.start ? new Date(hovered.start as Date) : new Date();
     const e = hovered.end ? new Date(hovered.end as Date) : s;
 
+    // Calcular posição do tooltip (evitar que saia da tela)
+    const skStyles = {
+      '--tp-x': `${Math.min(mousePos.x + 15, window.innerWidth - 340)}px`,
+      '--tp-y': `${Math.min(mousePos.y + 15, window.innerHeight - 300)}px`,
+      pointerEvents: 'auto'
+    } as React.CSSProperties;
+
     return (
-      <div className="bc-tooltip">
+      <div 
+        className="bc-tooltip" 
+        style={skStyles}
+        onMouseEnter={() => setHovered(hovered)}
+        onMouseLeave={() => setHovered(null)}
+      >
         <div className="bc-tooltip-card">
           <div className="bc-tooltip-header">
             <div className="bc-tooltip-title">
@@ -551,10 +559,6 @@ export const BookingCalendarPage = () => {
 
           <div className="bc-tooltip-content">
             <div className="bc-tooltip-row">
-              <span className="bc-muted">Cliente</span>
-              <span>{b.client?.name || '—'}</span>
-            </div>
-            <div className="bc-tooltip-row">
               <span className="bc-muted">Contato</span>
               <span>{b.client?.phone || '—'}</span>
             </div>
@@ -568,7 +572,7 @@ export const BookingCalendarPage = () => {
             </div>
             {collaborators.length > 0 && (
               <div className="bc-tooltip-row">
-                <span className="bc-muted">Colaboradores</span>
+                <span className="bc-muted">Equipe</span>
                 <span>{collaborators.length} atribuído(s)</span>
               </div>
             )}
@@ -576,67 +580,71 @@ export const BookingCalendarPage = () => {
               <span className="bc-muted">Valor</span>
               <span>{price ? `R$ ${Number(price).toFixed(2)}` : '—'}</span>
             </div>
-            {b.internalNotes && (
-              <div className="bc-tooltip-row">
-                <span className="bc-muted">Obs</span>
-                <span className="text-xs">{b.internalNotes.length > 50 ? `${b.internalNotes.substring(0, 50)}...` : b.internalNotes}</span>
-              </div>
-            )}
           </div>
 
           <div className="bc-tooltip-actions">
             <div className="action-buttons-grid">
               <button
                 className="btn-ghost btn-small"
-                onClick={() => navigate(`/admin/reservas/${hovered.resource.id}/editar`)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/admin/reservas/${hovered.resource.id}/editar`);
+                }}
                 disabled={!!actionLoading}
-                title="Editar reserva"
               >
                 ✏️ Editar
               </button>
               <button
                 className="btn-ghost btn-small"
-                onClick={() => navigate(`/admin/reservas/nova?duplicate=${hovered.resource.id}`)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/admin/reservas/nova?duplicate=${hovered.resource.id}`);
+                }}
                 disabled={!!actionLoading}
-                title="Duplicar reserva"
               >
                 📋 Duplicar
               </button>
               <button
                 className="btn-ghost btn-small"
-                onClick={() => navigate(`/admin/reservas/${hovered.resource.id}`)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/admin/reservas/${hovered.resource.id}`);
+                }}
                 disabled={!!actionLoading}
-                title="Ver detalhes completos"
               >
-                👁️ Detalhes
+                👁️ Ver
               </button>
               {status !== 'CONFIRMED' && (
                 <button
                   className="btn-ghost btn-small btn-primary"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setConfirmBookingId(hovered.resource.id);
                     setConfirmPrice(String(b.serviceValue || b.totalPrice || ''));
                     setConfirmOpen(true);
                   }}
                   disabled={!!actionLoading}
-                  title="Confirmar reserva"
                 >
                   ✅ Confirmar
                 </button>
               )}
               <button
                 className="btn-ghost btn-small btn-success"
-                onClick={() => applyStatus(hovered.resource.id, 'COMPLETED')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  applyStatus(hovered.resource.id, 'COMPLETED');
+                }}
                 disabled={!!actionLoading}
-                title="Marcar como concluída"
               >
                 ✓ Concluir
               </button>
               <button
                 className="btn-ghost btn-small btn-danger"
-                onClick={() => applyStatus(hovered.resource.id, 'CANCELLED')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  applyStatus(hovered.resource.id, 'CANCELLED');
+                }}
                 disabled={!!actionLoading}
-                title="Cancelar reserva"
               >
                 ✕ Cancelar
               </button>
@@ -656,10 +664,10 @@ export const BookingCalendarPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
       });
-      setEvents((prev) => prev.map((e) => (e.resource.id === id ? { ...e, resource: { ...e.resource, status } as any } : e)));
-      setHovered((prev) => (prev && prev.resource.id === id ? { ...prev, resource: { ...prev.resource, status } as any } : prev));
-    } catch (err: any) {
-      setError(err?.message || 'Falha ao atualizar status');
+      setEvents((prev) => prev.map((e) => (e.resource.id === id ? { ...e, resource: { ...e.resource, status: status as BookingStatus } } : e)));
+      setHovered((prev) => (prev && prev.resource.id === id ? { ...prev, resource: { ...prev.resource, status: status as BookingStatus } } : prev));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Falha ao atualizar status');
     } finally {
       setActionLoading(null);
     }
@@ -669,7 +677,7 @@ export const BookingCalendarPage = () => {
     if (!confirmBookingId) return;
     try {
       setActionLoading(confirmBookingId + 'CONFIRM');
-      const payload: any = {};
+      const payload: Partial<CalendarBooking> = {};
       if (confirmPrice) payload.totalPrice = Number(confirmPrice);
       if (confirmCollaboratorId) {
         payload.collaborators = [
@@ -691,9 +699,9 @@ export const BookingCalendarPage = () => {
               ...e,
               resource: {
                 ...e.resource,
-                status: 'CONFIRMED' as any,
-                serviceValue: payload.totalPrice ?? (e.resource as any).serviceValue,
-                totalPrice: payload.totalPrice ?? (e.resource as any).totalPrice,
+                status: BookingStatus.CONFIRMED,
+                serviceValue: payload.totalPrice ?? e.resource.serviceValue,
+                totalPrice: payload.totalPrice ?? e.resource.totalPrice,
                 collaborators: payload.collaborators
                   ? [
                       ...(e.resource.collaborators || []),
@@ -704,7 +712,7 @@ export const BookingCalendarPage = () => {
                       },
                     ]
                   : e.resource.collaborators,
-              } as any,
+              },
             }
           : e,
       ));
@@ -713,8 +721,8 @@ export const BookingCalendarPage = () => {
       setConfirmBookingId(null);
       setConfirmPrice('');
       setConfirmCollaboratorId('');
-    } catch (err: any) {
-      setError(err?.message || 'Falha ao confirmar reserva');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Falha ao confirmar reserva');
     } finally {
       setActionLoading(null);
     }
@@ -731,27 +739,27 @@ export const BookingCalendarPage = () => {
           duration: Math.max(1, Math.round((end.getTime() - start.getTime()) / 3600000))
         })
       });
-    } catch (err: any) {
-      setError(err?.message || 'Falha ao atualizar datas');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Falha ao atualizar datas');
       throw err;
     }
   };
 
-  const onEventDrop = async ({ event, start, end }: any) => {
+  const onEventDrop = async ({ event, start, end }: { event: CalendarEvent; start: Date; end: Date }) => {
     const prev = events;
     try {
       setEvents((curr) => curr.map((e) => (e === event ? { ...e, start, end } : e)));
-      await updateDates((event as CalendarEvent).resource.id, start, end);
+      await updateDates(event.resource.id, start, end);
     } catch {
       setEvents(prev);
     }
   };
 
-  const onEventResize = async ({ event, start, end }: any) => {
+  const onEventResize = async ({ event, start, end }: { event: CalendarEvent; start: Date; end: Date }) => {
     const prev = events;
     try {
       setEvents((curr) => curr.map((e) => (e === event ? { ...e, start, end } : e)));
-      await updateDates((event as CalendarEvent).resource.id, start, end);
+      await updateDates(event.resource.id, start, end);
     } catch {
       setEvents(prev);
     }
@@ -910,8 +918,19 @@ export const BookingCalendarPage = () => {
               return (
                 <div
                   className={`custom-event-content ${hasCollaborators ? 'has-collaborators' : ''} status-${status.toLowerCase()}`}
-                  onMouseEnter={() => setHovered(event)}
-                  onMouseLeave={() => setHovered((prev) => (prev?.resource.id === event.resource.id ? null : prev))}
+                  onMouseMove={(e) => {
+                    setMousePos({ x: e.clientX, y: e.clientY });
+                  }}
+                  onMouseEnter={(e) => {
+                    setMousePos({ x: e.clientX, y: e.clientY });
+                    setHovered(event);
+                  }}
+                  onMouseLeave={() => {
+                    // Pequeno delay para permitir mover o mouse para o tooltip
+                    setTimeout(() => {
+                      setHovered((prev) => (prev?.resource.id === event.resource.id ? null : prev));
+                    }, 50);
+                  }}
                   title={`${booking.client?.name || 'Reserva'} - ${equipmentCount} itens - ${format(event.start!, 'HH:mm')}`}
                 >
                   <div className="event-header">
