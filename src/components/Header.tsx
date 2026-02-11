@@ -56,8 +56,8 @@ export const Header = () => {
     { href: '/equipamentos', label: 'Equipamentos', Icon: ClipboardDocumentListIcon },
     { href: '/kits', label: 'Kits', Icon: CubeIcon },
     { href: '/servicos', label: 'Serviços', Icon: ClipboardDocumentListIcon },
-    { href: '/guias', label: 'Dicas', Icon: BookOpenIcon },
     { href: '/portfolio', label: 'Portfólio', Icon: PhotoIcon },
+    { href: '/guias', label: 'Dicas', Icon: BookOpenIcon },
     { href: '/contato', label: 'Contato', Icon: PhoneIcon },
   ];
 

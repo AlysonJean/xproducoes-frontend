@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../services/api';
 import { asArray } from '../utils/normalize';
@@ -64,15 +64,15 @@ export const PortfolioPage: React.FC = () => {
 
   const clearFilters = () => setFilters({});
   
-  const openModal = (item: PortfolioItem) => {
+  const openModal = useCallback((item: PortfolioItem) => {
     setSelectedItem(item);
     navigate(`/portfolio/${item.slug || ''}`);
-  };
+  }, [navigate]);
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setSelectedItem(null);
     navigate('/portfolio');
-  };
+  }, [navigate]);
 
   // UX: fechar modal com Esc e travar scroll do body
   useEffect(() => {
@@ -91,7 +91,7 @@ export const PortfolioPage: React.FC = () => {
         document.body.style.overflow = prevOverflow;
       };
     }
-  }, [selectedItem]);
+  }, [selectedItem, closeModal]);
 
   if (loading) {
     return (
