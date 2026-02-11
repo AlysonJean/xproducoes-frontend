@@ -99,12 +99,7 @@ export const HomePage = () => {
       const transformedKits = (kitsData as Kit[]).map(kit => transformKit(kit));
       setKits(transformedKits);
       
-      const sortedPortfolio = (portfolioData as PortfolioItem[]).sort((a, b) => {
-        const dateA = a.eventDate ? new Date(a.eventDate).getTime() : 0;
-        const dateB = b.eventDate ? new Date(b.eventDate).getTime() : 0;
-        return dateB - dateA;
-      });
-      setPortfolio(sortedPortfolio);
+      setPortfolio(portfolioData as PortfolioItem[]);
     } catch (err) {
       console.error('Erro detalhado no fetchPageData:', err);
       // Não bloqueia mais a renderização com tela de erro fatal

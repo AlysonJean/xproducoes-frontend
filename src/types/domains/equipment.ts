@@ -86,5 +86,6 @@ export interface PortfolioItem {
   description: string;
   eventDate?: string | Date;
   slug?: string;
+  isPinned?: boolean;
   images?: string[];
 }

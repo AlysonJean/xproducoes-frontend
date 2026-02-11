@@ -1,7 +1,7 @@
 // Caminho do arquivo: frontend/src/components/PortfolioCard.tsx
 
 import type { PortfolioCardProps } from '../../types/types';
-import { PlayCircle } from 'lucide-react';
+import { PlayCircle, Star } from 'lucide-react';
 import { OptimizedImage } from '../../components/ui/OptimizedImage';
 
 function getMediaSource(url?: string, title?: string): { src: string, isVideo: boolean, poster?: string } {
@@ -58,6 +58,13 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({ item, ...rest }) =
             width={600}
             height={400}
             />
+        )}
+
+        {item.isPinned && (
+            <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/90 text-white text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm shadow-lg shadow-emerald-500/20 border border-white/20">
+                <Star className="w-3 h-3 fill-white" />
+                Destaque
+            </div>
         )}
         
         <div className="absolute inset-0 bg-gradient-to-t from-surface/80 via-surface/20 to-transparent opacity-100 transition-opacity duration-300 flex items-end">
