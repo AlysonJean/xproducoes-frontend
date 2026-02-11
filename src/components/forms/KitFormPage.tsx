@@ -473,7 +473,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
             </div>
 
             {/* 3. Experience Levels - Agora mais integrado */}
-            <div className="bg-card border rounded-2xl shadow-sm overflow-hidden">
+            <div className="bg-card border rounded-2xl shadow-sm overflow-visible relative">
               <div className="p-6">
                 <ExperienceLevelsEditor
                   kitId={initialData?.id || 'new'}
