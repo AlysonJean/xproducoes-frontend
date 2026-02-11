@@ -792,9 +792,10 @@ export interface PortfolioItem {
   slug?: string;
   imageUrl: string;
   description: string;
-  eventDate?: string;
+  eventDate?: string | Date;
   media?: PortfolioMedia[];
   sortOrder?: number;
+  isPinned?: boolean;
 }
 
 // ================================

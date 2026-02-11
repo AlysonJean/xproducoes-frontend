@@ -25,11 +25,7 @@ export const PortfolioPage: React.FC = () => {
       try {
         setLoading(true);
         const portfolioData = await apiFetch('/portfolio');
-        const items = asArray<PortfolioItem>(portfolioData).sort((a, b) => {
-          const dateA = a.eventDate ? new Date(a.eventDate).getTime() : 0;
-          const dateB = b.eventDate ? new Date(b.eventDate).getTime() : 0;
-          return dateB - dateA;
-        });
+        const items = asArray<PortfolioItem>(portfolioData);
         setPortfolio(items);
 
         if (slug) {

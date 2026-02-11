@@ -35,6 +35,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [eventDate, setEventDate] = useState('');
+  const [isPinned, setIsPinned] = useState(false);
   
   // Media State
   const [mediaItems, setMediaItems] = useState<MediaFile[]>([]);
@@ -53,6 +54,8 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
              setEventDate(dateObj.toISOString().split('T')[0]);
         }
       }
+
+      setIsPinned(initialData.isPinned || false);
 
       // Handle Media mapping
       const existingMedia: MediaFile[] = [];
@@ -85,6 +88,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
       setTitle('');
       setDescription('');
       setEventDate('');
+      setIsPinned(false);
       setMediaItems([]);
     }
   }, [initialData]);
@@ -161,6 +165,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
       formData.append('title', title);
       formData.append('description', description);
       formData.append('eventDate', new Date(eventDate).toISOString());
+      formData.append('isPinned', String(isPinned));
       
       // Determine what to send
       const newFilesToUpload = mediaItems.filter(item => !item.isExisting && item.file);
@@ -230,7 +235,6 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
             rows={4}
             required
           />
-
           <Input
             label="Data do Evento"
             type="date"
@@ -238,6 +242,18 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
             onChange={(e) => setEventDate(e.target.value)}
             required
           />
+          <div className="flex items-center gap-2 px-1">
+            <input
+              type="checkbox"
+              id="isPinned"
+              checked={isPinned}
+              onChange={(e) => setIsPinned(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <label htmlFor="isPinned" className="text-sm font-medium cursor-pointer">
+              Fixar no Topo (Destaque Principal)
+            </label>
+          </div>
         </FormSection>
 
         <FormSection title="Galeria" description="Fotos e Vídeos do evento">
