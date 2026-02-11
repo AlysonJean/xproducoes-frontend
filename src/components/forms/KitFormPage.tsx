@@ -296,7 +296,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
             </div>
 
             {/* 2. Composition Section */}
-            <div className="bg-card border rounded-2xl shadow-sm overflow-hidden">
+            <div className="bg-card border rounded-2xl shadow-sm overflow-visible relative">
               <div className="px-6 py-4 border-b bg-muted/30 flex items-center justify-between">
                 <h3 className="font-semibold flex items-center gap-2">
                   <ShoppingBag className="w-5 h-5 text-primary" />
@@ -330,7 +330,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                   
                   {/* Results with better visual separation */}
                   {searchTerm && (
-                    <div className="absolute z-20 top-full left-0 right-0 mt-2 bg-popover border-2 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-popover border-2 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                       {filteredItems.length > 0 ? (
                         filteredItems.map(item => (
                           <button

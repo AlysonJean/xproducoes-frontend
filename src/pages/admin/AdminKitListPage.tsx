@@ -399,7 +399,7 @@ export const AdminKitListPage = () => {
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
         title={editingKit ? 'Engenharia de Combo Personalizado' : 'Protocolo de Criação de Kit Operacional'}
-        size="lg"
+        size="xl"
       >
         <KitForm
           initialData={editingKit}
