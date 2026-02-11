@@ -140,7 +140,7 @@ export function ExperienceLevelsEditor({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-12">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-primary" />
@@ -298,7 +298,7 @@ export function ExperienceLevelsEditor({
           </Button>
 
           {showAddPanel && (
-            <div className="absolute z-10 top-full left-0 right-0 mt-2 bg-popover border rounded-lg shadow-lg p-3 space-y-2">
+            <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-popover border rounded-lg shadow-lg p-3 space-y-2">
               {availableLevels.map(level => {
                 const info = LEVEL_INFO[level];
                 return (
