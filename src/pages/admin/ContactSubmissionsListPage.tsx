@@ -1,35 +1,65 @@
-// Caminho: frontend/src/pages/admin/ContactSubmissionsListPage.tsx
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { 
+  Mail, 
+  Trash2, 
+  CheckCircle2, 
+  Clock, 
+  AlertCircle, 
+  Search,
+  MessageSquare,
+  TrendingUp,
+  XCircle,
+  MoreHorizontal,
+  Calendar,
+  User
+} from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import type { ContactSubmission } from '../../types/types';
-import BrandLoader from '../../components/ui/BrandLoader';
-import AdminLayout from '../../components/admin/AdminLayout';
-import { Button } from '../../components/ui/Button';
-import { SimpleCard } from '../../components/ui/Cards';
+import { BrandLoader } from '@/components/ui/BrandLoader';
+import { AdminLayout } from '../../components/admin/AdminLayout';
+import { 
+  Button, 
+  Input, 
+  Select, 
+  ConfirmModal, 
+  Card, 
+  Badge, 
+  Grid,
+  Alert
+} from '@/components/ui/StandardComponents';
 
 export const ContactSubmissionsListPage = () => {
   const { addNotification } = useNotifications();
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // States for search and filter
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'PENDING' | 'READ'>('all');
+  
+  // Delete modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const fetchSubmissions = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await apiFetch('/admin/contacts');
+      setSubmissions(asArray<ContactSubmission>(data));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar mensagens.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchSubmissions = async () => {
-      try {
-        setLoading(true);
-  const data = await apiFetch('/admin/contacts');
-  setSubmissions(asArray<ContactSubmission>(data));
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Erro ao carregar mensagens.');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchSubmissions();
-  }, []);
+  }, [fetchSubmissions]);
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -39,6 +69,11 @@ export const ContactSubmissionsListPage = () => {
       setSubmissions((prev) =>
         prev.map((sub) => (sub.id === id ? (updatedSubmission as ContactSubmission) : sub))
       );
+      addNotification({
+        type: 'success',
+        title: 'Lida',
+        message: 'Mensagem marcada como lida com sucesso.'
+      });
     } catch (err: unknown) {
       addNotification({
         type: 'error',
@@ -48,147 +83,276 @@ export const ContactSubmissionsListPage = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Tem a certeza que deseja apagar esta mensagem permanentemente?')) {
-      try {
-        await apiFetch(`/admin/contacts/${id}`, { method: 'DELETE' });
-        setSubmissions((prev) => prev.filter((sub) => sub.id !== id));
-        addNotification({
-          type: 'success',
-          title: 'Sucesso',
-          message: 'Mensagem apagada com sucesso.'
-        });
-      } catch (err: unknown) {
-        addNotification({
-          type: 'error',
-          title: 'Erro',
-          message: err instanceof Error ? err.message : 'Erro ao apagar a mensagem.'
-        });
-      }
+  const openDeleteModal = (id: string) => {
+    setSubmissionToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!submissionToDelete) return;
+    try {
+      setIsDeleting(true);
+      await apiFetch(`/admin/contacts/${submissionToDelete}`, { method: 'DELETE' });
+      setSubmissions((prev) => prev.filter((sub) => sub.id !== submissionToDelete));
+      addNotification({
+        type: 'success',
+        title: 'Sucesso',
+        message: 'Mensagem apagada com sucesso.'
+      });
+    } catch (err: unknown) {
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: err instanceof Error ? err.message : 'Erro ao apagar a mensagem.'
+      });
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+      setSubmissionToDelete(null);
     }
   };
 
-  if (loading) {
-    return (
-      <AdminLayout title="Mensagens de Contato" breadcrumbs={[{ name: 'Admin' }, { name: 'Contatos' }]}>
-        <BrandLoader size={120} label="Carregando mensagens..." />
-      </AdminLayout>
-    );
-  }
+  const filteredSubmissions = submissions.filter(sub => {
+    const matchesSearch = 
+      sub.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sub.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sub.message.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = filterStatus === 'all' || sub.status === filterStatus;
+    
+    return matchesSearch && matchesStatus;
+  });
 
-  if (error) {
+  const stats = {
+    total: submissions.length,
+    pending: submissions.filter(s => s.status === 'PENDING').length,
+    read: submissions.filter(s => s.status === 'READ').length
+  };
+
+  if (loading && submissions.length === 0) {
     return (
       <AdminLayout title="Mensagens de Contato" breadcrumbs={[{ name: 'Admin' }, { name: 'Contatos' }]}>
-        <div className="flex items-center justify-center min-h-96">
-          <div className="text-destructive bg-destructive/10 p-4 rounded-lg border border-destructive">
-            {error}
-          </div>
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <BrandLoader size={120} label="Sincronizando caixa de entrada..." />
         </div>
       </AdminLayout>
     );
   }
 
   return (
-    <AdminLayout title="Mensagens de Contato" breadcrumbs={[{ name: 'Admin' }, { name: 'Contatos' }]}>
-      <div className="mb-8 flex justify-between items-center">
-        <div className="space-y-1">
-          <div className="text-muted-foreground text-sm">
-            Total de mensagens: <span className="font-semibold text-foreground">{submissions.length}</span>
-          </div>
-          <div className="text-muted-foreground text-sm">
-            Pendentes: <span className="font-semibold text-destructive">
-              {submissions.filter(s => s.status === 'PENDING').length}
-            </span>
+    <AdminLayout title="Mensagens" breadcrumbs={[{ name: 'Admin' }, { name: 'Contatos' }]}>
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+              <Mail className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-foreground">Caixa de Entrada</h2>
+              <p className="text-sm text-muted-foreground">Gerencie as comunicações diretas dos seus clientes.</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="space-y-6">
-        {submissions.length > 0 ? (
-          submissions.map((sub) => (
-            <SimpleCard
-              key={sub.id}
-              className={
-                sub.status !== 'PENDING'
-                  ? ''
-                  : 'border-l-4 border-l-primary'
-              }
-            >
-                <div className="flex justify-between items-start gap-6">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold text-foreground text-lg">
-                        {sub.name}
-                      </h3>
+        {/* Stats Grid */}
+        <Grid columns={{ sm: 1, md: 3 }} gap={6}>
+          <Card className="p-5 bg-primary/5 border-primary/10">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                <MessageSquare className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total de Contatos</p>
+                <p className="text-2xl font-black text-foreground">{stats.total}</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-5 bg-amber-500/5 border-amber-500/10">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                <Clock className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Pendentes de Leitura</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-black text-foreground">{stats.pending}</p>
+                  {stats.pending > 0 && (
+                    <span className="text-xs text-amber-600 font-bold flex items-center animate-pulse">
+                      <AlertCircle className="h-3 w-3 mr-1" /> Requer atenção
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-5 bg-emerald-500/5 border-emerald-500/10">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Processados</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-black text-foreground">{stats.read}</p>
+                  <span className="text-xs text-emerald-600 font-bold flex items-center">
+                    <TrendingUp className="h-3 w-3 mr-1" /> {((stats.read / (stats.total || 1)) * 100).toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </Grid>
+
+        {/* Filters */}
+        <Card className="p-4 bg-card/50 border-border">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Filtrar por nome, e-mail ou conteúdo..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Select
+                className="w-44"
+                value={filterStatus}
+                onChange={(e: any) => setFilterStatus(e.target.value as any)}
+                options={[
+                  { value: 'all', label: 'Todas as mensagens' },
+                  { value: 'PENDING', label: 'Apenas novas' },
+                  { value: 'READ', label: 'Já processadas' }
+                ]}
+              />
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={() => { setSearchTerm(''); setFilterStatus('all'); }}
+                title="Limpar Filtros"
+              >
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        {/* List Section */}
+        {error ? (
+          <Alert variant="error" title="Erro de Conexão" description={error}>
+            <Button variant="outline" size="sm" onClick={fetchSubmissions} className="mt-2 text-xs">
+              Tentar reconectar
+            </Button>
+          </Alert>
+        ) : filteredSubmissions.length > 0 ? (
+          <div className="space-y-4">
+            {filteredSubmissions.map((sub) => (
+              <Card 
+                key={sub.id} 
+                className={`group transition-all duration-300 hover:shadow-lg ${
+                  sub.status === 'PENDING' 
+                    ? 'border-l-4 border-l-primary bg-primary/5 ring-1 ring-primary/20' 
+                    : 'bg-card'
+                }`}
+              >
+                <div className="p-6">
+                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+                    <div className="flex-1 space-y-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <User className="h-4 w-4 text-primary" />
+                        </div>
+                        <h3 className="text-lg font-bold text-foreground">{sub.name}</h3>
+                        <Badge 
+                          variant={sub.status === 'PENDING' ? 'primary' : 'outline'} 
+                          className="h-5 text-[10px] uppercase font-black tracking-widest px-2"
+                        >
+                          {sub.status === 'PENDING' ? 'Novo Contato' : 'Mensagem Lida'}
+                        </Badge>
+                      </div>
+
+                      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground border-b border-border pb-4 font-medium">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/50">
+                          <Mail className="h-3.5 w-3.5" />
+                          {sub.email}
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/50">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {new Date(sub.createdAt).toLocaleString('pt-BR')}
+                        </div>
+                      </div>
+
+                      <div className="relative">
+                        <div className="absolute -left-3 top-0 bottom-0 w-1 bg-muted rounded-full" />
+                        <p className="text-sm text-foreground/80 leading-relaxed font-medium pl-4 italic whitespace-pre-wrap">
+                          "{sub.message}"
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-row lg:flex-col gap-2 flex-shrink-0 self-end lg:self-start">
                       {sub.status === 'PENDING' && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                          Nova
-                        </span>
+                        <Button
+                          onClick={() => handleMarkAsRead(sub.id)}
+                          variant="secondary"
+                          size="sm"
+                          className="gap-2 font-bold shadow-sm"
+                        >
+                          <CheckCircle2 className="h-4 w-4" /> Marcar Lida
+                        </Button>
                       )}
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                      <div className="flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                        </svg>
-                        {sub.email}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        {new Date(sub.createdAt).toLocaleString('pt-BR')}
-                      </div>
-                    </div>
-                    <div className="prose prose-sm max-w-none">
-                      <p className="text-foreground leading-relaxed whitespace-pre-wrap bg-muted/30 rounded-lg p-4 border">
-                        {sub.message}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2 flex-shrink-0">
-                    {sub.status === 'PENDING' && (
                       <Button
-                        onClick={() => handleMarkAsRead(sub.id)}
-                        variant="secondary"
+                        onClick={() => openDeleteModal(sub.id)}
+                        variant="destructive"
                         size="sm"
-                        className="gap-2"
+                        className="gap-2 font-bold"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Marcar como Lida
+                        <Trash2 className="h-4 w-4" /> Excluir
                       </Button>
-                    )}
-                    <Button
-                      onClick={() => handleDelete(sub.id)}
-                      variant="danger"
-                      size="sm"
-                      className="gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      Excluir
-                    </Button>
+                      <Button variant="outline" size="icon" className="h-8 w-8 ml-auto lg:ml-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-            </SimpleCard>
-          ))
+              </Card>
+            ))}
+          </div>
         ) : (
-          <SimpleCard className="text-center py-16">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-              <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
+          <Card className="p-20 flex flex-col items-center justify-center text-center bg-card/50 border-dashed border-2">
+            <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center mb-6 text-muted-foreground/30 ring-8 ring-muted/20">
+              <Mail className="h-10 w-10" />
             </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">Nenhuma mensagem encontrada</h3>
-            <p className="text-muted-foreground">
-              Ainda não foram recebidas mensagens de contato.
+            <h3 className="text-xl font-bold text-foreground">Sua caixa está limpa!</h3>
+            <p className="text-muted-foreground text-sm max-w-sm mx-auto mt-2">
+              {searchTerm || filterStatus !== 'all' 
+                ? 'Nenhuma mensagem encontrada com esses critérios de filtro.' 
+                : 'Ainda não foram registradas mensagens de contato no seu site.'}
             </p>
-          </SimpleCard>
+            {(searchTerm || filterStatus !== 'all') && (
+              <Button variant="outline" className="mt-6" onClick={() => { setSearchTerm(''); setFilterStatus('all'); }}>
+                Ver todas as mensagens
+              </Button>
+            )}
+          </Card>
         )}
       </div>
+
+      {/* Modals */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Apagar Mensagem Permanentemente?"
+        message="Esta ação não pode ser revertida. Se você ainda não respondeu ao cliente, considere salvar os dados de contato primeiro."
+        variant="danger"
+        confirmText="Confirmar Exclusão"
+        isLoading={isDeleting}
+      />
     </AdminLayout>
   );
 };

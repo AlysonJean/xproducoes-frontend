@@ -30,7 +30,7 @@ const StatsCards: React.FC<{ stats: DashboardStats | null }> = ({ stats }) => {
       title: 'Taxa de Conclusão',
       value: `${Math.round(stats.completionRate || 0)}%`,
       icon: '✅',
-      color: 'bg-gradient-to-br from-purple-500 to-purple-600',
+      color: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
       change: '+8%',
     },
   ];

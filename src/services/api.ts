@@ -57,7 +57,7 @@ api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-import { authService } from './auth.service';
+import { authService } from './authservice';
 
 // ✅ CIRCUIT BREAKER REMOVED - HANDLED BY AUTH SERVICE QUEUING
 
@@ -283,12 +283,30 @@ export const bookingAPI = {
   confirmWithDetails: (id: string, data: Record<string, unknown>) =>
     api.put(`/bookings/${id}/confirm-details`, data),
   cancel: (id: string, reason?: string) => api.post(`/bookings/${id}/cancel`, { reason }),
-  getMyBookings: () => api.get('/bookings/me'),
+  getMyBookings: () => api.get('/bookings/user'),
   getUpcoming: () => api.get('/bookings/upcoming'),
   getHistory: () => api.get('/bookings/history'),
   getDashboardStats: () => api.get('/bookings/stats'),
   getCalendar: (month: string, year: string) =>
     api.get(`/bookings/calendar?month=${month}&year=${year}`),
+};
+
+export const clientAPI = {
+  getAll: (filters?: Record<string, unknown>) => api.get('/admin/clients', { params: filters }),
+  getById: (id: string) => api.get(`/admin/clients/${id}`),
+  create: (data: Record<string, unknown> | FormData) => {
+    if (data instanceof FormData) {
+      return api.post('/admin/clients', data, { headers: { 'Content-Type': 'multipart/form-data' } });
+    }
+    return api.post('/admin/clients', data);
+  },
+  update: (id: string, data: Record<string, unknown> | FormData) => {
+    if (data instanceof FormData) {
+      return api.put(`/admin/clients/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
+    }
+    return api.put(`/admin/clients/${id}`, data);
+  },
+  delete: (id: string) => api.delete(`/admin/clients/${id}`),
 };
 
 export const collaboratorsAPI = {

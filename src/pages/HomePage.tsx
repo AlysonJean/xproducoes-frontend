@@ -129,7 +129,7 @@ export const HomePage = () => {
         user: { name: r.reviewer?.name || r.collaborator?.user?.name || 'Cliente' },
       }));
       setReviews(normalized);
-  } catch (e) {
+  } catch {
       setReviews([]);
     } finally {
       setReviewsLoading(false);
@@ -292,10 +292,10 @@ export const HomePage = () => {
         {/* Gemini Event Suggester - THE AI FEATURE */}
         <section className="relative pb-32">
           <div className="absolute inset-0 -z-10 flex items-center justify-center pointer-events-none opacity-40">
-              <div className="w-[1000px] h-[600px] bg-purple-600/20 blur-[180px] rounded-full" />
+              <div className="w-[1000px] h-[600px] bg-sky-600/20 blur-[180px] rounded-full" />
           </div>
           <div className="text-center mb-12">
-            <div className="inline-flex items-center px-4 py-2 bg-purple-500/10 border border-purple-500/20 backdrop-blur-md rounded-full text-purple-400 font-semibold text-xs uppercase tracking-widest mb-4">
+            <div className="inline-flex items-center px-4 py-2 bg-sky-500/10 border border-sky-500/20 backdrop-blur-md rounded-full text-sky-400 font-semibold text-xs uppercase tracking-widest mb-4">
               � Neural Suggestion Engine
             </div>
             <h2 ref={aiTitleRef} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Inteligência Criativa</h2>

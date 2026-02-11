@@ -1,175 +1,277 @@
-// src/pages/admin/CategoryListPage.tsx
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { 
+  Trash2, 
+  Edit2, 
+  Plus, 
+  Tag, 
+  Info,
+  TrendingUp,
+  XCircle,
+  MoreHorizontal,
+  ArrowUpDown,
+  Search
+} from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
-import { Category } from '../../types/types';
-import AdminLayout from '../../components/admin/AdminLayout';
+import type { Category } from '../../types/types';
+import { AdminLayout } from '../../components/admin/AdminLayout';
 import { BrandLoader } from '@/components/ui/BrandLoader';
-import { SimpleCard } from '../../components/ui/Cards';
-import { Button } from '../../components/ui/Button';
-import { Trash2, Edit2, Plus } from 'lucide-react';
+import { 
+  Button, 
+  Card, 
+  Modal, 
+  ConfirmModal, 
+  Alert,
+  Input,
+  Grid
+} from '@/components/ui/StandardComponents';
 import CategoryForm from '../../components/forms/CategoryFormPage';
-import { Modal } from '@/components/ui/StandardComponents';
 
 export const CategoryListPage = () => {
   const { addNotification } = useNotifications();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchCategories = async () => {
+  // Modal states
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
       const data = await apiFetch('/categories');
       setCategories(asArray<Category>(data));
-    } catch (err: unknown) {
-      setError(
-        typeof err === 'object' && err !== null && 'message' in err
-          ? String((err as { message?: unknown }).message)
-          : 'Não foi possível carregar a lista de categorias.'
-      );
+      setError(null);
+    } catch (err: any) {
+      const msg = err?.message || 'Não foi possível carregar a lista de categorias.';
+      setError(msg);
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: msg
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [addNotification]);
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [fetchCategories]);
 
-  const handleDelete = async (id?: string) => {
-    if (!id) return;
-    if (window.confirm('Tem a certeza de que quer apagar esta categoria?')) {
-      try {
-        await apiFetch(`/categories/${id}`, { method: 'DELETE' });
-        fetchCategories();
-        addNotification({
-          type: 'success',
-          title: 'Sucesso',
-          message: 'Categoria apagada com sucesso.'
-        });
-      } catch (err: unknown) {
-        addNotification({
-          type: 'error',
-          title: 'Erro',
-          message: `Erro ao apagar categoria: ${
-            typeof err === 'object' && err !== null && 'message' in err
-              ? String((err as { message?: unknown }).message)
-              : 'Erro desconhecido.'
-          }`
-        });
-      }
+  const handleDeleteClick = (id: string) => {
+    setCategoryToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!categoryToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      await apiFetch(`/categories/${categoryToDelete}`, { method: 'DELETE' });
+      
+      await fetchCategories();
+      addNotification({
+        type: 'success',
+        title: 'Sucesso',
+        message: 'Categoria excluída com sucesso.'
+      });
+      setIsDeleteModalOpen(false);
+    } catch (err: any) {
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: err?.message || 'Falha ao excluir categoria.'
+      });
+    } finally {
+      setIsDeleting(false);
+      setCategoryToDelete(null);
     }
   };
 
   const handleCreate = () => {
     setEditingCategory(null);
-    setIsModalOpen(true);
+    setIsFormModalOpen(true);
   };
 
   const handleEdit = (category: Category) => {
     setEditingCategory(category);
-    setIsModalOpen(true);
+    setIsFormModalOpen(true);
   };
+
+  const filteredCategories = useMemo(() => {
+    return categories.filter(c => 
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [categories, searchTerm]);
 
   if (loading && categories.length === 0) {
     return (
-      <AdminLayout title="Gestão de Categorias" breadcrumbs={[{ name: 'Admin' }, { name: 'Categorias' }]}>
-        <div className="flex items-center justify-center min-h-96">
-          <BrandLoader size={120} label="Carregando categorias..." />
+      <AdminLayout title="Categorias" breadcrumbs={[{ name: 'Admin' }, { name: 'Categorias' }]}>
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <BrandLoader size={120} label="Catalogando categorias..." />
         </div>
       </AdminLayout>
     );
   }
 
   return (
-    <AdminLayout title="Gestão de Categorias" breadcrumbs={[{ name: 'Admin' }, { name: 'Categorias' }]}>
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="space-y-1">
-          <div className="text-muted-foreground text-sm">
-            Total de categorias: <span className="font-semibold text-foreground">{categories.length}</span>
+    <AdminLayout title="Categorias" breadcrumbs={[{ name: 'Admin' }, { name: 'Categorias' }]}>
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+              <Tag className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-foreground">Taxonomia de Itens</h2>
+              <p className="text-sm text-muted-foreground">Estruture seu inventário com categorias inteligentes.</p>
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
+            <Button onClick={handleCreate} className="gap-2 shadow-lg shadow-primary/20">
+              <Plus className="h-5 w-5" /> Nova Categoria
+            </Button>
           </div>
         </div>
-        <Button onClick={handleCreate} variant="primary" className="gap-2">
-          <Plus size={20} />
-          Adicionar Nova Categoria
-        </Button>
-      </div>
 
-      {error ? (
-        <div className="flex items-center justify-center min-h-96">
-          <div className="text-destructive bg-destructive/10 p-4 rounded-lg border border-destructive">
-            {error}
+        {/* Stats Grid */}
+        <Grid columns={{ sm: 1, md: 3 }} gap={4}>
+          <Card className="p-4 bg-primary/5 border-primary/10">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <Tag className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Total</p>
+                <p className="text-xl font-black text-foreground">{categories.length}</p>
+              </div>
+            </div>
+          </Card>
+          
+          <Card className="p-4 bg-emerald-500/5 border-emerald-500/10">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                <TrendingUp className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Média de Itens/Cat</p>
+                <p className="text-xl font-black text-foreground">--</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4 bg-amber-500/5 border-amber-500/10">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                <Info className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Pendentes</p>
+                <p className="text-xl font-black text-foreground">0</p>
+              </div>
+            </div>
+          </Card>
+        </Grid>
+
+        {/* Filters and Search */}
+        <Card className="p-4 bg-card/50 border-border">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar categoria ou descrição..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="icon" onClick={() => setSearchTerm('')} title="Limpar Filtro">
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      ) : (
-        <SimpleCard className="overflow-hidden">
+        </Card>
+
+        {error && (
+          <Alert variant="error" title="Erro de Carregamento" description={error} />
+        )}
+
+        {/* Categories Table */}
+        <Card className="overflow-hidden border-border shadow-sm">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Categoria
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-muted/50 border-b border-border">
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    <div className="flex items-center gap-1 cursor-pointer">
+                      Identificador <ArrowUpDown className="h-3 w-3" />
+                    </div>
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Descrição
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Ações
-                  </th>
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Detalhes</th>
+                  <th className="px-6 py-4 text-xs font-bold text-right text-muted-foreground uppercase tracking-wider">Ações</th>
                 </tr>
               </thead>
-              <tbody className="bg-card divide-y divide-border">
-                {categories.map((category) => (
-                  <tr key={category.id} className="hover:bg-muted/30 transition-colors">
+              <tbody className="divide-y divide-border">
+                {filteredCategories.map((category) => (
+                  <tr key={category.id} className="hover:bg-muted/20 transition-colors group">
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/10 to-transparent border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
                           {category.imageUrl ? (
-                            <img 
-                              src={category.imageUrl} 
-                              alt={category.name} 
-                              className="w-full h-full object-cover"
-                            />
+                            <img src={category.imageUrl} alt={category.name} className="h-full w-full object-cover" />
                           ) : (
-                            <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                            </svg>
+                            <Tag className="h-6 w-6 text-muted-foreground/30" />
                           )}
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">{category.name}</p>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-foreground truncate">{category.name}</p>
+                          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">#{category.id.slice(0, 8)}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-muted-foreground">
-                        {category.description || 'Sem descrição'}
-                      </span>
+                      <p className="text-xs text-muted-foreground max-w-md line-clamp-1 font-medium">
+                        {category.description || (
+                          <span className="opacity-30 flex items-center gap-1 italic">
+                            <Info className="h-3 w-3" /> Nenhuma descrição informativa associada
+                          </span>
+                        )}
+                      </p>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button 
+                    <td className="px-6 py-4">
+                      <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="outline"
+                          size="icon"
                           onClick={() => handleEdit(category)}
-                          variant="outline" 
-                          size="sm"
-                          title="Editar categoria"
-                          aria-label="Editar categoria"
+                          className="h-8 w-8"
+                          title="Ajustar Definição"
                         >
-                          <Edit2 size={16} />
+                          <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
                         </Button>
                         <Button
-                          onClick={() => handleDelete(category.id)}
-                          variant="danger"
-                          size="sm"
-                          title="Excluir categoria"
-                          aria-label="Excluir categoria"
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => handleDeleteClick(category.id)}
+                          className="h-8 w-8"
+                          title="Remover Taxonomia"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="outline" size="icon" className="h-8 w-8 border-transparent">
+                           <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
                         </Button>
                       </div>
                     </td>
@@ -179,38 +281,52 @@ export const CategoryListPage = () => {
             </table>
           </div>
 
-          {categories.length === 0 && (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-                <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
+          {filteredCategories.length === 0 && !loading && (
+            <div className="py-24 text-center">
+              <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-6 text-muted-foreground/20 ring-8 ring-muted/10">
+                <Tag className="h-10 w-10" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">Nenhuma categoria encontrada</h3>
-              <p className="text-muted-foreground">
-                Comece criando a primeira categoria para organizar seus equipamentos
-              </p>
+              <h3 className="text-xl font-bold text-foreground">Taxonomia não encontrada</h3>
+              <p className="text-muted-foreground text-sm max-w-sm mx-auto mt-2">Personalize sua busca ou cadastre uma nova categoria organizacional.</p>
+              <Button variant="outline" className="mt-6" onClick={() => setSearchTerm('')}>
+                Limpar Filtros
+              </Button>
             </div>
           )}
-        </SimpleCard>
-      )}
+        </Card>
+      </div>
 
+      {/* Form Modal */}
       <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={editingCategory ? 'Editar Categoria' : 'Nova Categoria'}
-        className="max-w-lg"
+        isOpen={isFormModalOpen}
+        onClose={() => setIsFormModalOpen(false)}
+        title={editingCategory ? 'Refinar Categoria' : 'Mapear Nova Categoria'}
+        size="md"
       >
         <CategoryForm 
           initialData={editingCategory}
           onSuccess={() => {
-            setIsModalOpen(false);
+            setIsFormModalOpen(false);
             fetchCategories();
           }}
-          onCancel={() => setIsModalOpen(false)}
+          onCancel={() => setIsFormModalOpen(false)}
         />
       </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Desativar Categoria?"
+        message="Esta ação é definitiva. Todos os itens associados a esta categoria perderão sua classificação principal."
+        variant="danger"
+        isLoading={isDeleting}
+        confirmText="Confirmar Exclusão"
+        cancelText="Manter Registro"
+      />
     </AdminLayout>
   );
 };
 
+export default CategoryListPage;

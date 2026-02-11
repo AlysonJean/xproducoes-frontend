@@ -26,7 +26,7 @@ const equipmentFormSchema = z.object({
   categoryId: z.string().min(1, 'Categoria é obrigatória'),
   quantity: z.number().int().positive('Quantidade deve ser positiva'),
   status: z.nativeEnum(ItemStatus),
-  images: z.any(), // FileList será tratado no submit
+  images: z.custom<FileList>().optional(),
 });
 
 type EquipmentFormData = z.infer<typeof equipmentFormSchema>;
@@ -67,13 +67,13 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
       try {
         setLoading(true);
         // Backend returns mixed structures sometimes, normalize it
-        const categoriesResponse = await apiFetch('/categories');
+        const categoriesResponse = await apiFetch<Category[] | { data: Category[] }>('/categories');
         
         let cats: Category[] = [];
         if (Array.isArray(categoriesResponse)) {
-          cats = categoriesResponse as Category[];
-        } else if ((categoriesResponse as any)?.data && Array.isArray((categoriesResponse as any).data)) {
-          cats = (categoriesResponse as any).data as Category[];
+          cats = categoriesResponse;
+        } else if (categoriesResponse && 'data' in categoriesResponse && Array.isArray(categoriesResponse.data)) {
+          cats = categoriesResponse.data;
         }
         setCategories(cats);
         
@@ -224,10 +224,14 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-foreground">
+            <label 
+              htmlFor="equipment-images"
+              className="block text-sm font-medium text-foreground cursor-pointer"
+            >
               Imagens
             </label>
             <input
+              id="equipment-images"
               type="file"
               multiple
               accept="image/*"

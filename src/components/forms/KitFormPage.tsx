@@ -310,10 +310,16 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
               <div className="p-6 space-y-6">
                 {/* Enhanced Search */}
                 <div className="relative group">
-                  <label className="text-xs font-bold uppercase text-muted-foreground mb-1.5 block">Adicionar Itens</label>
+                  <label 
+                    htmlFor="item-search" 
+                    className="text-xs font-bold uppercase text-muted-foreground mb-1.5 block cursor-pointer"
+                  >
+                    Adicionar Itens
+                  </label>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                     <input
+                      id="item-search"
                       type="text"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -336,12 +342,12 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                             <div className="flex items-center gap-4">
                                <div className={clsx(
                                  "w-12 h-12 rounded-lg flex items-center justify-center border shrink-0",
-                                 item.type === 'EQUIPMENT' ? "bg-blue-50 border-blue-100" : "bg-purple-50 border-purple-100"
+                                 item.type === 'EQUIPMENT' ? "bg-blue-50 border-blue-100" : "bg-slate-50 border-slate-100"
                                )}>
                                  {item.type === 'EQUIPMENT' ? (
                                    <Package className="w-6 h-6 text-blue-500" />
                                  ) : (
-                                   <User className="w-6 h-6 text-purple-500" />
+                                   <User className="w-6 h-6 text-slate-500" />
                                  )}
                                </div>
                                <div>
@@ -349,7 +355,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                                    <p className="font-bold text-foreground group-hover/item:text-primary transition-colors">{item.name}</p>
                                    <span className={clsx(
                                      "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider",
-                                     item.type === 'EQUIPMENT' ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"
+                                     item.type === 'EQUIPMENT' ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-700"
                                    )}>
                                      {item.type === 'EQUIPMENT' ? 'Equipamento' : 'Serviço'}
                                    </span>
@@ -384,27 +390,32 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                       <div key={field.id} className="flex items-start gap-4 p-4 bg-muted/20 hover:bg-muted/40 rounded-2xl border-2 border-transparent hover:border-primary/20 transition-all group relative">
                         {/* Image/Icon */}
                         <div className="w-16 h-16 rounded-xl bg-card border shadow-sm flex items-center justify-center overflow-hidden shrink-0">
-                           {item.imageUrl ? (
-                             <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                           ) : (
-                             item.type === 'EQUIPMENT' ? <Package className="w-8 h-8 text-blue-400" /> : <User className="w-8 h-8 text-purple-400" />
-                           )}
-                        </div>
-
-                        {/* Text Content */}
-                        <div className="flex-1 min-w-0 pr-8">
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <span className={clsx(
-                              "w-2 h-2 rounded-full",
-                              item.type === 'EQUIPMENT' ? "bg-blue-500" : "bg-purple-500"
-                            )} />
+                            {item.imageUrl ? (
+                              <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                            ) : (
+                              item.type === 'EQUIPMENT' ? <Package className="w-8 h-8 text-blue-400" /> : <User className="w-8 h-8 text-slate-400" />
+                            )}
+                         </div>
+ 
+                         {/* Text Content */}
+                         <div className="flex-1 min-w-0 pr-8">
+                           <div className="flex items-center gap-1.5 mb-1">
+                             <span className={clsx(
+                               "w-2 h-2 rounded-full",
+                               item.type === 'EQUIPMENT' ? "bg-blue-500" : "bg-slate-500"
+                             )} />
                             <p className="font-bold text-sm truncate uppercase tracking-tight">{item.name}</p>
                           </div>
                           <p className="text-xs text-muted-foreground mb-3">{formatPrice(item.price)} / unidade</p>
                           
                           {/* Quantity Controls inside the card */}
                           <div className="flex items-center gap-3">
-                            <label className="text-[10px] font-bold uppercase text-muted-foreground">Quantidade</label>
+                            <label 
+                              htmlFor={`quantity-${index}`}
+                              className="text-[10px] font-bold uppercase text-muted-foreground cursor-pointer"
+                            >
+                              Quantidade
+                            </label>
                             <div className="flex items-center border rounded-lg bg-card overflow-hidden">
                               <button 
                                 type="button"
@@ -418,6 +429,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                                 className="px-2 py-1 hover:bg-muted transition-colors border-r"
                               >-</button>
                               <input
+                                id={`quantity-${index}`}
                                 type="number"
                                 min="1"
                                 className="w-10 text-center text-sm font-bold bg-transparent no-spinners"
@@ -532,10 +544,16 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-foreground">Preço de Venda do Kit</label>
+                  <label 
+                    htmlFor="kit-price" 
+                    className="text-xs font-bold text-foreground cursor-pointer"
+                  >
+                    Preço de Venda do Kit
+                  </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-primary">R$</span>
                     <input
+                       id="kit-price"
                        type="number"
                        step="0.01"
                        {...register('price', { valueAsNumber: true })}

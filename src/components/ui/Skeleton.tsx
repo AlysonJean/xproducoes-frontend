@@ -39,29 +39,24 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   );
 };
 
-export const SkeletonCard = () => (
-  <div className="bg-card border rounded-xl p-6 space-y-4">
-    <div className="flex justify-between items-start">
-      <Skeleton width={120} height={20} />
-      <Skeleton variant="circle" width={32} height={32} />
-    </div>
-    <div className="space-y-2">
-      <Skeleton width="60%" height={32} />
-      <Skeleton width="40%" height={16} />
+export const CardSkeleton = () => (
+  <div className="bg-card rounded-2xl overflow-hidden border border-border/50">
+    <Skeleton className="aspect-[16/10] w-full rounded-none" />
+    <div className="p-5 space-y-3">
+      <Skeleton className="h-6 w-3/4" />
+      <Skeleton className="h-4 w-full" />
+      <div className="flex justify-between items-center pt-2">
+        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-8 w-20 rounded-lg" />
+      </div>
     </div>
   </div>
 );
 
-export const SkeletonList = ({ items = 5 }: { items?: number }) => (
-  <div className="space-y-4">
-    {Array.from({ length: items }).map((_, i) => (
-      <div key={i} className="flex items-center space-x-4 p-2 border-b last:border-0 border-border/40">
-        <Skeleton variant="circle" width={40} height={40} />
-        <div className="flex-1 space-y-2">
-          <Skeleton width="30%" height={16} />
-          <Skeleton width="60%" height={12} />
-        </div>
-      </div>
+export const ListSkeleton = ({ cards = 8 }: { cards?: number }) => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+    {Array.from({ length: cards }).map((_, i) => (
+      <CardSkeleton key={i} />
     ))}
   </div>
 );

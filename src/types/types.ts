@@ -46,6 +46,37 @@ export interface User {
   lastLoginAt?: string;
 }
 
+export interface Client {
+  id: string;
+  userId?: string;
+  name: string;
+  email: string;
+  role?: string;
+  bio?: string;
+  location?: string;
+  phone?: string;
+  avatar?: string;
+  isActive?: boolean;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  totalBookings: number;
+  totalSpent: number;
+  companyName?: string;
+  industry?: string;
+  companySize?: string;
+  taxId?: string;
+  isVip?: boolean;
+  address?: any;
+  jobTitle?: string;
+  department?: string;
+  budget?: number;
+  preferredCategories?: string[];
+  eventTypes?: string[];
+  communicationPrefs?: any;
+  user?: User;
+}
+
 export interface Equipment {
   id: string;
   name: string;
@@ -603,6 +634,14 @@ export interface BookingDetails {
   clientEmail?: string;
   status?: string;
   deliveryStatus?: string;
+  paymentStatus?: string;
+  attachments?: Array<{
+    id: string;
+    url: string;
+    filename?: string;
+    mimeType?: string;
+    createdAt?: string;
+  }>;
   kit?: Kit;
   kits?: Array<{
     id?: string;
@@ -658,13 +697,6 @@ export interface BookingDetails {
         avatarUrl?: string;
       };
     };
-  }>;
-  attachments?: Array<{
-    id: string;
-    url: string;
-    filename?: string;
-    mimeType?: string;
-    createdAt?: string;
   }>;
 }
 
@@ -1095,6 +1127,11 @@ export interface ClientProfile {
   averageRating?: number;
   isVip?: boolean;
   memberSince: string;
+  preferences?: {
+    notifications?: ProfileNotificationPreferences;
+    general?: ProfileGeneralPreferences;
+  };
+  googleCalendarEmail?: string | null;
 }
 
 export interface ProfileFormData {
@@ -1107,6 +1144,35 @@ export interface ProfileFormData {
   companyName: string;
   jobTitle: string;
   industry: string;
+}
+
+export interface ProfilePasswordForm {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ProfileNotificationPreferences {
+  bookingUpdatesEmail: boolean;
+  bookingUpdatesPush: boolean;
+  logisticsUpdatesEmail: boolean;
+  logisticsUpdatesPush: boolean;
+  technicalUpdatesEmail: boolean;
+  inventoryAlertsEmail: boolean;
+  inventoryAlertsPush: boolean;
+  remindersEmail: boolean;
+  remindersPush: boolean;
+  promotionsEmail: boolean;
+  promotionsPush: boolean;
+}
+
+export interface ProfileGeneralPreferences {
+  language: string;
+  timezone: string;
+  currency: string;
+  profileType: 'individual' | 'business';
+  defaultDeliveryMethod: 'delivery' | 'pickup';
+  autoInvoice: boolean;
 }
 
 export interface ProfileSettings {

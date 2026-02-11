@@ -2,7 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { secureStorage } from '../utils/secureStorage';
 import { logger } from '../utils/logger';
 import { getApiBaseUrl } from '../utils/apiConfig';
-import { authService } from '../services/auth.service';
+import { authService } from '../services/authservice';
+import { authAPI } from '../services/api';
 
 // Lazy sentry getter to avoid circular dependency with main.tsx
 
@@ -16,6 +17,7 @@ export interface AuthUser {
   avatarUrl?: string;
   bio?: string;
   location?: string;
+  googleCalendarEmail?: string | null;
 }
 
 export interface AuthTokens {
@@ -100,10 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const expiresAt = secureStorage.get('tokenExpiresAt');
 
         if (accessToken && refreshTokenVal && expiresAt && isMounted) {
-          const API_BASE_URL = getApiBaseUrl();
           const expired = Date.now() >= parseInt(expiresAt);
-
-          let currentToken = accessToken;
 
           if (expired) {
             const refreshed = await authService.refreshToken();
@@ -111,31 +110,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setIsLoading(false);
               return;
             }
-            currentToken = refreshed;
+            // Token refreshed successfully
           }
 
-          // Buscar perfil
-          const meResp = await fetch(`${API_BASE_URL}/auth/me`, {
-            headers: { Authorization: `Bearer ${currentToken}`, 'Content-Type': 'application/json' },
-            signal: controller.signal,
-          });
-
-          if (meResp.ok) {
-            const userData = await meResp.json();
+          // Buscar perfil usando a instância api para aproveitar o interceptor de refresh automático
+          try {
+            const profileResp = await authAPI.getProfile();
+            // A instância 'api' de axios retorna a resposta original. O dado está em .data
+            const userData = (profileResp as any).data || profileResp;
             setUser(userData);
-          } else {
-            // Se falhou ao buscar perfil com token teoricamente válido
-            if (meResp.status === 401) {
-              const refreshed = await authService.refreshToken();
-              if (refreshed) {
-                const retryResp = await fetch(`${API_BASE_URL}/auth/me`, {
-                  headers: { Authorization: `Bearer ${refreshed}`, 'Content-Type': 'application/json' },
-                });
-                if (retryResp.ok) {
-                  setUser(await retryResp.json());
-                }
-              }
-            }
+          } catch (profileError) {
+            logger.error('Failed to fetch user profile during initialization', 'AuthContext', profileError);
+            // Se falhou mesmo após o refresh do interceptor, o usuário não está autenticado
+            setUser(null);
           }
         }
       } catch (error) {

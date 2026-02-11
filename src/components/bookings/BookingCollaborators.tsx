@@ -276,7 +276,7 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
          <div className="flex flex-wrap gap-2 mb-2">
            <span className="text-xs text-muted-foreground">Sugerido pelo Kit:</span>
            {requiredServices.map(s => (
-             <span key={s} className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
+             <span key={s} className="text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full font-medium">
                {s}
              </span>
            ))}

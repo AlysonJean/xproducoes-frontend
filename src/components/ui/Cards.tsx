@@ -14,6 +14,35 @@ export interface StatsCardProps {
   onClick?: () => void;
 }
 
+const getTrendColor = (type: 'positive' | 'negative' | 'neutral') => {
+  switch (type) {
+    case 'positive':
+      return 'text-success';
+    case 'negative':
+      return 'text-destructive';
+    default:
+      return 'text-muted-foreground';
+  }
+};
+
+const TrendIcon = ({ type }: { type: 'positive' | 'negative' | 'neutral' }) => {
+  if (type === 'positive') {
+    return (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+      </svg>
+    );
+  }
+  if (type === 'negative') {
+    return (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+      </svg>
+    );
+  }
+  return null;
+};
+
 export const StatsCard: React.FC<StatsCardProps> = ({
   title,
   value,
@@ -23,35 +52,6 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   className = '',
   onClick,
 }) => {
-  const getTrendColor = (type: 'positive' | 'negative' | 'neutral') => {
-    switch (type) {
-      case 'positive':
-        return 'text-success';
-      case 'negative':
-        return 'text-destructive';
-      default:
-        return 'text-muted-foreground';
-    }
-  };
-
-  const TrendIcon = ({ type }: { type: 'positive' | 'negative' | 'neutral' }) => {
-    if (type === 'positive') {
-      return (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-        </svg>
-      );
-    }
-    if (type === 'negative') {
-      return (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
-        </svg>
-      );
-    }
-    return null;
-  };
-
   return (
     <div
       className={`bg-card rounded-xl p-6 shadow-sm border transition-all duration-200 ${
@@ -211,6 +211,46 @@ export const SimpleCard: React.FC<SimpleCardProps> = ({
         </div>
       )}
       <div className={title || description ? 'p-6 pt-4' : 'p-6'}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// Componente Card padrão (Compatível com StandardComponents)
+export interface CardProps {
+  children: React.ReactNode;
+  className?: string;
+  padding?: boolean;
+}
+
+export const Card: React.FC<CardProps> = ({ 
+  children, 
+  className = '', 
+  padding = false 
+}) => {
+  return (
+    <div className={`rounded-lg border border-border bg-card text-card-foreground shadow-sm ${padding ? 'p-6' : ''} ${className}`}>
+      {children}
+    </div>
+  );
+};
+
+// Componente GlassCard (Efeito de vidro modernizado)
+export interface GlassCardProps {
+  children: React.ReactNode;
+  className?: string;
+  hoverEffect?: boolean;
+}
+
+export const GlassCard: React.FC<GlassCardProps> = ({ children, className = '', hoverEffect = true }) => {
+  return (
+    <div className={`relative bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 ${
+      hoverEffect ? 'hover:bg-white/15 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]' : ''
+    } ${className}`}>
+      <div className="absolute -top-24 -left-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-secondary/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative z-10 p-6">
         {children}
       </div>
     </div>

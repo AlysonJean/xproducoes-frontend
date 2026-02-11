@@ -1,8 +1,8 @@
 import { useCompare } from '../contexts/CompareContext';
 import { useRevealOnView } from '../hooks/useRevealOnView';
 import { useNotifications } from '../contexts/NotificationContext';
-import { formatPrice } from '../utils/typeSafeFormatters'; // Caminho correto
-// importação removida: tipos devem ser importados de '../types'
+import { formatPrice } from '../utils/typeSafeFormatters';
+import { SEO } from '../components/SEO';
 
 export const ComparePage = () => {
   const { ref: titleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
@@ -30,6 +30,10 @@ export const ComparePage = () => {
   if (compareItems.length === 0) {
     return (
       <div className="text-center py-20">
+        <SEO 
+          title="Comparar Equipamentos | X-Produções" 
+          description="Compare equipamentos lado a lado para escolher a melhor opção para seu evento."
+        />
         <div className="max-w-md mx-auto">
       <div className="w-24 h-24 mx-auto mb-6 bg-muted rounded-full flex items-center justify-center">
             <svg
@@ -46,9 +50,9 @@ export const ComparePage = () => {
               />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold mb-2 text-foreground">
+          <h2 className="text-2xl font-bold mb-2 text-foreground">
             Nenhum equipamento para comparar
-          </h1>
+          </h2>
           <p className="text-muted-foreground mb-6">
             Adicione equipamentos à comparação para ver as diferenças lado a lado.
           </p>
@@ -65,6 +69,10 @@ export const ComparePage = () => {
 
   return (
     <div className="space-y-6">
+      <SEO 
+        title="Comparar Equipamentos | X-Produções" 
+        description="Compare as especificações técnicas, preços e detalhes dos equipamentos para seu evento."
+      />
       <div className="flex justify-between items-center">
         <div>
           <h1 ref={titleRef} className="text-3xl font-bold text-foreground heading-elegant">Comparar Equipamentos</h1>

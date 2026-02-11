@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
-import { Button } from '../../components/ui/Button';
-import { SimpleCard, StatsCard } from '@/components/ui/Cards';
+import { 
+  Button, 
+  Card, 
+  Badge, 
+  Grid 
+} from '@/components/ui/StandardComponents';
 import { useAuth } from '../../contexts/AuthContext';
 import { SentryTestButton } from '../../components/SentryTestButton';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -9,9 +13,29 @@ import {
   MonitoringService, 
   IntegrationHealth, 
   SystemHealth, 
-  Alert, 
+  Alert as MonitoringAlert, 
   DashboardData 
 } from '../../services/monitoringService';
+import { 
+  Activity, 
+  ShieldCheck, 
+  Zap, 
+  AlertTriangle, 
+  RefreshCw, 
+  Cpu, 
+  HardDrive, 
+  Clock, 
+  Server, 
+  Globe, 
+  Layout, 
+  Database,
+  CheckCircle2,
+  XCircle,
+  ExternalLink,
+  ChevronRight,
+  Monitor
+} from 'lucide-react';
+import { BrandLoader } from '@/components/ui/BrandLoader';
 
 const monitoringService = MonitoringService.getInstance();
 
@@ -19,31 +43,29 @@ export const MonitoringPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [integrations, setIntegrations] = useState<IntegrationHealth[]>([]);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [alerts, setAlerts] = useState<MonitoringAlert[]>([]);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const { user } = useAuth();
   const { addNotification } = useNotifications();
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async (showLoader = false) => {
     try {
-      setIsLoading(true);
+      if (showLoader) setIsLoading(true);
       const data = await monitoringService.getDashboard();
       
-      // Adicionar verificação local do Google Analytics 4
       const gaId = import.meta.env.VITE_GOOGLE_ANALYTICS_ID;
-      const hasGa = !!gaId && gaId.length > 5; // Verificação simples
+      const hasGa = !!gaId && gaId.length > 5;
       
       const gaIntegration: IntegrationHealth = {
         name: 'Google Analytics 4',
         status: hasGa ? 'healthy' : 'warning', 
-        responseTime: 0, // Client-side logic, tempo desprezível
+        responseTime: 0,
         lastCheck: new Date().toISOString(),
         errorMessage: hasGa ? undefined : 'ID de rastreamento pendente'
       };
       
-      // Inserir GA na lista de integrações se não existir (evita duplicidade do backend se um dia for implementado lá)
       if (!data.integrations.find(i => i.name === 'Google Analytics 4')) {
          data.integrations.push(gaIntegration);
       }
@@ -53,72 +75,49 @@ export const MonitoringPage: React.FC = () => {
       setAlerts(data.activeAlerts);
       setSystemHealth(data.systemHealth);
       setLastUpdate(new Date());
-    } catch (error) {
-      console.error('Erro ao carregar dashboard:', error);
+    } catch {
+      console.error('Erro ao carregar dashboard:');
       addNotification({
         type: 'error',
-        title: 'Monitoramento Offline',
-        message: 'Não foi possível carregar os dados de monitoramento.'
+        title: 'Radar Offline',
+        message: 'Falha crítica ao tentar recuperar telemetria do sistema.'
       });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [addNotification]);
+
+  useEffect(() => {
+    loadDashboardData(true);
+    const interval = setInterval(() => loadDashboardData(false), 30000);
+    return () => clearInterval(interval);
+  }, [loadDashboardData]);
 
   const testIntegration = async (integrationName: string) => {
-    // Check local para Google Analytics 4 (não enviar para backend)
     if (integrationName === 'Google Analytics 4') {
       const gaId = import.meta.env.VITE_GOOGLE_ANALYTICS_ID;
       const hasGa = !!gaId && gaId.length > 5;
-      
       const result: IntegrationHealth = {
         name: 'Google Analytics 4',
         status: hasGa ? 'healthy' : 'warning',
-        responseTime: Math.floor(Math.random() * 10) + 1, // Simula latência baixa
+        responseTime: Math.floor(Math.random() * 10) + 1,
         lastCheck: new Date().toISOString(),
         errorMessage: hasGa ? undefined : 'ID de rastreamento pendente'
       };
-
-      setIntegrations(prev => 
-        prev.map(integration => 
-          integration.name === integrationName ? result : integration
-        )
-      );
+      setIntegrations(prev => prev.map(i => i.name === integrationName ? result : i));
+      addNotification({ type: 'success', title: 'Teste GA4', message: 'Configuração cliente validada com sucesso.' });
       return;
     }
 
     try {
       const result = await monitoringService.testIntegration(integrationName);
-      
-      // Atualizar a integração na lista
-      setIntegrations(prev => 
-        prev.map(integration => 
-          integration.name === integrationName ? result : integration
-        )
-      );
-    } catch (error) {
-      console.error(`Erro ao testar integração ${integrationName}:`, error);
-      addNotification({
-        type: 'error',
-        title: 'Teste Falhou',
-        message: `Falha ao testar a integração ${integrationName}. Tente novamente.`
-      });
+      setIntegrations(prev => prev.map(i => i.name === integrationName ? result : i));
+      addNotification({ type: 'success', title: 'Check Ativo', message: `Integração ${integrationName} respondeu corretamente.` });
+    } catch {
+      addNotification({ type: 'error', title: 'Falha no Check', message: `O sistema ${integrationName} não retornou o sinal esperado.` });
     }
   };
 
-  const refreshData = async () => {
-    await loadDashboardData();
-  };
-
-  useEffect(() => {
-    loadDashboardData();
-    
-    // Auto-refresh a cada 30 segundos
-    const interval = setInterval(loadDashboardData, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Função para formatar bytes
   const formatBytes = (bytes: number) => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     if (bytes === 0) return '0 Bytes';
@@ -126,498 +125,466 @@ export const MonitoringPage: React.FC = () => {
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-  // Função para formatar uptime
   const formatUptime = (seconds: number) => {
     const days = Math.floor(seconds / (24 * 3600));
     const hours = Math.floor((seconds % (24 * 3600)) / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
-    
     if (days > 0) return `${days}d ${hours}h ${mins}m`;
     if (hours > 0) return `${hours}h ${mins}m`;
     return `${mins}m`;
   };
 
-  // Função para obter cor do status
-  const getStatusColor = (status: string) => {
+  const getStatusInfo = (status: string) => {
     switch (status) {
-      case 'healthy': return 'text-green-600 bg-green-100';
-      case 'warning': return 'text-yellow-600 bg-yellow-100';
-      case 'error': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'healthy': return { variant: 'success', icon: CheckCircle2, label: 'Operacional', color: 'text-emerald-500' };
+      case 'warning': return { variant: 'warning', icon: AlertTriangle, label: 'Degradado', color: 'text-amber-500' };
+      case 'error': return { variant: 'destructive', icon: XCircle, label: 'Falha Crítica', color: 'text-destructive' };
+      default: return { variant: 'outline', icon: Activity, label: 'Desconhecido', color: 'text-muted-foreground' };
     }
   };
-
-  // Função para obter ícone do status
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'healthy': return '✅';
-      case 'warning': return '⚠️';
-      case 'error': return '❌';
-      default: return '❓';
-    }
-  };
-
-  const tabs = [
-    { id: 'dashboard', label: '📊 Dashboard' },
-    { id: 'integrations', label: '🔗 Integrações' },
-    { id: 'system', label: '🖥️ Sistema' },
-    { id: 'alerts', label: '🚨 Alertas' },
-    { id: 'sentry', label: '🧪 Teste Sentry' }
-  ];
 
   if (!user || user.role !== 'ADMIN') {
-    return <div>Acesso negado. Apenas administradores podem acessar esta página.</div>;
+    return <div className="p-12 text-center text-muted-foreground font-black uppercase tracking-widest">Acesso Negado: Permissões insuficientes.</div>;
   }
 
+  const tabs = [
+    { id: 'dashboard', label: 'Monitor', icon: Layout },
+    { id: 'integrations', label: 'Conectores', icon: Globe },
+    { id: 'system', label: 'Hardware', icon: Server },
+    { id: 'alerts', label: 'Incidentes', icon: AlertTriangle },
+    { id: 'sentry', label: 'Sentry Core', icon: Monitor }
+  ];
+
   return (
-    <AdminLayout
-      title="Monitoramento Enterprise"
-      breadcrumbs={[
-        { name: 'Dashboard', href: '/admin' },
-        { name: 'Monitoramento', href: '/admin/monitoring' }
-      ]}
+    <AdminLayout 
+        title="Painel de Telemetria" 
+        breadcrumbs={[{ name: 'Admin' }, { name: 'Painel' }, { name: 'Sistemas' }]}
     >
-      <div className="space-y-6">
-        {/* Cabeçalho */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <p className="text-muted-foreground">
-              Sistema de monitoramento em tempo real das integrações e saúde do sistema
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Última atualização: {lastUpdate.toLocaleTimeString()}
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Button 
-              onClick={refreshData} 
-              disabled={isLoading} 
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <span className={isLoading ? 'animate-spin' : ''}>🔄</span>
-              Atualizar
-            </Button>
-          </div>
-        </div>
-
-        {/* Navegação por abas */}
-        <div className="flex space-x-1 bg-muted p-1 rounded-lg">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Conteúdo das abas */}
-        {isLoading && !dashboardData ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <div className="animate-spin text-4xl mb-4">🔄</div>
-              <p className="text-muted-foreground">Carregando dados de monitoramento...</p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Dashboard Executivo */}
-            {activeTab === 'dashboard' && dashboardData && (
-              <div className="space-y-6">
-                {/* Cards de métricas principais */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <StatsCard
-                    title="Status Geral"
-                    value={getStatusIcon(dashboardData.overview.systemStatus)}
-                    description={`Sistema ${dashboardData.overview.systemStatus}`}
-                  />
-                  <StatsCard
-                    title="Integrações Saudáveis"
-                    value={`${dashboardData.overview.healthyIntegrations}/${dashboardData.overview.totalIntegrations}`}
-                    description={`${Math.round((dashboardData.overview.healthyIntegrations / dashboardData.overview.totalIntegrations) * 100)}% operacionais`}
-                  />
-                  <StatsCard
-                    title="Alertas Ativos"
-                    value={dashboardData.overview.activeAlerts.toString()}
-                    description={dashboardData.overview.activeAlerts === 0 ? 'Nenhum problema' : 'Requer atenção'}
-                  />
-                  <StatsCard
-                    title="Uptime"
-                    value={formatUptime(dashboardData.uptime)}
-                    description="Tempo de funcionamento"
-                  />
+      <div className="space-y-8">
+        {/* Header Control */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg ring-1 ring-primary/20">
+                    <Activity className="h-7 w-7" />
                 </div>
-
-                {/* Gráficos principais */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <SimpleCard title="🔗 Status das Integrações">
-                    <div className="space-y-3">
-                      {dashboardData.integrations.map((integration) => (
-                        <div key={integration.name} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg">{getStatusIcon(integration.status)}</span>
-                            <div>
-                              <p className="font-medium capitalize">{integration.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {integration.responseTime}ms • {new Date(integration.lastCheck).toLocaleTimeString()}
-                              </p>
-                            </div>
-                          </div>
-                          <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(integration.status)}`}>
-                            {integration.status}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </SimpleCard>
-
-                  <SimpleCard title="🚨 Alertas Recentes">
-                    {dashboardData.activeAlerts.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <div className="text-4xl mb-2">✅</div>
-                        <p>Nenhum alerta ativo</p>
-                        <p className="text-sm">Todos os sistemas funcionando normalmente</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {dashboardData.activeAlerts.slice(0, 5).map((alert) => (
-                          <div key={alert.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-                            <span className="text-lg">
-                              {alert.type === 'error' ? '🔴' : alert.type === 'warning' ? '🟡' : 'ℹ️'}
-                            </span>
-                            <div className="flex-1">
-                              <p className="font-medium text-sm">{alert.integration}</p>
-                              <p className="text-xs text-muted-foreground">{alert.message}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {new Date(alert.timestamp).toLocaleString()}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </SimpleCard>
-                </div>
-              </div>
-            )}
-
-            {/* Integrações */}
-            {activeTab === 'integrations' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {integrations.map((integration) => (
-                  <SimpleCard key={integration.name} title={`${getStatusIcon(integration.status)} ${integration.name.charAt(0).toUpperCase() + integration.name.slice(1)}`}>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Status</span>
-                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(integration.status)}`}>
-                          {integration.status}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Tempo de Resposta</span>
-                        <span className="text-sm font-medium">{integration.responseTime}ms</span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Último Check</span>
-                        <span className="text-sm font-medium">
-                          {new Date(integration.lastCheck).toLocaleTimeString()}
-                        </span>
-                      </div>
-
-                      {integration.errorMessage && (
-                        <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-                          {integration.errorMessage}
-                        </div>
-                      )}
-
-                      <Button 
-                        onClick={() => testIntegration(integration.name)}
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                      >
-                        🧪 Testar Agora
-                      </Button>
-                    </div>
-                  </SimpleCard>
-                ))}
-              </div>
-            )}
-
-            {/* Sistema */}
-            {activeTab === 'system' && systemHealth && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <SimpleCard title="🖥️ CPU">
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-primary">{systemHealth.cpu.usage.toFixed(1)}%</div>
-                      <p className="text-sm text-muted-foreground">Uso atual</p>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div 
-                        className={`bg-primary h-2 rounded-full transition-all duration-300 ${
-                          systemHealth.cpu.usage >= 80 ? 'w-full' :
-                          systemHealth.cpu.usage >= 60 ? 'w-4/5' :
-                          systemHealth.cpu.usage >= 40 ? 'w-3/5' :
-                          systemHealth.cpu.usage >= 20 ? 'w-2/5' : 'w-1/5'
-                        }`}
-                      ></div>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      <p>{systemHealth.cpu.cores} cores</p>
-                      <p className="truncate">{systemHealth.cpu.model}</p>
-                    </div>
-                  </div>
-                </SimpleCard>
-
-                <SimpleCard title="💾 Memória">
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-blue-600">{systemHealth.memory.usage.toFixed(1)}%</div>
-                      <p className="text-sm text-muted-foreground">Uso atual</p>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div 
-                        className={`bg-blue-500 h-2 rounded-full transition-all duration-300 ${
-                          systemHealth.memory.usage >= 80 ? 'w-full' :
-                          systemHealth.memory.usage >= 60 ? 'w-4/5' :
-                          systemHealth.memory.usage >= 40 ? 'w-3/5' :
-                          systemHealth.memory.usage >= 20 ? 'w-2/5' : 'w-1/5'
-                        }`}
-                      ></div>
-                    </div>
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <div className="flex justify-between">
-                        <span>Total:</span>
-                        <span>{formatBytes(systemHealth.memory.total)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Usado:</span>
-                        <span>{formatBytes(systemHealth.memory.used)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Livre:</span>
-                        <span>{formatBytes(systemHealth.memory.free)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </SimpleCard>
-
-                <SimpleCard title="⏱️ Uptime">
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-green-600">{formatUptime(systemHealth.uptime)}</div>
-                      <p className="text-sm text-muted-foreground">Tempo ativo</p>
-                    </div>
-                    <div className="text-xs text-muted-foreground text-center">
-                      <p>Sistema operando continuamente</p>
-                      <p>desde o último reinício</p>
-                    </div>
-                  </div>
-                </SimpleCard>
-              </div>
-            )}
-
-            {/* Alertas */}
-            {activeTab === 'alerts' && (
-              <SimpleCard title="🚨 Gestão de Alertas">
-                {alerts.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="text-6xl mb-4">🎉</div>
-                    <h3 className="text-lg font-medium mb-2">Nenhum alerta ativo!</h3>
-                    <p className="text-muted-foreground">
-                      Todos os sistemas estão funcionando perfeitamente.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {alerts.map((alert) => (
-                      <div key={alert.id} className="border border-border rounded-lg p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">
-                              {alert.type === 'error' ? '🔴' : alert.type === 'warning' ? '🟡' : 'ℹ️'}
-                            </span>
-                            <h4 className="font-medium">{alert.integration}</h4>
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              alert.type === 'error' ? 'bg-red-100 text-red-700' :
-                              alert.type === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-blue-100 text-blue-700'
-                            }`}>
-                              {alert.type}
-                            </span>
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(alert.timestamp).toLocaleString()}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-3">{alert.message}</p>
-                        {!alert.resolved && (
-                          <Button variant="outline" size="sm">
-                            Marcar como Resolvido
-                          </Button>
+                <div>
+                   <div className="flex items-center gap-2">
+                        <h2 className="text-xl font-black text-foreground uppercase tracking-tighter">Enterprise Health Control</h2>
+                        {dashboardData?.overview.systemStatus === 'healthy' && (
+                            <Badge variant="success" className="h-1.5 w-1.5 rounded-full p-0 shadow-[0_0_12px_rgba(16,185,129,0.8)]"> </Badge>
                         )}
-                      </div>
+                   </div>
+                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">Sincronizado há {Math.floor((new Date().getTime() - lastUpdate.getTime())/1000)} segundos</p>
+                </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+                <div className="flex bg-muted/50 p-1 rounded-2xl border border-border/40">
+                    {tabs.map((t) => (
+                        <button
+                            key={t.id}
+                            onClick={() => setActiveTab(t.id)}
+                            className={`flex items-center gap-2 px-6 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${
+                                activeTab === t.id 
+                                ? 'bg-background text-primary shadow-sm border border-border/10' 
+                                : 'text-muted-foreground hover:bg-muted/80'
+                            }`}
+                        >
+                            <t.icon className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">{t.label}</span>
+                        </button>
                     ))}
+                </div>
+                <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="h-11 w-11 rounded-2xl border-border/60 hover:border-primary transition-all group" 
+                    onClick={() => loadDashboardData(true)}
+                    disabled={isLoading}
+                >
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+                </Button>
+            </div>
+        </div>
+
+        {isLoading && !dashboardData ? (
+            <div className="flex flex-col items-center justify-center min-h-[400px]">
+                <BrandLoader size={120} label="Interrogando terminais de monitoramento..." />
+            </div>
+        ) : (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                {/* Dashboard View */}
+                {activeTab === 'dashboard' && dashboardData && (
+                    <div className="space-y-8">
+                        <Grid columns={{ sm: 1, md: 2, lg: 4 }} gap={6}>
+                            <Card className="p-6 bg-primary/5 border-primary/10">
+                                <div className="flex flex-col h-full justify-between gap-4">
+                                   <div className="flex items-center justify-between">
+                                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Sinal Vital</p>
+                                      <div className={`h-2 w-2 rounded-full ${getStatusInfo(dashboardData.overview.systemStatus).color}`} />
+                                   </div>
+                                   <div className="flex items-center gap-3">
+                                      {React.createElement(getStatusInfo(dashboardData.overview.systemStatus).icon, { className: `h-6 w-6 ${getStatusInfo(dashboardData.overview.systemStatus).color}` })}
+                                      <p className="text-xl font-black text-foreground uppercase tracking-tighter">{getStatusInfo(dashboardData.overview.systemStatus).label}</p>
+                                   </div>
+                                </div>
+                            </Card>
+
+                            <Card className="p-6 bg-card/50">
+                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4">Sincronização</p>
+                                <div className="flex items-center gap-4">
+                                   <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                                      <Globe className="h-5 w-5" />
+                                   </div>
+                                   <div>
+                                      <p className="text-xl font-black text-foreground">{dashboardData.overview.healthyIntegrations} / {dashboardData.overview.totalIntegrations}</p>
+                                      <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">Integrações OK</p>
+                                   </div>
+                                </div>
+                            </Card>
+
+                            <Card className={`p-6 ${dashboardData.overview.activeAlerts > 0 ? 'bg-destructive/5 border-destructive/20' : 'bg-card/50'}`}>
+                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4">Alertas Ativos</p>
+                                <div className="flex items-center gap-4">
+                                   <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${dashboardData.overview.activeAlerts > 0 ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>
+                                      <AlertTriangle className="h-5 w-5" />
+                                   </div>
+                                   <div>
+                                      <p className={`text-xl font-black ${dashboardData.overview.activeAlerts > 0 ? 'text-destructive' : 'text-foreground'}`}>{dashboardData.overview.activeAlerts}</p>
+                                      <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">Requerem Atenção</p>
+                                   </div>
+                                </div>
+                            </Card>
+
+                            <Card className="p-6 bg-card/50">
+                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4">Uptime Contínuo</p>
+                                <div className="flex items-center gap-4">
+                                   <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                                      <Clock className="h-5 w-5" />
+                                   </div>
+                                   <div>
+                                      <p className="text-xl font-black text-foreground">{formatUptime(dashboardData.uptime)}</p>
+                                      <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">Disponibilidade</p>
+                                   </div>
+                                </div>
+                            </Card>
+                        </Grid>
+
+                        <Grid columns={{ sm: 1, lg: 3 }} gap={8}>
+                            <div className="lg:col-span-2 space-y-6">
+                                <Card className="p-0 overflow-hidden border-border/60 bg-card/60">
+                                    <div className="p-6 border-b border-border/50 bg-muted/40 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <Globe className="h-5 w-5 text-primary" />
+                                            <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Estado das Integrações</h3>
+                                        </div>
+                                        <Badge variant="outline" className="text-[9px] font-black uppercase">Tempo Real</Badge>
+                                    </div>
+                                    <div className="p-0">
+                                        {dashboardData.integrations.map((integration, idx) => (
+                                            <div key={integration.name} className={`px-6 py-5 flex items-center justify-between group transition-all hover:bg-muted/30 ${idx !== dashboardData.integrations.length -1 ? 'border-b border-border/50' : ''}`}>
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`h-2.5 w-2.5 rounded-full ${getStatusInfo(integration.status).color} ring-4 ring-${integration.status === 'healthy' ? 'emerald' : integration.status === 'warning' ? 'amber' : 'red'}-500/10`} />
+                                                    <div>
+                                                        <p className="text-xs font-black text-foreground uppercase tracking-wider">{integration.name}</p>
+                                                        <p className="text-[10px] font-bold text-muted-foreground opacity-60">{integration.responseTime}ms de latência • Sinc: {new Date(integration.lastCheck).toLocaleTimeString()}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <Badge variant={getStatusInfo(integration.status).variant as any} className="text-[8px] font-black uppercase px-2 py-0.5 opacity-80">{integration.status}</Badge>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors" onClick={() => testIntegration(integration.name)}>
+                                                        <RefreshCw className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </Card>
+                            </div>
+
+                            <div className="space-y-6">
+                                 <Card className="p-0 overflow-hidden border-border/60 bg-card/60">
+                                    <div className="p-6 border-b border-border/50 bg-muted/40 flex items-center gap-3">
+                                        <AlertTriangle className="h-5 w-5 text-amber-500" />
+                                        <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Log de Incidentes</h3>
+                                    </div>
+                                    <div className="p-6 space-y-4">
+                                        {dashboardData.activeAlerts.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                                <div className="h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-4 ring-8 ring-emerald-500/5">
+                                                    <ShieldCheck className="h-8 w-8" />
+                                                </div>
+                                                <h4 className="text-[11px] font-black text-foreground uppercase tracking-widest">Perímetro Seguro</h4>
+                                                <p className="text-[10px] text-muted-foreground font-medium mt-1">Nenhum evento anômalo detectado nas últimas 24h.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                {dashboardData.activeAlerts.slice(0, 5).map((alert) => (
+                                                    <div key={alert.id} className="p-4 rounded-2xl bg-muted/40 border border-border/40 hover:border-border transition-colors">
+                                                        <div className="flex items-center justify-between mb-1.5">
+                                                            <span className="text-[10px] font-black text-primary uppercase tracking-tighter">{alert.integration}</span>
+                                                            <span className="text-[9px] font-bold text-muted-foreground opacity-50 font-mono">{new Date(alert.timestamp).toLocaleTimeString()}</span>
+                                                        </div>
+                                                        <p className="text-[11px] font-bold text-foreground leading-relaxed italic line-clamp-2">"{alert.message}"</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    {dashboardData.activeAlerts.length > 0 && (
+                                        <button onClick={() => setActiveTab('alerts')} className="w-full py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted/50 border-t border-border/50 transition-all flex items-center justify-center gap-2">
+                                            Ver Histórico de Incidentes <ChevronRight className="h-3 w-3" />
+                                        </button>
+                                    )}
+                                </Card>
+                            </div>
+                        </Grid>
+                    </div>
+                )}
+
+                {/* Integrations View */}
+                {activeTab === 'integrations' && (
+                  <Grid columns={{ sm: 1, md: 2, lg: 3 }} gap={6}>
+                    {integrations.map((integration) => (
+                      <Card key={integration.name} className="overflow-hidden p-0 border-border/60 hover:border-primary/50 transition-all duration-300">
+                        <div className="p-6 border-b border-border/50 bg-muted/30 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                {React.createElement(getStatusInfo(integration.status).icon, { className: `h-5 w-5 ${getStatusInfo(integration.status).color}` })}
+                                <h3 className="text-sm font-black text-foreground uppercase tracking-widest truncate max-w-[150px]">{integration.name}</h3>
+                            </div>
+                            <Badge variant={getStatusInfo(integration.status).variant as any} className="text-[9px] font-black uppercase h-5">{integration.status}</Badge>
+                        </div>
+                        <div className="p-6 space-y-4">
+                           <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                              <span>Latência</span>
+                              <span className="text-foreground">{integration.responseTime}ms</span>
+                           </div>
+                           <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                              <span>Check de Pulso</span>
+                              <span className="text-foreground">{new Date(integration.lastCheck).toLocaleTimeString()}</span>
+                           </div>
+                           
+                           {integration.errorMessage && (
+                               <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-[10px] font-bold text-destructive italic leading-relaxed">
+                                 {integration.errorMessage}
+                               </div>
+                           )}
+
+                           <Button 
+                             onClick={() => testIntegration(integration.name)}
+                             variant="outline" 
+                             className="w-full h-10 font-black uppercase text-[10px] tracking-widest mt-2 border-border/60 hover:bg-primary/5"
+                           >
+                             <Zap size={14} className="mr-2" /> Forçar Diagnóstico
+                           </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </Grid>
+                )}
+
+                {/* Hardware View */}
+                {activeTab === 'system' && systemHealth && (
+                  <Grid columns={{ sm: 1, lg: 3 }} gap={8}>
+                    <Card className="p-6 space-y-6 bg-card/60">
+                      <div className="flex items-center gap-3 pb-4 border-b border-border/50">
+                        <Cpu className="h-5 w-5 text-indigo-500" />
+                        <h3 className="text-xs font-black text-foreground uppercase tracking-widest">Processamento (CPU)</h3>
+                      </div>
+                      <div className="flex flex-col items-center py-6">
+                        <div className="relative h-32 w-32 flex items-center justify-center">
+                            <svg className="h-full w-full rotate-[-90deg]">
+                                <circle cx="64" cy="64" r="58" fill="transparent" stroke="currentColor" strokeWidth="8" className="text-muted/30" />
+                                <circle cx="64" cy="64" r="58" fill="transparent" stroke="currentColor" strokeWidth="8" strokeDasharray={`${Math.PI * 116}`} strokeDashoffset={`${Math.PI * 116 * (1 - systemHealth.cpu.usage / 100)}`} className="text-indigo-500 transition-all duration-1000" strokeLinecap="round" />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <span className="text-2xl font-black text-foreground">{systemHealth.cpu.usage.toFixed(0)}%</span>
+                                <span className="text-[9px] font-black text-muted-foreground uppercase">Utilização</span>
+                            </div>
+                        </div>
+                      </div>
+                      <div className="space-y-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        <div className="flex justify-between">
+                            <span>Arquitetura</span>
+                            <span className="text-foreground">{systemHealth.cpu.cores} Cores</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span>Proprietário</span>
+                            <span className="text-foreground truncate max-w-[120px]">{systemHealth.cpu.model}</span>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Card className="p-6 space-y-6 bg-card/60">
+                      <div className="flex items-center gap-3 pb-4 border-b border-border/50">
+                        <Database className="h-5 w-5 text-emerald-500" />
+                        <h3 className="text-xs font-black text-foreground uppercase tracking-widest">Memória Volátil (RAM)</h3>
+                      </div>
+                      <div className="flex flex-col items-center py-6">
+                        <div className="relative h-32 w-32 flex items-center justify-center">
+                            <svg className="h-full w-full rotate-[-90deg]">
+                                <circle cx="64" cy="64" r="58" fill="transparent" stroke="currentColor" strokeWidth="8" className="text-muted/30" />
+                                <circle cx="64" cy="64" r="58" fill="transparent" stroke="currentColor" strokeWidth="8" strokeDasharray={`${Math.PI * 116}`} strokeDashoffset={`${Math.PI * 116 * (1 - systemHealth.memory.usage / 100)}`} className="text-emerald-500 transition-all duration-1000" strokeLinecap="round" />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <span className="text-2xl font-black text-foreground">{systemHealth.memory.usage.toFixed(0)}%</span>
+                                <span className="text-[9px] font-black text-muted-foreground uppercase">Carga</span>
+                            </div>
+                        </div>
+                      </div>
+                      <div className="space-y-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        <div className="flex justify-between">
+                            <span>Saturado</span>
+                            <span className="text-foreground">{formatBytes(systemHealth.memory.used)}</span>
+                        </div>
+                        <div className="flex justify-between border-t border-border/20 pt-2">
+                            <span>Capacidade</span>
+                            <span className="text-foreground font-black">{formatBytes(systemHealth.memory.total)}</span>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Card className="p-6 space-y-6 bg-card/60">
+                      <div className="flex items-center gap-3 pb-4 border-b border-border/50">
+                        <HardDrive className="h-5 w-5 text-pink-500" />
+                        <h3 className="text-xs font-black text-foreground uppercase tracking-widest">Resiliência Operativa</h3>
+                      </div>
+                      <div className="h-32 flex flex-col items-center justify-center">
+                         <div className="text-3xl font-black text-foreground tracking-tighter">{formatUptime(systemHealth.uptime)}</div>
+                         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mt-1 opacity-60">Sessão Contínua</p>
+                      </div>
+                      <div className="bg-muted/30 p-4 rounded-2xl border border-dashed border-border/50">
+                        <div className="flex items-center gap-3">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                            <p className="text-[10px] font-bold text-foreground leading-relaxed italic">"Plataforma estabilizada. Sem registros de reinícios anômalos detectados pelo watchdog."</p>
+                        </div>
+                      </div>
+                    </Card>
+                  </Grid>
+                )}
+
+                {/* Incidentes View */}
+                {activeTab === 'alerts' && (
+                  <Card className="p-0 border-border/60 bg-card/60 overflow-hidden">
+                    <div className="p-6 border-b border-border/50 bg-muted/40 flex items-center justify-between">
+                        <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Console de Segurança e Auditoria</h3>
+                        <Badge variant="outline" className="text-[10px] font-black uppercase px-3 py-1">Histórico Global</Badge>
+                    </div>
+                    <div className="p-6">
+                        {alerts.length === 0 ? (
+                            <div className="text-center py-24">
+                                <div className="h-20 w-20 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 mx-auto mb-6 ring-8 ring-emerald-500/5">
+                                    <ShieldCheck className="h-10 w-10 text-emerald-500/30" />
+                                </div>
+                                <h3 className="text-lg font-black text-foreground uppercase tracking-widest">Nenhum Alerta Ativo</h3>
+                                <p className="text-sm text-muted-foreground max-w-sm mx-auto mt-2 font-medium">Os protocolos de segurança e integridade não dispararam gatilhos operacionais recentes.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {alerts.map((alert) => (
+                                    <div key={alert.id} className="group p-5 rounded-[1.5rem] bg-muted/30 border border-border/40 hover:border-primary/30 transition-all flex flex-col md:flex-row gap-6 md:items-center justify-between">
+                                        <div className="flex items-start gap-4">
+                                            <div className={`h-11 w-11 rounded-full flex items-center justify-center shrink-0 ${
+                                                alert.type === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/10 text-amber-500'
+                                            }`}>
+                                                <AlertTriangle size={20} />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <h4 className="text-xs font-black text-foreground uppercase tracking-widest">{alert.integration}</h4>
+                                                    <Badge variant={alert.type === 'error' ? 'destructive' : 'warning'} className="text-[8px] font-black uppercase tracking-tighter px-1.5 h-4">Critical</Badge>
+                                                </div>
+                                                <p className="text-sm font-bold text-muted-foreground leading-relaxed italic line-clamp-2">"{alert.message}"</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col md:items-end gap-3 shrink-0">
+                                            <span className="text-[10px] font-black text-muted-foreground opacity-50 uppercase tracking-tighter">{new Date(alert.timestamp).toLocaleString()}</span>
+                                            {!alert.resolved && (
+                                                <Button variant="outline" size="sm" className="h-9 px-6 font-black uppercase text-[10px] tracking-widest rounded-xl bg-card">Limpar Alerta</Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                  </Card>
+                )}
+
+                {/* Sentry View */}
+                {activeTab === 'sentry' && (
+                  <div className="space-y-8 max-w-5xl mx-auto">
+                    <Card className="p-8 border-primary/20 bg-primary/5 rounded-[2.5rem]">
+                      <div className="flex flex-col md:flex-row gap-8 items-center">
+                        <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0 border border-primary/20 shadow-inner ring-8 ring-primary/5">
+                            <Monitor className="h-10 w-10 text-primary/40" />
+                        </div>
+                        <div>
+                          <h4 className="text-xl font-black text-foreground uppercase tracking-widest mb-2">Protocolo Sentry de Monitoramento</h4>
+                          <p className="text-sm text-muted-foreground leading-relaxed font-medium">Esta interface interage diretamente com o núcleo de captura de exceções em tempo real. Erros gerados aqui servem para validar o fluxo de notificações e rastreamento de issues em produção.</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Grid columns={{ sm: 1, lg: 2 }} gap={8}>
+                        <Card className="p-8 space-y-6">
+                            <h3 className="text-sm font-black text-foreground uppercase tracking-widest border-b border-border/50 pb-4">Laboratório de Stress</h3>
+                            <div className="grid grid-cols-1 gap-3">
+                                <SentryTestButton position="inline" />
+                            </div>
+                            <div className="pt-4 space-y-3">
+                                <div className="flex items-start gap-3">
+                                    <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0">1</div>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase leading-relaxed tracking-wider italic">Execute um dos disparos acida para testar o watchdog de erros.</p>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0">2</div>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase leading-relaxed tracking-wider italic">Verifique os logs no console do desenvolvedor para confirmação imediata.</p>
+                                </div>
+                            </div>
+                        </Card>
+
+                        <Card className="p-0 border-border/60 bg-card/60 overflow-hidden">
+                            <div className="p-6 border-b border-border/50 bg-muted/40">
+                                <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Parâmetros de Sessão</h3>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <div className="flex justify-between items-center px-4 py-3 rounded-2xl bg-muted/30 border border-border/40">
+                                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Modo Executivo</span>
+                                    <Badge variant={import.meta.env.MODE === 'production' ? 'success' : 'warning'} className="text-[9px] font-black uppercase">{import.meta.env.MODE}</Badge>
+                                </div>
+                                <div className="flex justify-between items-center px-4 py-3 rounded-2xl bg-muted/30 border border-border/40">
+                                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Sentry Hub Status</span>
+                                    <Badge variant={import.meta.env.VITE_SENTRY_DSN ? 'success' : 'destructive'} className="text-[9px] font-black uppercase">{import.meta.env.VITE_SENTRY_DSN ? 'Conectado' : 'Offline'}</Badge>
+                                </div>
+                                <div className="flex justify-between items-center px-4 py-3 rounded-2xl bg-muted/30 border border-border/40">
+                                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Performance Engine</span>
+                                    <Badge variant="success" className="text-[9px] font-black uppercase">Otimizado</Badge>
+                                </div>
+                                
+                                <a 
+                                    href="https://sentry.io" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="block mt-6 p-4 rounded-2xl bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-widest text-center shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform active:scale-[0.98]"
+                                >
+                                    Acessar Dashboard Sentry External <ExternalLink className="inline ml-2 h-3 w-3" />
+                                </a>
+                            </div>
+                        </Card>
+                    </Grid>
                   </div>
                 )}
-              </SimpleCard>
-            )}
-
-            {/* Teste Sentry */}
-            {activeTab === 'sentry' && (
-              <div className="space-y-6">
-                <SimpleCard title="🧪 Teste de Monitoramento de Erros (Sentry)">
-                  <div className="space-y-4">
-                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <span className="text-2xl">⚠️</span>
-                        <div>
-                          <h4 className="font-medium text-yellow-900 dark:text-yellow-100 mb-1">
-                            Atenção: Área de Testes
-                          </h4>
-                          <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                            Esta seção permite testar a integração com o Sentry, nosso sistema de monitoramento de erros.
-                            Os erros gerados aqui são intencionais e serão capturados pelo Sentry.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="prose dark:prose-invert max-w-none">
-                      <h3 className="text-lg font-semibold mb-3">Como funciona?</h3>
-                      <ul className="space-y-2 text-sm text-muted-foreground">
-                        <li>
-                          <strong>💥 Lançar Erro:</strong> Simula um erro não tratado que será capturado pelo Error Boundary
-                        </li>
-                        <li>
-                          <strong>⚠️ Capturar Exceção:</strong> Simula um erro tratado manualmente com try/catch
-                        </li>
-                        <li>
-                          <strong>📝 Enviar Mensagem:</strong> Envia uma mensagem informativa para o Sentry
-                        </li>
-                      </ul>
-
-                      <h3 className="text-lg font-semibold mb-3 mt-6">Verificando os Resultados</h3>
-                      <ol className="space-y-2 text-sm text-muted-foreground">
-                        <li>1. Clique em um dos botões de teste abaixo</li>
-                        <li>2. Em desenvolvimento: veja o log no console do navegador</li>
-                        <li>3. Em produção: acesse o <a href="https://sentry.io" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">dashboard do Sentry</a></li>
-                        <li>4. Verifique os eventos capturados na seção "Issues"</li>
-                      </ol>
-                    </div>
-
-                    <div className="border-t border-border pt-6 mt-6">
-                      <h3 className="text-lg font-semibold mb-4">Painel de Testes</h3>
-                      <div className="flex justify-center">
-                        <SentryTestButton position="inline" />
-                      </div>
-                    </div>
-
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-6">
-                      <div className="flex items-start gap-3">
-                        <span className="text-2xl">ℹ️</span>
-                        <div>
-                          <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-1">
-                            Informação
-                          </h4>
-                          <p className="text-sm text-blue-800 dark:text-blue-200">
-                            Em ambiente de desenvolvimento, os erros são apenas registrados no console.
-                            Em produção, todos os erros são enviados para o Sentry para monitoramento em tempo real.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </SimpleCard>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <SimpleCard title="📊 Configuração Atual">
-                    <div className="space-y-3 text-sm">
-                      <div className="flex justify-between py-2 border-b border-border">
-                        <span className="text-muted-foreground">Ambiente:</span>
-                        <span className="font-medium">
-                          {import.meta.env.MODE === 'production' ? '🟢 Produção' : '🟡 Desenvolvimento'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b border-border">
-                        <span className="text-muted-foreground">Sentry DSN:</span>
-                        <span className="font-medium">
-                          {import.meta.env.VITE_SENTRY_DSN ? '✅ Configurado' : '❌ Não configurado'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b border-border">
-                        <span className="text-muted-foreground">Error Boundary:</span>
-                        <span className="font-medium">✅ Ativo</span>
-                      </div>
-                      <div className="flex justify-between py-2">
-                        <span className="text-muted-foreground">Performance Monitoring:</span>
-                        <span className="font-medium">✅ Ativo</span>
-                      </div>
-                    </div>
-                  </SimpleCard>
-
-                  <SimpleCard title="🔗 Links Úteis">
-                    <div className="space-y-3">
-                      <a
-                        href="https://sentry.io"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 bg-muted/50 hover:bg-muted rounded-lg transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-xl">🌐</span>
-                          <div>
-                            <p className="font-medium text-sm">Dashboard Sentry</p>
-                            <p className="text-xs text-muted-foreground">Visualizar erros capturados</p>
-                          </div>
-                        </div>
-                        <span className="text-muted-foreground">→</span>
-                      </a>
-
-                      <a
-                        href="/docs/SENTRY_CONFIGURATION.md"
-                        className="flex items-center justify-between p-3 bg-muted/50 hover:bg-muted rounded-lg transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-xl">📚</span>
-                          <div>
-                            <p className="font-medium text-sm">Documentação</p>
-                            <p className="text-xs text-muted-foreground">Guia de configuração</p>
-                          </div>
-                        </div>
-                        <span className="text-muted-foreground">→</span>
-                      </a>
-
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <span className="text-xl">👤</span>
-                          <div>
-                            <p className="font-medium text-sm">Usuário Atual</p>
-                            <p className="text-xs text-muted-foreground">{user?.email || 'Não autenticado'}</p>
-                          </div>
-                        </div>
-                        <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100">
-                          Admin
-                        </span>
-                      </div>
-                    </div>
-                  </SimpleCard>
-                </div>
-              </div>
-            )}
-          </>
+            </div>
         )}
+
+        {/* Real-time Status Footer */}
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-2 duration-500">
+           <div className="flex items-center gap-3 px-6 py-3 rounded-full border border-primary/20 bg-card/80 backdrop-blur-xl shadow-2xl">
+              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-foreground/80">Monitoramento Ativo: Transmissão de telemetria em tempo real</span>
+           </div>
+        </div>
       </div>
     </AdminLayout>
   );

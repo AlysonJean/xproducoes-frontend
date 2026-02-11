@@ -1,33 +1,37 @@
-/**
- * 🎨 Button Component
- * Componente de botão flexível e acessível
- */
-
-import { forwardRef } from 'react';
+import { forwardRef, ReactNode } from 'react';
 import { clsx } from 'clsx';
 import { Loader2 } from 'lucide-react';
-import type { IButtonProps } from '@/types/ui';
+import { StandardVariant, StandardSize } from './StandardTypes';
 
-const buttonVariants: Record<NonNullable<IButtonProps['variant']>, string> = {
-  primary:
-    'bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-2 focus:ring-ring focus:ring-offset-2 active:bg-primary/95 shadow-sm transition-all duration-200',
-  secondary:
-    'bg-secondary text-secondary-foreground hover:bg-secondary/80 focus:ring-2 focus:ring-ring focus:ring-offset-2 active:bg-secondary/90 shadow-sm transition-all duration-200',
-  outline:
-    'border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2 active:bg-accent/90 transition-all duration-200',
-  ghost:
-    'text-foreground hover:bg-accent hover:text-accent-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2 active:bg-accent/80 transition-all duration-200',
-  danger:
-    'bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-2 focus:ring-ring focus:ring-offset-2 active:bg-destructive/95 shadow-sm transition-all duration-200',
+export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'size'> {
+  variant?: StandardVariant;
+  size?: StandardSize;
+  isLoading?: boolean;
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
+  fullWidth?: boolean;
+}
+
+const buttonVariants: Record<StandardVariant, string> = {
+  primary: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-lg',
+  secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border shadow-sm',
+  outline: 'border-2 border-primary text-primary hover:bg-primary/5',
+  ghost: 'text-foreground hover:bg-accent hover:text-accent-foreground',
+  destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-md',
+  success: 'bg-success text-success-foreground hover:bg-success/90 shadow-md',
+  warning: 'bg-warning text-warning-foreground hover:bg-warning/90 shadow-md',
 };
 
-const buttonSizes: Record<NonNullable<IButtonProps['size']>, string> = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-sm',
-  lg: 'px-6 py-3 text-base',
+const buttonSizes: Record<StandardSize, string> = {
+  xs: 'h-8 px-3 text-xs',
+  sm: 'h-10 px-4 text-sm font-medium',
+  md: 'h-12 px-6 text-sm font-bold uppercase tracking-wider',
+  lg: 'h-14 px-8 text-base font-bold uppercase tracking-wider',
+  xl: 'h-16 px-10 text-lg font-bold uppercase tracking-widest',
+  icon: 'h-10 w-10 p-2',
 };
 
-export const Button = forwardRef<HTMLButtonElement, IButtonProps>(
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
       variant = 'primary',
@@ -43,30 +47,23 @@ export const Button = forwardRef<HTMLButtonElement, IButtonProps>(
     },
     ref
   ) => {
-    const isDisabled = disabled || isLoading;
-
     return (
       <button
         ref={ref}
+        disabled={disabled || isLoading}
         className={clsx(
-          // Base styles - usando variáveis de tema
-          'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-all duration-200 focus:outline-none disabled:pointer-events-none disabled:opacity-50',
-          // Variant styles
+          'inline-flex items-center justify-center gap-2 rounded-xl transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100',
           buttonVariants[variant],
-          // Size styles
           buttonSizes[size],
-          // Full width
           fullWidth && 'w-full',
-          // Custom className
           className
         )}
-        disabled={isDisabled}
         {...props}
       >
-        {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-        {!isLoading && leftIcon && leftIcon}
-        {children}
-        {!isLoading && rightIcon && rightIcon}
+        {isLoading && <Loader2 className="h-5 w-5 animate-spin" />}
+        {!isLoading && leftIcon}
+        <span className="truncate">{children}</span>
+        {!isLoading && rightIcon}
       </button>
     );
   }

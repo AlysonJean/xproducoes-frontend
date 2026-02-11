@@ -18,6 +18,7 @@ import { Textarea } from '../../components/ui/Textarea';
 import { collaboratorProfileAPI } from '../../services/api';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { GoogleCalendarIntegration } from '../../components/GoogleCalendarIntegration';
 
 const CollaboratorProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ const CollaboratorProfilePage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'portfolio' | 'reviews' | 'settings'>('overview');
+  const [uploading, setUploading] = useState(false);
 
   // Form states
   const [editMode, setEditMode] = useState(false);
@@ -96,6 +98,7 @@ const CollaboratorProfilePage: React.FC = () => {
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      setUploading(true);
       try {
         const formData = new FormData();
         formData.append('avatar', file);
@@ -109,6 +112,8 @@ const CollaboratorProfilePage: React.FC = () => {
           title: 'Erro',
           message: 'Erro ao atualizar avatar.'
         });
+      } finally {
+        setUploading(false);
       }
     }
   };
@@ -166,7 +171,7 @@ const CollaboratorProfilePage: React.FC = () => {
             </div>
             <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
               <input type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
-              {false ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
             </label>
           </div>
 
@@ -222,7 +227,7 @@ const CollaboratorProfilePage: React.FC = () => {
                     <div className="text-sm font-medium text-gray-600 mt-1">Concluídos</div>
                   </div>
                   <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-600">R$ {(Number(profile.totalEarnings) || 0).toFixed(2)}</div>
+                    <div className="text-2xl font-bold text-indigo-600">R$ {(Number(profile.totalEarnings) || 0).toFixed(2)}</div>
                     <div className="text-sm font-medium text-gray-600 mt-1">Total Ganho</div>
                   </div>
                   <div className="text-center p-4 bg-muted/50 rounded-lg">
@@ -409,7 +414,14 @@ const CollaboratorProfilePage: React.FC = () => {
 
           {activeTab === 'settings' && (
             <div className="bg-gray-50 rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Configurações Profissionais</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-6">Configurações Profissionais</h3>
+
+              {/* Integrações */}
+              {!editMode && profile && (
+                 <div className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden">
+                    <GoogleCalendarIntegration googleCalendarEmail={profile.user?.googleCalendarEmail} />
+                 </div>
+              )}
 
               {editMode ? (
                 <div className="space-y-4">

@@ -55,7 +55,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
             <Button
               onClick={onConfirm}
-              variant={confirmVariant}
+              variant={confirmVariant === 'danger' ? 'destructive' : confirmVariant === 'outline' ? 'outline' : 'primary'}
               disabled={isLoading}
               className="w-full sm:w-auto sm:ml-3"
             >

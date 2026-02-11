@@ -425,7 +425,7 @@ const CollaboratorWorkSchedule: React.FC = () => {
             <div className="flex items-center">
               <div className="p-2 bg-accent rounded-lg">
                 <svg
-                  className="w-6 h-6 text-purple-600"
+                  className="w-6 h-6 text-indigo-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -440,7 +440,7 @@ const CollaboratorWorkSchedule: React.FC = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Dias de Trabalho</p>
-                <p className="text-2xl font-bold text-purple-600">{monthlyStats.workingDays}</p>
+                <p className="text-2xl font-bold text-indigo-600">{monthlyStats.workingDays}</p>
               </div>
             </div>
           </div>

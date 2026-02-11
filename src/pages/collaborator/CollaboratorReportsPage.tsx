@@ -217,7 +217,7 @@ const CollaboratorReportsPage: React.FC = () => {
                       type.color === '#10b981' ? 'bg-emerald-500' :
                       type.color === '#f59e0b' ? 'bg-amber-500' :
                       type.color === '#ef4444' ? 'bg-red-500' :
-                      'bg-purple-500'
+                      'bg-indigo-500'
                     }`}
                   ></div>
                   <span className="text-sm text-foreground">{type.type}</span>
@@ -263,17 +263,17 @@ const CollaboratorReportsPage: React.FC = () => {
                 </p>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-200">
+              <div className="flex items-center justify-between p-4 bg-indigo-50 rounded-lg border border-indigo-200">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-purple-600" />
+                  <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-indigo-600" />
                   </div>
                   <div>
-                    <p className="font-medium text-purple-900">Dias Trabalhados</p>
-                    <p className="text-sm text-purple-700">Média mensal</p>
+                    <p className="font-medium text-indigo-900">Dias Trabalhados</p>
+                    <p className="text-sm text-indigo-700">Média mensal</p>
                   </div>
                 </div>
-                <p className="text-lg font-bold text-purple-900">
+                <p className="text-lg font-bold text-indigo-900">
                   {reportData?.timeAnalysis?.workingDaysPerMonth || 0} dias
                 </p>
               </div>

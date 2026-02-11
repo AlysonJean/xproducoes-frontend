@@ -67,7 +67,6 @@ const CollaboratorNotificationsPage: React.FC = () => {
 
   useEffect(() => {
     loadNotifications();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadNotifications = async () => {
@@ -353,7 +352,7 @@ const CollaboratorNotificationsPage: React.FC = () => {
                           <div className={`p-2 rounded-lg ${
                             notification.type === 'booking' ? 'bg-blue-100 text-blue-600' :
                             notification.type === 'payment' ? 'bg-green-100 text-green-600' :
-                            notification.type === 'message' ? 'bg-purple-100 text-purple-600' :
+                            notification.type === 'message' ? 'bg-sky-100 text-sky-600' :
                             'bg-gray-100 text-gray-600'
                           }`}>
                             {getNotificationIcon(notification.type)}
