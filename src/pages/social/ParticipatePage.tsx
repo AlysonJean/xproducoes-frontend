@@ -8,6 +8,12 @@ interface WallConfig {
     hashtag: string;
 }
 
+interface TvConfigResponse {
+    linked: boolean;
+    eventName: string;
+    hashtag: string;
+}
+
 const ParticipatePage = () => {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
@@ -19,7 +25,7 @@ const ParticipatePage = () => {
         const fetchConfig = async () => {
             try {
                 if (slug) {
-                    const res = await apiFetch<any>(`/tv/config?slug=${slug}`);
+                    const res = await apiFetch<TvConfigResponse>(`/tv/config?slug=${slug}`);
                     if (res.linked) {
                         setConfig({
                             name: res.eventName,
@@ -78,7 +84,7 @@ const ParticipatePage = () => {
                 <div className="grid gap-6 mt-8">
                     {/* Option 1: Instagram */}
                     <div className="relative group animate-fade-in-up delay-100">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                        <div className="absolute -inset-1 bg-gradient-to-r from-sky-600 to-indigo-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
                         <button 
                             onClick={handleInstagram}
                             className="relative w-full py-6 bg-surface rounded-xl border border-border/10 hover:bg-muted transition-all flex flex-col items-center gap-3 cursor-pointer"

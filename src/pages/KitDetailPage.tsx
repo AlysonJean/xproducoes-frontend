@@ -263,7 +263,7 @@ export const KitDetailPage = () => {
         </div>
       </div>
 
-      {/* Included Equipments Grid */}
+      {/* Included Equipments Grid - Grouped by Category */}
       <div className="border-t border-border pt-12">
         <div className="flex items-center gap-3 mb-8">
             <h2 className="text-3xl font-black text-foreground">O que vem no Kit?</h2>
@@ -272,52 +272,103 @@ export const KitDetailPage = () => {
             </span>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {(kit.items || []).map((item) => {
+        {(() => {
+          // Agrupamento de itens por categoria
+          const groupedItems = (kit.items || []).reduce((acc, item) => {
             const entity = item.equipment || item.service;
-            if (!entity) return null;
-            const isService = !!item.serviceId;
-            const price = isService ? (entity as any).price : (entity as any).pricePerHour;
+            if (!entity) return acc;
+            
+            let categoryName = 'Outros Equipamentos';
+            
+            if (item.service) {
+                categoryName = 'Serviços Inclusos';
+            } else if (item.equipment) {
+                if (typeof item.equipment.category === 'object' && item.equipment.category?.name) {
+                    categoryName = item.equipment.category.name;
+                } else if (typeof item.equipment.category === 'string' && item.equipment.category) {
+                    categoryName = item.equipment.category;
+                }
+            }
+            
+            if (!acc[categoryName]) {
+              acc[categoryName] = [];
+            }
+            acc[categoryName].push(item);
+            return acc;
+          }, {} as Record<string, typeof kit.items>);
 
-            return (
-              <div key={item.id} className="group bg-muted/10 rounded-2xl p-5 hover:bg-muted/20 transition-all border border-border hover:border-primary/20 shadow-sm hover:shadow-md">
-                <div className="flex items-center space-x-5">
-                  <div className="w-20 h-20 rounded-xl overflow-hidden shadow-inner flex-shrink-0 bg-card flex items-center justify-center">
-                      {entity.imageUrl ? (
-                        <img
-                          src={entity.imageUrl}
-                          alt={entity.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                      ) : (
-                        isService ? <User className="w-10 h-10 text-purple-400" /> : <Package className="w-10 h-10 text-blue-400" />
-                      )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className={`w-2 h-2 rounded-full ${isService ? 'bg-purple-500' : 'bg-blue-500'}`} />
-                      <h3 className="font-bold text-foreground text-sm truncate uppercase tracking-tight">{entity.name}</h3>
-                    </div>
-                    {item.quantity > 1 && (
-                       <p className="text-xs font-bold text-primary mb-1">{item.quantity}x Unidades</p>
-                    )}
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-primary font-bold text-sm">
-                        {formatPrice(Number(price))}{isService ? '/serviço' : '/h'}
-                      </span>
-                      <Link 
-                        to={isService ? `/servicos/${(entity as any).slug}` : `/equipamentos/${(entity as any).slug || entity.id}`} 
-                        className="text-[10px] font-bold text-muted-foreground hover:text-primary underline-offset-4 hover:underline transition-colors uppercase tracking-widest"
-                      >
-                        Detalhes
-                      </Link>
-                    </div>
+          const categoryNames = Object.keys(groupedItems).sort((a, b) => {
+             // 'Serviços Inclusos' e 'Outros Equipamentos'  no final
+             if (a === 'Serviços Inclusos') return 1;
+             if (b === 'Serviços Inclusos') return -1;
+             if (a === 'Outros Equipamentos') return 1;
+             if (b === 'Outros Equipamentos') return -1;
+             return a.localeCompare(b);
+          });
+
+          return (
+            <div className="space-y-10">
+              {categoryNames.map(categoryName => (
+                <div key={categoryName} className="space-y-4">
+                  <h3 className="text-xl font-bold text-primary border-l-4 border-primary pl-3 flex items-center">
+                    {categoryName}
+                    <span className="ml-2 text-xs font-normal text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+                      {groupedItems[categoryName].length}
+                    </span>
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {groupedItems[categoryName].map((item) => {
+                      const entity = item.equipment || item.service;
+                      if (!entity) return null;
+                      const isService = !!item.serviceId;
+                      const price = isService ? (entity as any).price : (entity as any).pricePerHour;
+
+                      return (
+                        <div key={item.id} className="group bg-muted/10 rounded-2xl p-5 hover:bg-muted/20 transition-all border border-border hover:border-primary/20 shadow-sm hover:shadow-md">
+                          <div className="flex items-center space-x-5">
+                            <div className="w-20 h-20 rounded-xl overflow-hidden shadow-inner flex-shrink-0 bg-card flex items-center justify-center relative">
+                                {entity.imageUrl ? (
+                                  <img
+                                    src={entity.imageUrl}
+                                    alt={entity.name}
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                  />
+                                ) : (
+                                  isService ? <User className="w-10 h-10 text-emerald-400" /> : <Package className="w-10 h-10 text-blue-400" />
+                                )}
+                                {item.quantity > 1 && (
+                                   <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-bl-lg">
+                                     {item.quantity}x
+                                   </div>
+                                )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <span className={`w-2 h-2 rounded-full ${isService ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                                <h3 className="font-bold text-foreground text-sm truncate uppercase tracking-tight" title={entity.name}>{entity.name}</h3>
+                              </div>
+                              <div className="flex justify-between items-center mt-2">
+                                <span className="text-primary font-bold text-sm">
+                                  {formatPrice(Number(price))}{isService ? '/serviço' : '/h'}
+                                </span>
+                                <Link 
+                                  to={isService ? `/servicos/${(entity as any).slug}` : `/equipamentos/${(entity as any).slug || entity.id}`} 
+                                  className="text-[10px] font-bold text-muted-foreground hover:text-primary underline-offset-4 hover:underline transition-colors uppercase tracking-widest"
+                                >
+                                  Detalhes
+                                </Link>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Benefits Grid (Premium styling) */}

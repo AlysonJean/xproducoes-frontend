@@ -59,7 +59,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
         try {
           await apiFetch(`/admin/clients/${data.clientId}/resend-invite`, { method: 'POST' });
           addNotification({ type: 'success', title: 'Sucesso', message: 'Convite reenviado' });
-        } catch (e) {
+        } catch {
           addNotification({ type: 'error', title: 'Erro', message: 'Falha ao reenviar convite' });
         }
       },
@@ -179,8 +179,8 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
               file:mr-4 file:py-2 file:px-4
               file:rounded-full file:border-0
               file:text-sm file:font-semibold
-              file:bg-violet-50 file:text-violet-700
-              hover:file:bg-violet-100" />
+              file:bg-slate-50 file:text-slate-700
+              hover:file:bg-slate-100" />
           </div>
         </div>
 

@@ -2,7 +2,6 @@ import { useParams, Navigate, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { PageLayout } from '../components/layouts/PageLayout';
 import { GUIDES } from '../data/guides';
-import { SEO } from '../components/SEO';
 import { ChevronLeft, CalendarIcon } from 'lucide-react';
 import { useState } from 'react';
 import { BrandLoader } from '../components/ui/BrandLoader';
@@ -34,37 +33,14 @@ export const GuideDetailPage = () => {
     );
   }
 
-  // Schema for Article
-  const articleSchema = {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    "headline": guide.title,
-    "image": guide.coverImage,
-    "author": {
-      "@type": "Person",
-      "name": guide.author.name
-    },
-    "publisher": {
-      "@type": "Organization",
-      "name": "X-Produções",
-      "logo": {
-        "@type": "ImageObject",
-        "url": "https://xproducoes.com.br/logo.png"
-      }
-    },
-    "datePublished": guide.date,
-    "description": guide.excerpt
-  };
+
 
   return (
-    <PageLayout title={guide.title}>
-      <SEO 
-        title={guide.title} 
-        description={guide.excerpt}
-        image={guide.coverImage}
-        type="article"
-        jsonLd={articleSchema}
-      />
+    <PageLayout 
+      title={guide.title}
+      description={guide.excerpt}
+      image={guide.coverImage}
+    >
 
       <div className="max-w-4xl mx-auto">
         <Link to="/guias" className="inline-flex items-center text-muted-foreground hover:text-primary mb-6 transition-colors">

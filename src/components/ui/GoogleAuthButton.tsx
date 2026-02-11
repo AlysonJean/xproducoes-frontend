@@ -21,6 +21,7 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
         const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
         
         const response = await axios.post(`${API_BASE_URL}/auth/social/google`, {
+          provider: 'google',
           accessToken: tokenResponse.access_token
         });
 

@@ -28,9 +28,9 @@ const LEVEL_CONFIG = {
   [ExperienceLevel.PLATINUM]: {
     name: 'Platinum',
     icon: '💎',
-    color: 'from-purple-400 to-indigo-500',
-    borderColor: 'border-purple-400',
-    bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+    color: 'from-slate-400 to-indigo-500',
+    borderColor: 'border-slate-400',
+    bgColor: 'bg-slate-50 dark:bg-slate-900/20',
     defaultIncludes: ['Kit de Equipamentos', 'Montagem Profissional', 'Técnico de Som', 'DJ Profissional', 'Operação completa'],
   },
 };

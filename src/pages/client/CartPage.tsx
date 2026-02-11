@@ -87,7 +87,7 @@ export const CartPage = () => {
         message: `${itemName} foi removido do carrinho`,
         duration: 3000,
       });
-    } catch (error) {
+    } catch {
        addNotification({
         type: 'error',
         title: 'Erro ao remover',
@@ -204,7 +204,7 @@ export const CartPage = () => {
                     <div className="flex items-center gap-2 mb-2">
                     <span className={`text-[10px] uppercase tracking-[0.2em] font-black px-2.5 py-1 rounded-lg ${
                         item.type === 'equipment' ? 'bg-blue-500/10 text-blue-500' : 
-                        item.type === 'service' ? 'bg-purple-500/10 text-purple-500' : 
+                        item.type === 'service' ? 'bg-emerald-500/10 text-emerald-500' : 
                         'bg-orange-500/10 text-orange-500'
                     }`}>
                         {item.type === 'equipment' ? 'Equipamento' : item.type === 'service' ? 'Serviço' : 'Combo'}

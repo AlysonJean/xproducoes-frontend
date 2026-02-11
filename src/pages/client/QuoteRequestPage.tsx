@@ -1,134 +1,161 @@
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState } from 'react';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
+import { zodResolver } from '@hookform/resolvers/zod';
 import ReactGA from 'react-ga4';
 import { v4 as uuidv4 } from 'uuid';
+import { MapPin, Calendar, Clock, Info, User, Phone, Navigation2, Building2 } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { api } from '../../services/api';
-import { Button } from '../../components/ui/Button';
+import { 
+  Button, 
+  Input, 
+  Textarea, 
+  Card, 
+  Form, 
+  Alert,
+  Grid
+} from '../../components/ui/StandardComponents';
+import { quoteRequestSchema } from '../../validators/bookingSchema';
 import type { Booking } from '../../types/types';
+import { z } from 'zod';
 
-import { CustomQuoteFormData } from '@/types/types';
+type QuoteFormData = z.infer<typeof quoteRequestSchema>;
 
 export const QuoteRequestPage: React.FC = () => {
   const { cart, clearCart } = useCart();
-  const equipments = (cart as any)?.equipments ?? [];
-  const services = (cart as any)?.services ?? [];
-  const kit = (cart as any)?.kit;
+  const equipments = cart?.equipments ?? [];
+  const services = cart?.services ?? [];
+  const kit = cart?.kit;
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addNotification } = useNotifications();
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<CustomQuoteFormData>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<QuoteFormData>({
+    resolver: zodResolver(quoteRequestSchema) as any,
     defaultValues: {
       requiresStairs: 'no',
       isCovered: 'no',
       hasParking: 'no',
-      // start time padrão
       startTime: '19:00',
     },
   });
 
-  const onSubmit = async (data: CustomQuoteFormData) => {
+  const onSubmit: SubmitHandler<QuoteFormData> = async (data) => {
     setServerError(null);
 
     if (!equipments.length && !kit?.id && !services.length) {
-      setServerError('Adicione algum item ao carrinho.');
+      setServerError('Adicione algum item ao carrinho antes de prosseguir.');
+      addNotification({ 
+        type: 'warning', 
+        title: 'Carrinho vazio', 
+        message: 'Adicione algum item ao carrinho antes de prosseguir.' 
+      });
       return;
     }
 
-    // Requer autenticação para criar reserva (backend protege /bookings)
     if (!user?.id) {
       const msg = 'Você precisa estar logado para enviar o pedido. Faça login e tente novamente.';
       setServerError(msg);
-      addNotification({ type: 'warning', title: 'Login necessário', message: msg });
+      addNotification({ 
+        type: 'warning', 
+        title: 'Login necessário', 
+        message: msg 
+      });
       return;
     }
 
-    const durationNum = Number(data.duration);
-    if (!data.eventDate || isNaN(durationNum) || durationNum <= 0) {
-      setServerError('Preencha a data e duração corretamente.');
-      return;
-    }
-    // Construir payload mínimo compatível com backend (juntando data + hora de início)
-    const startTimeStr = (data as any).startTime || '00:00';
-    const [hh, mm] = startTimeStr.split(':').map((s: string) => Number(s));
-    
-    // Parse da data local (YYYY-MM-DD) sem deslocamento UTC
-    const [yyyy, mon, dd] = data.eventDate.split('-').map(Number);
-    const eventStart = new Date(yyyy, mon - 1, dd, hh || 0, mm || 0, 0, 0);
+    try {
+      // Construir payload para o backend
+      const [hh, mm] = data.startTime.split(':').map(Number);
+      const [yyyy, mon, dd] = data.eventDate.split('-').map(Number);
+      const eventStart = new Date(yyyy, mon - 1, dd, hh, mm, 0, 0);
+      const eventEnd = new Date(eventStart.getTime() + (data.duration * 3600 * 1000));
 
-    const eventEnd = new Date(eventStart.getTime() + durationNum * 3600 * 1000);
+      const bookingData: any = {
+        eventDate: eventStart.toISOString(),
+        eventEndDate: eventEnd.toISOString(),
+        eventDuration: data.duration,
+        location: data.venue,
+        street: data.street,
+        neighborhood: data.neighborhood,
+        city: data.city,
+        state: data.state,
+        zipCode: data.zipCode,
+        addressNumber: data.addressNumber,
+        addressComplement: data.addressComplement || undefined,
+        requiresStairs: data.requiresStairs === 'yes',
+        isCovered: data.isCovered === 'yes',
+        hasParking: data.hasParking === 'yes',
+        notes: data.notes || undefined,
+        status: 'PENDING',
+        setupTime: eventStart.toISOString(),
+        userId: user.id,
+        clientName: (user as any)?.name || data.name || undefined,
+        clientContact: (user as any)?.phone || (user as any)?.email || data.phone || data.email || undefined,
+      };
 
-    const bookingData: any = {
-      eventDate: eventStart.toISOString(),
-      eventEndDate: eventEnd.toISOString(),
-      eventDuration: durationNum,
-      location: data.venue,
-      street: data.street,
-      neighborhood: data.neighborhood,
-      city: data.city,
-      state: data.state,
-      zipCode: data.zipCode,
-      addressNumber: data.addressNumber,
-      addressComplement: data.addressComplement || undefined,
-      requiresStairs: data.requiresStairs === 'yes',
-      isCovered: data.isCovered === 'yes',
-      hasParking: data.hasParking === 'yes',
-      notes: data.notes || undefined,
-      status: 'PENDING',
-    };
-
-  // enviar também a hora de início separada caso precise (setupTime)
-  bookingData.setupTime = eventStart.toISOString();
-
-    if (kit?.id) {
-      bookingData.kitId = kit.id;
-    }
-    
-    const equipmentIds = equipments.map((it: any) => it.id || it.equipment?.id).filter(Boolean);
-    const serviceIds = services.map((it: any) => it.id).filter(Boolean);
-    
-    if (equipmentIds.length > 0) bookingData.equipmentIds = equipmentIds;
-    if (serviceIds.length > 0) (bookingData as any).serviceIds = serviceIds;
-
-    // Dados do usuário autenticado
-    bookingData.userId = user.id;
-    // Enviar também dados de contato do cliente para manter cadastro atualizado
-    bookingData.clientName = (user as any)?.name || data.name || undefined;
-    bookingData.clientContact = (user as any)?.phone || (user as any)?.email || data.phone || data.email || undefined;
-    if (data.email) bookingData.clientEmail = data.email;
+      if (data.email) bookingData.clientEmail = data.email;
+      if (kit?.id) bookingData.kitId = kit.id;
+      
+      const equipmentIds = equipments.map((it) => {
+        if ('id' in it) return it.id;
+        return it.equipmentId;
+      }).filter(Boolean);
+      
+      const serviceIds = services.map((it) => it.id).filter(Boolean);
+      
+      if (equipmentIds.length > 0) bookingData.equipmentIds = equipmentIds;
+      if (serviceIds.length > 0) bookingData.serviceIds = serviceIds;
 
       const idempotencyKey = uuidv4();
-      try {
-        addNotification({ type: 'info', title: 'Enviando pedido', message: 'Salvando seu pedido...' });
-        const resp = await api.post('/bookings', bookingData, { headers: { 'Idempotency-Key': idempotencyKey } });
-        const createdBooking: Booking | null = resp?.data?.data ?? resp?.data ?? null;
+      
+      addNotification({ 
+        type: 'info', 
+        title: 'Processando', 
+        message: 'Enviando seu pedido de orçamento...' 
+      });
 
-        // GA Tracking - Purchase / Lead Generation
-        ReactGA.event({
-          category: "ecommerce",
-          action: "purchase", // or generate_lead
-          label: "quote_request_success",
-          value: 0
-        });
+      const resp = await api.post('/bookings', bookingData, { 
+        headers: { 'Idempotency-Key': idempotencyKey } 
+      });
+      
+      const createdBooking: Booking | null = resp?.data?.data ?? resp?.data ?? null;
 
-        try { await clearCart(); } catch (e) { console.warn('Erro ao limpar carrinho', e); }
-        addNotification({ type: 'success', title: 'Pedido salvo', message: 'O pedido foi salvo como pendente.' });
-        
-        const statePayload = { 
-          booking: createdBooking, 
-          formData: data,
-          // Passar todos os itens do carrinho explicitamente para garantir que o WhatsApp tenha os nomes corretos
-          cartItems: [
-            ...(kit?.id ? [{ name: kit?.name ? `Kit: ${kit.name}` : 'Kit Selecionado' }] : []),
-            ...equipments.map((it: any) => ({ name: it.name || it.equipment?.name })),
-            ...services.map((it: any) => ({ name: it.name }))
-          ]
-        };
+      ReactGA.event({
+        category: "ecommerce",
+        action: "purchase",
+        label: "quote_request_success",
+        value: 0
+      });
+
+      await clearCart();
+      
+      addNotification({ 
+        type: 'success', 
+        title: 'Sucesso!', 
+        message: 'Seu pedido de orçamento foi enviado com sucesso.' 
+      });
+      
+      const statePayload = { 
+        booking: createdBooking, 
+        formData: data,
+        cartItems: [
+          ...(kit?.id ? [{ name: kit?.name ? `Kit: ${kit.name}` : 'Kit Selecionado' }] : []),
+          ...equipments.map((it) => {
+            if ('name' in it) return { name: it.name };
+            return { name: it.equipment.name };
+          }),
+          ...services.map((it) => ({ name: it.name }))
+        ]
+      };
 
       if (createdBooking?.id) {
         navigate(`/reserva-sucesso/${createdBooking.id}`, { state: statePayload });
@@ -140,136 +167,252 @@ export const QuoteRequestPage: React.FC = () => {
       const msg = err?.response?.data?.message || err?.message || 'Erro ao salvar pedido.';
       setServerError(msg);
       
-      // GA Tracking - Error
       ReactGA.event({
         category: "ecommerce",
         action: "purchase_error",
         label: msg.substring(0, 50)
       });
 
-      addNotification({ type: 'error', title: 'Erro ao salvar', message: msg });
+      addNotification({ 
+        type: 'error', 
+        title: 'Falha no envio', 
+        message: msg 
+      });
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="max-w-4xl mx-auto space-y-8">
-      <h1 className="text-4xl font-bold text-center text-primary">Finalizar Orçamento</h1>
-      <div className="bg-card p-8 rounded-lg shadow-lg border border-border">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label htmlFor="venue">Local do Evento*</label>
-            <input {...register('venue', { required: true })} id="venue" className="input" />
-            {errors.venue && <span className="text-destructive">Campo obrigatório</span>}
-          </div>
-          <div>
-            <label htmlFor="eventDate">Data do Evento*</label>
-            <input type="date" {...register('eventDate', { required: true })} id="eventDate" className="input" />
-            {errors.eventDate && <span className="text-destructive">Campo obrigatório</span>}
-          </div>
-          <div>
-            <label htmlFor="startTime">Hora de Início*</label>
-            <input type="time" {...register('startTime', { required: true })} id="startTime" className="input" defaultValue="19:00" />
-            {errors.startTime && <span className="text-destructive">Campo obrigatório</span>}
-          </div>
-          <div>
-            <label htmlFor="duration">Duração (horas)*</label>
-            <input type="number" {...register('duration', { required: true, min: 1 })} id="duration" className="input" />
-            {errors.duration && <span className="text-destructive">Campo obrigatório</span>}
-          </div>
-          <div>
-            <label htmlFor="zipCode">CEP*</label>
-            <input {...register('zipCode', { required: true })} id="zipCode" className="input" />
-            {errors.zipCode && <span className="text-destructive">Campo obrigatório</span>}
-          </div>
-          <div>
-            <label htmlFor="street">Rua*</label>
-            <input {...register('street', { required: true })} id="street" className="input" />
-            {errors.street && <span className="text-destructive">Campo obrigatório</span>}
-          </div>
-          <div>
-            <label htmlFor="addressNumber">Número*</label>
-            <input {...register('addressNumber', { required: true })} id="addressNumber" className="input" />
-            {errors.addressNumber && <span className="text-destructive">Campo obrigatório</span>}
-          </div>
-          <div>
-            <label htmlFor="addressComplement">Complemento</label>
-            <input {...register('addressComplement')} id="addressComplement" className="input" placeholder="Ex: Apto 101, fundos, etc." />
-          </div>
-          <div>
-            <label htmlFor="neighborhood">Bairro*</label>
-            <input {...register('neighborhood', { required: true })} id="neighborhood" className="input" />
-            {errors.neighborhood && <span className="text-destructive">Campo obrigatório</span>}
-          </div>
-          <div>
-            <label htmlFor="city">Cidade*</label>
-            <input {...register('city', { required: true })} id="city" className="input" />
-            {errors.city && <span className="text-destructive">Campo obrigatório</span>}
-          </div>
-          <div>
-            <label htmlFor="state">Estado*</label>
-            <input {...register('state', { required: true })} id="state" className="input" />
-            {errors.state && <span className="text-destructive">Campo obrigatório</span>}
-          </div>
-        </div>
+    <div className="max-w-4xl mx-auto py-8 px-4">
+      <div className="text-center mb-10">
+        <h1 className="text-3xl font-bold text-foreground">Finalizar Orçamento</h1>
+        <p className="text-muted-foreground mt-2">
+          Revise os detalhes abaixo para que possamos preparar o melhor serviço para você.
+        </p>
+      </div>
 
-        <div className="mt-6">
-          <label>O local tem escadas?*</label>
-          <div>
-            <label><input type="radio" value="yes" {...register('requiresStairs', { required: true })} /> Sim</label>
-            <label className="ml-4"><input type="radio" value="no" {...register('requiresStairs', { required: true })} /> Não</label>
-            {errors.requiresStairs && <span className="text-destructive ml-2">Obrigatório</span>}
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <label>O local é coberto?*</label>
-          <div>
-            <label><input type="radio" value="yes" {...register('isCovered', { required: true })} /> Sim</label>
-            <label className="ml-4"><input type="radio" value="no" {...register('isCovered', { required: true })} /> Não</label>
-            {errors.isCovered && <span className="text-destructive ml-2">Obrigatório</span>}
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <label>O local possui estacionamento?*</label>
-          <div>
-            <label><input type="radio" value="yes" {...register('hasParking', { required: true })} /> Sim</label>
-            <label className="ml-4"><input type="radio" value="no" {...register('hasParking', { required: true })} /> Não</label>
-            {errors.hasParking && <span className="text-destructive ml-2">Obrigatório</span>}
-          </div>
-        </div>
-
-        {!user?.id && (
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="name">Nome*</label>
-              <input {...register('name', { required: true })} id="name" className="input" />
-              {errors.name && <span className="text-destructive">Campo obrigatório</span>}
-            </div>
-            <div>
-              <label htmlFor="phone">Telefone ou Email*</label>
-              <input {...register('phone', { required: true })} id="phone" className="input" />
-              {errors.phone && <span className="text-destructive">Campo obrigatório</span>}
-            </div>
-          </div>
+      <Card className="p-8 shadow-xl border-border">
+        {serverError && (
+          <Alert variant="error" className="mb-8">
+            {serverError}
+          </Alert>
         )}
 
-        <div className="mt-4">
-          <label htmlFor="notes">Observações</label>
-          <textarea {...register('notes')} id="notes" className="input w-full" rows={3}></textarea>
-        </div>
+        <Form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+          {/* Seção 1: Detalhes do Evento */}
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
+              <Calendar className="h-5 w-5 text-primary" />
+              Detalhes do Evento
+            </h2>
+            
+            <Grid columns={{ sm: 1, md: 2 }} gap={6}>
+              <Input
+                label="Local do Evento *"
+                leftIcon={<Building2 className="h-4 w-4" />}
+                {...register('venue')}
+                error={errors.venue?.message}
+                placeholder="Ex: Salão de Festas, Residência..."
+              />
+              
+              <Input
+                label="Data do Evento *"
+                type="date"
+                leftIcon={<Calendar className="h-4 w-4" />}
+                {...register('eventDate')}
+                error={errors.eventDate?.message}
+              />
 
-        {serverError && <div className="bg-destructive/10 text-destructive p-3 rounded-md my-4">{serverError}</div>}
+              <Input
+                label="Hora de Início *"
+                type="time"
+                leftIcon={<Clock className="h-4 w-4" />}
+                {...register('startTime')}
+                error={errors.startTime?.message}
+              />
 
-        <div className="mt-6">
-          <Button type="submit" variant="primary" size="lg" fullWidth isLoading={isSubmitting}>
-            Salvar pedido
-          </Button>
-        </div>
-      </div>
-    </form>
+              <Input
+                label="Duração Estimada (horas) *"
+                type="number"
+                leftIcon={<Clock className="h-4 w-4" />}
+                {...register('duration')}
+                error={errors.duration?.message}
+                placeholder="Ex: 5"
+              />
+            </Grid>
+          </div>
+
+          <hr className="border-border/50" />
+
+          {/* Seção 2: Endereço */}
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
+              <MapPin className="h-5 w-5 text-primary" />
+              Localização do Evento
+            </h2>
+
+            <Grid columns={{ sm: 1, md: 2 }} gap={6}>
+              <Input
+                label="CEP *"
+                {...register('zipCode')}
+                error={errors.zipCode?.message}
+                placeholder="00000-000"
+              />
+              
+              <Input
+                label="Rua *"
+                {...register('street')}
+                error={errors.street?.message}
+                placeholder="Nome da avenida, rua..."
+              />
+
+              <Input
+                label="Número *"
+                {...register('addressNumber')}
+                error={errors.addressNumber?.message}
+                placeholder="Ex: 123"
+              />
+
+              <Input
+                label="Complemento"
+                {...register('addressComplement')}
+                error={errors.addressComplement?.message}
+                placeholder="Ex: Bloco A, Apto 101"
+              />
+
+              <Input
+                label="Bairro *"
+                {...register('neighborhood')}
+                error={errors.neighborhood?.message}
+              />
+
+              <Grid columns={2} gap={4}>
+                <Input
+                  label="Cidade *"
+                  {...register('city')}
+                  error={errors.city?.message}
+                />
+                <Input
+                  label="Estado *"
+                  {...register('state')}
+                  error={errors.state?.message}
+                  placeholder="UF"
+                />
+              </Grid>
+            </Grid>
+          </div>
+
+          <hr className="border-border/50" />
+
+          {/* Seção 3: Logística */}
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
+              <Navigation2 className="h-5 w-5 text-primary" />
+              Logística e Ambiente
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-6 bg-muted/30 rounded-2xl border border-border/50">
+              <div className="space-y-3">
+                <label className="text-sm font-semibold text-foreground">Local com escadas?</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" value="yes" {...register('requiresStairs')} className="accent-primary" /> Sim
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" value="no" {...register('requiresStairs')} className="accent-primary" /> Não
+                  </label>
+                </div>
+                {errors.requiresStairs && <p className="text-xs text-destructive">{errors.requiresStairs.message}</p>}
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-sm font-semibold text-foreground">Local coberto?</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" value="yes" {...register('isCovered')} className="accent-primary" /> Sim
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" value="no" {...register('isCovered')} className="accent-primary" /> Não
+                  </label>
+                </div>
+                {errors.isCovered && <p className="text-xs text-destructive">{errors.isCovered.message}</p>}
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-sm font-semibold text-foreground">Tem estacionamento?</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" value="yes" {...register('hasParking')} className="accent-primary" /> Sim
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" value="no" {...register('hasParking')} className="accent-primary" /> Não
+                  </label>
+                </div>
+                {errors.hasParking && <p className="text-xs text-destructive">{errors.hasParking.message}</p>}
+              </div>
+            </div>
+          </div>
+
+          <hr className="border-border/50" />
+
+          {/* Seção 4: Contato Adicional (se necessário) */}
+          {!user?.id && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
+                <User className="h-5 w-5 text-primary" />
+                Seu Contato
+              </h2>
+              
+              <Grid columns={{ sm: 1, md: 2 }} gap={6}>
+                <Input
+                  label="Seu Nome *"
+                  leftIcon={<User className="h-4 w-4" />}
+                  {...register('name')}
+                  error={errors.name?.message}
+                />
+                
+                <Input
+                  label="Telefone ou Email de Contato *"
+                  leftIcon={<Phone className="h-4 w-4" />}
+                  {...register('phone')}
+                  error={errors.phone?.message}
+                />
+              </Grid>
+            </div>
+          )}
+
+          {/* Seção 5: Observações */}
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
+              <Info className="h-5 w-5 text-primary" />
+              Observações Adicionais
+            </h2>
+            
+            <Textarea
+              {...register('notes')}
+              error={errors.notes?.message}
+              rows={4}
+              placeholder="Deseja acrescentar algum detalhe específico sobre o local, acessos ou necessidades técnicas?"
+            />
+          </div>
+
+          <div className="pt-6">
+            <Button
+              type="submit"
+              size="lg"
+              fullWidth
+              isLoading={isSubmitting}
+              className="h-14 text-lg font-bold shadow-lg shadow-primary/20"
+            >
+              Confirmar Pedido de Orçamento
+            </Button>
+            <p className="text-center text-xs text-muted-foreground mt-4 italic">
+              * Ao clicar em confirmar, seu pedido será enviado para nossa equipe e entraremos em contato em breve.
+            </p>
+          </div>
+        </Form>
+      </Card>
+    </div>
   );
 };
 
 export default QuoteRequestPage;
-

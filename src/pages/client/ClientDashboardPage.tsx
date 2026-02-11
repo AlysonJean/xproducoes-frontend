@@ -72,6 +72,15 @@ export const ClientDashboardPage = () => {
       color: 'success'
     },
     {
+      id: 'my-calendar',
+      title: 'Minha Agenda',
+      description: 'Veja suas reservas no calendário',
+      icon: <Calendar className="h-6 w-6" />,
+      href: '/cliente/agenda',
+      color: 'info',
+      badge: 'Novo'
+    },
+    {
       id: 'favorites',
       title: 'Favoritos',
       description: 'Equipamentos salvos para depois',

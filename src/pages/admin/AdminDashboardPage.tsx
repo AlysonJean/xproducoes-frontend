@@ -1,293 +1,190 @@
 import { ReceitaMensalChart } from '../../components/ReceitaMensalChart';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { GoogleCalendarIntegration } from '../../components/GoogleCalendarIntegration';
+
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../services/api';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { AdminLayout } from '../../components/admin/AdminLayout';
-import { StatsCard, SimpleCard } from '../../components/ui/Cards';
-import { QuickActionCard } from '../../components/ui/QuickActionCard';
-import type { AdminDashboardStats, Activity, AdminNotification } from '../../types/domains/dashboard';
+import { 
+  Users, 
+  Calendar, 
+  DollarSign, 
+  Camera, 
+  TrendingUp, 
+  TrendingDown, 
+  Activity, 
+  ArrowRight,
+  Plus,
+  Monitor,
+  Package,
+  Star,
+  Clock,
+  CheckCircle2,
+  BarChart3,
+  CreditCard,
+  Target
+} from 'lucide-react';
+import { 
+  Button, 
+  Card, 
+  Badge, 
+  Grid
+} from '../../components/ui/StandardComponents';
+import type { AdminDashboardStats, Activity as DashboardActivity, AdminNotification } from '../../types/domains/dashboard';
 import type { BookingListItem } from '../../types/types';
-import { Skeleton, SkeletonCard, SkeletonList } from '../../components/ui/Skeleton';
+import { BrandLoader } from '../../components/ui/BrandLoader';
 
-// Função utilitária para formatar valores monetários
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value);
-};
-
-// Função utilitária para formatar data relativa
-const formatRelativeTime = (date: Date) => {
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - new Date(date).getTime()) / 1000);
-
-  if (diffInSeconds < 60) return 'há poucos segundos';
-  if (diffInSeconds < 3600) return `há ${Math.floor(diffInSeconds / 60)} minutos`;
-  if (diffInSeconds < 86400) return `há ${Math.floor(diffInSeconds / 3600)} horas`;
-  return `há ${Math.floor(diffInSeconds / 86400)} dias`;
-};
-
-// Ícones otimizados para cards
-const UsersIcon = () => (
-  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} role="img" aria-hidden="true">
-    <title>Ícone de Usuários</title>
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
-    />
-  </svg>
+// Componentes internos de apoio para manter o Dashboard conciso
+const StatItem = ({ 
+  title, 
+  value, 
+  icon: Icon, 
+  trend, 
+  description, 
+  color = "primary",
+  onClick 
+}: { 
+  title: string; 
+  value: string | number; 
+  icon: React.ElementType; 
+  trend?: { value: number; type: 'positive' | 'negative' | 'neutral' };
+  description?: string;
+  color?: string;
+  onClick?: () => void;
+}) => (
+  <div 
+    className={`p-5 group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-border/50 rounded-3xl bg-card/50 backdrop-blur-sm ${onClick ? 'cursor-pointer' : ''}`}
+    onClick={onClick}
+  >
+    <div className="flex items-start justify-between">
+      <div className={`p-3 rounded-2xl bg-${color}/10 border border-${color}/20 text-${color} group-hover:scale-110 transition-transform duration-500`}>
+        <Icon className="h-6 w-6" />
+      </div>
+      {trend && (
+        <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${
+          trend.type === 'positive' ? 'bg-emerald-500/10 text-emerald-600' : 
+          trend.type === 'negative' ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'
+        }`}>
+          {trend.type === 'positive' ? <TrendingUp className="h-3 w-3" /> : 
+           trend.type === 'negative' ? <TrendingDown className="h-3 w-3" /> : null}
+          {trend.value}%
+        </div>
+      )}
+    </div>
+    <div className="mt-4">
+      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-2">{title}</p>
+      <div className="flex items-baseline gap-2">
+        <h3 className="text-2xl font-black text-foreground tracking-tight">{value}</h3>
+      </div>
+      {description && <p className="text-xs text-muted-foreground mt-2 font-medium opacity-70 group-hover:opacity-100 transition-opacity">{description}</p>}
+    </div>
+  </div>
 );
 
-const CalendarIcon = () => (
-  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} role="img" aria-hidden="true">
-    <title>Ícone de Calendário</title>
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
-    />
-  </svg>
-);
-
-const CurrencyIcon = () => (
-  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} role="img" aria-hidden="true">
-    <title>Ícone de Receita</title>
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-    />
-  </svg>
-);
-
-const CameraIcon = () => (
-  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} role="img" aria-hidden="true">
-    <title>Ícone de Equipamento</title>
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"
-    />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-  </svg>
-);
-
-const PlusIcon = () => (
-  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} role="img" aria-hidden="true">
-    <title>Ícone Mais</title>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-  </svg>
-);
-
-const AnalyticsIcon = () => (
-  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} role="img" aria-hidden="true">
-    <title>Ícone de Análise</title>
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
-    />
-  </svg>
-);
-
-const EquipmentIcon = () => (
-  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} role="img" aria-hidden="true">
-    <title>Ícone de Ferramentas</title>
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M21.75 6.75a4.5 4.5 0 01-4.884 4.484c-1.076-.091-2.264.071-2.95.904l-7.152 8.684a2.548 2.548 0 11-3.586-3.586l8.684-7.152c.833-.686.995-1.874.904-2.95a4.5 4.5 0 016.336-4.486L21.75 6.75z"
-    />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 15.75L3 12l5.25-5.25" />
-  </svg>
-);
-
-// Componente de Atividade Recente
-const RecentActivity = ({ activities, loading }: { activities: Activity[], loading: boolean }) => {
+const RecentActivityList = ({ activities, loading }: { activities: DashboardActivity[], loading: boolean }) => {
   const navigate = useNavigate();
   return (
-  <SimpleCard title="Atividade Recente">
-      <div className="space-y-3">
+    <Card className="flex flex-col h-full border-border/50 bg-card/30 backdrop-blur-sm p-0 overflow-hidden">
+      <div className="p-6 border-b border-border/50 flex items-center justify-between bg-muted/20">
+        <div>
+          <h3 className="text-sm font-black text-foreground uppercase tracking-widest flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary" /> Fluxo de Atividades
+          </h3>
+          <p className="text-[10px] text-muted-foreground font-medium uppercase mt-1">Registros de sistema em tempo real</p>
+        </div>
+        <Button variant="ghost" size="sm" className="text-[10px] uppercase font-black tracking-widest" onClick={() => navigate('/admin/reservas')}>
+          Ver Tudo <ArrowRight className="h-3.5 w-3.5 ml-1" />
+        </Button>
+      </div>
+      <div className="flex-1 overflow-y-auto max-h-[400px] p-4 space-y-3">
         {loading ? (
-          <SkeletonList items={4} />
+             <div className="flex items-center justify-center h-48">
+                <BrandLoader size={60} label="Sincronizando feed..." />
+             </div>
         ) : activities.length > 0 ? (
-          activities.slice(0, 4).map((activity, index) => {
-            const isClickable = activity.type === 'booking' && activity.id;
-            const goTo = () => {
-              if (activity.type === 'booking' && activity.id) {
-                navigate(`/admin/reservas/${activity.id}`);
-              }
-            };
-            return (
-              <div
-                key={activity.id || index}
-                {...(isClickable ? { 
-                  role: 'button', 
-                  tabIndex: 0, 
-                  onClick: goTo, 
-                  'aria-label': `Ver detalhes da reserva: ${activity.title || activity.description}`,
-                  onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goTo(); } } 
-                } : {})}
-                className={`flex items-start space-x-3 p-2 rounded-lg transition-colors ${
-                  isClickable ? 'hover:bg-muted/50 cursor-pointer' : 'hover:bg-muted/30'
-                }`}
-              >
-                <div
-                  className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                    activity.type === 'booking' ? 'bg-primary' : 'bg-warning'
-                  }`}
-                ></div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {activity.title || activity.description}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1 truncate">
-                    {activity.description}
-                  </p>
-                  {activity.amount && (
-                    <p className="text-xs text-success font-medium">
-                      {formatCurrency(activity.amount)}
-                    </p>
-                  )}
-                  <div className="flex items-center justify-between mt-1">
-                    <p className="text-xs text-muted-foreground">
-                      {formatRelativeTime(new Date(activity.timestamp || activity.createdAt || ''))}
-                    </p>
-                    {activity.status && (
-                      <div
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          activity.status === 'COMPLETED'
-                            ? 'bg-success/10 text-success'
-                            : activity.status === 'PENDING'
-                              ? 'bg-warning/10 text-warning'
-                              : 'bg-info/10 text-info'
-                        }`}
-                      >
-                        {activity.status}
-                      </div>
-                    )}
-                  </div>
-                </div>
+          activities.slice(0, 10).map((activity, index) => (
+            <div
+              key={activity.id || index}
+              onClick={() => activity.type === 'booking' && activity.id && navigate(`/admin/reservas/${activity.id}`)}
+              className={`flex items-start gap-3 p-3 rounded-xl transition-all duration-200 group border border-transparent ${
+                activity.type === 'booking' && activity.id ? 'hover:bg-primary/5 hover:border-primary/10 cursor-pointer' : 'hover:bg-muted/50'
+              }`}
+            >
+              <div className={`mt-1 p-1.5 rounded-lg shrink-0 ${
+                activity.type === 'booking' ? 'bg-primary/10 text-primary' : 'bg-amber-500/10 text-amber-500'
+              }`}>
+                {activity.type === 'booking' ? <Calendar className="h-3.5 w-3.5" /> : <Activity className="h-3.5 w-3.5" />}
               </div>
-            );
-          })
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <p className="text-xs font-bold text-foreground truncate">{activity.title || activity.description}</p>
+                  <span className="text-[9px] font-black text-muted-foreground uppercase shrink-0">
+                    {new Date(activity.timestamp || activity.createdAt || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground line-clamp-1">{activity.description}</p>
+                {activity.amount && (
+                  <p className="text-[10px] text-emerald-600 font-bold mt-1">
+                    +{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(activity.amount)}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))
         ) : (
-          <p className="text-muted-foreground text-center py-8">
-            Nenhuma atividade recente
-          </p>
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/30">
+             <Activity className="h-12 w-12 mb-3 opacity-20" />
+             <p className="text-xs font-bold uppercase tracking-widest">Feed Silencioso</p>
+          </div>
         )}
       </div>
-      <div className="mt-4 text-right">
-        <button
-          onClick={() => navigate('/admin/reservas')}
-          className="text-sm text-primary hover:underline"
-        >
-          Ver todas as reservas
-        </button>
-      </div>
-    </SimpleCard>
+    </Card>
   );
 };
 
-// Componente de Performance
-const PerformanceOverview = ({ stats, loading }: { stats: AdminDashboardStats | null, loading: boolean }) => {
-  return (
-    <SimpleCard title="Performance Overview">
-      <div className="space-y-6">
-        {loading ? (
-          <div className="space-y-6">
-            <div className="space-y-2"><Skeleton width="40%" height={14} /><Skeleton width="100%" height={8} /></div>
-            <div className="space-y-2"><Skeleton width="40%" height={14} /><Skeleton width="100%" height={8} /></div>
-            <div className="space-y-2"><Skeleton width="40%" height={14} /><Skeleton width="100%" height={8} /></div>
+const EfficiencyStats = ({ stats, loading }: { stats: AdminDashboardStats | null, loading: boolean }) => (
+  <Card className="border-border/50 bg-card/30 backdrop-blur-sm p-6">
+    <div className="flex items-center gap-2 mb-6">
+      <Target className="h-4 w-4 text-primary" />
+      <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Otimização Operacional</h3>
+    </div>
+    <div className="space-y-6">
+      {[
+        { label: 'Confirmação de Reservas', value: stats ? Math.round(((stats.confirmedBookings || 0) / Math.max(stats.totalBookings || 1, 1)) * 100) : 0, color: 'bg-emerald-500', icon: CheckCircle2 },
+        { label: 'Conclusão de Eventos', value: stats ? Math.round(((stats.completedBookings || 0) / Math.max(stats.totalBookings || 1, 1)) * 100) : 0, color: 'bg-blue-500', icon: BarChart3 },
+        { label: 'Ocupação da Equipe', value: stats ? Math.min((stats.activeCollaborators || 0) * 8, 100) : 0, color: 'bg-purple-500', icon: Users }
+      ].map((item, i) => (
+        <div key={i} className="space-y-2">
+          <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-tighter">
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+               <item.icon className="h-3.5 w-3.5" /> {item.label}
+            </span>
+            <span className="text-foreground">{item.value}%</span>
           </div>
-        ) : (
-          <>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">
-                Taxa de Confirmação
-              </span>
-              <div className="flex items-center space-x-3">
-                <div className="w-24">
-                  <progress
-                    className="progress progress-green"
-                    value={Math.min(
-                      (stats?.confirmedBookings || 0) / Math.max(stats?.totalBookings || 1, 1) * 100,
-                      100
-                    )}
-                    max={100}
-                    aria-label="Taxa de confirmação"
-                  />
-                </div>
-                <span className="text-sm font-bold text-foreground min-w-[3rem] text-right">
-                  {Math.round(
-                    ((stats?.confirmedBookings || 0) / Math.max(stats?.totalBookings || 1, 1)) * 100
-                  )}%
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">
-                Taxa de Conclusão
-              </span>
-              <div className="flex items-center space-x-3">
-                <div className="w-24">
-                  <progress
-                    className="progress progress-blue"
-                    value={Math.min(
-                      (stats?.completedBookings || 0) / Math.max(stats?.totalBookings || 1, 1) * 100,
-                      100
-                    )}
-                    max={100}
-                    aria-label="Taxa de conclusão"
-                  />
-                </div>
-                <span className="text-sm font-bold text-foreground min-w-[3rem] text-right">
-                  {Math.round(
-                    ((stats?.completedBookings || 0) / Math.max(stats?.totalBookings || 1, 1)) * 100
-                  )}%
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">
-                Eficiência da Equipe
-              </span>
-              <div className="flex items-center space-x-3">
-                <div className="w-24">
-                  <progress
-                    className="progress progress-signal"
-                    value={Math.min((stats?.activeCollaborators || 0) * 10, 100)}
-                    max={100}
-                    aria-label="Eficiência da equipe"
-                  />
-                </div>
-                <span className="text-sm font-bold text-foreground min-w-[3rem] text-right">
-                  {stats?.activeCollaborators || 0}
-                </span>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-  </SimpleCard>
-  );
-};
+          <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+            <div 
+              className={`h-full ${item.color} transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(0,0,0,0.1)]`} 
+              style={{ width: `${loading ? 0 : item.value}%` }} 
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  </Card>
+);
 
 export const AdminDashboardPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activities, setActivities] = useState<DashboardActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [liveStats, setLiveStats] = useState<{ todayBookings: number; todayRevenue: number; activeUsers: number } | null>(null);
-  const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
+  // const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
   const [nextBookings, setNextBookings] = useState<BookingListItem[]>([]);
-  const [loadingNext, setLoadingNext] = useState<boolean>(true);
   const [topEquipment, setTopEquipment] = useState<{ name: string; bookings: number }[]>([]);
   const [topCollaborators, setTopCollaborators] = useState<{
     collaborator: { id: string; name: string; role: string };
@@ -295,313 +192,318 @@ export const AdminDashboardPage = () => {
     eventCount: number;
   }[]>([]);
 
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [statsRes, actsRes, liveRes, , equipRes, collabRes] = await Promise.all([
+        apiFetch<AdminDashboardStats>('/dashboard/stats'),
+        apiFetch<DashboardActivity[]>('/dashboard/recent-activities'),
+        apiFetch<{ todayBookings: number; todayRevenue: number; activeUsers: number }>('/dashboard/live-stats'),
+        apiFetch<AdminNotification[]>('/dashboard/notifications'),
+        apiFetch<{ name: string; bookings: number }[]>('/dashboard/top-equipment'),
+        apiFetch<{ collaborator: { id: string; name: string; role: string }; rating: number; eventCount: number }[]>('/dashboard/top-collaborators')
+      ]);
+
+      setStats(statsRes);
+      setActivities(actsRes || []);
+      setLiveStats(liveRes);
+      // setUnreadNotifications((notifsRes || []).filter(n => !n.read).length);
+      setTopEquipment(equipRes || []);
+      setTopCollaborators(collabRes || []);
+
+      const bookingsResp = await apiFetch<BookingListItem[] | { data: BookingListItem[] }>('/admin/bookings');
+      const allBookings = Array.isArray(bookingsResp) ? bookingsResp : Array.isArray(bookingsResp?.data) ? bookingsResp.data : [];
+      const now = new Date();
+      const upcoming = allBookings
+        .filter((b: BookingListItem) => b?.eventDate && new Date(b.eventDate) >= new Date(now.getFullYear(), now.getMonth(), now.getDate()))
+        .sort((a: BookingListItem, b: BookingListItem) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime())
+        .slice(0, 5);
+      setNextBookings(upcoming);
+
+    } catch (error) {
+      console.error('Erro ao carregar dashboard:', error);
+      addNotification({ type: 'error', title: 'Falha Critical', message: 'Erro na sincronização dos dados mestres.' });
+    } finally {
+      setLoading(false);
+    }
+  }, [addNotification]);
+
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        const [statsRes, actsRes, liveRes, notifsRes, equipRes, collabRes] = await Promise.all([
-          apiFetch<AdminDashboardStats>('/dashboard/stats'),
-          apiFetch<Activity[]>('/dashboard/recent-activities'),
-          apiFetch<{ todayBookings: number; todayRevenue: number; activeUsers: number }>('/dashboard/live-stats'),
-          apiFetch<AdminNotification[]>('/dashboard/notifications'),
-          apiFetch<{ name: string; bookings: number }[]>('/dashboard/top-equipment'),
-          apiFetch<{ collaborator: { id: string; name: string; role: string }; rating: number; eventCount: number }[]>('/dashboard/top-collaborators')
-        ]);
-
-        setStats(statsRes);
-        setActivities(actsRes);
-        setLiveStats(liveRes);
-        setUnreadNotifications((notifsRes || []).filter(n => !n.read).length);
-        setTopEquipment(equipRes || []);
-        setTopCollaborators(collabRes || []);
-
-        // Buscar reservas para próximos eventos (mantido separado por ser opcional/pesado)
-        try {
-          const resp = await apiFetch<BookingListItem[] | { data: BookingListItem[] }>('/admin/bookings');
-          const all = Array.isArray(resp) ? resp : Array.isArray(resp?.data) ? resp.data : [];
-          const now = new Date();
-          const upcoming = all
-            .filter((b: BookingListItem) => {
-              if (!b?.eventDate) return false;
-              const d = new Date(b.eventDate);
-              return !isNaN(d.getTime()) && d >= new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            })
-            .sort((a: BookingListItem, b: BookingListItem) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime())
-            .slice(0, 5);
-          setNextBookings(upcoming);
-        } catch {
-          setNextBookings([]);
-        } finally {
-          setLoadingNext(false);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar dados do dashboard:', error);
-        addNotification({
-          type: 'error',
-          title: 'Erro de Carregamento',
-          message: 'Não foi possível carregar os dados do dashboard.',
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchDashboardData();
-  }, [addNotification, navigate]);
+  }, [fetchDashboardData]);
+
+  const formatCurrency = (val: number) => 
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   return (
-    <AdminLayout title="Dashboard Administrativo" breadcrumbs={[{ name: 'Admin' }, { name: 'Dashboard' }]}>
+    <AdminLayout title="Painel de Controle" breadcrumbs={[{ name: 'Admin' }, { name: 'Dashboard' }]}>
       <div className="space-y-8">
-        {/* Header de boas-vindas */}
-        <div className="bg-gradient-to-r from-primary to-secondary rounded-xl text-white p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold mb-2">
-                Bem-vindo de volta, {user?.name}!
+        {/* Welcome Header */}
+        <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-primary to-indigo-900 p-8 text-white shadow-2xl">
+          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -left-20 -bottom-20 h-48 w-48 rounded-full bg-primary-foreground/10 blur-2xl" />
+          
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="text-center md:text-left">
+              <Badge variant="outline" className="mb-4 bg-white/10 border-white/20 text-white font-black tracking-widest text-[9px] uppercase">
+                Status: Operação Nominal
+              </Badge>
+              <h1 className="text-3xl md:text-4xl font-black tracking-tighter mb-2">
+                Olá, {user?.name?.split(' ')[0]}! 👋
               </h1>
-              <p className="text-white/80">Aqui está um resumo das suas atividades recentes</p>
+              <p className="text-white/70 font-medium max-w-md">
+                O ecossistema está estável. Temos <span className="text-white font-bold">{liveStats?.todayBookings || 0} eventos</span> programados para hoje.
+              </p>
             </div>
-            <div className="hidden md:flex items-center space-x-4">
-              <div className="flex items-center space-x-2 text-sm">
-                <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-                <span>Sistema Online</span>
+            
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button 
+                onClick={() => navigate('/admin/reservas/nova')}
+                className="bg-white text-primary hover:bg-white/90 border-none font-black uppercase text-[10px] tracking-widest h-12 px-6 rounded-2xl shadow-xl shadow-black/20"
+              >
+                <Plus className="mr-2 h-4 w-4" /> Lançar Reserva
+              </Button>
+              <div className="relative">
+                <Button 
+                    variant="outline" 
+                    onClick={() => navigate('/admin/monitoramento')}
+                    className="border-white/20 bg-white/5 hover:bg-white/10 text-white font-black uppercase text-[10px] tracking-widest h-12 px-6 rounded-2xl backdrop-blur-sm"
+                >
+                    <Monitor className="mr-2 h-4 w-4" /> Live Tracking
+                </Button>
+                {liveStats && liveStats.activeUsers > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 border-2 border-indigo-900 text-[8px] font-black items-center justify-center">
+                      {liveStats.activeUsers}
+                    </span>
+                  </span>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Métricas principais / Skeletons */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Main Stats Grid */}
+        <Grid columns={{ sm: 1, md: 2, lg: 4 }} gap={6}>
           {loading ? (
-            <>
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </>
+             Array(4).fill(0).map((_, i) => <div key={i} className="h-32 bg-muted/50 animate-pulse border-none rounded-3xl" />)
           ) : (
             <>
-              <StatsCard
-                title="Total de Clientes"
-                value={stats?.totalClients || 0}
-                icon={<UsersIcon />}
-                description="Clientes cadastrados"
+              <StatItem 
+                title="Base de Clientes" 
+                value={stats?.totalClients || 0} 
+                icon={Users} 
+                description="Total histórico de cadastros" 
+                color="primary"
                 onClick={() => navigate('/admin/clientes')}
               />
-              <StatsCard
-                title="Reservas Ativas"
-                value={stats?.confirmedBookings || 0}
-                icon={<CalendarIcon />}
-                description="Reservas confirmadas"
+              <StatItem 
+                title="Agenda Operacional" 
+                value={stats?.confirmedBookings || 0} 
+                icon={Calendar} 
+                trend={stats?.bookingsGrowth ? { value: stats.bookingsGrowth, type: stats.bookingsGrowth > 0 ? 'positive' : 'negative' } : undefined}
+                description="Próximas reservas confirmadas" 
+                color="indigo"
                 onClick={() => navigate('/admin/reservas')}
-                {...(typeof stats?.bookingsGrowth === 'number'
-                  ? {
-                      trend: {
-                        value: stats.bookingsGrowth,
-                        type:
-                          stats.bookingsGrowth > 0
-                            ? 'positive'
-                            : stats.bookingsGrowth < 0
-                            ? 'negative'
-                            : 'neutral',
-                      },
-                    }
-                  : {})}
               />
-              <StatsCard
-                title="Receita Total"
-                value={formatCurrency(stats?.totalRevenue || 0)}
-                icon={<CurrencyIcon />}
-                description="Receita acumulada"
-                {...(typeof stats?.revenueGrowth === 'number'
-                  ? {
-                      trend: {
-                        value: stats.revenueGrowth,
-                        type:
-                          stats.revenueGrowth > 0
-                            ? 'positive'
-                            : stats.revenueGrowth < 0
-                            ? 'negative'
-                            : 'neutral',
-                      },
-                    }
-                  : {})}
+              <StatItem 
+                title="Faturamento Global" 
+                value={formatCurrency(stats?.totalRevenue || 0)} 
+                icon={DollarSign} 
+                trend={stats?.revenueGrowth ? { value: stats.revenueGrowth, type: stats.revenueGrowth > 0 ? 'positive' : 'negative' } : undefined}
+                description="Ticket médio em crescimento" 
+                color="emerald"
               />
-              <StatsCard
-                title="Equipamentos"
-                value={stats?.totalEquipments || 0}
-                icon={<CameraIcon />}
-                description="Equipamentos disponíveis"
+              <StatItem 
+                title="Ativos de Inventário" 
+                value={stats?.totalEquipments || 0} 
+                icon={Camera} 
+                description="Equipamentos sob gestão" 
+                color="amber"
                 onClick={() => navigate('/admin/equipamentos')}
               />
             </>
           )}
+        </Grid>
+
+        {/* Integrações */}
+        <div className="grid grid-cols-1 mb-6">
+             <Card className="p-6 border-l-4 border-l-indigo-500">
+                 <div className="flex items-center justify-between mb-4">
+                     <div>
+                         <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <Calendar className="w-5 h-5 text-indigo-600" />
+                            Agenda Mestra (Centralizada)
+                         </h3>
+                         <p className="text-sm text-gray-500 mt-1">
+                            Sincronize automaticamente todas as reservas confirmadas com o calendário oficial da X Produções.
+                         </p>
+                     </div>
+                 </div>
+                 <GoogleCalendarIntegration googleCalendarEmail={user?.googleCalendarEmail} />
+             </Card>
         </div>
 
-        {/* Gráfico de receita mensal */}
-        <SimpleCard title="Receita Mensal">
+        {/* Revenue Chart Section */}
+        <Card className="border-border/50 bg-card/30 backdrop-blur-sm p-6 overflow-hidden">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                <CreditCard className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Desempenho Financeiro</h3>
+                <p className="text-[10px] text-muted-foreground font-medium uppercase mt-0.5">Visão consolidada do exercício atual</p>
+              </div>
+            </div>
+          </div>
           {loading ? (
-            <div className="h-64 flex items-end space-x-2 py-4 px-2">
-              {[60, 40, 80, 50, 70, 90, 45, 65, 85, 55, 75, 95].map((h, i) => (
-                <div 
-                  key={i} 
-                  className="chart-loading-bar" 
-                  style={{ '--bar-h': `${h}%` } as React.CSSProperties}
-                  data-height={h}
-                ></div>
-              ))}
-            </div>
+             <div className="h-[300px] flex items-center justify-center">
+                <BrandLoader size={80} label="Processando gráficos..." />
+             </div>
           ) : (
-            <div className="mt-2">
-              <ReceitaMensalChart year={new Date().getFullYear()} />
-            </div>
+            <ReceitaMensalChart year={new Date().getFullYear()} />
           )}
-        </SimpleCard>
+        </Card>
 
-        {/* Grid de conteúdo secundário */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Atividade Recente */}
+        {/* Dynamic Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Recent Activity Column */}
           <div className="lg:col-span-1">
-            <RecentActivity activities={activities} loading={loading} />
+            <RecentActivityList activities={activities} loading={loading} />
           </div>
 
-          {/* Performance Overview & Integrations */}
-          <div className="lg:col-span-1 space-y-6">
-            <PerformanceOverview stats={stats} loading={loading} />
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <SimpleCard title="Top Equipamentos">
-                <div className="space-y-4">
-                  {loading ? (
-                    <SkeletonList items={3} />
-                  ) : topEquipment.length > 0 ? (
-                    topEquipment.map((item, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <span className="text-sm font-medium truncate pr-2" title={item.name}>{item.name}</span>
-                        <span className="text-xs font-bold px-2 py-1 bg-primary/10 text-primary rounded-full">
-                          {item.bookings} reservas
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-xs text-muted-foreground text-center py-4">Sem dados</p>
-                  )}
+          {/* Detailed Intelligence Column */}
+          <div className="lg:col-span-2 space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <EfficiencyStats stats={stats} loading={loading} />
+              
+              <Card className="border-border/50 bg-card/30 backdrop-blur-sm p-6 overflow-hidden flex flex-col">
+                <div className="flex items-center gap-2 mb-6 shrink-0">
+                  <Star className="h-4 w-4 text-amber-500" />
+                  <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Talentos em Destaque</h3>
                 </div>
-              </SimpleCard>
-
-              <SimpleCard title="Top Colaboradores">
-                <div className="space-y-4">
-                  {loading ? (
-                    <SkeletonList items={3} />
-                  ) : topCollaborators.length > 0 ? (
-                    topCollaborators.map((item, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{item.collaborator.name}</p>
-                          <p className="text-[10px] text-muted-foreground">{item.collaborator.role}</p>
+                <div className="space-y-4 flex-1">
+                  {loading ? <BrandLoader size={40} /> : topCollaborators.length > 0 ? (
+                    topCollaborators.slice(0, 4).map((item, i) => (
+                      <div key={i} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-xl transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-black text-primary border border-primary/20">
+                            {item.collaborator.name.charAt(0)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-foreground truncate">{item.collaborator.name}</p>
+                            <p className="text-[9px] text-muted-foreground font-black uppercase tracking-tighter">{item.collaborator.role}</p>
+                          </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs font-bold text-accent">★ {item.rating.toFixed(1)}</p>
-                          <p className="text-[10px] text-muted-foreground">{item.eventCount} ev.</p>
+                          <p className="text-[11px] font-black text-amber-600">★ {item.rating.toFixed(1)}</p>
+                          <p className="text-[9px] text-muted-foreground font-medium">{item.eventCount} missões</p>
                         </div>
                       </div>
                     ))
-                  ) : (
-                    <p className="text-xs text-muted-foreground text-center py-4">Sem dados</p>
-                  )}
+                  ) : <p className="text-[10px] uppercase font-black text-muted-foreground text-center py-10 opacity-30">Nenhum dado apurado</p>}
                 </div>
-              </SimpleCard>
+              </Card>
             </div>
+
+            {/* Inventory Insights */}
+            <Card className="border-border/50 bg-card/30 backdrop-blur-sm p-0 overflow-hidden">
+               <div className="p-6 border-b border-border/50 bg-muted/20 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Ranking de Utilização: Equipamentos</h3>
+                  </div>
+               </div>
+               <div className="p-6">
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                   {loading ? Array(3).fill(0).map((_,i) => <div key={i} className="h-12 bg-muted/30 rounded-2xl" />) : 
+                    topEquipment.slice(0, 3).map((item, i) => (
+                      <div key={i} className="relative group">
+                          <div className="p-4 rounded-2xl bg-muted/50 border border-border/50 group-hover:border-primary/30 transition-all">
+                              <p className="text-[10px] font-black text-muted-foreground uppercase mb-1 tracking-widest">#0{i+1} Mais Locado</p>
+                              <p className="text-xs font-bold text-foreground truncate mb-3">{item.name}</p>
+                              <Badge variant="primary" className="text-[9px] font-black uppercase">
+                                 {item.bookings} Operações
+                              </Badge>
+                          </div>
+                      </div>
+                    ))
+                   }
+                 </div>
+               </div>
+            </Card>
           </div>
         </div>
 
-        {/* Quick Actions (Amostra / Placeholders reais) */}
-        <SimpleCard title="Ações Rápidas">
-           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-             <QuickActionCard
-               title="Nova Reserva"
-               description="Criar novo agendamento rápida"
-               icon={<PlusIcon />}
-               onClick={() => navigate('/admin/reservas/nova')}
-               color="primary"
-             />
-             <QuickActionCard
-               title="Relatórios"
-               description="Ver estatísticas detalhadas"
-               icon={<AnalyticsIcon />}
-               onClick={() => navigate('/admin/relatorios')}
-               color="secondary"
-               badge={unreadNotifications > 0 ? { content: unreadNotifications, variant: 'destructive' } : undefined}
-             />
-             <QuickActionCard
-               title="Gerenciar Estoque"
-               description="Controlar equipamentos e kits"
-               icon={<EquipmentIcon />}
-               onClick={() => navigate('/admin/equipamentos')}
-               color="info"
-             />
-             <QuickActionCard
-               title="Monitorar Live"
-               description={`${liveStats?.activeUsers || 0} usuários online agora`}
-               icon={
-                 <div className="relative">
-                   <AnalyticsIcon />
-                   {liveStats && liveStats.activeUsers > 0 && (
-                     <div className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full border-2 border-card"></div>
-                   )}
-                 </div>
-               }
-               onClick={() => navigate('/admin/monitoramento')}
-               color="destructive"
-             />
-           </div>
-        </SimpleCard>
-
-        {/* Próximas Reservas */}
-        <SimpleCard title="Próximas Reservas">
-          {loadingNext ? (
-            <SkeletonList items={3} />
-          ) : nextBookings.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-muted-foreground border-b border-border/40">
-                    <th className="pb-3 font-medium">Cliente</th>
-                    <th className="pb-3 font-medium">Data</th>
-                    <th className="pb-3 font-medium">Status</th>
-                    <th className="pb-3 font-medium text-right">Ação</th>
+        {/* Bottom Section: Upcoming Schedule */}
+        <Card className="border-border/50 bg-card/30 backdrop-blur-sm p-0 overflow-hidden">
+          <div className="p-6 border-b border-border/50 flex items-center justify-between bg-muted/20">
+             <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Escale de Próximos Eventos</h3>
+             </div>
+             <Button variant="outline" size="sm" className="text-[10px] uppercase font-black tracking-widest" onClick={() => navigate('/admin/agenda')}>
+                Agenda Completa
+             </Button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-muted/30 border-b border-border text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                  <th className="px-6 py-4">Ficha / Cliente</th>
+                  <th className="px-6 py-4">Data Planejada</th>
+                  <th className="px-6 py-4">Status Operacional</th>
+                  <th className="px-6 py-4 text-right">Ação</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/30">
+                {nextBookings.length > 0 ? nextBookings.map((booking) => (
+                  <tr key={booking.id} className="hover:bg-primary/5 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                         <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 shrink-0">
+                            <Users className="h-4 w-4" />
+                         </div>
+                         <span className="text-xs font-bold text-foreground">{booking.client?.user?.name || 'Manual Registro'}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {new Date(booking.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant={booking.status === 'CONFIRMED' ? 'success' : 'warning'} className="text-[9px] font-black uppercase">
+                        {booking.status}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/admin/reservas/${booking.id}`)}
+                        className="text-[9px] uppercase font-black tracking-widest hover:bg-primary/10 text-primary"
+                      >
+                        Abrir Ficha
+                      </Button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40">
-                  {nextBookings.map((booking: BookingListItem) => (
-                    <tr key={booking.id} className="group hover:bg-muted/30 transition-colors">
-                      <td className="py-4 font-medium">{booking.client?.user?.name || '---'}</td>
-                      <td className="py-4">{new Date(booking.eventDate).toLocaleDateString()}</td>
-                      <td className="py-4">
-                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
-                          booking.status === 'CONFIRMED' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
-                        }`}>
-                          {booking.status}
-                        </span>
-                      </td>
-                      <td className="py-4 text-right">
-                        <button
-                          onClick={() => navigate(`/admin/reservas/${booking.id}`)}
-                          className="text-primary opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-2 rounded-md hover:bg-primary/10"
-                          aria-label={`Ver detalhes da reserva de ${booking.client?.user?.name || '---'}`}
-                        >
-                          Ver Detalhes
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-center py-8">Nenhuma reserva futura encontrada</p>
-          )}
-        </SimpleCard>
+                )) : (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground/30 font-black uppercase text-xs">
+                       Nenhuma operação agendada para o curto prazo
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       </div>
     </AdminLayout>
   );
 };
+
+export default AdminDashboardPage;

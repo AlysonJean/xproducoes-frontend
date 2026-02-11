@@ -110,6 +110,9 @@ const GuideDetailPage = lazy(() => import('./pages/GuideDetailPage').then((m) =>
 const ClientDashboardPage = lazy(() =>
   import('./pages/client/ClientDashboardPage').then((m) => ({ default: m.ClientDashboardPage }))
 );
+const ClientCalendarPage = lazy(() =>
+  import('./pages/client/ClientCalendarPage').then((m) => ({ default: m.ClientCalendarPage }))
+);
 const CollaboratorDashboardPage = lazy(() =>
   import('./pages/collaborator/CollaboratorDashboard').then((m) => ({ default: m.default }))
 );
@@ -153,6 +156,9 @@ const CollaboratorSettingsPage = lazy(() =>
 // Admin Pages - Lazy Loading (Heavy components)
 const AdminDashboardPage = lazy(() =>
   import('./pages/admin/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage }))
+);
+const AdminWhatsappPage = lazy(() =>
+  import('./pages/admin/WhatsappPage').then((m) => ({ default: m.default }))
 );
 const ReviewManagementPage = lazy(() =>
   import('./pages/admin/ReviewManagementPage').then((m) => ({ default: m.default }))
@@ -452,6 +458,14 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
+        path="/cliente/agenda"
+        element={
+          <ProtectedRoute role="CLIENT">
+            <ClientCalendarPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/colaborador/painel"
         element={
           <ProtectedRoute role="COLLABORATOR">
@@ -570,6 +584,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute adminOnly>
             <AdminDashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/whatsapp"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminWhatsappPage />
           </ProtectedRoute>
         }
       />

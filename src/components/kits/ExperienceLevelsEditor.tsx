@@ -32,7 +32,7 @@ const LEVEL_INFO = {
   [ExperienceLevel.PLATINUM]: {
     name: 'Platinum',
     icon: '💎',
-    color: 'border-purple-400 bg-purple-50 dark:bg-purple-900/20',
+    color: 'border-slate-400 bg-slate-50 dark:bg-slate-900/20',
     description: 'Solução completa com técnico e DJ',
     defaultIncludes: ['Kit de Equipamentos', 'Montagem Profissional', 'Técnico de Som', 'DJ Profissional', 'Operação completa'],
     suggestedMarkup: 2.0,

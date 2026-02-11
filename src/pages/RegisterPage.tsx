@@ -1,89 +1,51 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import ReactGA from 'react-ga4';
-import { PageLayout } from '../components/layouts/PageLayout';
+import { useNavigate, Link } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { authAPI } from '../services/api';
 import { userRegisterSchema } from '../validators/userSchema';
-import { useNavigate } from 'react-router-dom';
-import { normalizeString } from '../utils/string';
+import { PageLayout } from '../components/layouts/PageLayout';
 import GoogleAuthButton from '../components/ui/GoogleAuthButton';
-import { useNotifications } from '@/contexts/NotificationContext';
+import { 
+  Button, 
+  Card, 
+  Input, 
+  Form, 
+  Alert 
+} from '../components/ui/StandardComponents';
+import { UserPlus, User, Mail, Phone, Lock } from 'lucide-react';
 
-const validateEmail = (email: string): boolean => {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(normalizeString(email));
-};
+type RegisterFormData = z.infer<typeof userRegisterSchema>;
 
 export const RegisterPage = () => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');
-  const [formErrors, setFormErrors] = useState({
-    name: '',
-    email: '',
-    password: '',
-    phone: '',
-    general: '',
-  });
-  const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { addNotification } = useNotifications();
+  const navigate = useNavigate();
 
-  const validateForm = (): boolean => {
-    const errors = { name: '', email: '', password: '', phone: '', general: '' };
-    let isValid = true;
-    if (!name.trim()) {
-      errors.name = 'O nome é obrigatório.';
-      isValid = false;
-    }
-    if (!email) {
-      errors.email = 'O e-mail é obrigatório.';
-      isValid = false;
-    } else if (!validateEmail(email)) {
-      errors.email = 'Por favor, insira um e-mail válido.';
-      isValid = false;
-    }
-    if (!password) {
-      errors.password = 'A palavra-passe é obrigatória.';
-      isValid = false;
-    } else if (password.length < 6) {
-      errors.password = 'A palavra-passe deve ter pelo menos 6 caracteres.';
-      isValid = false;
-    }
-    if (!phone.trim()) {
-      errors.phone = 'O telefone é obrigatório.';
-      isValid = false;
-    }
-    setFormErrors(errors);
-    return isValid;
-  };
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(userRegisterSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      phone: '',
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormErrors({ name: '', email: '', password: '', phone: '', general: '' });
-    if (!validateForm()) {
-      return;
-    }
-    if (!validateForm()) {
-      return;
-    }
+  const onSubmit = async (data: RegisterFormData) => {
+    setError(null);
     setLoading(true);
     try {
-      // Validação extra com Zod
-      const parsed = userRegisterSchema.safeParse({ name, email, password });
-      if (!parsed.success) {
-        const issues = parsed.error.issues.map(i => i.message).join('. ');
-        setFormErrors(prev => ({ ...prev, general: `Dados inválidos: ${issues}` }));
-        setLoading(false);
-        return;
-      }
-
-      // Chamada à API de registro
-      const payload: Record<string, unknown> = { name, email, password };
-      if (phone) payload.phone = phone;
-
-      await authAPI.register(payload);
+      await authAPI.register(data);
       
-      // GA Tracking - Sign Up
       ReactGA.event({
         category: "auth",
         action: "sign_up",
@@ -100,14 +62,12 @@ export const RegisterPage = () => {
       let errorMessage = 'Falha ao criar conta. O e-mail pode já estar em uso.';
       if (err instanceof Error) {
         errorMessage = err.message;
-        // Tentar extrair mensagem do axios
-        // @ts-expect-error - Response structure is unknown in catch block
-        if (err.response && err.response.data) {
-          // @ts-expect-error - Response structure is unknown in catch block
-          errorMessage = err.response.data.message || err.response.data.error || errorMessage;
+        const axiosError = err as any;
+        if (axiosError.response?.data) {
+          errorMessage = axiosError.response.data.message || axiosError.response.data.error || errorMessage;
         }
       }
-      setFormErrors((prev) => ({ ...prev, general: errorMessage }));
+      setError(errorMessage);
       addNotification({
         type: 'error',
         title: 'Erro no registro',
@@ -118,90 +78,82 @@ export const RegisterPage = () => {
     }
   };
 
-  const navigate = useNavigate();
-
   return (
     <PageLayout
       title="Criar Conta"
       description="Preencha os dados abaixo para criar sua conta e aproveitar todos os benefícios."
     >
-      <div className="w-full max-w-md mx-auto bg-card p-8 rounded-2xl shadow-lg border border-border">
-        <h2 className="text-2xl font-bold text-center mb-6 text-primary">Criar Conta</h2>
-        {formErrors.general && (
-          <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-4 text-center border border-destructive">
-            {formErrors.general}
+      <div className="max-w-md mx-auto py-8">
+        <Card className="p-8 shadow-xl border-border">
+          <div className="text-center mb-8">
+            <div className="mx-auto h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
+              <UserPlus className="h-6 w-6 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">Criar Conta</h1>
+            <p className="text-muted-foreground mt-1">Junte-se à nossa comunidade</p>
           </div>
-        )}
-        <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1">Nome</label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                className={`w-full px-4 py-3 rounded-lg border ${formErrors.name ? 'border-destructive' : 'border-border'} bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40`}
-                placeholder="Nome completo"
-                autoComplete="name"
-              />
-              {formErrors.name && <span className="text-xs text-destructive mt-1 block">{formErrors.name}</span>}
-            </div>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">E-mail</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className={`w-full px-4 py-3 rounded-lg border ${formErrors.email ? 'border-destructive' : 'border-border'} bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40`}
-                placeholder="E-mail"
-                autoComplete="email"
-              />
-              {formErrors.email && <span className="text-xs text-destructive mt-1 block">{formErrors.email}</span>}
-            </div>
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-foreground mb-1">Telefone</label>
-              <input
-                id="phone"
-                name="phone"
-                type="tel"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                className={`w-full px-4 py-3 rounded-lg border ${formErrors.phone ? 'border-destructive' : 'border-border'} bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40`}
-                placeholder="Telefone"
-                autoComplete="tel"
-              />
-              {formErrors.phone && <span className="text-xs text-destructive mt-1 block">{formErrors.phone}</span>}
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">Senha</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className={`w-full px-4 py-3 rounded-lg border ${formErrors.password ? 'border-destructive' : 'border-border'} bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40`}
-                placeholder="Senha"
-                autoComplete="new-password"
-              />
-              {formErrors.password && <span className="text-xs text-destructive mt-1 block">{formErrors.password}</span>}
-            </div>
-            <button
+
+          {error && (
+            <Alert variant="error" className="mb-6">
+              {error}
+            </Alert>
+          )}
+
+          <Form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <Input
+              label="Nome completo"
+              leftIcon={<User className="h-4 w-4" />}
+              {...register('name')}
+              error={errors.name?.message}
+              placeholder="Ex: João Silva"
+              autoComplete="name"
+            />
+
+            <Input
+              label="E-mail"
+              type="email"
+              leftIcon={<Mail className="h-4 w-4" />}
+              {...register('email')}
+              error={errors.email?.message}
+              placeholder="Ex: joao@exemplo.com"
+              autoComplete="email"
+            />
+
+            <Input
+              label="Telefone"
+              type="tel"
+              leftIcon={<Phone className="h-4 w-4" />}
+              {...register('phone')}
+              error={errors.phone?.message}
+              placeholder="Ex: +55 11 99999-9999"
+              autoComplete="tel"
+            />
+
+            <Input
+              label="Senha"
+              type="password"
+              showPasswordToggle
+              leftIcon={<Lock className="h-4 w-4" />}
+              {...register('password')}
+              error={errors.password?.message}
+              placeholder="Mínimo 6 caracteres"
+              autoComplete="new-password"
+            />
+
+            <Button
               type="submit"
-              className="w-full bg-primary text-primary-foreground font-bold py-3 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
-              disabled={loading}
+              fullWidth
+              isLoading={loading}
+              className="mt-6"
             >
-              {loading ? 'Criando conta...' : 'Criar Conta'}
-            </button>
-            
-            <div className="relative my-6">
+              Criar Conta
+            </Button>
+
+            <div className="relative my-8">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-border"></div>
               </div>
-              <div className="relative flex justify-center text-sm">
+              <div className="relative flex justify-center text-xs uppercase">
                 <span className="px-2 bg-card text-muted-foreground">Ou continue com</span>
               </div>
             </div>
@@ -209,20 +161,20 @@ export const RegisterPage = () => {
             <GoogleAuthButton onSuccess={() => {
               addNotification({
                 type: 'success',
-                title: 'Login com Google',
-                message: 'Autenticação realizada com sucesso!'
+                title: 'Sucesso',
+                message: 'Autenticação realizada!'
               });
-              // GoogleAuthButton component likely handles redirect or we need to pass a callback that does it? 
-              // Assuming GoogleAuthButton handles external auth, keeping it simple here or updating it too?
-              // The original code was onSuccess={() => setSuccess(true)}. 
-              // We should probably just navigate or let the button handle it.
               navigate('/login');
             }} />
-          </form>
-        <p className="text-center text-muted-foreground mt-8">
-          Já tem uma conta?
-          <a href="/login" className="text-primary font-semibold ml-1 hover:underline">Entrar</a>
-        </p>
+          </Form>
+
+          <p className="text-center text-muted-foreground mt-8 text-sm">
+            Já tem uma conta?{' '}
+            <Link to="/login" className="text-primary font-bold hover:underline">
+              Entrar
+            </Link>
+          </p>
+        </Card>
       </div>
     </PageLayout>
   );
