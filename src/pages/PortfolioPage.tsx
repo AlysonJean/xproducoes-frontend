@@ -171,6 +171,81 @@ export const PortfolioPage: React.FC = () => {
             }
           />
         )}
+        {/* Strategic Instagram Call-to-Action */}
+        <div className="mt-24 relative group no-print">
+          {/* Decorative background elements */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-emerald-500/5 rounded-[60px] blur-3xl" />
+          
+          <div className="relative overflow-hidden rounded-[40px] bg-zinc-950 border border-white/5 p-8 lg:p-16 shadow-2xl">
+            {/* Glossy overlay */}
+            <div className="absolute top-0 right-0 w-2/3 h-full bg-gradient-to-l from-emerald-600/10 via-emerald-600/5 to-transparent pointer-events-none" />
+            
+            <div className="relative z-10 flex flex-col lg:flex-row items-center gap-12">
+              <div className="flex-1 text-center lg:text-left">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-950/50 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-8">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  No Ar: Bastidores e Montagens
+                </div>
+                
+                <h2 className="text-4xl lg:text-6xl font-black text-white leading-[1.1] mb-8">
+                  Quer ver o <br />
+                  <span className="text-emerald-500 underline decoration-emerald-500/30 underline-offset-8">show completo?</span>
+                </h2>
+                
+                <p className="text-zinc-400 text-lg lg:text-xl max-w-xl font-medium leading-relaxed mb-10">
+                  Nem todos os eventos conseguem chegar ao site a tempo. Nossos bastidores e montagens acontecem agora mesmo no nosso Instagram. 
+                </p>
+                
+                <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-6">
+                  <a 
+                    href="https://www.instagram.com/x_producoeseventos" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="group/btn relative px-10 py-5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black rounded-2xl transition-all duration-500 shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1.5 active:scale-95 flex items-center gap-4 overflow-hidden"
+                  >
+                    <span className="relative z-10">Seguir @x_producoeseventos</span>
+                    <svg className="w-5 h-5 relative z-10 group-hover/btn:translate-x-2 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                    {/* Interactive shine effect */}
+                    <div className="absolute inset-x-0 top-0 h-full w-24 bg-white/20 -skew-x-[45deg] -translate-x-[200%] group-hover/btn:translate-x-[400%] transition-transform duration-1000 ease-in-out" />
+                  </a>
+                  
+                  <div className="flex flex-col items-center sm:items-start gap-2">
+                    <div className="flex -space-x-3">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="w-10 h-10 rounded-full border-2 border-zinc-950 bg-zinc-800 ring-2 ring-emerald-500/10 flex items-center justify-center overflow-hidden transition-transform hover:scale-110 hover:z-20 cursor-pointer">
+                          <img src={`https://i.pravatar.cc/100?img=${i+20}`} alt="Seguidor" className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                    <span className="text-zinc-500 text-xs font-bold uppercase tracking-widest">+10k seguindo a X</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="w-full lg:w-[450px] aspect-square relative flex items-center justify-center">
+                {/* Abstract Instagram Post Stack */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-80 bg-zinc-900 rounded-[32px] border border-white/10 rotate-[-15deg] shadow-2xl overflow-hidden scale-90 lg:scale-100 opacity-40 group-hover:rotate-[-20deg] transition-transform duration-700">
+                   <img src="https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=400&q=80" alt="Evento" className="w-full h-full object-cover" />
+                </div>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-80 bg-zinc-900 rounded-[32px] border border-emerald-500/20 rotate-[10deg] shadow-2xl overflow-hidden group-hover:rotate-[15deg] transition-transform duration-700">
+                   <img src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=400&q=80" alt="Show" className="w-full h-full object-cover" />
+                   <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                      <div className="w-16 h-16 bg-white/10 backdrop-blur-xl rounded-pull rounded-full flex items-center justify-center border border-white/20">
+                        <svg className="w-8 h-8 text-white fill-white" viewBox="0 0 24 24">
+                          <path d="M12.017 0C8.396 0 7.931.013 6.714.058 5.498.103 4.677.301 3.958.585a6.022 6.022 0 0 0-2.188 1.424A6.022 6.022 0 0 0 .346 3.998c-.284.72-.482 1.54-.527 2.756C-.026 7.97-.013 8.435-.013 12.056c0 3.621.013 4.086.058 5.303.045 1.216.243 2.036.527 2.756.284.721.665 1.356 1.424 2.188a6.022 6.022 0 0 0 2.188 1.424c.72.284 1.54.482 2.756.527 1.217.045 1.682.058 5.303.058 3.621 0 4.086-.013 5.303-.058 1.216-.045 2.036-.243 2.756-.527a6.022 6.022 0 0 0 2.188-1.424 6.022 6.022 0 0 0 1.424-2.188c.284-.72.482-1.54.527-2.756.045-1.217.058-1.682.058-5.303 0-3.621-.013-4.086-.058-5.303-.045-1.216-.243-2.036-.527-2.756a6.022 6.022 0 0 0-1.424-2.188A6.022 6.022 0 0 0 18.973.585c-.72-.284-1.54-.482-2.756-.527C15 .013 14.535 0 12.017 0z" />
+                        </svg>
+                      </div>
+                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {selectedItem && (
@@ -225,6 +300,22 @@ export const PortfolioPage: React.FC = () => {
                   ))}
                 </div>
               )}
+
+              {/* Modal Instagram Feed Hook */}
+              <div className="mt-12 pt-8 border-t border-border/50 text-center">
+                <p className="text-muted-foreground text-sm mb-4">Gostou deste projeto? Veja os bastidores deste e outros eventos no nosso Instagram.</p>
+                <a 
+                  href="https://www.instagram.com/x_producoeseventos" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-emerald-500 font-bold hover:text-emerald-400 transition-colors"
+                >
+                  Continuar vendo no Instagram
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </a>
+              </div>
             </div>
           </div>
         </div>
