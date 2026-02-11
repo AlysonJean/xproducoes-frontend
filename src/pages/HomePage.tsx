@@ -273,6 +273,33 @@ export const HomePage = () => {
                       <PortfolioCard item={item} />
                     </Link>
                   ))}
+                  
+                  {/* Social Pulse Instagram Card */}
+                  <a 
+                    href="https://www.instagram.com/x_producoeseventos" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="min-w-[300px] w-[300px] md:min-w-[400px] md:w-[400px] snap-start flex-shrink-0 relative group/card no-print overflow-hidden rounded-[32px] bg-zinc-950 border border-white/5 p-8 flex flex-col items-center justify-center text-center shadow-xl transition-all duration-500 hover:shadow-emerald-500/10 hover:-translate-y-2 hover:scale-[1.02]"
+                  >
+                    {/* Animated background pulse */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/20 via-transparent to-amber-500/5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-700" />
+                    
+                    <div className="relative z-10 w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 group-hover/card:scale-110 transition-transform duration-500 border border-emerald-500/20">
+                      <svg className="w-10 h-10 text-emerald-500 fill-emerald-500" viewBox="0 0 24 24">
+                        <path d="M12.017 0C8.396 0 7.931.013 6.714.058 5.498.103 4.677.301 3.958.585a6.022 6.022 0 0 0-2.188 1.424A6.022 6.022 0 0 0 .346 3.998c-.284.72-.482 1.54-.527 2.756C-.026 7.97-.013 8.435-.013 12.056c0 3.621.013 4.086.058 5.303.045 1.216.243 2.036.527 2.756.284.721.665 1.356 1.424 2.188a6.022 6.022 0 0 0 2.188 1.424c.72.284 1.54.482 2.756.527 1.217.045 1.682.058 5.303.058 3.621 0 4.086-.013 5.303-.058 1.216-.045 2.036-.243 2.756-.527a6.022 6.022 0 0 0 2.188-1.424 6.022 6.022 0 0 0 1.424-2.188c.284-.72.482-1.54.527-2.756.045-1.217.058-1.682.058-5.303 0-3.621-.013-4.086-.058-5.303-.045-1.216-.243-2.036-.527-2.756a6.022 6.022 0 0 0-1.424-2.188A6.022 6.022 0 0 0 18.973.585c-.72-.284-1.54-.482-2.756-.527C15 .013 14.535 0 12.017 0zm0 2.145c3.438 0 3.86.014 5.22.059 1.359.062 2.1.289 2.593.48.653.254 1.12.558 1.609 1.047.49.489.793.956 1.047 1.609.191.493.418 1.234.48 2.593.045 1.36.059 1.782.059 5.22 0 3.438-.014 3.86-.059 5.22-.062 1.359-.289 2.1-.48 2.593a4.339 4.339 0 0 1-1.047 1.609c-.489.49-.956.793-1.609 1.047-.493.191-1.234.418-2.593.48-1.36.045-1.782.059-5.22.059-3.438 0-3.86-.014-5.22-.059-1.359-.062-2.1-.289-2.593-.48a4.339 4.339 0 0 1-1.609-1.047 4.339 4.339 0 0 1-1.047-1.609c-.191-.493-.418-1.234-.48-2.593-.045-1.36-.059-1.782-.059-5.22 0-3.438.014-3.86.059-5.22.062-1.359.289-2.1.48-2.593.254-.653.558-1.12 1.047-1.609.489-.49.956-.793 1.609-1.047.493-.191 1.234-.418 2.593-.48 1.36-.045 1.782-.059 5.22-.059z" />
+                      </svg>
+                    </div>
+                    
+                    <h3 className="text-2xl font-black text-white mb-3">Veja mais no Instagram</h3>
+                    <p className="text-zinc-500 text-sm font-medium leading-relaxed mb-6 px-4">
+                      Nem todos os shows entram no site! Siga para acompanhar tudo em tempo real.
+                    </p>
+                    
+                    <div className="relative overflow-hidden bg-emerald-500 text-zinc-950 text-xs font-black uppercase tracking-widest py-3 px-8 rounded-full group-hover/card:bg-emerald-400 transition-colors">
+                      @x_producoeseventos
+                    </div>
+                  </a>
+
                   <div className="min-w-[1px] w-[1px] flex-shrink-0" />
                </div>
                <div className="absolute right-0 top-0 bottom-6 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none opacity-0 group-hover/portfolio-scroll:opacity-100 transition-opacity" />
