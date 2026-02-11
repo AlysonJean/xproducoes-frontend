@@ -84,5 +84,7 @@ export interface PortfolioItem {
   title: string;
   imageUrl: string;
   description: string;
+  eventDate?: string | Date;
+  slug?: string;
   images?: string[];
 }

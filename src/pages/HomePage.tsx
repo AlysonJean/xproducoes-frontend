@@ -1,6 +1,7 @@
 // Caminho do arquivo: frontend/src/pages/HomePage.tsx
 
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
+import { Link } from 'react-router-dom';
 import { useRevealOnView } from '../hooks/useRevealOnView';
 import { KitCard } from '../components/ui/KitCard';
 import { PortfolioCard } from '../components/ui/PortfolioCard';
@@ -98,7 +99,12 @@ export const HomePage = () => {
       const transformedKits = (kitsData as Kit[]).map(kit => transformKit(kit));
       setKits(transformedKits);
       
-      setPortfolio(portfolioData as PortfolioItem[]);
+      const sortedPortfolio = (portfolioData as PortfolioItem[]).sort((a, b) => {
+        const dateA = a.eventDate ? new Date(a.eventDate).getTime() : 0;
+        const dateB = b.eventDate ? new Date(b.eventDate).getTime() : 0;
+        return dateB - dateA;
+      });
+      setPortfolio(sortedPortfolio);
     } catch (err) {
       console.error('Erro detalhado no fetchPageData:', err);
       // Não bloqueia mais a renderização com tela de erro fatal
@@ -261,13 +267,21 @@ export const HomePage = () => {
               <h2 ref={portfolioTitleRef} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Galeria de Experiências</h2>
               <div className="w-24 h-1 bg-emerald-500 mx-auto rounded-full mb-6" />
             </div>
-            <Grid columns={{ sm: 1, md: 2, lg: 3 }} gap={10}>
-              {portfolio.map((item) => (
-                <div key={item.id} className="group">
-                  <PortfolioCard item={item} />
-                </div>
-              ))}
-            </Grid>
+            <div className="relative group/portfolio-scroll">
+               <div className="flex overflow-x-auto pb-6 gap-6 snap-x snap-mandatory scrollbar-none hover:scrollbar-thin scrollbar-thumb-emerald-500/10 scrollbar-track-transparent transition-all w-full">
+                  {portfolio.map((item) => (
+                    <Link 
+                      key={item.id} 
+                      to={`/portfolio/${item.slug || item.id}`}
+                      className="min-w-[300px] w-[300px] md:min-w-[400px] md:w-[400px] snap-start flex-shrink-0 transition-transform duration-300 hover:scale-[1.01]"
+                    >
+                      <PortfolioCard item={item} />
+                    </Link>
+                  ))}
+                  <div className="min-w-[1px] w-[1px] flex-shrink-0" />
+               </div>
+               <div className="absolute right-0 top-0 bottom-6 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none opacity-0 group-hover/portfolio-scroll:opacity-100 transition-opacity" />
+            </div>
           </section>
         )}
 
