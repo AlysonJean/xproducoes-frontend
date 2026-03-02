@@ -48,7 +48,7 @@ interface WallConfig {
     // Mosaic
     enableMosaic?: boolean;
     mosaicFrequency?: number;
-    
+
     // Gamification
     enableGamification?: boolean;
 }
@@ -62,9 +62,9 @@ interface LeaderboardItem {
 
 // Optimization: Pre-calculate aspect ratio class to avoid CLS
 // Using Tailwind for styling to avoid inline styles (Lint fix)
-const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag, showQrCode, qrCodeText, slug }: { 
-    post: SocialPost; 
-    active: boolean; 
+const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag, showQrCode, qrCodeText, slug }: {
+    post: SocialPost;
+    active: boolean;
     isLandscapeMode: boolean;
     sponsors?: SponsorLogo[];
     hashtag?: string;
@@ -75,8 +75,8 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
     if (!active) return null;
 
     // Cloudinary Optimization: Request exact resolution
-    const optimizedUrl = post.mediaUrl.includes('cloudinary') 
-        ? post.mediaUrl.replace('/upload/', '/upload/w_1920,h_1080,c_fit,q_auto/') 
+    const optimizedUrl = post.mediaUrl.includes('cloudinary')
+        ? post.mediaUrl.replace('/upload/', '/upload/w_1920,h_1080,c_fit,q_auto/')
         : post.mediaUrl;
 
     const isVerticalContent = true; // Simulating detection, real implementation would check aspect ratio or assuming generic fit
@@ -85,7 +85,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
     // 1. Portrait Mode (TV is Vertical) -> Show Full Screen
     // 2. Landscape Mode (TV is Horizontal) + Vertical Content -> Show Sidebar
     // 3. Landscape Mode + Horizontal Content -> Full Screen
-    
+
     // For simplicity in this implementation, we assume Landscape Mode + Vertical Content uses Sidebars
     // Show sidebars if landscape AND vertical content AND (has sponsors OR has QR enabled)
     const showSidebars = isLandscapeMode && isVerticalContent && ((sponsors && sponsors.length > 0) || showQrCode);
@@ -101,90 +101,90 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
     }
 
     return (
-        <div 
+        <div
             className={`absolute inset-0 flex items-center justify-center transition-opacity duration-1000 ease-in-out will-[opacity,transform] ${active ? 'opacity-100' : 'opacity-0'}`}
         >
             {/* Background Layer (Blurred if sidebars) */}
             <div className="absolute inset-0 bg-surface overflow-hidden z-0">
-                 {/* Blurred Background for aesthetic fill */}
-                 <img src={optimizedUrl} className="w-full h-full object-cover opacity-30 blur-xl scale-110" alt="" />
+                {/* Blurred Background for aesthetic fill */}
+                <img src={optimizedUrl} className="w-full h-full object-cover opacity-30 blur-xl scale-110" alt="" />
             </div>
 
             {/* Content Layer */}
             <div className="z-10 relative flex w-full h-full">
-                
+
                 {/* Left Sidebar (Sponsors) */}
-                    <div className="flex flex-col justify-between items-center w-1/4 bg-surface/40 backdrop-blur-sm p-6 gap-6 animate-fade-in-right h-full border-l border-border/10">
-                        {/* Top: Hashtag & CTA */}
-                        <div className="text-foreground text-center">
-                            <p className="text-sm uppercase tracking-widest mb-1 text-muted-foreground">Participe</p>
-                            <p className="font-bold text-3xl drop-shadow-md">#{hashtag || 'mural'}</p>
-                        </div>
-                        {/* Middle: QR Code (Dynamic) */}
-                        {showQrCode && slug && (
-                            <div className="bg-transparent p-0 rounded-none shadow-none">
-                                <QRCode 
-                                    value={`${getPublicBase()}/participate/${slug}`}
-                                    size={180}
-                                    level="M"
-                                />
-                                {qrCodeText && (
-                                    <p className="text-foreground text-xs font-bold text-center mt-2 uppercase tracking-wide">{qrCodeText}</p>
-                                )}
-                                {/* Debug: show resolved QR value when debugging */}
-                                {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
-                                    <p className="text-xs text-muted-foreground mt-2 break-all">{`${getPublicBase()}/participate/${slug}`}</p>
-                                )}
-                            </div>
-                        )}
-                        {/* Bottom: Sponsors or Logo */}
-                        {sponsors && sponsors.length > 0 ? (
-                            <div className="grid grid-cols-1 gap-4 w-full">
-                                {sponsors.slice(0, 3).map(s => {
-                                    const opt = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_600,c_limit,q_auto/') : s.imageUrl;
-                                    const small = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_300,c_limit/') : s.imageUrl;
-                                        return (
-                                            <div key={s.id} className="w-full flex items-center justify-center bg-transparent p-0">
-                                                <img
-                                                    src={opt || 'https://placehold.co/240x80?text=Sponsor'}
-                                                    srcSet={opt ? `${small} 240w, ${opt} 480w` : undefined}
-                                                    alt={s.name || 'Sponsor'}
-                                                    className="w-full h-full object-cover sponsor-debug-img"
-                                                    style={{ minHeight: 0, minWidth: 0, maxHeight: '100%', maxWidth: '100%' }}
-                                                    loading="eager"
-                                                    onLoad={() => {
-                                                        try {
-                                                            if (typeof window !== 'undefined') {
-                                                                // @ts-ignore
-                                                                window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
-                                                                // @ts-ignore
-                                                                if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
-                                                            }
-                                                        } catch (err) {/* ignore */}
-                                                    }}
-                                                    onError={(e) => {
-                                                        // eslint-disable-next-line no-console
-                                                        console.warn('SlideComponent - Sponsor image failed to load, replacing with placeholder:', s.imageUrl);
-                                                        e.currentTarget.src = 'https://placehold.co/240x80?text=Sponsor';
-                                                    }}
-                                                />
-                                            </div>
-                                        );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="h-20"></div>
-                        )}
+                <div className="flex flex-col justify-between items-center w-1/4 bg-surface/40 backdrop-blur-sm p-6 gap-6 animate-fade-in-right h-full border-l border-border/10">
+                    {/* Top: Hashtag & CTA */}
+                    <div className="text-foreground text-center">
+                        <p className="text-sm uppercase tracking-widest mb-1 text-muted-foreground">Participe</p>
+                        <p className="font-bold text-3xl drop-shadow-md">#{hashtag || 'mural'}</p>
                     </div>
+                    {/* Middle: QR Code (Dynamic) */}
+                    {showQrCode && slug && (
+                        <div className="bg-transparent p-0 rounded-none shadow-none">
+                            <QRCode
+                                value={`${getPublicBase()}/participate/${slug}`}
+                                size={180}
+                                level="M"
+                            />
+                            {qrCodeText && (
+                                <p className="text-foreground text-xs font-bold text-center mt-2 uppercase tracking-wide">{qrCodeText}</p>
+                            )}
+                            {/* Debug: show resolved QR value when debugging */}
+                            {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
+                                <p className="text-xs text-muted-foreground mt-2 break-all">{`${getPublicBase()}/participate/${slug}`}</p>
+                            )}
+                        </div>
+                    )}
+                    {/* Bottom: Sponsors or Logo */}
+                    {sponsors && sponsors.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-4 w-full">
+                            {sponsors.slice(0, 3).map(s => {
+                                const opt = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_600,c_limit,q_auto/') : s.imageUrl;
+                                const small = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_300,c_limit/') : s.imageUrl;
+                                return (
+                                    <div key={s.id} className="w-full flex items-center justify-center bg-transparent p-0">
+                                        <img
+                                            src={opt || 'https://placehold.co/240x80?text=Sponsor'}
+                                            srcSet={opt ? `${small} 240w, ${opt} 480w` : undefined}
+                                            alt={s.name || 'Sponsor'}
+                                            className="w-full h-full object-cover sponsor-debug-img"
+                                            style={{ minHeight: 0, minWidth: 0, maxHeight: '100%', maxWidth: '100%' }}
+                                            loading="eager"
+                                            onLoad={() => {
+                                                try {
+                                                    if (typeof window !== 'undefined') {
+                                                        // @ts-ignore
+                                                        window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
+                                                        // @ts-ignore
+                                                        if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
+                                                    }
+                                                } catch (err) {/* ignore */ }
+                                            }}
+                                            onError={(e) => {
+                                                // eslint-disable-next-line no-console
+                                                console.warn('SlideComponent - Sponsor image failed to load, replacing with placeholder:', s.imageUrl);
+                                                e.currentTarget.src = 'https://placehold.co/240x80?text=Sponsor';
+                                            }}
+                                        />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="h-20"></div>
+                    )}
+                </div>
 
                 {/* Main Content Area */}
                 <div className={`flex-1 flex items-center justify-center relative ${showSidebars ? 'p-4' : 'p-0'}`}>
-                    <img 
-                        src={optimizedUrl} 
-                        alt={post.caption || 'Social Post'} 
+                    <img
+                        src={optimizedUrl}
+                        alt={post.caption || 'Social Post'}
                         className="max-h-full max-w-full object-contain shadow-2xl rounded-sm will-transform"
                     />
-                    
+
                     {/* Caption Overlay */}
                     {post.caption && (
                         <div className="absolute bottom-10 left-0 right-0 text-center">
@@ -199,7 +199,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                 {/* Right Sidebar (Sponsors - mirrored or different) */}
                 {showSidebars && (
                     <div className="flex flex-col justify-between items-center w-1/4 bg-surface/40 backdrop-blur-sm p-6 gap-6 animate-fade-in-right h-full border-l border-border/10">
-                    
+
                         {/* Top: Hashtag & CTA */}
                         <div className="text-foreground text-center">
                             <p className="text-sm uppercase tracking-widest mb-1 text-muted-foreground">Participe</p>
@@ -209,7 +209,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                         {/* Middle: QR Code (Dynamic) */}
                         {showQrCode && slug && (
                             <div className="bg-transparent p-0 rounded-none shadow-none">
-                                <QRCode 
+                                <QRCode
                                     value={`${getPublicBase()}/participate/${slug}`}
                                     size={180}
                                     level="M"
@@ -246,7 +246,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                                             // @ts-ignore
                                                             if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                                         }
-                                                    } catch (err) {/* ignore */}
+                                                    } catch (err) {/* ignore */ }
                                                 }}
                                                 onError={(e) => {
                                                     // eslint-disable-next-line no-console
@@ -260,7 +260,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                             </div>
                         ) : (
                             <div className="h-20"></div>
-                        )} 
+                        )}
                     </div>
                 )}
             </div>
@@ -277,7 +277,7 @@ const TVPage: React.FC = () => {
     const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
     const [showAnnouncement, setShowAnnouncement] = useState<SocialAnnouncement | null>(null);
     const [slidesSinceAnnouncement, setSlidesSinceAnnouncement] = useState(0);
-    
+
     // Mosaic State
     const [showMosaic, setShowMosaic] = useState(false);
     const [slidesSinceMosaic, setSlidesSinceMosaic] = useState(0);
@@ -291,7 +291,7 @@ const TVPage: React.FC = () => {
         if (code) return code;
         return Math.floor(1000 + Math.random() * 9000).toString();
     });
-    
+
     // Refs for intervals/timeouts
     const nextSlideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -353,6 +353,7 @@ const TVPage: React.FC = () => {
 
         // Polling loop if not linked
         const interval = setInterval(() => {
+            if (document.hidden) return; // Pausa polling se a aba não estiver visível
             if (!config) {
                 fetchConfig();
             }
@@ -373,16 +374,19 @@ const TVPage: React.FC = () => {
     useEffect(() => {
         if (!config?.settingId) return;
         const fetchAnnouncments = async () => {
-             try {
-                 const response = await socialService.getAnnouncements(config.settingId!);
-                 setAnnouncements(response.data.filter((a: SocialAnnouncement) => a.isActive));
-             } catch (err) {
-                 console.error(err);
-             }
+            try {
+                const response = await socialService.getAnnouncements(config.settingId!);
+                setAnnouncements(response.data.filter((a: SocialAnnouncement) => a.isActive));
+            } catch (err) {
+                console.error(err);
+            }
         };
         fetchAnnouncments();
         // Poll for updates every minute
-        const interval = setInterval(fetchAnnouncments, 60000);
+        const interval = setInterval(() => {
+            if (document.hidden) return; // Pausa polling se a aba não estiver visível
+            fetchAnnouncments();
+        }, 60000);
         return () => clearInterval(interval);
     }, [config?.settingId]);
 
@@ -391,7 +395,7 @@ const TVPage: React.FC = () => {
         if (!config?.enableGamification || !config.settingId) return;
 
         const fetchLeaderboard = async () => {
-             try {
+            try {
                 const res = await apiFetch<LeaderboardItem[]>(`/public/social/leaderboard?settingId=${config.settingId}`);
                 if (res) {
                     setLeaderboard(res);
@@ -402,14 +406,17 @@ const TVPage: React.FC = () => {
         };
 
         fetchLeaderboard();
-        const interval = setInterval(fetchLeaderboard, 60000 * 5); // 5 min
+        const interval = setInterval(() => {
+            if (document.hidden) return; // Pausa polling se aba inativa
+            fetchLeaderboard();
+        }, 60000 * 5); // 5 min
         return () => clearInterval(interval);
     }, [config?.settingId, config?.enableGamification]);
 
     // 2. Socket Connection (Restored)
     useEffect(() => {
         if (!config) return;
-        
+
         // Conecta sempre na porta correta do backend
         const socketUrl = window.location.hostname === 'localhost' ? 'http://localhost:4000' : API_URL;
         console.log('Connecting to socket at:', socketUrl);
@@ -417,9 +424,9 @@ const TVPage: React.FC = () => {
             path: '/socket.io',
             transports: ['websocket', 'polling']
         });
-        
+
         const roomId = config.settingId ? `wall:${config.settingId}` : `event:${config.eventId}`;
-        
+
         socket.on('connect', () => {
             console.log('Connected to WebSocket server');
             socket.emit('join', roomId);
@@ -462,7 +469,7 @@ const TVPage: React.FC = () => {
         const scheduleNext = () => {
             // Determine duration of current slide
             let duration = 8000; // Default post duration
-            
+
             if (showAnnouncement) {
                 duration = (showAnnouncement.duration || 10) * 1000;
             }
@@ -474,7 +481,7 @@ const TVPage: React.FC = () => {
                     setSlidesSinceAnnouncement(0);
                     // Move to next post
                     setActiveIndex(prev => (prev + 1) % posts.length);
-                } 
+                }
                 else if (showMosaic) {
                     setShowMosaic(false);
                     setSlidesSinceMosaic(0);
@@ -488,11 +495,11 @@ const TVPage: React.FC = () => {
                 }
                 else {
                     // Currently showing post. Check triggers.
-                    
+
                     // 1. Announcements
                     const nextAnnounceCounter = slidesSinceAnnouncement + 1;
                     const dueAnnouncement = announcements.find(a => nextAnnounceCounter >= (a.frequency || 10));
-                    
+
                     // 2. Mosaic
                     const nextMosaicCounter = slidesSinceMosaic + 1;
                     const mosaicFreq = config?.mosaicFrequency || 15;
@@ -506,7 +513,7 @@ const TVPage: React.FC = () => {
                     if (dueAnnouncement) {
                         setShowAnnouncement(dueAnnouncement);
                     } else if (dueMosaic) {
-                         setShowMosaic(true);
+                        setShowMosaic(true);
                     } else if (dueLeaderboard) {
                         setShowLeaderboard(true);
                     } else {
@@ -523,7 +530,7 @@ const TVPage: React.FC = () => {
         scheduleNext();
 
         return () => {
-             if (nextSlideTimeout.current) clearTimeout(nextSlideTimeout.current);
+            if (nextSlideTimeout.current) clearTimeout(nextSlideTimeout.current);
         };
     }, [posts.length, showAnnouncement, slidesSinceAnnouncement, announcements, activeIndex, slidesSinceMosaic, showMosaic, config, leaderboard, showLeaderboard, slidesSinceLeaderboard]);
 
@@ -536,7 +543,7 @@ const TVPage: React.FC = () => {
             </div>
         );
     }
-    
+
     if (!config) return <div className="bg-surface w-screen h-screen flex items-center justify-center text-foreground">Carregando...</div>;
 
     const isVerticalContent = true; // Match SlideComponent logic
@@ -564,7 +571,7 @@ const TVPage: React.FC = () => {
                 </div>
 
                 <div className="absolute inset-0 z-10 flex items-center justify-center p-8">
-                    <SlideComponent 
+                    <SlideComponent
                         post={placeholderPost}
                         active={true}
                         isLandscapeMode={config?.layoutMode === 'LANDSCAPE'}
@@ -577,10 +584,10 @@ const TVPage: React.FC = () => {
                 </div>
 
                 {/* Sidebar & Overlay Elements (QR, Sponsors em modos sem sidebar) */}
-                { !showSidebarsAtMain && !showAnnouncement && !showMosaic && !showLeaderboard && (
+                {!showSidebarsAtMain && !showAnnouncement && !showMosaic && !showLeaderboard && (
                     <div className="absolute bottom-8 right-8 flex flex-col items-end gap-4">
                         {/* QR Code flutuante */}
-                        { !!config?.enableQrCode && (
+                        {!!config?.enableQrCode && (
                             <div className="bg-transparent p-4 rounded-xl animate-fade-in-up">
                                 <p className="text-center font-bold mb-2 text-sm uppercase tracking-wider">{config.qrCodeText || 'Participe'}</p>
                                 <div className="p-2 rounded-lg bg-transparent">
@@ -592,7 +599,7 @@ const TVPage: React.FC = () => {
                             </div>
                         )}
                         {/* Logos dos patrocinadores flutuantes */}
-                        { config?.sponsors && config.sponsors.length > 0 && (
+                        {config?.sponsors && config.sponsors.length > 0 && (
                             <div className="flex gap-3 bg-transparent p-0 rounded-xl animate-fade-in-up">
                                 {config.sponsors.slice(0, 3).map(s => {
                                     const opt = s.imageUrl && s.imageUrl.includes('/upload/') ? s.imageUrl.replace('/upload/', '/upload/w_480,c_limit,q_auto/') : s.imageUrl;
@@ -607,7 +614,7 @@ const TVPage: React.FC = () => {
                                                         // @ts-ignore
                                                         if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                                     }
-                                                } catch (err) {/* ignore */}
+                                                } catch (err) {/* ignore */ }
                                             }} onError={e => {
                                                 // eslint-disable-next-line no-console
                                                 console.warn('TVPage - sponsor overlay failed to load, replacing with placeholder:', s.imageUrl);
@@ -630,7 +637,7 @@ const TVPage: React.FC = () => {
 
     // Dev-only fallback: allow testing logos/QR without a backend by setting VITE_TV_DEV_FALLBACK=true
     useEffect(() => {
-        const enabled = (import.meta.env.DEV && import.meta.env.VITE_TV_DEV_FALLBACK === 'true') || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) ;
+        const enabled = (import.meta.env.DEV && import.meta.env.VITE_TV_DEV_FALLBACK === 'true') || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
         if (!enabled) return;
         if (config) return; // only apply when no config is present
 
@@ -691,28 +698,28 @@ const TVPage: React.FC = () => {
         <div className="relative w-screen h-screen bg-black text-white overflow-hidden font-sans selection:bg-pink-500 selection:text-white">
             {/* Background Layer (Blur) */}
             <div className="absolute inset-0 z-0 opacity-40 scale-110 pointer-events-none">
-                 {/* Reuse optimized URL from current post for background if available */}
-                 {currentPost && (
-                    <img 
-                        src={currentPost.mediaUrl.replace('/upload/', '/upload/w_100,c_scale,q_auto/')} 
-                        className="w-full h-full object-cover blur-3xl" 
-                        alt="" 
+                {/* Reuse optimized URL from current post for background if available */}
+                {currentPost && (
+                    <img
+                        src={currentPost.mediaUrl.replace('/upload/', '/upload/w_100,c_scale,q_auto/')}
+                        className="w-full h-full object-cover blur-3xl"
+                        alt=""
                     />
-                 )}
+                )}
             </div>
 
             {/* Content Layer */}
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-8">
-                 {showAnnouncement && (
-                     <AnnouncementSlide announcement={showAnnouncement} />
-                 )}
-                 {showMosaic ? (
-                     <MosaicSlide posts={posts} />
-                 ) : showLeaderboard ? (
-                     <LeaderboardSlide items={leaderboard} />
-                 ) : currentPost ? (
-                     <SlideComponent 
-                        post={currentPost} 
+                {showAnnouncement && (
+                    <AnnouncementSlide announcement={showAnnouncement} />
+                )}
+                {showMosaic ? (
+                    <MosaicSlide posts={posts} />
+                ) : showLeaderboard ? (
+                    <LeaderboardSlide items={leaderboard} />
+                ) : currentPost ? (
+                    <SlideComponent
+                        post={currentPost}
                         active={true}
                         isLandscapeMode={config?.layoutMode === 'LANDSCAPE'}
                         sponsors={config?.sponsors}
@@ -720,19 +727,19 @@ const TVPage: React.FC = () => {
                         showQrCode={config?.enableQrCode}
                         qrCodeText={config?.qrCodeText}
                         slug={config?.slug}
-                     />
-                 ) : (
+                    />
+                ) : (
                     <div className="flex items-center justify-center h-full">
                         <p className="text-2xl opacity-50">Aguardando posts...</p>
                     </div>
-                 )}
+                )}
             </div>
-            
+
             {/* Sidebar & Overlay Elements (QR, Sponsors em modos sem sidebar) */}
-            { !showSidebarsAtMain && !showAnnouncement && !showMosaic && !showLeaderboard && (
+            {!showSidebarsAtMain && !showAnnouncement && !showMosaic && !showLeaderboard && (
                 <div className="absolute bottom-8 right-8 flex flex-col items-end gap-4">
                     {/* QR Code flutuante */}
-                    { !!config?.enableQrCode && (
+                    {!!config?.enableQrCode && (
                         <div className="bg-transparent p-4 rounded-xl animate-fade-in-up">
                             <p className="text-center font-bold mb-2 text-sm uppercase tracking-wider">{config.qrCodeText || 'Participe'}</p>
                             <div className="p-2 rounded-lg bg-transparent">
@@ -741,7 +748,7 @@ const TVPage: React.FC = () => {
                         </div>
                     )}
                     {/* Logos dos patrocinadores flutuantes */}
-                    { config?.sponsors && config.sponsors.length > 0 && (
+                    {config?.sponsors && config.sponsors.length > 0 && (
                         <div className="flex gap-3 bg-transparent p-0 rounded-xl animate-fade-in-up">
                             {config.sponsors.slice(0, 3).map(s => (
                                 <div key={s.id} className="w-40 flex items-center justify-center">
