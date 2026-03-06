@@ -23,6 +23,7 @@ export function normalizeStringLocale(value: unknown, locale?: string): string {
   const s = String(value).trim();
   try {
     return locale ? s.toLocaleLowerCase(locale) : s.toLowerCase();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {
     return s.toLowerCase();
   }

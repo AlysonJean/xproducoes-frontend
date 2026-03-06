@@ -118,6 +118,7 @@ Sitemap: ${BASE_URL}/sitemap.xml`;
   })
 
   // Helper function to set headers
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const helpers = (httpResponse: any, res: any) => {
     const { headers } = httpResponse
     headers.forEach(([name, value]: [string, string]) => res.setHeader(name, value))

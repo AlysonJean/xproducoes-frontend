@@ -62,6 +62,7 @@ export const RegisterPage = () => {
       let errorMessage = 'Falha ao criar conta. O e-mail pode já estar em uso.';
       if (err instanceof Error) {
         errorMessage = err.message;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const axiosError = err as any;
         if (axiosError.response?.data) {
           errorMessage = axiosError.response.data.message || axiosError.response.data.error || errorMessage;

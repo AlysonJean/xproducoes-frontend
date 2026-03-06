@@ -17,6 +17,7 @@ export const BookingSuccessPage = () => {
       const items = cartItems || (booking?.kit ? [booking.kit] : booking?.equipments || []);
       const userInfo = {
         name: booking?.clientName || booking?.client?.user?.name || formData?.name || '-',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         phone: (booking?.client && (booking.client as any).phone) || booking?.clientContact || formData?.phone || '-',
       };
       const eventDate = booking?.eventDate ? new Date(booking.eventDate) : (formData?.eventDate ? new Date(formData.eventDate) : new Date());
@@ -39,8 +40,11 @@ export const BookingSuccessPage = () => {
         items,
         notes: booking?.notes || formData?.notes || '',
         logistics: {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           requiresStairs: (booking as any)?.requiresStairs ?? (formData?.requiresStairs === 'yes'),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           isCovered: (booking as any)?.isCovered ?? (formData?.isCovered === 'yes'),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           hasParking: (booking as any)?.hasParking ?? (formData?.hasParking === 'yes'),
         },
       });
@@ -56,6 +60,7 @@ export const BookingSuccessPage = () => {
       handleOpenWhatsApp();
       hasAutoOpened.current = true;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

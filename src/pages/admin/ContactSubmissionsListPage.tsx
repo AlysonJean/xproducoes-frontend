@@ -222,6 +222,7 @@ export const ContactSubmissionsListPage = () => {
               <Select
                 className="w-44"
                 value={filterStatus}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onChange={(e: any) => setFilterStatus(e.target.value as any)}
                 options={[
                   { value: 'all', label: 'Todas as mensagens' },

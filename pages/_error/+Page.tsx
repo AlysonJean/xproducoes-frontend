@@ -5,8 +5,8 @@ export function Page({ is404 }: { is404: boolean }) {
   if (is404) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen py-20 bg-gray-50 px-4 sm:px-6 lg:px-8">
-        <h1 suppressHydrationWarning className="text-9xl font-extrabold text-blue-600">404</h1>
-        <h2 suppressHydrationWarning className="mt-4 text-3xl font-bold text-gray-900 tracking-tight sm:text-5xl">Página não encontrada</h2>
+        <h2 suppressHydrationWarning className="text-9xl font-extrabold text-blue-600">404</h2>
+        <h3 suppressHydrationWarning className="mt-4 text-3xl font-bold text-gray-900 tracking-tight sm:text-5xl">Página não encontrada</h3>
         <p className="mt-2 text-base text-gray-500 max-w-lg text-center">
             Desculpe, não conseguimos encontrar a página que você está procurando. Talvez ela tenha sido movida ou excluída.
         </p>
@@ -21,8 +21,8 @@ export function Page({ is404 }: { is404: boolean }) {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen py-20 bg-red-50 px-4 sm:px-6 lg:px-8">
-      <h1 suppressHydrationWarning className="text-9xl font-extrabold text-red-600">500</h1>
-      <h2 suppressHydrationWarning className="mt-4 text-3xl font-bold text-gray-900 tracking-tight sm:text-5xl">Erro Interno</h2>
+      <h2 suppressHydrationWarning className="text-9xl font-extrabold text-red-600">500</h2>
+      <h3 suppressHydrationWarning className="mt-4 text-3xl font-bold text-gray-900 tracking-tight sm:text-5xl">Erro Interno</h3>
       <p className="mt-2 text-base text-gray-500 max-w-lg text-center">
           Algo deu errado no nosso servidor. Estamos trabalhando para corrigir isso.
       </p>

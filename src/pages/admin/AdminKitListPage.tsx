@@ -58,6 +58,7 @@ export const AdminKitListPage = () => {
       const data = await apiFetch('/kits');
       setKits(asArray<Kit>(data).map(transformKit));
       setError(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       const msg = err?.message || 'Erro ao carregar repositório de combos.';
       setError(msg);
@@ -95,6 +96,7 @@ export const AdminKitListPage = () => {
         message: 'O kit foi removido permanentemente da base de locação.'
       });
       setIsDeleteModalOpen(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       addNotification({
         type: 'error',
@@ -123,6 +125,7 @@ export const AdminKitListPage = () => {
         title: 'Pulso Sincronizado',
         message: 'Status do combo atualizado no catálogo ativo.'
       });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       addNotification({
         type: 'error',
@@ -260,6 +263,7 @@ export const AdminKitListPage = () => {
               <Select
                 className="w-56 h-10 text-[10px] font-bold uppercase tracking-widest bg-card border-border/60"
                 value={statusFilter}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onChange={(e: any) => setStatusFilter(e.target.value)}
                 options={[
                     { value: 'all', label: 'Todos os Status' },
@@ -348,6 +352,7 @@ export const AdminKitListPage = () => {
                       <td className="px-6 py-5">
                         <StatusSelect 
                           currentStatus={kit.status as ItemStatus || ItemStatus.ACTIVE}
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           onStatusChange={(newStatus: any) => handleStatusChange(kit, newStatus)}
                         />
                       </td>

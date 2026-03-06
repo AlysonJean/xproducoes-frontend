@@ -44,6 +44,7 @@ test.describe('Sanity Check - Auth Flow', () => {
     await expect(successMsg).toBeVisible();
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   test('should login with the new user', async ({ page }) => {
     // Note: This relies on the previous test running successfully or persisting state if run in sequence. 
     // Ideally, tests should be isolated, but we are doing a quick flow check.

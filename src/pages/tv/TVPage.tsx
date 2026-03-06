@@ -9,8 +9,7 @@ import QRCode from 'react-qr-code';
 const getPublicBase = () => {
     // Use environment var if provided, else fallback to origin
     // VITE_PUBLIC_URL should include protocol (https://example.com)
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
+     
     return import.meta.env.VITE_PUBLIC_URL || (typeof window !== 'undefined' ? window.location.origin : '');
 };
 import { socialService, SocialAnnouncement } from '../../services/socialService';
@@ -90,13 +89,13 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
     // Show sidebars if landscape AND vertical content AND (has sponsors OR has QR enabled)
     const showSidebars = isLandscapeMode && isVerticalContent && ((sponsors && sponsors.length > 0) || showQrCode);
 
-    // eslint-disable-next-line no-console
+     
     console.debug('SlideComponent - sponsors', sponsors?.map(s => ({ id: s.id, url: s.imageUrl })), 'showSidebars', showSidebars);
 
     // Inspect DOM for sponsor images when component renders
     if (typeof document !== 'undefined') {
         const imgs = Array.from(document.querySelectorAll('.sponsor-debug-img')) as HTMLImageElement[];
-        // eslint-disable-next-line no-console
+         
         console.debug('SlideComponent - DOM sponsor imgs count:', imgs.length, imgs.map(i => i.src));
     }
 
@@ -132,6 +131,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                 <p className="text-foreground text-xs font-bold text-center mt-2 uppercase tracking-wide">{qrCodeText}</p>
                             )}
                             {/* Debug: show resolved QR value when debugging */}
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
                                 <p className="text-xs text-muted-foreground mt-2 break-all">{`${getPublicBase()}/participate/${slug}`}</p>
                             )}
@@ -149,21 +149,19 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                             src={opt || 'https://placehold.co/240x80?text=Sponsor'}
                                             srcSet={opt ? `${small} 240w, ${opt} 480w` : undefined}
                                             alt={s.name || 'Sponsor'}
-                                            className="w-full h-full object-cover sponsor-debug-img"
-                                            style={{ minHeight: 0, minWidth: 0, maxHeight: '100%', maxWidth: '100%' }}
+                                            className="w-full h-full object-cover sponsor-debug-img min-h-0 min-w-0 max-h-full max-w-full"
                                             loading="eager"
                                             onLoad={() => {
                                                 try {
                                                     if (typeof window !== 'undefined') {
-                                                        // @ts-ignore
-                                                        window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
-                                                        // @ts-ignore
-                                                        if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
+                                                        (window as any).__sponsorsLoaded = ((window as any).__sponsorsLoaded || 0) + 1;
+                                                        if ((window as any).__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                                     }
+                                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                                 } catch (err) {/* ignore */ }
                                             }}
                                             onError={(e) => {
-                                                // eslint-disable-next-line no-console
+                                                 
                                                 console.warn('SlideComponent - Sponsor image failed to load, replacing with placeholder:', s.imageUrl);
                                                 e.currentTarget.src = 'https://placehold.co/240x80?text=Sponsor';
                                             }}
@@ -218,6 +216,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                     <p className="text-foreground text-xs font-bold text-center mt-2 uppercase tracking-wide">{qrCodeText}</p>
                                 )}
                                 {/* Debug: show resolved QR value when debugging */}
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
                                     <p className="text-xs text-muted-foreground mt-2 break-all">{`${getPublicBase()}/participate/${slug}`}</p>
                                 )}
@@ -235,21 +234,19 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                                 src={opt || 'https://placehold.co/300x96?text=Sponsor'}
                                                 srcSet={opt ? `${small} 300w, ${opt} 600w` : undefined}
                                                 alt={s.name || 'Sponsor'}
-                                                className="w-full h-full object-cover sponsor-debug-img"
-                                                style={{ minHeight: 0, minWidth: 0, maxHeight: '100%', maxWidth: '100%' }}
+                                                className="w-full h-full object-cover sponsor-debug-img min-h-0 min-w-0 max-h-full max-w-full"
                                                 loading="eager"
                                                 onLoad={() => {
                                                     try {
                                                         if (typeof window !== 'undefined') {
-                                                            // @ts-ignore
-                                                            window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
-                                                            // @ts-ignore
-                                                            if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
+                                                            (window as any).__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
+                                                            if ((window as any).__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                                         }
+                                                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                                     } catch (err) {/* ignore */ }
                                                 }}
                                                 onError={(e) => {
-                                                    // eslint-disable-next-line no-console
+                                                     
                                                     console.warn('SlideComponent - Sponsor image failed to load, replacing with placeholder:', s.imageUrl);
                                                     e.currentTarget.src = 'https://placehold.co/300x96?text=Sponsor';
                                                 }}
@@ -307,6 +304,7 @@ const TVPage: React.FC = () => {
 
             if (!url) return;
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const res = await apiFetch<any>(url);
             if (res.linked) {
                 setConfig({
@@ -328,6 +326,7 @@ const TVPage: React.FC = () => {
         } catch (error) {
             console.error("Failed to load config", error);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchParams, pairingCode, config]); // Added config to avoid re-fetching if already set
 
     useEffect(() => {
@@ -338,12 +337,12 @@ const TVPage: React.FC = () => {
 
         // Log para depuração
         if (config) {
-            // eslint-disable-next-line no-console
+             
             console.log('Config carregado:', config);
         }
 
         // Diagnostic logs when config changes
-        // eslint-disable-next-line no-console
+         
         console.log('TV Debug - derived:', {
             sponsorsCount: config?.sponsors?.length ?? 0,
             enableQr: !!config?.enableQrCode,
@@ -365,7 +364,7 @@ const TVPage: React.FC = () => {
     // Warn when QR is enabled but slug is missing (always declared to keep Hooks order stable)
     useEffect(() => {
         if (config?.enableQrCode && !config?.slug) {
-            // eslint-disable-next-line no-console
+             
             console.warn('TV Debug - QR is enabled but config.slug is missing. QR will not be rendered.');
         }
     }, [config?.enableQrCode, config?.slug]);
@@ -534,6 +533,62 @@ const TVPage: React.FC = () => {
         };
     }, [posts.length, showAnnouncement, slidesSinceAnnouncement, announcements, activeIndex, slidesSinceMosaic, showMosaic, config, leaderboard, showLeaderboard, slidesSinceLeaderboard]);
 
+    // Dev-only fallback: allow testing logos/QR without a backend by setting VITE_TV_DEV_FALLBACK=true
+    useEffect(() => {
+        const enabled = (import.meta.env.DEV && import.meta.env.VITE_TV_DEV_FALLBACK === 'true') || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
+        if (!enabled) return;
+        if (config) return; // only apply when no config is present
+
+        console.info('TV Debug - applying dev fallback config for local testing');
+
+        const sampleConfig: WallConfig = {
+            id: 'dev-sample',
+            name: 'Dev Sample Wall',
+            hashtag: 'muraldev',
+            layoutMode: 'LANDSCAPE',
+            enableQrCode: true,
+            qrCodeText: 'Participe - Dev',
+            slug: 'dev-sample',
+            sponsors: [
+                { id: 'sp1', imageUrl: 'https://via.placeholder.com/200x80?text=Sponsor+1', name: 'Sponsor 1' },
+                { id: 'sp2', imageUrl: 'https://via.placeholder.com/200x80?text=Sponsor+2', name: 'Sponsor 2' }
+            ],
+            enableMosaic: true,
+            mosaicFrequency: 6,
+            enableGamification: false,
+        };
+
+        const samplePosts: SocialPost[] = [
+            { id: 'p1', mediaUrl: 'https://via.placeholder.com/1200x800?text=Post+1', author: 'dev_user', caption: 'post de teste 1', status: 'APPROVED' },
+            { id: 'p2', mediaUrl: 'https://via.placeholder.com/800x1200?text=Post+2', author: 'dev_user2', caption: 'post vertical', status: 'APPROVED' },
+        ];
+
+        setConfig(sampleConfig);
+        setPosts(samplePosts);
+    }, [config]);
+
+    // Debug: Inspect DOM for sponsor images when sponsors or posts change
+    useEffect(() => {
+        console.debug('TV Debug - sponsors changed', config?.sponsors);
+
+        const runCheck = (note: string) => {
+            if (typeof document !== 'undefined') {
+                const imgs = Array.from(document.querySelectorAll('.sponsor-debug-img')) as HTMLImageElement[];
+                console.log(`DOM sponsor imgs count (${note}):`, imgs.length, imgs.map(i => i.src));
+            }
+        };
+
+        // Run immediate and delayed checks to catch DOM updates after render
+        runCheck('immediate');
+        const t1 = setTimeout(() => runCheck('100ms'), 100);
+        const t2 = setTimeout(() => runCheck('500ms'), 500);
+
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+        };
+    }, [config?.sponsors, posts.length, activeIndex]);
+
     // Render Loading / Pairing / Error states
     if (!config && pairingCode) {
         return (
@@ -550,7 +605,7 @@ const TVPage: React.FC = () => {
     const showSidebarsAtMain = config?.layoutMode === 'LANDSCAPE' && isVerticalContent && ((config?.sponsors && config.sponsors.length > 0) || config?.enableQrCode);
 
     // Diagnostic: log why sidebars may or may not display
-    // eslint-disable-next-line no-console
+     
     console.log('TV Debug - showSidebarsAtMain', { showSidebarsAtMain, layoutMode: config?.layoutMode, sponsorsCount: config?.sponsors?.length ?? 0, enableQr: !!config?.enableQrCode });
 
     if (posts.length === 0) {
@@ -593,6 +648,7 @@ const TVPage: React.FC = () => {
                                 <div className="p-2 rounded-lg bg-transparent">
                                     <QRCode value={`${getPublicBase()}/participate/${config.slug || ''}`} size={120} />
                                 </div>
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
                                     <p className="text-xs text-gray-600 mt-2 break-all">{`${getPublicBase()}/participate/${config.slug || ''}`}</p>
                                 )}
@@ -609,14 +665,13 @@ const TVPage: React.FC = () => {
                                             <img src={opt || 'https://placehold.co/240x80?text=Sponsor'} alt={s.name || 'Sponsor'} className="w-full h-auto object-contain sponsor-debug-img" height={80} width={240} srcSet={opt ? `${small} 240w, ${opt} 480w` : undefined} loading="eager" onLoad={() => {
                                                 try {
                                                     if (typeof window !== 'undefined') {
-                                                        // @ts-ignore
-                                                        window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
-                                                        // @ts-ignore
-                                                        if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
+                                                        (window as any).__sponsorsLoaded = ((window as any).__sponsorsLoaded || 0) + 1;
+                                                        if ((window as any).__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                                     }
+                                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                                 } catch (err) {/* ignore */ }
                                             }} onError={e => {
-                                                // eslint-disable-next-line no-console
+                                                 
                                                 console.warn('TVPage - sponsor overlay failed to load, replacing with placeholder:', s.imageUrl);
                                                 e.currentTarget.src = 'https://placehold.co/240x80?text=Sponsor';
                                             }} />
@@ -634,65 +689,6 @@ const TVPage: React.FC = () => {
 
 
     const currentPost = posts[activeIndex];
-
-    // Dev-only fallback: allow testing logos/QR without a backend by setting VITE_TV_DEV_FALLBACK=true
-    useEffect(() => {
-        const enabled = (import.meta.env.DEV && import.meta.env.VITE_TV_DEV_FALLBACK === 'true') || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
-        if (!enabled) return;
-        if (config) return; // only apply when no config is present
-
-        // eslint-disable-next-line no-console
-        console.info('TV Debug - applying dev fallback config for local testing');
-
-        const sampleConfig: WallConfig = {
-            id: 'dev-sample',
-            name: 'Dev Sample Wall',
-            hashtag: 'muraldev',
-            layoutMode: 'LANDSCAPE',
-            enableQrCode: true,
-            qrCodeText: 'Participe - Dev',
-            slug: 'dev-sample',
-            sponsors: [
-                { id: 'sp1', imageUrl: 'https://via.placeholder.com/200x80?text=Sponsor+1', name: 'Sponsor 1' },
-                { id: 'sp2', imageUrl: 'https://via.placeholder.com/200x80?text=Sponsor+2', name: 'Sponsor 2' }
-            ],
-            enableMosaic: true,
-            mosaicFrequency: 6,
-            enableGamification: false,
-        };
-
-        const samplePosts: SocialPost[] = [
-            { id: 'p1', mediaUrl: 'https://via.placeholder.com/1200x800?text=Post+1', author: 'dev_user', caption: 'post de teste 1', status: 'APPROVED' },
-            { id: 'p2', mediaUrl: 'https://via.placeholder.com/800x1200?text=Post+2', author: 'dev_user2', caption: 'post vertical', status: 'APPROVED' },
-        ];
-
-        setConfig(sampleConfig);
-        setPosts(samplePosts);
-    }, [config]);
-
-    // Debug: Inspect DOM for sponsor images when sponsors or posts change
-    useEffect(() => {
-        // eslint-disable-next-line no-console
-        console.debug('TV Debug - sponsors changed', config?.sponsors);
-
-        const runCheck = (note: string) => {
-            if (typeof document !== 'undefined') {
-                const imgs = Array.from(document.querySelectorAll('.sponsor-debug-img')) as HTMLImageElement[];
-                // eslint-disable-next-line no-console
-                console.log(`DOM sponsor imgs count (${note}):`, imgs.length, imgs.map(i => i.src));
-            }
-        };
-
-        // Run immediate and delayed checks to catch DOM updates after render
-        runCheck('immediate');
-        const t1 = setTimeout(() => runCheck('100ms'), 100);
-        const t2 = setTimeout(() => runCheck('500ms'), 500);
-
-        return () => {
-            clearTimeout(t1);
-            clearTimeout(t2);
-        };
-    }, [config?.sponsors, posts.length, activeIndex]);
 
     return (
         <div className="relative w-screen h-screen bg-black text-white overflow-hidden font-sans selection:bg-pink-500 selection:text-white">
@@ -754,16 +750,15 @@ const TVPage: React.FC = () => {
                                 <div key={s.id} className="w-40 flex items-center justify-center">
                                     <img src={s.imageUrl} alt={s.name} className="w-full h-auto object-contain sponsor-debug-img" height={80} width={240} onLoad={() => {
                                         try {
-                                            // eslint-disable-next-line no-console
+                                             
                                             if (typeof window !== 'undefined') {
-                                                // @ts-ignore
-                                                window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
-                                                // @ts-ignore
-                                                if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
+                                                (window as any).__sponsorsLoaded = ((window as any).__sponsorsLoaded || 0) + 1;
+                                                if ((window as any).__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                             }
+                                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                         } catch (err) { /* ignore */ }
                                     }} onError={e => {
-                                        // eslint-disable-next-line no-console
+                                         
                                         console.warn('TVPage - sponsor overlay failed to load:', s.imageUrl);
                                         e.currentTarget.style.display = 'none';
                                     }} />

@@ -11,10 +11,11 @@ export const getWhatsAppPhone = (opts?: { countryCode?: string }): string => {
   // .env (frontend):
   // VITE_WHATSAPP_PHONE -> número destino (pode conter +, espaços, etc.)
   // VITE_WHATSAPP_DDI   -> DDI para prefixar quando o número parecer local (ex.: 55 BR, 351 PT)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const envObj = (import.meta as any)?.env ?? {};
   const raw = (envObj.VITE_WHATSAPP_PHONE as string | undefined) || '';
   const ddi = (opts?.countryCode || (envObj.VITE_WHATSAPP_DDI as string) || '55').replace(/\D/g, '');
-  let digits = normalizePhone(raw);
+  const digits = normalizePhone(raw);
 
   // Se não veio nada, usa fallback conhecido (BR)
   if (!digits) return '5531989252272';
@@ -52,6 +53,7 @@ export const openWhatsApp = (phone: string, message: string): void => {
     // Fallback para casos de bloqueio de popup: cria um link e clica programaticamente
       try {
         createAndClickAnchor({ href: url, target: '_blank', rel: 'noopener noreferrer' });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (err) {
         console.warn('Não foi possível abrir o WhatsApp automaticamente.');
       }
@@ -61,6 +63,7 @@ export const openWhatsApp = (phone: string, message: string): void => {
 export const buildQuoteMessage = (p: QuoteMessageParams): string => {
   const equipamentos = (p.items || [])
     .map((eq) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const name = (eq as any)?.name || (eq as any)?.equipment?.name;
       return name ? `- ${name}` : '';
     })

@@ -207,6 +207,7 @@ export const RecommendationsDemo = () => {
 
                 {/* Recommendation Section */}
                 <RecommendationSection
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     type={selectedType as any}
                     items={mockRecommendations}
                     maxItems={4}

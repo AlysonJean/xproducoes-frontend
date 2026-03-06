@@ -215,9 +215,9 @@ const AdminAnnouncementPage: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="p-4 bg-purple-500/5 border-purple-500/10">
+          <Card className="p-4 bg-cyan-500/5 border-cyan-500/10">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+              <div className="h-10 w-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-500">
                 <Clock className="h-5 w-5" />
               </div>
               <div>

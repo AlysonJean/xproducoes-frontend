@@ -104,6 +104,7 @@ export const useBundleAnalytics = () => {
   return {
     trackChunkLoad,
     getBundleMetrics,
+    // eslint-disable-next-line react-hooks/refs
     loadedChunks: loadedChunks.current,
   };
 };

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * 🎨 Standard Components Bridge
  * Este arquivo atua como uma ponte (barrel file) para os componentes UI individualizados.

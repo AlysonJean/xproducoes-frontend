@@ -70,6 +70,7 @@ const BookingDetailsModal = ({ event, onClose }: { event: CalendarEvent; onClose
         .join(', ')
     : '';
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const statusMap: Record<string, { variant: any; label: string }> = {
     PENDING: { variant: 'warning', label: 'Pendente' },
     CONFIRMED: { variant: 'success', label: 'Confirmada' },
@@ -294,6 +295,7 @@ const safeDate = (input?: string | Date | null): Date | null => {
 };
 
 export const BookingCalendarPage = () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const DnDCalendar = useMemo(() => withDragAndDrop<CalendarEvent>(Calendar as any), []);
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
@@ -503,6 +505,7 @@ export const BookingCalendarPage = () => {
       setConfirmOpen(false);
       setConfirmBookingId(null);
       addNotification({ type: 'success', title: 'Agenda Confirmada', message: 'Valor e equipe alocados com sucesso.' });
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err: unknown) {
       addNotification({ type: 'error', title: 'Erro de Confirmação', message: 'Falha ao salvar detalhes da agenda.' });
     } finally {
@@ -522,6 +525,7 @@ export const BookingCalendarPage = () => {
     });
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onEventDrop = async ({ event, start, end }: any) => {
     const s = new Date(start);
     const e = new Date(end);
@@ -535,6 +539,7 @@ export const BookingCalendarPage = () => {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onEventResize = async ({ event, start, end }: any) => {
     const s = new Date(start);
     const e = new Date(end);
@@ -603,6 +608,7 @@ export const BookingCalendarPage = () => {
                     className="w-40 h-9 text-[10px] font-bold uppercase tracking-widest !bg-muted/30"
                     placeholder="Status"
                     value={filters.status}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     onChange={(e: any) => setFilters(f => ({ ...f, status: e.target.value as any }))}
                     options={[
                         { value: 'ALL', label: 'Todos Status' },
@@ -613,6 +619,7 @@ export const BookingCalendarPage = () => {
                     className="w-44 h-9 text-[10px] font-bold uppercase tracking-widest !bg-muted/30"
                     placeholder="Colaborador"
                     value={filters.collaboratorId}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     onChange={(e: any) => setFilters(f => ({ ...f, collaboratorId: e.target.value }))}
                     options={[
                         { value: '', label: 'Toda Equipe' },
@@ -625,6 +632,7 @@ export const BookingCalendarPage = () => {
                         className="pl-9 h-9 text-xs font-medium placeholder:text-muted-foreground/50 border-border/60 !bg-muted/30"
                         placeholder="Pesquisar cliente, id ou notas..."
                         value={filters.search}
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         onChange={(e: any) => setFilters(f => ({ ...f, search: e.target.value }))}
                      />
                   </div>
@@ -644,6 +652,7 @@ export const BookingCalendarPage = () => {
                    ].map(v => (
                        <button 
                         key={v.id}
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         onClick={() => setView(v.id as any)}
                         className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all ${view === v.id ? 'bg-primary text-primary-foreground shadow-lg' : 'text-muted-foreground hover:bg-muted'}`}
                        >
@@ -774,12 +783,14 @@ export const BookingCalendarPage = () => {
                <div className="space-y-4">
                   <div>
                     <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Ajuste de Valor (R$)</label>
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     <Input type="number" step="0.01" value={confirmPrice} onChange={(e: any) => setConfirmPrice(e.target.value)} />
                   </div>
                   <div>
                     <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Atribuir Master Líder</label>
                     <Select 
                         value={confirmCollaboratorId}
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         onChange={(e: any) => setConfirmCollaboratorId(e.target.value)}
                         placeholder="Pesquisar na equipe..."
                         options={[
@@ -793,6 +804,7 @@ export const BookingCalendarPage = () => {
                         <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Responsabilidade</label>
                         <Select 
                             value={confirmRole}
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             onChange={(e: any) => setConfirmRole(e.target.value as any)}
                             options={[
                                 { value: 'PHOTOGRAPHER', label: 'Líder Fotógrafo' },

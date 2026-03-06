@@ -75,7 +75,7 @@ export type Prettify<T> = {
   [K in keyof T]: T[K];
 } & {};
 
-export type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
+export type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
 
 export type NonNullable<T> = T extends null | undefined ? never : T;
 
@@ -84,11 +84,11 @@ export type ValueOf<T> = T[keyof T];
 export type StringLiteral<T> = T extends string ? (string extends T ? never : T) : never;
 
 export type FunctionKeys<T> = {
-  [K in keyof T]: T[K] extends Function ? K : never;
+  [K in keyof T]: T[K] extends (...args: unknown[]) => unknown ? K : never;
 }[keyof T];
 
 export type NonFunctionKeys<T> = {
-  [K in keyof T]: T[K] extends Function ? never : K;
+  [K in keyof T]: T[K] extends (...args: unknown[]) => unknown ? never : K;
 }[keyof T];
 
 // ================================
@@ -103,11 +103,11 @@ export type EventHandler<T = Element, E = Event> = (event: E & { currentTarget: 
 
 export type ChangeHandler<T = string> = (value: T) => void;
 
-export type SubmitHandler<T = any> = (data: T) => void | Promise<void>;
+export type SubmitHandler<T = unknown> = (data: T) => void | Promise<void>;
 
-export type AsyncFunction<T = any, R = any> = (...args: T[]) => Promise<R>;
+export type AsyncFunction<T = unknown, R = unknown> = (...args: T[]) => Promise<R>;
 
-export type SyncFunction<T = any, R = any> = (...args: T[]) => R;
+export type SyncFunction<T = unknown, R = unknown> = (...args: T[]) => R;
 
 // ================================
 // TIPOS PARA API E HTTP
@@ -130,7 +130,7 @@ export type ResponseHeaders = Record<string, string>;
 // TIPOS PARA VALIDAÇÃO
 // ================================
 
-export type ValidationRule<T = any> = {
+export type ValidationRule<T = unknown> = {
   required?: boolean;
   min?: number;
   max?: number;
@@ -146,7 +146,7 @@ export type ValidationResult = {
   errors: string[];
 };
 
-export type FieldValidation<T = any> = {
+export type FieldValidation<T = unknown> = {
   [K in keyof T]?: ValidationRule<T[K]>;
 };
 
@@ -189,7 +189,7 @@ export type FilterOperator =
 export interface FilterCondition {
   field: string;
   operator: FilterOperator;
-  value: any;
+  value: unknown;
 }
 
 export interface SearchFilters {
@@ -342,7 +342,7 @@ export interface LogEntry {
   level: LogLevel;
   message: string;
   timestamp: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   userId?: string;
   sessionId?: string;
   data?: unknown;
@@ -353,7 +353,7 @@ export interface LogEntry {
 // ================================
 
 export interface AppContextValue {
-  user: any | null;
+  user: Record<string, unknown> | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   theme: ThemeConfig;
@@ -362,7 +362,7 @@ export interface AppContextValue {
 }
 
 export interface StoreState {
-  user: any | null;
+  user: Record<string, unknown> | null;
   ui: {
     theme: ThemeConfig;
     locale: LocaleConfig;
@@ -370,10 +370,10 @@ export interface StoreState {
     modals: Record<string, boolean>;
   };
   data: {
-    equipment: any[];
-    bookings: any[];
-    categories: any[];
-    kits: any[];
+    equipment: Record<string, unknown>[];
+    bookings: Record<string, unknown>[];
+    categories: Record<string, unknown>[];
+    kits: Record<string, unknown>[];
   };
   loading: Record<string, boolean>;
   errors: Record<string, string | null>;
@@ -409,7 +409,7 @@ export type UseFormState<T> = {
 // TIPOS PARA WEB WORKERS E SERVICE WORKERS
 // ================================
 
-export interface WorkerMessage<T = any> {
+export interface WorkerMessage<T = unknown> {
   type: string;
   payload: T;
   id?: string;
@@ -584,7 +584,7 @@ export interface ChartConfig {
 export interface DragItem {
   id: string;
   type: string;
-  data?: any;
+  data?: unknown;
 }
 
 export interface DropZone {

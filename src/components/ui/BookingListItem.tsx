@@ -59,7 +59,9 @@ export const BookingListItem = ({ booking, onReviewClick, onViewDetails }: Booki
         <ul className="list-disc list-inside text-muted-foreground text-sm space-y-1">
           {Array.isArray(booking.equipments) && booking.equipments.length > 0 ? (
             booking.equipments.map((eq, idx) => (
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               <li key={(eq as any)?.equipmentId || (eq as any)?.id || `${booking.id}-equipment-${idx}`}>
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 {(eq as any)?.equipment?.name || (eq as any)?.name || 'Equipamento'}
               </li>
             ))
@@ -72,7 +74,9 @@ export const BookingListItem = ({ booking, onReviewClick, onViewDetails }: Booki
             <h4 className="font-semibold mb-2 mt-4 text-foreground">Kits Reservados:</h4>
             <ul className="list-disc list-inside text-muted-foreground text-sm space-y-1">
               {booking.kits.map((kit, idx) => (
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 <li key={(kit as any)?.kitId || (kit as any)?.id || `${booking.id}-kit-${idx}`}>
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   {(kit as any)?.kit?.name || (kit as any)?.name || 'Kit'}
                 </li>
               ))}

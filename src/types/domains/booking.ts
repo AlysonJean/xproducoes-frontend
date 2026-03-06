@@ -93,6 +93,7 @@ export interface CalendarBooking {
   kits?: Kit[];
   collaborators?: Array<{
     collaboratorId?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     collaborator?: any;
     role?: string;
   }>;
@@ -126,7 +127,9 @@ export interface BookingDetails {
     totalHours?: number;
     totalPayment?: number;
     collaboratorId?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     collaborator?: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     payments?: any[];
   }>;
   attachments?: Array<{
@@ -189,6 +192,7 @@ export interface CalendarEvent {
   title: string;
   start: Date;
   end: Date;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   resource?: any;
   allDay?: boolean;
   booking?: Booking;

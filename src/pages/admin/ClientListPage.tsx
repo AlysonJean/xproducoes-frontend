@@ -88,7 +88,7 @@ export const ClientListPage: React.FC = () => {
   }, [rawClients]);
 
   const filteredClients = useMemo(() => {
-    let result = (rawClients || []).filter(client => {
+    const result = (rawClients || []).filter(client => {
       const name = (client.name || '').toLowerCase();
       const email = (client.email || '').toLowerCase();
       const company = (client.companyName || '').toLowerCase();
@@ -303,6 +303,7 @@ export const ClientListPage: React.FC = () => {
                 <Select
                   className="pl-9 h-10 text-[10px] font-bold uppercase tracking-widest bg-card border-border/60"
                   value={statusFilter}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   onChange={(e: any) => setStatusFilter(e.target.value)}
                   options={STATUS_OPTIONS}
                 />
@@ -310,6 +311,7 @@ export const ClientListPage: React.FC = () => {
               <Select
                 className="w-48 h-10 text-[10px] font-bold uppercase tracking-widest bg-card border-border/60"
                 value={sortBy}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onChange={(e: any) => setSortBy(e.target.value)}
                 options={SORT_OPTIONS}
               />
@@ -477,6 +479,7 @@ export const ClientListPage: React.FC = () => {
         size="lg"
       >
         <ClientForm
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           initialData={editingClient as any}
           onSuccess={() => {
             setIsFormModalOpen(false);

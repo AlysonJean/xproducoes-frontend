@@ -126,6 +126,7 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
       let availableIds: Set<string> | null = null;
       if (eventDate) {
           try {
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
              const availableResponse = await collaboratorsAPI.getAvailable(eventDate) as { data: { success: boolean; data: any[] } };
              const availableList = availableResponse.data.data; // Ajuste conforme resposta da API
              

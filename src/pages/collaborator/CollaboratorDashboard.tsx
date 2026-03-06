@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Navigate, Link } from 'react-router-dom';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
-import BrandLoader from '../../components/ui/BrandLoader';
+import { BrandLoader } from '../../components/ui/BrandLoader';
 import type { DashboardEvent } from '../../types/domains/dashboard';
 import { collaboratorsAPI } from '../../services/api';
 import { StatsCard, SimpleCard } from '../../components/ui/Cards';
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 // Componente de Métricas Profissionais com Dados Reais
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ProfessionalMetrics: React.FC<{ data: any | null }> = ({ data }) => {
   if (!data) return null;
 
@@ -167,6 +168,7 @@ const UpcomingEvents: React.FC<{ events: DashboardEvent[] }> = ({ events }) => (
 );
 
 // Componente de Atividades Recentes
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const RecentActivities: React.FC<{ activities: any[] }> = ({ activities }) => (
   <SimpleCard 
     title="Atividades Recentes" 
@@ -213,8 +215,10 @@ const RecentActivities: React.FC<{ activities: any[] }> = ({ activities }) => (
 // Componente principal melhorado
 const CollaboratorDashboard: React.FC = () => {
   const { user } = useAuth();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [dashboard, setDashboard] = useState<any | null>(null);
   const [events, setEvents] = useState<DashboardEvent[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -256,7 +260,12 @@ const CollaboratorDashboard: React.FC = () => {
       ]}
     >
       {loading ? (
-        <BrandLoader size={120} label="Carregando painel..." />
+        <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in duration-700">
+          <BrandLoader size="xl" />
+          <p className="mt-8 text-muted-foreground font-medium tracking-widest uppercase text-[10px] animate-pulse">
+            Sincronizando Agenda X Produções...
+          </p>
+        </div>
       ) : (
         <div className="space-y-8">
           {/* Boas-vindas personalizada */}
@@ -294,38 +303,38 @@ const CollaboratorDashboard: React.FC = () => {
           {/* Ações Rápidas Melhoradas */}
           <SimpleCard title="Ações Rápidas">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Link to="/collaborator/schedule" className="flex flex-col items-center justify-center p-6 bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-lg transition-all group">
-                <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center mb-3 group-hover:bg-primary/30 transition-colors">
-                  <Calendar className="w-6 h-6 text-primary" />
+              <Link to="/collaborator/schedule" className="flex flex-col items-center justify-center min-h-[120px] p-6 bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-xl transition-all group active:scale-95">
+                <div className="w-14 h-14 bg-primary/20 rounded-xl flex items-center justify-center mb-3 group-hover:bg-primary/30 transition-colors">
+                  <Calendar className="w-7 h-7 text-primary" />
                 </div>
-                <span className="font-medium text-foreground text-sm">Ver Agenda</span>
-                <span className="text-xs text-muted-foreground mt-1">Calendário completo</span>
+                <span className="font-semibold text-foreground text-sm">Ver Agenda</span>
+                <span className="text-xs text-muted-foreground mt-1 text-center">Calendário completo de eventos</span>
               </Link>
 
-              <Link to="/collaborator/profile" className="flex flex-col items-center justify-center p-6 bg-muted/30 hover:bg-muted/50 border border-border/30 rounded-lg transition-all group">
-                <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mb-3 group-hover:bg-muted/80 transition-colors">
-                  <User className="w-6 h-6 text-muted-foreground" />
+              <Link to="/collaborator/profile" className="flex flex-col items-center justify-center min-h-[120px] p-6 bg-muted/30 hover:bg-muted/50 border border-border/30 rounded-xl transition-all group active:scale-95">
+                <div className="w-14 h-14 bg-muted rounded-xl flex items-center justify-center mb-3 group-hover:bg-muted/80 transition-colors">
+                  <User className="w-7 h-7 text-muted-foreground" />
                 </div>
-                <span className="font-medium text-foreground text-sm">Meu Perfil</span>
-                <span className="text-xs text-muted-foreground mt-1">Editar informações</span>
+                <span className="font-semibold text-foreground text-sm">Meu Perfil</span>
+                <span className="text-xs text-muted-foreground mt-1 text-center">Minhas informações</span>
               </Link>
 
-              <button className="flex flex-col items-center justify-center p-6 bg-muted/30 hover:bg-muted/50 border border-border/30 rounded-lg transition-all group">
-                <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mb-3 group-hover:bg-muted/80 transition-colors">
-                  <svg className="w-6 h-6 text-muted-foreground" fill="currentColor" viewBox="0 0 20 20">
+              <button className="flex flex-col items-center justify-center min-h-[120px] p-6 bg-muted/30 hover:bg-muted/50 border border-border/30 rounded-xl transition-all group active:scale-95">
+                <div className="w-14 h-14 bg-muted rounded-xl flex items-center justify-center mb-3 group-hover:bg-muted/80 transition-colors">
+                  <svg className="w-7 h-7 text-muted-foreground" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z" clipRule="evenodd" />
                   </svg>
                 </div>
-                <span className="font-medium text-foreground text-sm">Mensagens</span>
-                <span className="text-xs text-muted-foreground mt-1">Comunicação</span>
+                <span className="font-semibold text-foreground text-sm">Mensagens</span>
+                <span className="text-xs text-muted-foreground mt-1 text-center">Falar com a base</span>
               </button>
 
-              <button className="flex flex-col items-center justify-center p-6 bg-muted/30 hover:bg-muted/50 border border-border/30 rounded-lg transition-all group">
-                <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mb-3 group-hover:bg-muted/80 transition-colors">
-                  <CheckCircle className="w-6 h-6 text-muted-foreground" />
+              <button className="flex flex-col items-center justify-center min-h-[120px] p-6 bg-muted/30 hover:bg-muted/50 border border-border/30 rounded-xl transition-all group active:scale-95">
+                <div className="w-14 h-14 bg-muted rounded-xl flex items-center justify-center mb-3 group-hover:bg-muted/80 transition-colors">
+                  <CheckCircle className="w-7 h-7 text-muted-foreground" />
                 </div>
-                <span className="font-medium text-foreground text-sm">Checklists</span>
-                <span className="text-xs text-muted-foreground mt-1">Preparação</span>
+                <span className="font-semibold text-foreground text-sm">Checklists</span>
+                <span className="text-xs text-muted-foreground mt-1 text-center">Tarefas do evento</span>
               </button>
             </div>
           </SimpleCard>

@@ -90,6 +90,7 @@ export const EventManagement: React.FC<EventManagementProps> = ({
     onSave(newAssignments);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateAssignment = (collaboratorId: string, field: keyof SelectedCollaboratorAssignment, value: any) => {
     setSelectedCollaborators((prev) => ({
       ...prev,

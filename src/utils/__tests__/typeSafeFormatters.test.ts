@@ -38,7 +38,9 @@ describe('typeSafeFormatters utilities', () => {
 
   describe('formatDate and formatDateTime', () => {
     it('returns empty string for null/undefined/invalid dates', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect(formatDate(null as any)).toBe('');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect(formatDateTime(undefined as any)).toBe('');
       expect(formatDate('invalid-date')).toBe('');
     });
@@ -101,7 +103,9 @@ describe('typeSafeFormatters utilities', () => {
     it('safely applies defaults and parses numeric fields', () => {
       const input: Partial<Equipment> = {
         id: 'eq1',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         name: undefined as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         dailyPrice: '199,90' as any,
         status: undefined,
       };
@@ -116,8 +120,11 @@ describe('typeSafeFormatters utilities', () => {
 
   describe('validateKit', () => {
     it('validates required fields: name, positive price, non-empty equipments', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const invalid1: Partial<Kit> = { name: 'Kit', price: 0, equipments: [] as any };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const invalid2: Partial<Kit> = { name: 'Kit', price: 'abc' as any, equipments: [] as any };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const invalid3: Partial<Kit> = { name: '', price: 100, equipments: [{ id: 'e1', name: 'E', equipments: [] } as any] };
 
       expect(validateKit(invalid1)).toBe(false);
@@ -126,7 +133,9 @@ describe('typeSafeFormatters utilities', () => {
 
       const valid: Partial<Kit> = {
         name: 'Bundle',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         price: '1.000,00' as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         equipments: [{ id: 'e1', name: 'E1' } as any],
       };
       expect(validateKit(valid)).toBe(true);

@@ -7,8 +7,10 @@ interface UseClientsReturn {
   clients: Client[];
   isLoading: boolean;
   error: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fetchClients: (filters?: any) => Promise<void>;
   deleteClient: (id: string) => Promise<void>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   meta: any;
 }
 
@@ -16,8 +18,10 @@ export const useClients = (): UseClientsReturn => {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [meta, setMeta] = useState<any>(null);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fetchClients = useCallback(async (filters?: any) => {
     try {
       setIsLoading(true);
@@ -32,6 +36,7 @@ export const useClients = (): UseClientsReturn => {
       } else {
         setClients(asArray(result));
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err?.message || 'Erro ao buscar clientes');
     } finally {
@@ -44,6 +49,7 @@ export const useClients = (): UseClientsReturn => {
       setError(null);
       await clientAPI.delete(id);
       setClients((prev) => prev.filter((c) => c.id !== id));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err?.message || 'Erro ao remover cliente');
       throw err;

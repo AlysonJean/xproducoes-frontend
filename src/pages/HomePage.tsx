@@ -10,7 +10,8 @@ import { apiFetch } from '../services/api';
 import type { Category, Kit, PortfolioItem } from '../types/types';
 import { transformKit } from '../utils/transformKit';
 import { BrandLoader } from '@/components/ui/BrandLoader';
-import { GeminiEventSuggester } from '../components/ui/GeminiEventSuggester';
+import { InteractiveQuiz } from '../components/ui/InteractiveQuiz';
+import { getWhatsAppPhone } from '../utils/whatsapp';
 
 import { Grid } from '../components/ui/StandardComponents';
 import { TestimonialCard } from '../components/ui/TestimonialCard';
@@ -57,9 +58,19 @@ export const HomePage = () => {
   const { ref: portfolioTitleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
   // Seção de avaliações/depoimentos
   const { ref: aiTitleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
+
+  interface ReviewItem {
+    id: string;
+    rating: number;
+    comment: string;
+    reviewer?: { name: string };
+    collaborator?: { user?: { name: string } };
+    user?: { name: string };
+  }
+
   const [kits, setKits] = useState<Kit[]>([]);
   // Estado de avaliações públicas aprovadas
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState<boolean>(false);
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -115,20 +126,20 @@ export const HomePage = () => {
     setReviewsLoading(true);
     try {
       // Preferir endpoint recente para limitar quantidade, caindo para /reviews/public
-      let data: any[] | null = null;
+      let data: ReviewItem[] | null = null;
       try {
   data = await apiFetch('/reviews/recent?limit=8');
       } catch {
         // fallback
   data = await apiFetch('/reviews/public');
       }
-      // Normalizar campos esperados pelo TestimonialCard
-      const normalized = (data || []).map((r: any) => ({
+      const normalized = (data || []).map((r: ReviewItem) => ({
         id: r.id,
         rating: r.rating,
         comment: r.comment,
+        author: r.reviewer?.name || r.collaborator?.user?.name || 'Cliente',
         user: { name: r.reviewer?.name || r.collaborator?.user?.name || 'Cliente' },
-      }));
+      } as unknown as ReviewItem));
       setReviews(normalized);
   } catch {
       setReviews([]);
@@ -156,8 +167,8 @@ export const HomePage = () => {
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
       <FloatingGlow />
       <SEO 
-        title="Aluguel de Som, Luz e LED" 
-        description="A melhor empresa de aluguel de som, iluminação e painel de LED em Belo Horizonte. Equipamentos profissionais para casamentos, festas e eventos corporativos."
+        title="Aluguel de Som, Luz e LED em BH | X Produções" 
+        description="Locação de som, iluminação e painel de LED de alta performance em Belo Horizonte. Equipamentos profissionais para casamentos, festas e eventos corporativos."
       />
       
       {/* Dynamic Banner Carousel */}
@@ -186,11 +197,21 @@ export const HomePage = () => {
 
           <div className="relative z-10">
             <h1 ref={heroTitleRef} className="text-4xl sm:text-5xl lg:text-7xl font-extrabold mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70">
-              Eleve seu Evento
+              Locação de Som, Luz e LED em BH
             </h1>
-            <p className="text-lg sm:text-xl lg:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto font-light leading-relaxed">
-              Equipamentos de alta performance e tecnologia de ponta para experiências sensoriais inesquecíveis.
+            <p className="text-lg sm:text-xl lg:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto font-light leading-relaxed">
+              Transformamos sua ideia em realidade com equipamentos de alta performance e tecnologia de ponta para experiências sensoriais inesquecíveis.
             </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <a 
+                href={`https://wa.me/${getWhatsAppPhone()}?text=${encodeURIComponent('Olá! Vim pelo site e gostaria de um orçamento para locação de equipamentos em BH...')}`} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="px-8 py-4 w-full sm:w-auto text-lg font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 rounded-full shadow-[0_0_30px_-5px_hsl(var(--primary))] hover:shadow-[0_0_50px_-5px_hsl(var(--primary))] transform hover:-translate-y-1"
+              >
+                Solicitar Orçamento
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -319,28 +340,29 @@ export const HomePage = () => {
             </div>
             <Grid columns={{ sm: 1, md: 2, lg: 3 }} gap={8}>
               {reviews.map((review) => (
-                <TestimonialCard key={review.id} review={review} />
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                <TestimonialCard key={review.id} review={review as any} />
               ))}
             </Grid>
           </section>
         )}
 
-        {/* Gemini Event Suggester - THE AI FEATURE */}
+        {/* Interactive Event Quiz */}
         <section className="relative pb-32">
           <div className="absolute inset-0 -z-10 flex items-center justify-center pointer-events-none opacity-40">
               <div className="w-[1000px] h-[600px] bg-sky-600/20 blur-[180px] rounded-full" />
           </div>
           <div className="text-center mb-12">
             <div className="inline-flex items-center px-4 py-2 bg-sky-500/10 border border-sky-500/20 backdrop-blur-md rounded-full text-sky-400 font-semibold text-xs uppercase tracking-widest mb-4">
-              � Neural Suggestion Engine
+              ✨ Consultoria Express
             </div>
-            <h2 ref={aiTitleRef} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Inteligência Criativa</h2>
+            <h2 ref={aiTitleRef} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Mapeamento de Necessidades</h2>
             <p className="text-slate-400 max-w-2xl mx-auto text-lg">
-              Deixe nossa inteligência artificial planejar a configuração ideal para sua visão única.
+              Responda a 3 perguntas rápidas e receba uma proposta pré-qualificada diretamente no WhatsApp.
             </p>
           </div>
           <div className="max-w-4xl mx-auto">
-             <GeminiEventSuggester />
+             <InteractiveQuiz />
           </div>
         </section>
       </div>

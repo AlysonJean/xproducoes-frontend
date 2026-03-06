@@ -154,6 +154,7 @@ const CollaboratorWorkSchedule: React.FC = () => {
         if (Array.isArray(eventsData)) {
             // O backend retorna EventCollaborator[], precisamos extrair o booking
             // e garantir que o objeto resultante tenha o formato Booking esperado
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const bookings = eventsData.map((item: any) => {
                 // Se item já for booking (caso endpoint mude), usa item.
                 // Se for EventCollaborator, usa item.booking

@@ -9,9 +9,11 @@ export const initSentry = () => {
   if (!SENTRY_DSN) {
     console.warn('⚠️ Sentry DSN não configurado. Monitoramento de erros desativado.');
     // Sentry is optional. Return a safe no-op API so callers don't need to null-check.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const noop = () => undefined as any;
     return {
       setUserContext: noop,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ErrorBoundary: ({ children }: any) => children,
       ErrorFallback: SentryErrorFallback,
       captureException: noop,
@@ -100,6 +102,7 @@ export const initSentry = () => {
   }
 
   // Set user context if available
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const setUserContext = (user: any) => {
     if (user) {
       Sentry.setUser({

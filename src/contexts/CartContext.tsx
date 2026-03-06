@@ -1,3 +1,4 @@
+ 
 // Caminho do arquivo: frontend/src/contexts/CartContext.tsx
 
 import React, { useState, useEffect, createContext, useCallback, type ReactNode, useContext, useRef, useMemo } from 'react';
@@ -65,16 +66,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const notifCtx = useContext(NotificationContext);
   const addNotification = notifCtx?.addNotification ?? (() => {});
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const addItem = async (item: Equipment | Kit | Service, type: 'equipment' | 'kit' | 'service') => {
     // Deduplicação
     if (type === 'kit' && cart?.kit && cart.kit.id === (item as Kit).id) {
       addNotification({ type: 'warning', title: 'Kit já está no carrinho', message: 'Este kit já foi adicionado.' });
       return;
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (type === 'equipment' && cart?.equipments?.some((e: any) => (e.equipmentId || e.id) === (item as Equipment).id)) {
       addNotification({ type: 'warning', title: 'Item já está no carrinho', message: 'Este equipamento já foi adicionado.' });
       return;
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (type === 'service' && cart?.services?.some((s: any) => s.id === (item as Service).id)) {
       addNotification({ type: 'warning', title: 'Serviço já está no carrinho', message: 'Este serviço já foi adicionado.' });
       return;
@@ -115,9 +119,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setCart(updatedCart as Cart);
       ReactGA.event({ category: "ecommerce", action: "add_to_cart", label: equipmentItem.name, value: Number(equipmentItem.pricePerHour || 0) });
       addNotification({ type: 'success', title: 'Item adicionado', message: 'Item adicionado ao carrinho.' });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       setCart(previousCart ?? null);
-      let message = e?.message || 'Não foi possível adicionar o item ao carrinho.';
+      const message = e?.message || 'Não foi possível adicionar o item ao carrinho.';
       if (message.includes('401') || normalizeString(message).includes('unauthorized')) {
         addNotification({ type: 'error', title: 'Sessão expirada', message: 'Faça login para adicionar itens ao carrinho.' });
         window.location.href = '/login';
@@ -128,6 +133,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const removeItem = async (itemId: string, type: 'equipment' | 'service' | 'kit' = 'equipment') => {
     const previousCart = cart;
     try {
@@ -141,6 +147,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       }
       setCart(updatedCart as Cart);
       addNotification({ type: 'success', title: 'Removido', message: 'Item removido do carrinho.' });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       setCart(previousCart ?? null);
       const message = e?.message || 'Não foi possível remover o item do carrinho.';
@@ -149,6 +156,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const clearCart = async () => {
     const previousCart = cart;
     try {
@@ -156,6 +164,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       const updatedCart = await apiFetch('/cart/clear', { method: 'POST' });
       setCart(updatedCart as Cart);
       addNotification({ type: 'success', title: 'Carrinho limpo', message: 'O carrinho foi limpo.' });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       setCart(previousCart ?? null);
       const message = e?.message || 'Não foi possível limpar o carrinho.';

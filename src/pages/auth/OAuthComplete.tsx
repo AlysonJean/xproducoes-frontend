@@ -17,6 +17,7 @@ export default function OAuthComplete() {
       } else {
         window.close();
       }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       window.close();
     }

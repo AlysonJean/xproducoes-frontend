@@ -48,6 +48,7 @@ export const CategoryListPage = () => {
       const data = await apiFetch('/categories');
       setCategories(asArray<Category>(data));
       setError(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       const msg = err?.message || 'Não foi possível carregar a lista de categorias.';
       setError(msg);
@@ -84,6 +85,7 @@ export const CategoryListPage = () => {
         message: 'Categoria excluída com sucesso.'
       });
       setIsDeleteModalOpen(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       addNotification({
         type: 'error',

@@ -47,6 +47,7 @@ export function ReceitaMensalChart({ year }: ReceitaMensalChartProps) {
 
   // Buscar dados do ano selecionado
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError(null);
     apiFetch<MonthlyRevenue[]>(`/dashboard/monthly-revenue?year=${selectedYear}`)

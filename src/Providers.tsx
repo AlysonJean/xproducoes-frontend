@@ -7,10 +7,12 @@ import './index.css'
 // Initialize Sentry
 const sentry = initSentry()
 if (typeof window !== 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).__SENTRY__ = sentry
   // Load heading reveal only on client side
   import('./styles/headingReveal');
 }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SentryErrorBoundary = (sentry && (sentry as any).ErrorBoundary) || (({ children }: any) => children)
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID

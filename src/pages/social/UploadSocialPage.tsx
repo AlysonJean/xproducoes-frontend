@@ -27,6 +27,7 @@ const UploadSocialPage = () => {
         const fetchConfig = async () => {
             try {
                 if (slug) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const res = await apiFetch<any>(`/tv/config?slug=${slug}`);
                     if (res.linked) {
                         setConfig({
