@@ -76,7 +76,7 @@ const SortableItem = ({ item, onEdit, onDelete }: SortableItemProps) => {
   return (
     <div 
       ref={setNodeRef} 
-      style={style}
+      {...{ style }}
       className="h-full [transform:var(--transform)] [transition:var(--transition)] [z-index:var(--z-index)] [opacity:var(--opacity)]"
     >
       <Card className="overflow-hidden flex flex-col h-full p-0 relative group border-border hover:border-primary/50 transition-all shadow-sm hover:shadow-md">
