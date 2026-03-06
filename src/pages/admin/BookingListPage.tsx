@@ -50,6 +50,8 @@ export const BookingListPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<BookingListItem | null>(null);
@@ -156,13 +158,25 @@ export const BookingListPage = () => {
   const filteredBookings = useMemo(() => {
     return bookings.filter(booking => {
       const q = normalizeString(searchTerm);
-      const clientName = normalizeString(booking.client?.user?.name || '');
+      const clientName = normalizeString(booking.client?.user?.name || (booking as any).clientName || '');
       const bookingId = normalizeString(booking.id || '');
       const matchesSearch = clientName.includes(q) || bookingId.includes(q);
       const matchesStatus = filterStatus === 'all' || booking.status === filterStatus;
-      return matchesSearch && matchesStatus;
+      
+      let matchesDate = true;
+      if (booking.eventDate) {
+        const bDate = new Date(booking.eventDate).getTime();
+        if (startDate) {
+          matchesDate = matchesDate && bDate >= new Date(startDate).getTime();
+        }
+        if (endDate) {
+          matchesDate = matchesDate && bDate <= new Date(endDate).getTime();
+        }
+      }
+      
+      return matchesSearch && matchesStatus && matchesDate;
     });
-  }, [bookings, searchTerm, filterStatus]);
+  }, [bookings, searchTerm, filterStatus, startDate, endDate]);
 
   const stats = useMemo(() => ({
     total: bookings.length,
@@ -278,23 +292,59 @@ export const BookingListPage = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-2 bg-card border border-border rounded-xl px-3 h-10">
+                <Calendar size={14} className="text-muted-foreground" />
+                <input 
+                  type="date" 
+                  value={startDate} 
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest focus:ring-0 w-24 outline-none"
+                  aria-label="Data inicial"
+                />
+                <span className="text-[10px] font-black text-muted-foreground opacity-30 px-1">ATÉ</span>
+                <input 
+                  type="date" 
+                  value={endDate} 
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest focus:ring-0 w-24 outline-none"
+                  aria-label="Data final"
+                />
+              </div>
+
               <div className="relative min-w-[200px]">
                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Select
                   value={filterStatus}
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   onChange={(e: any) => setFilterStatus(e.target.value)}
-                  className="pl-10 h-10 border-border bg-card"
+                  className="pl-10 h-10 border-border bg-card rounded-xl text-[10px] font-black uppercase tracking-widest"
                   options={[
-                    { value: 'all', label: 'Todos os Status' },
-                    { value: 'PENDING', label: '📌 Pendente' },
-                    { value: 'CONFIRMED', label: '✅ Confirmado' },
-                    { value: 'COMPLETED', label: '🏁 Concluído' },
-                    { value: 'CANCELLED', label: '❌ Cancelado' },
+                    { value: 'all', label: 'TODOS OS STATUS' },
+                    { value: 'PENDING', label: '📌 PENDENTE' },
+                    { value: 'CONFIRMED', label: '✅ CONFIRMADO' },
+                    { value: 'ON_THE_WAY', label: '🚚 EM TRÂNSITO' },
+                    { value: 'ARRIVED', label: '📍 NO LOCAL' },
+                    { value: 'COMPLETED', label: '🏁 CONCLUÍDO' },
+                    { value: 'CANCELLED', label: '❌ CANCELADO' },
                   ]}
                 />
               </div>
+
+              {(searchTerm || filterStatus !== 'all' || startDate || endDate) && (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    setSearchTerm('');
+                    setFilterStatus('all');
+                    setStartDate('');
+                    setEndDate('');
+                  }}
+                  className="h-10 px-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground"
+                >
+                  <AlertCircle size={14} className="mr-2" /> Limpar
+                </Button>
+              )}
             </div>
           </div>
         </Card>

@@ -12,6 +12,7 @@ import {
   Truck, 
   MapPin, 
   Calendar, 
+  Clock, 
   User, 
   Phone, 
   Mail, 
@@ -28,7 +29,10 @@ import {
   CreditCard,
   Paperclip,
   Share2,
-  Package
+  Package,
+  Clock,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import { isToday } from 'date-fns';
 import { BrandLoader } from '@/components/ui/BrandLoader';
@@ -269,13 +273,53 @@ export const BookingDetailPage = () => {
                <ArrowLeft size={18} />
             </Button>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-4">
                 <h2 className="text-xl font-black text-foreground uppercase tracking-tighter">Ficha Operacional</h2>
-                <Badge variant={booking.status === 'CONFIRMED' ? 'success' : booking.status === 'CANCELLED' ? 'destructive' : 'warning'} className="uppercase text-[10px] font-black h-5">
-                   {booking.status}
-                </Badge>
+                
+                {/* Visual Status Timeline */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide max-w-full">
+                  {[
+                    { key: 'PENDING', label: 'Lead', icon: Clock },
+                    { key: 'CONFIRMED', label: 'Confirmado', icon: ShieldCheck },
+                    { key: 'ON_THE_WAY', label: 'Em Trânsito', icon: Truck },
+                    { key: 'ARRIVED', label: 'No Local', icon: MapPin },
+                    { key: 'COMPLETED', label: 'Entrega', icon: CheckCircle2 }
+                  ].map((step, idx, arr) => {
+                    const isCurrent = booking.status === step.key;
+                    // Logic for "past" steps
+                    const statusOrder = ['PENDING', 'CONFIRMED', 'ON_THE_WAY', 'ARRIVED', 'COMPLETED'];
+                    const currentIndex = statusOrder.indexOf(booking.status || 'PENDING');
+                    const isPast = idx < currentIndex;
+                    const isCancelled = booking.status === 'CANCELLED';
+
+                    return (
+                      <div key={step.key} className="flex items-center">
+                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-500 whitespace-nowrap ${
+                          isCurrent 
+                            ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20 scale-105 z-10' 
+                            : isPast 
+                              ? 'bg-primary/10 border-primary/20 text-primary' 
+                              : 'bg-muted/50 border-border/50 text-muted-foreground opacity-50'
+                        } ${isCancelled && 'grayscale opacity-30 cursor-not-allowed'}`}>
+                          <step.icon size={12} className={isCurrent ? 'animate-pulse' : ''} />
+                          <span className="text-[10px] font-black uppercase tracking-widest">{step.label}</span>
+                        </div>
+                        {idx < arr.length - 1 && (
+                          <div className={`w-4 h-[1px] ${isPast ? 'bg-primary/30' : 'bg-border/30'}`} />
+                        )}
+                      </div>
+                    );
+                  })}
+                  
+                  {booking.status === 'CANCELLED' && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20 text-destructive animate-in zoom-in duration-300">
+                      <XCircle size={12} />
+                      <span className="text-[10px] font-black uppercase tracking-widest">CANCELADO</span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">Visão detalhada de alocação e fluxogramas</p>
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-2">Visão detalhada de alocação e fluxogramas</p>
             </div>
           </div>
           

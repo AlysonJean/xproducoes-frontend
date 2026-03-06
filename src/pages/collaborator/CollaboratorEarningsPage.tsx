@@ -148,7 +148,12 @@ const CollaboratorEarningsPage: React.FC = () => {
           { name: 'Ganhos' }
         ]}
       >
-        <BrandLoader size={120} label="Carregando ganhos..." />
+        <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in duration-700">
+          <BrandLoader size="xl" />
+          <p className="mt-8 text-muted-foreground font-medium tracking-widest uppercase text-[10px] animate-pulse">
+            Sincronizando extrato X Produções...
+          </p>
+        </div>
       </CollaboratorLayout>
     );
   }
@@ -161,7 +166,7 @@ const CollaboratorEarningsPage: React.FC = () => {
         { name: 'Ganhos' }
       ]}
     >
-      <div className="space-y-8">
+      <div className="space-y-8 animate-in slide-in-from-bottom-4 fade-in duration-1000">
         {/* Métricas Principais */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
