@@ -78,18 +78,18 @@ export const InteractiveQuiz = () => {
     return `https://wa.me/${getWhatsAppPhone()}?text=${encodeURIComponent(message)}`;
   };
 
-  const progressValue = 
-    currentStep === 'event_type' ? '25%' :
-    currentStep === 'audience_size' ? '50%' :
-    currentStep === 'environment' ? '75%' : '100%';
+
 
   return (
     <GlassCard className="max-w-4xl mx-auto border-border/50 bg-card/80 backdrop-blur-2xl relative overflow-hidden shadow-xl">
       {/* Progress Bar - Theme Aware */}
       <div className="absolute top-0 left-0 h-1.5 bg-muted w-full z-50">
         <div 
-          className="h-full bg-primary transition-all duration-1000 ease-in-out"
-          style={{ width: progressValue }}
+          className={`h-full bg-primary transition-all duration-1000 ease-in-out ${
+            currentStep === 'event_type' ? 'w-[25%]' :
+            currentStep === 'audience_size' ? 'w-[50%]' :
+            currentStep === 'environment' ? 'w-[75%]' : 'w-full'
+          }`}
         />
       </div>
 
