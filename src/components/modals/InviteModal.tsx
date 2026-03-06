@@ -12,10 +12,10 @@ export const InviteModal: React.FC<{
   const copy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      // eslint-disable-next-line no-console
+       
       console.log('copied');
     } catch (e) {
-      // eslint-disable-next-line no-console
+       
       console.error('failed copy', e);
     }
   };

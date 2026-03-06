@@ -5,6 +5,7 @@ import type { LogLevel, LogEntry } from '@/types';
 const getSentry = () => {
   try {
     // Dynamic import to avoid circular dependency
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (window as any).__SENTRY__;
   } catch {
     return null;
@@ -12,6 +13,7 @@ const getSentry = () => {
 };
 
 class Logger {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private isDevelopment = (import.meta as any).env?.MODE === 'development';
 
   private formatMessage(level: LogLevel, message: string, context?: string): string {
@@ -100,7 +102,9 @@ class Logger {
 export const logger = new Logger();
 
 // Backward compatibility
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function logDebug(...args: any[]) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if ((import.meta as any).env?.MODE === 'development') {
     console.debug('[DEBUG]', ...args);
   }

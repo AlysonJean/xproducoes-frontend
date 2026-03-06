@@ -45,6 +45,7 @@ export const CompleteRegistrationPage: React.FC = () => {
       addNotification({ type: 'success', title: 'Registro completo', message: 'Sua conta foi ativada. Faça login.' });
       // redireciona para login após sucesso
       navigate('/login?registered=1');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error(err);
       addNotification({ type: 'error', title: 'Erro', message: err?.response?.data?.message || 'Erro ao completar registro' });

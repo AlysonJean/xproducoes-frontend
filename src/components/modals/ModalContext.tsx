@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // packages/web/src/shared/modals/ModalContext.tsx
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import type {

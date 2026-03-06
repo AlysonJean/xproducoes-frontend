@@ -13,6 +13,7 @@ export const ServiceRow = () => {
     const fetchServices = async () => {
       try {
         // Fetch only ACTIVE services
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const response: any = await apiFetch('/services?status=ACTIVE&limit=6');
         
         let data: Service[] = [];

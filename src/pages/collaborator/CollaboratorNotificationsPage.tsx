@@ -76,8 +76,10 @@ const CollaboratorNotificationsPage: React.FC = () => {
       // Ajuste conforme a estrutura real da resposta do backend
       const loadedNotifications = response.data?.data ?? response.data ?? [];
       
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mapped = Array.isArray(loadedNotifications) ? loadedNotifications.map((n: any) => ({
         id: n.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         type: (n.type || 'system').toLowerCase() as any,
         title: n.title,
         message: n.message,

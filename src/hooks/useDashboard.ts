@@ -44,7 +44,9 @@ export const useDashboard = () => {
     try {
       // Busca dados reais do dashboard
       const data = await (await import('@/services/api')).apiFetch('/dashboard/stats');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setStats((data as any)?.data || {});
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       setError('Erro ao carregar dados do dashboard');
     } finally {

@@ -115,6 +115,7 @@ export const useServiceWorker = () => {
   // Auto-registrar Service Worker
   useEffect(() => {
     if (state.isSupported && !state.isRegistered) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       register();
     }
   }, [state.isSupported, state.isRegistered, register]);

@@ -40,6 +40,7 @@ const CollaboratorReportsPage: React.FC = () => {
             onTimeDelivery: 100 // Mock: Backend ainda não calcula pontualidade baseado em check-in/out
           },
           // Mapear ganhos mensais do backend
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           monthly: apiStats.monthlyEarnings ? apiStats.monthlyEarnings.map((m: any) => ({
              month: m.month,
              events: Number(m.events),
@@ -68,6 +69,7 @@ const CollaboratorReportsPage: React.FC = () => {
     fetchReportData();
   }, [selectedPeriod]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percentage }: any) => {
     const RADIAN = Math.PI / 180;
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;

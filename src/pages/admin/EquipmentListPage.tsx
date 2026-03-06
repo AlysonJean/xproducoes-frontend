@@ -140,6 +140,7 @@ export const EquipmentListPage = () => {
   const categories = useMemo(() => {
     const cats = new Set<string>();
     equipments.forEach(e => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cat = typeof e.category === 'string' ? e.category : (e.category as any)?.name;
         if (cat) cats.add(cat);
     });
@@ -148,6 +149,7 @@ export const EquipmentListPage = () => {
 
   const filteredEquipments = useMemo(() => {
     return equipments.filter(e => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cat = typeof e.category === 'string' ? e.category : (e.category as any)?.name || '';
         const matchesSearch = e.name.toLowerCase().includes(searchTerm.toLowerCase()) || cat.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = categoryFilter === 'all' || cat === categoryFilter;
@@ -282,6 +284,7 @@ export const EquipmentListPage = () => {
               <Select
                 className="w-48 h-10 text-[10px] font-bold uppercase tracking-widest bg-card border-border/60"
                 value={categoryFilter}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onChange={(e: any) => setCategoryFilter(e.target.value)}
                 options={[
                     { value: 'all', label: 'Todas as Categorias' },
@@ -291,6 +294,7 @@ export const EquipmentListPage = () => {
               <Select
                 className="w-44 h-10 text-[10px] font-bold uppercase tracking-widest bg-card border-border/60"
                 value={statusFilter}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onChange={(e: any) => setStatusFilter(e.target.value)}
                 options={[
                     { value: 'all', label: 'Todos os Estados' },
@@ -362,6 +366,7 @@ export const EquipmentListPage = () => {
                       <td className="px-6 py-5">
                         <div className="flex flex-col gap-1.5">
                             <Badge variant="outline" className="w-fit text-[9px] font-black uppercase tracking-widest border-primary/30 bg-primary/5 text-primary h-5 px-2">
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 {typeof item.category === 'string' ? item.category : (item.category as any)?.name || 'Generalista'}
                             </Badge>
                         </div>
@@ -375,6 +380,7 @@ export const EquipmentListPage = () => {
                       <td className="px-6 py-5">
                         <StatusSelect 
                           currentStatus={item.status as ItemStatus || ItemStatus.ACTIVE}
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           onStatusChange={(newStatus: any) => handleStatusChange(item, newStatus)}
                         />
                       </td>

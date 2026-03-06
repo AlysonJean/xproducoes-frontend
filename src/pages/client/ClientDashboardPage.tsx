@@ -13,6 +13,7 @@ import {
   Grid,
   Badge
 } from '../../components/ui/StandardComponents';
+import { BrandLoader } from '../../components/ui/BrandLoader';
 import { BookingListItem } from '../../components/ui/BookingListItem';
 import { ReviewModal } from '../../components/modals/ReviewModal';
 import type { SafeBooking, Kit } from '../../types/types';
@@ -131,12 +132,14 @@ export const ClientDashboardPage = () => {
         // Processar favoritos primeiro
         let favoritesCount = 0;
         if (favoritesResponse.status === 'fulfilled') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const favorites = asArray<any>((favoritesResponse.value as any)?.data || favoritesResponse.value);
           favoritesCount = favorites.length;
         }
 
         // Processar estatísticas do usuário
         if (statsResponse.status === 'fulfilled') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const statsData = (statsResponse.value as any)?.data;
           if (statsData) {
             setStats({
@@ -161,17 +164,20 @@ export const ClientDashboardPage = () => {
         // Processar reservas
         let allBookings: SafeBooking[] = [];
         if (bookingsResponse.status === 'fulfilled') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           allBookings = asArray<SafeBooking>((bookingsResponse.value as any)?.data || bookingsResponse.value);
           setRecentBookings(allBookings.slice(0, 3));
         }
 
         // Processar próximas reservas
         if (upcomingResponse.status === 'fulfilled') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setUpcomingBookings(asArray<SafeBooking>((upcomingResponse.value as any)?.data || upcomingResponse.value));
         }
 
         // Processar kits recomendados
         if (kitsResponse.status === 'fulfilled') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setRecommendedKits(asArray<Kit>((kitsResponse.value as any)?.data || kitsResponse.value));
         }
 
@@ -209,6 +215,7 @@ export const ClientDashboardPage = () => {
     };
 
     loadDashboardData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const formatCurrency = (value: number) => {
@@ -238,21 +245,11 @@ export const ClientDashboardPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="animate-pulse space-y-8">
-            <div className="h-8 bg-muted rounded w-1/3"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-32 bg-muted rounded-lg"></div>
-              ))}
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 h-96 bg-muted rounded-lg"></div>
-              <div className="h-96 bg-muted rounded-lg"></div>
-            </div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center animate-in fade-in duration-700">
+          <BrandLoader size="xl" />
+          <p className="mt-8 text-muted-foreground font-medium tracking-widest uppercase text-[10px] animate-pulse">
+            Preparando seu painel personalizado X Produções...
+          </p>
       </div>
     );
   }

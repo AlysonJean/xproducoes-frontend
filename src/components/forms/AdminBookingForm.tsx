@@ -49,7 +49,7 @@ const bookingFormSchema = z
     deliveryStatus: z.string(),
     // Campos admin-only
     serviceValue: z.number().positive('Valor do serviço deve ser positivo'),
-    paymentProof: z.any(), // FileList será tratado no submit
+    paymentProof: z.unknown(), // FileList será tratado no submit
   })
   .refine(
     (d) =>
@@ -68,6 +68,27 @@ const bookingFormSchema = z
 
 type BookingFormData = z.infer<typeof bookingFormSchema>;
 type ClientForSelect = { id: string; name: string; email?: string; phone?: string };
+
+interface ClientData {
+  id?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  user?: { id?: string; name?: string; email?: string };
+}
+interface ClientResponse {
+  data?: ClientData[];
+}
+
+interface RawBooking extends Omit<Booking, 'kits' | 'equipments'> {
+  userId?: string;
+  client?: { name?: string; phone?: string; email?: string };
+  location?: string;
+  venue?: { street?: string; neighborhood?: string; city?: string; state?: string; zipCode?: string; addressNumber?: string; addressComplement?: string };
+  kits?: Array<{ id?: string; kitId?: string }>;
+  equipments?: Array<{ id?: string; equipmentId?: string }>;
+  serviceValue?: number;
+}
 
 interface AdminBookingFormProps {
   initialData?: Booking | null;
@@ -118,21 +139,28 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
       try {
         setLoading(true);
         // clientes
-        let clientsRes: any = { data: [] };
+        let clientsRes: ClientResponse | ClientData[] = { data: [] };
         try {
-           clientsRes = await apiFetch<any>('/admin/clients');
+           clientsRes = await apiFetch<ClientResponse | ClientData[]>('/admin/clients');
         } catch (e) {
            console.warn("Could not load clients", e);
         }
-        const list = Array.isArray(clientsRes?.data) ? clientsRes.data : (Array.isArray(clientsRes) ? clientsRes : []);
+        
+        let list: ClientData[] = [];
+        if ('data' in clientsRes && Array.isArray(clientsRes.data)) {
+          list = clientsRes.data;
+        } else if (Array.isArray(clientsRes)) {
+          list = clientsRes;
+        }
+
         // Sort clients alphabetically
-        list.sort((a: any, b: any) => {
+        list.sort((a, b) => {
           const nameA = a.user?.name || a.name || '';
           const nameB = b.user?.name || b.name || '';
           return nameA.localeCompare(nameB);
         });
-        const mapped: ClientForSelect[] = list.map((c: any) => ({
-          id: c.id || c.user?.id,
+        const mapped: ClientForSelect[] = list.map((c) => ({
+          id: (c.id || c.user?.id) as string,
           name: c.user?.name || c.name || 'Cliente',
           email: c.user?.email || c.email,
           phone: c.phone,
@@ -148,45 +176,45 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
         setEquipments(Array.isArray(eqData) ? eqData : []);
 
         if (initialData) {
-          const booking = initialData;
-          const manualClient = !(booking as any).userId;
+          const booking = initialData as RawBooking;
+          const manualClient = !booking.userId;
           const eventDate = (booking.eventDate as string) || '';
           const eventEndDate = (booking.eventEndDate as string) || eventDate;
-          const location = (booking as any).location || '';
-          const address = (booking as any).venue || booking;
+          const location = booking.location || '';
+          const address = booking.venue || (booking as unknown as { street?: string; neighborhood?: string; city?: string; state?: string; zipCode?: string; addressNumber?: string; addressComplement?: string });
           const extractedKitId = (Array.isArray(booking.kits) && booking.kits.length > 0)
-            ? (booking.kits as any[])[0]?.kitId || (booking.kits as any[])[0]?.id
+            ? booking.kits[0]?.kitId || booking.kits[0]?.id
             : undefined;
           const extractedEquipmentIds = Array.isArray(booking.equipments)
-            ? (booking.equipments as any[]).map((e) => e.equipmentId || e.id).filter(Boolean)
+            ? booking.equipments.map((e) => e.equipmentId || e.id).filter(Boolean) as string[]
             : [];
           reset({
             clientType: manualClient ? 'manual' : 'registered',
-            clientId: (booking as any).userId as string | undefined,
-            clientName: (booking as any)?.client?.name,
-            clientContact: (booking as any)?.client?.phone,
-            clientEmail: (booking as any)?.client?.email,
+            clientId: booking.userId as string | undefined,
+            clientName: booking?.client?.name,
+            clientContact: booking?.client?.phone,
+            clientEmail: booking?.client?.email,
             selectionType: extractedKitId ? 'kit' : 'equipments',
-            kitId: extractedKitId,
+            kitId: extractedKitId as string | undefined,
             equipmentIds: extractedEquipmentIds,
             eventDate: eventDate ? eventDate.substring(0, 16) : '',
             eventEndDate: eventEndDate ? eventEndDate.substring(0, 16) : '',
             location: location,
-            street: (address as any).street || '',
-            neighborhood: (address as any).neighborhood || '',
-            city: (address as any).city || '',
-            state: (address as any).state || '',
-            zipCode: (address as any).zipCode || '',
-            addressNumber: (address as any).addressNumber || '',
-            addressComplement: (address as any).addressComplement || '',
+            street: address.street || '',
+            neighborhood: address.neighborhood || '',
+            city: address.city || '',
+            state: address.state || '',
+            zipCode: address.zipCode || '',
+            addressNumber: address.addressNumber || '',
+            addressComplement: address.addressComplement || '',
             notes: (booking.notes as string) || '',
             status: (booking.status as string) || 'PENDING',
             deliveryStatus: (booking.deliveryStatus as string) || 'PENDING',
-            serviceValue: (booking as any).serviceValue || undefined,
+            serviceValue: booking.serviceValue || undefined,
           });
         }
-      } catch (e: any) {
-        setServerError(e?.message || 'Falha ao carregar dados do formulário');
+      } catch (e: unknown) {
+        setServerError(e instanceof Error ? e.message : 'Falha ao carregar dados do formulário');
       } finally {
         setLoading(false);
       }
@@ -213,7 +241,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
             body: formData,
           });
           
-          paymentProofUrl = (uploadResponse as any)?.imageUrl;
+          paymentProofUrl = (uploadResponse as { imageUrl?: string })?.imageUrl;
         } catch (uploadError) {
           console.error('Erro no upload do comprovante:', uploadError);
           addNotification({ 
@@ -224,7 +252,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
         }
       }
 
-      const payload: Record<string, any> = {
+      const payload: Record<string, unknown> = {
         clientId: data.clientType === 'registered' ? data.clientId : undefined,
         clientName: data.clientType === 'manual' ? data.clientName : undefined,
         clientContact: data.clientType === 'manual' ? data.clientContact : undefined,
@@ -264,9 +292,10 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
         addNotification({ type: 'success', title: 'Reserva criada', message: 'Reserva criada com sucesso.' });
       }
       onSuccess();
-    } catch (e: any) {
-      setServerError(e?.message || 'Falha ao salvar reserva');
-      addNotification({ type: 'error', title: 'Erro', message: e?.message || 'Não foi possível salvar.' });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Falha ao salvar reserva';
+      setServerError(msg);
+      addNotification({ type: 'error', title: 'Erro', message: msg });
     } finally {
       setSaving(false);
     }
@@ -286,7 +315,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
             <Select
               label="Tipo de Cliente"
               value={clientType}
-              onChange={(e: any) => setValue('clientType', e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setValue('clientType', e.target.value as 'registered' | 'manual')}
               options={[
                 { value: 'registered', label: 'Registrado' },
                 { value: 'manual', label: 'Manual' },
@@ -318,7 +347,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
             <Select
               label="Modo de seleção"
               value={selectionType}
-              onChange={(e: any) => setValue('selectionType', e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setValue('selectionType', e.target.value as 'kit' | 'equipments')}
               options={[
                 { value: 'kit', label: 'Kit' },
                 { value: 'equipments', label: 'Equipamentos' },

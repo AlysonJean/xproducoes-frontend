@@ -25,12 +25,14 @@ const CollaboratorProfilePage: React.FC = () => {
   const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [profile, setProfile] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'portfolio' | 'reviews' | 'settings'>('overview');
   const [uploading, setUploading] = useState(false);
 
   // Form states
   const [editMode, setEditMode] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [formData, setFormData] = useState<any>({});
 
   useEffect(() => {

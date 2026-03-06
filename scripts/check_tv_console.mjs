@@ -76,7 +76,7 @@ import { chromium } from 'playwright';
             const max = 4000; // ms
             const interval = 250; // ms
             let elapsed = 0;
-            // eslint-disable-next-line no-console
+             
             console.debug('Sponsor check (fallback): not found initially, waiting up to', max, 'ms');
             let found2 = await page.evaluate(() => !!document.querySelector('.sponsor-debug-img'));
             while (!found2 && elapsed < max) {
@@ -84,18 +84,18 @@ import { chromium } from 'playwright';
               elapsed += interval;
               found2 = await page.evaluate(() => !!document.querySelector('.sponsor-debug-img'));
             }
-            // eslint-disable-next-line no-console
+             
             console.debug('Sponsor check (fallback): finished waiting, elapsed', elapsed, 'ms');
           }
         }
 
         const imgsLater = await page.evaluate(() => Array.from(document.querySelectorAll('.sponsor-debug-img')).map(i => ({ src: i.src, alt: i.alt })));
-        // eslint-disable-next-line no-console
+         
         console.log('Sponsor-debug imgs at final check:', imgsLater.length, imgsLater.slice(0,6));
         if (imgsLater.length > 0) {
           await page.screenshot({ path: `./tmp_screenshots/${name}_sponsors.png`, fullPage: true });
         } else {
-          // eslint-disable-next-line no-console
+           
           console.debug('Sponsor check: no sponsor images found after wait');
         }
       } catch (e) {

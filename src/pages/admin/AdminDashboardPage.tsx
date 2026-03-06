@@ -100,8 +100,17 @@ const RecentActivityList = ({ activities, loading }: { activities: DashboardActi
       </div>
       <div className="flex-1 overflow-y-auto max-h-[400px] p-4 space-y-3">
         {loading ? (
-             <div className="flex items-center justify-center h-48">
-                <BrandLoader size={60} label="Sincronizando feed..." />
+             <div className="space-y-4">
+                 {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex items-start gap-4 p-3 relative overflow-hidden rounded-xl">
+                       <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                       <div className="h-10 w-10 shrink-0 rounded-xl bg-muted/40 animate-pulse" />
+                       <div className="flex-1 space-y-2 py-1">
+                          <div className="h-4 w-3/4 rounded bg-muted/40 animate-pulse" />
+                          <div className="h-3 w-1/2 rounded bg-muted/40 animate-pulse" />
+                       </div>
+                    </div>
+                 ))}
              </div>
         ) : activities.length > 0 ? (
           activities.slice(0, 10).map((activity, index) => (
@@ -154,7 +163,7 @@ const EfficiencyStats = ({ stats, loading }: { stats: AdminDashboardStats | null
       {[
         { label: 'Confirmação de Reservas', value: stats ? Math.round(((stats.confirmedBookings || 0) / Math.max(stats.totalBookings || 1, 1)) * 100) : 0, color: 'bg-emerald-500', icon: CheckCircle2 },
         { label: 'Conclusão de Eventos', value: stats ? Math.round(((stats.completedBookings || 0) / Math.max(stats.totalBookings || 1, 1)) * 100) : 0, color: 'bg-blue-500', icon: BarChart3 },
-        { label: 'Ocupação da Equipe', value: stats ? Math.min((stats.activeCollaborators || 0) * 8, 100) : 0, color: 'bg-purple-500', icon: Users }
+        { label: 'Ocupação da Equipe', value: stats ? Math.min((stats.activeCollaborators || 0) * 8, 100) : 0, color: 'bg-cyan-500', icon: Users }
       ].map((item, i) => (
         <div key={i} className="space-y-2">
           <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-tighter">
@@ -165,8 +174,8 @@ const EfficiencyStats = ({ stats, loading }: { stats: AdminDashboardStats | null
           </div>
           <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
             <div 
-              className={`h-full ${item.color} transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(0,0,0,0.1)]`} 
-              style={{ width: `${loading ? 0 : item.value}%` }} 
+              className={`h-full ${item.color} transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(0,0,0,0.1)] ${loading ? 'w-0' : ''}`}
+              {...(!loading ? { style: { width: `${item.value}%` } } : {})}
             />
           </div>
         </div>
@@ -235,6 +244,19 @@ export const AdminDashboardPage = () => {
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
+  if (loading && !stats) {
+    return (
+      <AdminLayout title="Painel de Controle" breadcrumbs={[{ name: 'Admin' }, { name: 'Dashboard' }]}>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in duration-700">
+          <BrandLoader size="xl" />
+          <p className="mt-8 text-muted-foreground font-medium tracking-widest uppercase text-[10px] animate-pulse">
+            Sincronizando Ecossistema X Produções...
+          </p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout title="Painel de Controle" breadcrumbs={[{ name: 'Admin' }, { name: 'Dashboard' }]}>
       <div className="space-y-8">
@@ -287,7 +309,18 @@ export const AdminDashboardPage = () => {
         {/* Main Stats Grid */}
         <Grid columns={{ sm: 1, md: 2, lg: 4 }} gap={6}>
           {loading ? (
-             Array(4).fill(0).map((_, i) => <div key={i} className="h-32 bg-muted/50 animate-pulse border-none rounded-3xl" />)
+             Array(4).fill(0).map((_, i) => (
+               <div key={i} className="h-[120px] p-5 rounded-[2rem] bg-card/50 border border-border/50 backdrop-blur-sm relative overflow-hidden">
+                 <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                 <div className="flex items-start justify-between">
+                   <div className="h-12 w-12 rounded-2xl bg-muted/40 animate-pulse" />
+                 </div>
+                 <div className="mt-4 space-y-2">
+                   <div className="h-3 w-24 rounded bg-muted/40 animate-pulse" />
+                   <div className="h-6 w-16 rounded bg-muted/40 animate-pulse" />
+                 </div>
+               </div>
+             ))
           ) : (
             <>
               <StatItem 

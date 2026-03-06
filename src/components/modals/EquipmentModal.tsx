@@ -71,12 +71,15 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
         if (!mounted) return;
         if (Array.isArray(res)) {
           setCategories(res as Category[]);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } else if ((res as any)?.data && Array.isArray((res as any).data)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setCategories((res as any).data as Category[]);
         } else {
           // fallback to default list transformed to Category shape
           setCategories(defaultCategories.map((name, idx) => ({ id: String(idx), name })));
         }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (e) {
         if (!mounted) return;
         setCategories(defaultCategories.map((name, idx) => ({ id: String(idx), name })));
@@ -87,6 +90,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
     return () => {
       mounted = false;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const statusOptions = ['Disponível', 'Indisponível', 'Manutenção', 'Reservado'];

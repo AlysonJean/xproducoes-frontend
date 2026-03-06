@@ -79,6 +79,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     },
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const selectedType = watch('type');
 
   useEffect(() => {

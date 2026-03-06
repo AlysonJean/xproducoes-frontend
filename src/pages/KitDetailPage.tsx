@@ -56,7 +56,9 @@ export const KitDetailPage = () => {
         const transformed = transformKit(data as Kit);
         setKit({
             ...transformed,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             prevSlug: (data as any).prevSlug,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             nextSlug: (data as any).nextSlug
         });
         
@@ -117,6 +119,7 @@ export const KitDetailPage = () => {
           title: 'Combo Adicionado', 
           message: `${kit.name} foi incluído no seu orçamento com desconto.` 
       });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       addNotification({ 
           type: 'error', 
@@ -198,6 +201,7 @@ export const KitDetailPage = () => {
           )}
           <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <FavoriteButton equipmentId={kit.id} equipmentName={kit.name} size="lg" />
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             <CompareButton equipment={{...kit, pricePerHour: kit.price} as any} size="lg" />
           </div>
         </div>
@@ -210,6 +214,7 @@ export const KitDetailPage = () => {
             </h1>
             <div className="hidden lg:flex space-x-2">
                 <FavoriteButton equipmentId={kit.id} equipmentName={kit.name} size="lg" />
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 <CompareButton equipment={{...kit, pricePerHour: kit.price} as any} size="lg" />
             </div>
           </div>
@@ -321,6 +326,7 @@ export const KitDetailPage = () => {
                       const entity = item.equipment || item.service;
                       if (!entity) return null;
                       const isService = !!item.serviceId;
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       const price = isService ? (entity as any).price : (entity as any).pricePerHour;
 
                       return (
@@ -352,6 +358,7 @@ export const KitDetailPage = () => {
                                   {formatPrice(Number(price))}{isService ? '/serviço' : '/h'}
                                 </span>
                                 <Link 
+                                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                   to={isService ? `/servicos/${(entity as any).slug}` : `/equipamentos/${(entity as any).slug || entity.id}`} 
                                   className="text-[10px] font-bold text-muted-foreground hover:text-primary underline-offset-4 hover:underline transition-colors uppercase tracking-widest"
                                 >

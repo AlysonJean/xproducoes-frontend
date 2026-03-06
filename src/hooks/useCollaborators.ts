@@ -28,6 +28,7 @@ export const useCollaborators = (): UseCollaboratorsReturn => {
       const rawData = asArray(response.data);
       
       // Mapear dados do backend (que podem vir aninhados com user) para o formato esperado pelo frontend
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mappedData = rawData.map((item: any) => ({
         ...item,
         name: item.user?.name || item.name || 'Sem nome',

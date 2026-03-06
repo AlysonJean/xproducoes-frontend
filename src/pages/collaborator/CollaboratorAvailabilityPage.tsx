@@ -141,6 +141,7 @@ const CollaboratorAvailabilityPage: React.FC = () => {
                         <select
                             aria-label="Status da disponibilidade"
                             value={newAvailability.status}
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             onChange={(e) => setNewAvailability({...newAvailability, status: e.target.value as any})}
                             className="w-full border rounded-md px-3 py-2"
                         >

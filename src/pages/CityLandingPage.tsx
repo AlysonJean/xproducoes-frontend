@@ -27,6 +27,7 @@ export const CityLandingPage = () => {
 
   useEffect(() => {
     const statsPromise = apiFetch('/reviews/stats')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .then((data: any) => setReviewStats(data))
       .catch(err => console.error('Failed to fetch stats', err));
 

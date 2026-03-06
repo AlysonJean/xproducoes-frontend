@@ -54,7 +54,9 @@ export const ServiceDetailPage = () => {
         const transformed = transformService(data as Service);
         setService({
             ...transformed,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             prevSlug: (data as any).prevSlug,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             nextSlug: (data as any).nextSlug
         });
 
@@ -62,7 +64,9 @@ export const ServiceDetailPage = () => {
           ReactGA.event({
             category: "ecommerce",
             action: "view_item",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             label: (data as any).name,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             value: Number((data as any).price || 0)
           });
         }
@@ -87,6 +91,7 @@ export const ServiceDetailPage = () => {
         title: 'Adicionado ao Orçamento',
         message: `${service.name} foi adicionado ao seu orçamento.`
       });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       addNotification({
         type: 'error',
@@ -196,6 +201,7 @@ export const ServiceDetailPage = () => {
           />
           <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="lg" isService={true} />
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             <CompareButton equipment={service as any} size="lg" />
           </div>
         </div>
@@ -208,6 +214,7 @@ export const ServiceDetailPage = () => {
             </h1>
             <div className="hidden lg:flex space-x-2">
                 <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="lg" isService={true} />
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 <CompareButton equipment={service as any} size="lg" />
             </div>
           </div>

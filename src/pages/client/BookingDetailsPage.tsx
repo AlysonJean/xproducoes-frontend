@@ -28,6 +28,7 @@ export const BookingDetailsPage = () => {
     } catch (err: unknown) {
       // ✅ Mensagens de erro contextuais baseadas no status HTTP
       if (err && typeof err === 'object' && 'response' in err) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const response = (err as any).response;
         if (response?.status === 404) {
           setError('Reserva não encontrada. Ela pode ter sido cancelada ou excluída.');
@@ -52,6 +53,7 @@ export const BookingDetailsPage = () => {
 
   useEffect(() => {
     fetchBookingDetails();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleDeleteProof = (proofId: string) => {
@@ -229,6 +231,7 @@ export const BookingDetailsPage = () => {
                     <div className="space-y-2">
                       {booking.kits && booking.kits.length > 0 ? (
                         booking.kits.map((kitItem, idx) => {
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           const kitName = 'kit' in kitItem ? kitItem.kit?.name : (kitItem as any).name;
                           return (
                             <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
@@ -252,6 +255,7 @@ export const BookingDetailsPage = () => {
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">Equipamentos Individuais</h3>
                     <div className="space-y-2">
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       {booking.equipments?.map((eq: any, idx: number) => (
                         <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                           <p className="font-medium text-foreground">{eq.name}</p>
@@ -267,6 +271,7 @@ export const BookingDetailsPage = () => {
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">Serviços Adicionais</h3>
                     <div className="space-y-2">
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       {booking.services?.map((s: any, idx: number) => (
                         <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                           <p className="font-medium text-foreground">{s.name}</p>

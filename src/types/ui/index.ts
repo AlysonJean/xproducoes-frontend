@@ -193,14 +193,22 @@ export type ModalNames =
   | 'invite';
 
 export type ModalPropsMap = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   booking: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   equipment: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   kit: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payment: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   profile: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   contact: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   whatsapp: any;
   imageGallery: ImageGalleryModalProps;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   filter: any;
   confirm: ConfirmModalProps;
   alert: AlertModalProps;

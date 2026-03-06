@@ -39,6 +39,7 @@ export const QuoteRequestPage: React.FC = () => {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<QuoteFormData>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(quoteRequestSchema) as any,
     defaultValues: {
       requiresStairs: 'no',
@@ -79,6 +80,7 @@ export const QuoteRequestPage: React.FC = () => {
       const eventStart = new Date(yyyy, mon - 1, dd, hh, mm, 0, 0);
       const eventEnd = new Date(eventStart.getTime() + (data.duration * 3600 * 1000));
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const bookingData: any = {
         eventDate: eventStart.toISOString(),
         eventEndDate: eventEnd.toISOString(),
@@ -98,7 +100,9 @@ export const QuoteRequestPage: React.FC = () => {
         status: 'PENDING',
         setupTime: eventStart.toISOString(),
         userId: user.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         clientName: (user as any)?.name || data.name || undefined,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         clientContact: (user as any)?.phone || (user as any)?.email || data.phone || data.email || undefined,
       };
 
@@ -162,6 +166,7 @@ export const QuoteRequestPage: React.FC = () => {
       } else {
         navigate('/reserva-sucesso', { state: statePayload });
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error('Erro ao criar booking', err);
       const msg = err?.response?.data?.message || err?.message || 'Erro ao salvar pedido.';
@@ -197,21 +202,24 @@ export const QuoteRequestPage: React.FC = () => {
           </Alert>
         )}
 
-        <Form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+        <Form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
           {/* Seção 1: Detalhes do Evento */}
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
-              <Calendar className="h-5 w-5 text-primary" />
-              Detalhes do Evento
+          <div className="bg-muted/10 p-6 md:p-8 rounded-[2rem] border border-border/50">
+            <h2 className="text-xl font-bold flex items-center gap-3 text-foreground mb-6">
+              <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+                <Calendar className="h-5 w-5" />
+              </div>
+              O Momento
             </h2>
             
             <Grid columns={{ sm: 1, md: 2 }} gap={6}>
               <Input
-                label="Local do Evento *"
+                label="Nome/Local do Evento *"
                 leftIcon={<Building2 className="h-4 w-4" />}
                 {...register('venue')}
                 error={errors.venue?.message}
-                placeholder="Ex: Salão de Festas, Residência..."
+                placeholder="Ex: Espaço Kalahari, Casamento..."
+                className="bg-card"
               />
               
               <Input
@@ -220,35 +228,41 @@ export const QuoteRequestPage: React.FC = () => {
                 leftIcon={<Calendar className="h-4 w-4" />}
                 {...register('eventDate')}
                 error={errors.eventDate?.message}
+                 className="bg-card"
               />
 
               <Input
-                label="Hora de Início *"
+                label="Hora de Início da Montagem *"
                 type="time"
                 leftIcon={<Clock className="h-4 w-4" />}
                 {...register('startTime')}
                 error={errors.startTime?.message}
+                 className="bg-card"
               />
 
               <Input
-                label="Duração Estimada (horas) *"
+                label="Tempo de Operação (horas) *"
                 type="number"
                 leftIcon={<Clock className="h-4 w-4" />}
                 {...register('duration')}
                 error={errors.duration?.message}
                 placeholder="Ex: 5"
+                 className="bg-card"
               />
             </Grid>
           </div>
 
-          <hr className="border-border/50" />
-
           {/* Seção 2: Endereço */}
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
-              <MapPin className="h-5 w-5 text-primary" />
-              Localização do Evento
-            </h2>
+          <div className="bg-muted/10 p-6 md:p-8 rounded-[2rem] border border-border/50">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+               <h2 className="text-xl font-bold flex items-center gap-3 text-foreground">
+                 <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500">
+                   <MapPin className="h-5 w-5" />
+                 </div>
+                 O Destino
+               </h2>
+               <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Logística Geográfica</p>
+            </div>
 
             <Grid columns={{ sm: 1, md: 2 }} gap={6}>
               <Input
@@ -286,29 +300,23 @@ export const QuoteRequestPage: React.FC = () => {
               />
 
               <Grid columns={2} gap={4}>
-                <Input
-                  label="Cidade *"
-                  {...register('city')}
-                  error={errors.city?.message}
-                />
-                <Input
-                  label="Estado *"
-                  {...register('state')}
-                  error={errors.state?.message}
-                  placeholder="UF"
-                />
+                <Input label="Cidade *" {...register('city')} error={errors.city?.message} className="bg-card" />
+                <Input label="Estado *" {...register('state')} error={errors.state?.message} placeholder="UF" className="bg-card" />
               </Grid>
             </Grid>
           </div>
 
-          <hr className="border-border/50" />
-
           {/* Seção 3: Logística */}
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
-              <Navigation2 className="h-5 w-5 text-primary" />
-              Logística e Ambiente
-            </h2>
+          <div className="bg-muted/10 p-6 md:p-8 rounded-[2rem] border border-border/50">
+             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                 <h2 className="text-xl font-bold flex items-center gap-3 text-foreground">
+                   <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500">
+                     <Navigation2 className="h-5 w-5" />
+                   </div>
+                   O Terreno
+                 </h2>
+                 <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Análise Estrutural</p>
+             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-6 bg-muted/30 rounded-2xl border border-border/50">
               <div className="space-y-3">
@@ -352,14 +360,14 @@ export const QuoteRequestPage: React.FC = () => {
             </div>
           </div>
 
-          <hr className="border-border/50" />
-
           {/* Seção 4: Contato Adicional (se necessário) */}
           {!user?.id && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
-                <User className="h-5 w-5 text-primary" />
-                Seu Contato
+            <div className="bg-muted/10 p-6 md:p-8 rounded-[2rem] border border-border/50">
+              <h2 className="text-xl font-bold flex items-center gap-3 text-foreground mb-6">
+                <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500">
+                   <User className="h-5 w-5" />
+                </div>
+                Sua Identidade
               </h2>
               
               <Grid columns={{ sm: 1, md: 2 }} gap={6}>
@@ -381,10 +389,12 @@ export const QuoteRequestPage: React.FC = () => {
           )}
 
           {/* Seção 5: Observações */}
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
-              <Info className="h-5 w-5 text-primary" />
-              Observações Adicionais
+          <div className="bg-muted/10 p-6 md:p-8 rounded-[2rem] border border-border/50">
+            <h2 className="text-xl font-bold flex items-center gap-3 text-foreground mb-6">
+               <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-500">
+                   <Info className="h-5 w-5" />
+               </div>
+               Orientações Finais
             </h2>
             
             <Textarea

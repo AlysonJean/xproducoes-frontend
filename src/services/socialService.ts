@@ -61,11 +61,13 @@ export const socialService = {
 
   // Standalone Features
   createWall: async (data: { name: string; hashtag: string; slug?: string; autoApprove?: boolean }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await api.post<{ data: any }>('/admin/social/create', data);
     return response.data;
   },
 
   listWalls: async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await api.get<{ data: any[] }>('/admin/social/walls');
     return response.data;
   },
@@ -93,21 +95,26 @@ export const socialService = {
   },
 
   pairDevice: async (data: { pairingCode: string; settingId?: string; eventId?: string; deviceName?: string }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await api.post<{ data: any }>('/tv/pair', data);
     return response.data;
   },
 
   getWallConfig: async (id: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await api.get<any>(`/tv/config?settingId=${id}`);
     return response.data;
   },
 
   getAdminWall: async (id: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await api.get<{ data: any }>(`/admin/social/walls/${id}`);
     return response.data;
   },
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   updateWall: async (id: string, data: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await api.put<{ data: any }>(`/admin/social/walls/${id}`, data);
     return response.data;
   }

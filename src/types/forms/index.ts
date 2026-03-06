@@ -85,14 +85,14 @@ export interface KitModalProps {
   isLoading?: boolean;
   initialData?: Partial<KitData>;
   isEditing?: boolean;
-  availableEquipment?: any[];
+  availableEquipment?: Record<string, unknown>[];
 }
 
 export interface BookingModalProps {
   onSubmit?: (data: BookingData) => void;
   isLoading?: boolean;
-  equipment?: any;
-  kit?: any;
+  equipment?: Record<string, unknown>;
+  kit?: Record<string, unknown>;
   initialData?: Partial<BookingData>;
 }
 
@@ -114,12 +114,12 @@ export interface ProfileModalProps {
 }
 
 export interface PaymentModalProps {
-  onSubmit?: (data: any) => void;
+  onSubmit?: (data: unknown) => void;
   isLoading?: boolean;
   bookingId?: string;
   totalAmount?: number;
   paymentMethods?: string[];
-  initialData?: Partial<any>;
+  initialData?: Partial<Record<string, unknown>>;
 }
 
 export interface ContactModalProps {
@@ -130,7 +130,7 @@ export interface ContactModalProps {
 }
 
 export interface WhatsAppModalProps {
-  // Props específicas se necessário
+  _phantom?: never;
 }
 
 // ================================
@@ -207,7 +207,7 @@ export type QuoteMessageParams = {
 // ================================
 
 export interface SearchFiltersProps {
-  categories: any[];
+  categories: Record<string, unknown>[];
   onFiltersChange: (filters: {
     searchTerm: string;
     categoryId: string;
@@ -218,11 +218,11 @@ export interface SearchFiltersProps {
 }
 
 export interface PortfolioCardProps {
-  item: any;
+  item: Record<string, unknown>;
 }
 
 export interface KitCardProps {
-  kit: any;
+  kit: Record<string, unknown>;
   showCompare?: boolean;
   showFavorite?: boolean;
   className?: string;

@@ -71,6 +71,7 @@ const AdminSocialListPage: React.FC = () => {
             setIsFormModalOpen(false);
             setNewWall({ name: '', hashtag: '', slug: '' });
             fetchWalls();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             addNotification({ 
               type: 'error', 

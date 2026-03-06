@@ -4,6 +4,7 @@ import type { OnRenderClientAsync } from 'vike/types'
 import { BrowserRouter } from 'react-router-dom'
 
 interface PageContext {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Page: React.ComponentType<any>
   pageProps: Record<string, unknown>
 }

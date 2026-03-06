@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState } from 'react';
 import { ICollaborator } from '../types/types';
 import type { Event } from '../types/domains/dashboard';

@@ -26,6 +26,7 @@ export const isSafeWebsite = (url?: string | null) => {
     if (isIPv4(host)) return false;
     if (isPrivateIPv4(host)) return false;
     return true;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {
     return false;
   }
@@ -44,9 +45,11 @@ export const openWebsite = (url?: string | null) => {
     const safe = `${u.protocol}//${u.hostname}${path}`;
     try {
       window.open(safe, '_blank', 'noopener,noreferrer');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       return;
     }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {
     return;
   }

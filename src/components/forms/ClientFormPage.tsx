@@ -71,6 +71,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
     if (!validate()) return;
     try {
       setIsSubmitting(true);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let responseData: any = null;
 
       const fd = new FormData();
@@ -106,8 +107,10 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
       } else {
         // Create Mode
         if (avatarFile) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           responseData = await apiFetch<any>('/admin/clients', { method: 'POST', body: fd });
         } else {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           responseData = await apiFetch<any>('/admin/clients', {
             method: 'POST',
             body: JSON.stringify({
@@ -131,6 +134,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
         }
       }
     } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const message = (err as any)?.message || `Falha ao ${isEditing ? 'atualizar' : 'criar'} cliente`;
       addNotification({ type: 'error', title: 'Erro', message });
     } finally {

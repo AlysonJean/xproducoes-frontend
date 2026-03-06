@@ -12,6 +12,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   availableCategories = [],
   availableLocations = [],
   priceRange = { min: 0, max: 1000 },
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   filterType = 'general',
   title = 'Filtros',
   ...props

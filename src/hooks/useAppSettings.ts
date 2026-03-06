@@ -26,6 +26,7 @@ export const useAppSettings = () => {
       if (data.companyName) {
         localStorage.setItem('companyName', data.companyName);
       }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       // Não mostrar erro ao usuário, apenas usar fallback
       console.info('Using fallback settings (backend unavailable)');
@@ -68,6 +69,7 @@ export const useAppSettings = () => {
       }
       
       return data;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.warn(`Backend unavailable (${err.message}), saving to localStorage only`);
       

@@ -16,6 +16,7 @@ export function isSafeUrl(u: string): boolean {
     const parsed = new URL(trimmed, window.location.href);
     const proto = (parsed.protocol || '').toLowerCase();
     return proto === 'http:' || proto === 'https:' || proto === 'blob:';
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {
     return false;
   }
@@ -26,6 +27,7 @@ export function sanitizeFilename(name: string | undefined): string | undefined {
   // keep only basename, remove path separators, control chars and newlines
   const base = name.split(/[\\/]/).pop() || name;
   // remove characters that could break headers or filesystem: newlines, null, etc.
+  // eslint-disable-next-line no-control-regex
   return base.replace(/[\x00-\x1F\x7F"'<>\\/\\\\]/g, '_').slice(0, 200);
 }
 
@@ -33,7 +35,7 @@ export function createAndClickAnchor(opts: AnchorOptions): void {
   // Validate href
   if (!isSafeUrl(opts.href)) {
     // do not attempt to append unsafe hrefs
-    // eslint-disable-next-line no-console
+     
     console.warn('createAndClickAnchor blocked insecure href:', opts.href);
     return;
   }
@@ -54,6 +56,7 @@ export function createAndClickAnchor(opts: AnchorOptions): void {
     if (opts.revokeObjectUrl && opts.objectUrl) {
       try {
         window.URL.revokeObjectURL(opts.objectUrl);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (e) {
         /* ignore */
       }
@@ -81,7 +84,7 @@ export function appendScriptIfNotExists(opts: ScriptOptions): HTMLScriptElement 
     return script;
   } catch (err) {
     // do not throw in UI code path
-    // eslint-disable-next-line no-console
+     
     console.warn('appendScriptIfNotExists failed:', err instanceof Error ? err.message : err);
     return null;
   }

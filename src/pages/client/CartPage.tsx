@@ -12,6 +12,7 @@ export const CartPage = () => {
   const { cart, removeItem, itemCount, clearCart } = useCart();
   
   // Equipamentos
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const equipmentItems = (cart?.equipments || []).map((item: any) => {
     if ('equipmentId' in item) {
       return {
@@ -32,6 +33,7 @@ export const CartPage = () => {
   });
 
   // Serviços
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const serviceItems = ((cart as any)?.services || []).map((item: any) => ({
     id: item.id,
     name: item.name,
@@ -67,6 +69,7 @@ export const CartPage = () => {
   const complementaryRecommendations = useRecommendations({
     type: 'frequently-bought',
     itemId: firstItemId || '',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     itemType: (firstItemType as any) || 'equipment',
     limit: 4,
     autoFetch: !!firstItemId

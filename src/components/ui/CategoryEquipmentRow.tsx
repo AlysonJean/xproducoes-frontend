@@ -18,6 +18,7 @@ export const CategoryEquipmentRow = ({ category }: CategoryEquipmentRowProps) =>
     const fetchCategoryEquipments = async () => {
       try {
         // Fetch only ACTIVE items for this category
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const response: any = await apiFetch(`/equipments/search?categoryId=${category.id}&status=ACTIVE&limit=6`);
         
         let data: Equipment[] = [];

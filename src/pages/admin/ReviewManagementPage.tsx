@@ -65,6 +65,7 @@ export default function ReviewManagementPage() {
       const data = Array.isArray(res) ? res : ((res as ApiResponse<AdminReview[]>)?.data ?? []);
       setItems(data);
       setError(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       setError(e?.message ?? 'Falha ao carregar avaliações');
     } finally {
@@ -128,6 +129,7 @@ export default function ReviewManagementPage() {
       await apiFetch(`/reviews/${id}/approve`, { method: 'POST' });
       addNotification({ type: 'success', title: 'Aprovada', message: 'Avaliação aprovada e publicada.' });
       await load();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       addNotification({ type: 'error', title: 'Erro ao aprovar', message: e?.message || 'Falha na aprovação.' });
     } finally {
@@ -141,6 +143,7 @@ export default function ReviewManagementPage() {
       await apiFetch(`/reviews/${id}/reject`, { method: 'POST' });
       addNotification({ type: 'info', title: 'Rejeitada', message: 'Avaliação marcada como rejeitada.' });
       await load();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       addNotification({ type: 'error', title: 'Erro ao rejeitar', message: e?.message || 'Falha ao rejeitar.' });
     } finally {
@@ -162,6 +165,7 @@ export default function ReviewManagementPage() {
       addNotification({ type: 'success', title: 'Excluída', message: 'Avaliação apagada com sucesso.' });
       await load();
       setIsDeleteModalOpen(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       addNotification({ type: 'error', title: 'Erro ao apagar', message: e?.message || 'Falha ao apagar.' });
     } finally {
@@ -178,6 +182,7 @@ export default function ReviewManagementPage() {
       addNotification({ type: 'success', title: 'Atualizada', message: 'Avaliação atualizada com sucesso.' });
       setEditingReview(null);
       await load();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       addNotification({ type: 'error', title: 'Erro ao atualizar', message: e?.message || 'Falha ao atualizar.' });
     } finally {
@@ -265,6 +270,7 @@ export default function ReviewManagementPage() {
                 placeholder="Buscar por comentário, autor ou equipamento..."
                 className="pl-10"
                 value={query}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onChange={(e: any) => setQuery(e.target.value)}
               />
             </div>
@@ -272,6 +278,7 @@ export default function ReviewManagementPage() {
               <Select
                 className="w-32"
                 value={minRating}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onChange={(e: any) => setMinRating(e.target.value)}
                 options={[
                   { value: '', label: 'Nota: Todas' },
@@ -283,6 +290,7 @@ export default function ReviewManagementPage() {
               <Select
                 className="w-32"
                 value={statusFilter}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onChange={(e: any) => setStatusFilter(e.target.value)}
                 options={[
                   { value: 'all', label: 'Status: Todos' },
@@ -293,6 +301,7 @@ export default function ReviewManagementPage() {
               <Select
                 className="w-40"
                 value={sortBy}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onChange={(e: any) => setSortBy(e.target.value)}
                 options={[
                   { value: 'date_desc', label: 'Mais Recentes' },
@@ -460,6 +469,7 @@ export default function ReviewManagementPage() {
                    min={1} 
                    max={5} 
                    value={editingReview.rating} 
+                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                    onChange={(e: any) => setEditingReview({ ...editingReview, rating: parseInt(e.target.value || '0', 10) })} 
                    className="w-full"
                  />

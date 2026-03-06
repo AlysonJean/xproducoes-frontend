@@ -5,7 +5,6 @@ test.describe('debug.html safe rendering', () => {
   test('não deve executar HTML injetado via localStorage', async ({ page }) => {
     // Definir uma chave maliciosa no localStorage antes de navegar
     await page.addInitScript(() => {
-      // @ts-ignore
       localStorage.setItem('malicious', '<img src=x onerror="window.__XSS_TRIGGERED = true">');
     });
 
@@ -15,6 +14,7 @@ test.describe('debug.html safe rendering', () => {
     await page.waitForTimeout(200);
 
     // Checar se a variável global que indicaria execução não existe
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const triggered = await page.evaluate(() => (window as any).__XSS_TRIGGERED === true);
     expect(triggered).toBeFalsy();
 
