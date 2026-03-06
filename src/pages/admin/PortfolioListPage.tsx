@@ -66,16 +66,17 @@ const SortableItem = ({ item, onEdit, onDelete }: SortableItemProps) => {
 
 
 
+  const style = {
+    '--transform': CSS.Transform.toString(transform),
+    '--transition': transition,
+    '--z-index': isDragging ? '50' : 'auto',
+    '--opacity': isDragging ? '0.5' : '1'
+  } as React.CSSProperties;
+
   return (
     <div 
       ref={setNodeRef} 
-      // eslint-disable-next-line
-      style={{ 
-        '--transform': CSS.Transform.toString(transform), 
-        '--transition': transition,
-        '--z-index': isDragging ? '50' : 'auto',
-        '--opacity': isDragging ? '0.5' : '1' 
-      } as React.CSSProperties} 
+      style={style}
       className="h-full [transform:var(--transform)] [transition:var(--transition)] [z-index:var(--z-index)] [opacity:var(--opacity)]"
     >
       <Card className="overflow-hidden flex flex-col h-full p-0 relative group border-border hover:border-primary/50 transition-all shadow-sm hover:shadow-md">
