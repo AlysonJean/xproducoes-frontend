@@ -29,10 +29,7 @@ import {
   CreditCard,
   Paperclip,
   Share2,
-  Package,
-  Clock,
-  CheckCircle2,
-  XCircle
+  Package
 } from 'lucide-react';
 import { isToday } from 'date-fns';
 import { BrandLoader } from '@/components/ui/BrandLoader';
