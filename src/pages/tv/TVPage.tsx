@@ -239,7 +239,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                                 onLoad={() => {
                                                     try {
                                                         if (typeof window !== 'undefined') {
-                                                            (window as any).__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
+                                                            (window as any).__sponsorsLoaded = ((window as any).__sponsorsLoaded || 0) + 1;
                                                             if ((window as any).__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                                         }
                                                     // eslint-disable-next-line @typescript-eslint/no-unused-vars
