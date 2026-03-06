@@ -69,6 +69,7 @@ const SortableItem = ({ item, onEdit, onDelete }: SortableItemProps) => {
   return (
     <div 
       ref={setNodeRef} 
+      // eslint-disable-next-line react/no-danger-with-children
       style={{ 
         transform: CSS.Transform.toString(transform), 
         transition,
