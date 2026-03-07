@@ -130,9 +130,9 @@ export const InteractiveQuiz = () => {
           </div>
         </div>
 
-        <div className="relative min-h-[360px]">
+        <div className="relative min-h-[550px] md:min-h-[400px]">
           {/* Step 1: Event Type */}
-          <div className={`transition-all duration-500 absolute inset-0 ${currentStep === 'event_type' ? 'opacity-100 translate-y-0 pointer-events-auto scale-100' : 'opacity-0 translate-y-4 pointer-events-none scale-95'}`}>
+          <div className={`transition-all duration-500 absolute inset-0 pt-2 ${currentStep === 'event_type' ? 'opacity-100 translate-y-0 pointer-events-auto scale-100' : 'opacity-0 translate-y-4 pointer-events-none scale-95'}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {eventTypes.map(opt => (
                 <button
@@ -163,7 +163,7 @@ export const InteractiveQuiz = () => {
           </div>
 
           {/* Step 2: Audience Size */}
-          <div className={`transition-all duration-500 absolute inset-0 ${currentStep === 'audience_size' ? 'opacity-100 translate-y-0 pointer-events-auto scale-100' : 'opacity-0 translate-y-4 pointer-events-none scale-95'}`}>
+          <div className={`transition-all duration-500 absolute inset-0 pt-2 pb-6 overflow-y-auto ${currentStep === 'audience_size' ? 'opacity-100 translate-y-0 pointer-events-auto scale-100' : 'opacity-0 translate-y-4 pointer-events-none scale-95'}`}>
             <div className="grid grid-cols-1 gap-4 max-w-2xl mx-auto">
               {audienceSizes.map(opt => (
                 <button
@@ -197,7 +197,7 @@ export const InteractiveQuiz = () => {
           </div>
 
           {/* Step 3: Environment */}
-          <div className={`transition-all duration-500 absolute inset-0 ${currentStep === 'environment' ? 'opacity-100 translate-y-0 pointer-events-auto scale-100' : 'opacity-0 translate-y-4 pointer-events-none scale-95'}`}>
+          <div className={`transition-all duration-500 absolute inset-0 pt-2 pb-6 overflow-y-auto ${currentStep === 'environment' ? 'opacity-100 translate-y-0 pointer-events-auto scale-100' : 'opacity-0 translate-y-4 pointer-events-none scale-95'}`}>
             <div className="grid grid-cols-1 gap-4 max-w-2xl mx-auto">
               {environments.map(opt => (
                 <button
