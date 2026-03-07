@@ -110,8 +110,7 @@ export const KitCard: React.FC<KitCardProps> = ({
                   pricePerHour: kit.price,
                   imageUrl: kit.imageUrl,
                   isAvailable: kit.isActive ?? true
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                } as any} 
+                } as unknown as any} 
                 size="sm" 
               />
             )}
