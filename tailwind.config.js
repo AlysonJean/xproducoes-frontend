@@ -145,6 +145,12 @@ export default {
         xs: "calc(var(--radius) - 6px)",
       },
       fontFamily: {
+        display: [
+          "Outfit",
+          "Inter",
+          "system-ui",
+          "sans-serif",
+        ],
         sans: [
           "Inter",
           "ui-sans-serif",

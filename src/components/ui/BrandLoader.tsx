@@ -46,11 +46,6 @@ const BrandLoader: React.FC<BrandLoaderProps> = ({
     ? 'fixed inset-0 flex flex-col items-center justify-center bg-background z-[9999]'
     : 'flex flex-col items-center justify-center relative';
 
-  const sizeStyle = typeof size === 'number' ? {
-    width: `${size}px`,
-    height: `${size}px`,
-  } : {};
-
 
 
   // Determinar cores para o filtro baseado no tema (pode-se usar um observador de classe ou apenas checar o documento)
@@ -67,8 +62,9 @@ const BrandLoader: React.FC<BrandLoaderProps> = ({
     <div className={`${containerClass} ${className}`}>
       {isClient && (
         <div 
-          className={`brand-loader-animation ${sizeClass} flex items-center justify-center relative`}
-          style={sizeStyle}
+          className={`brand-loader-animation flex items-center justify-center relative ${
+            typeof size === 'number' ? `w-[${size}px] h-[${size}px]` : sizeClass
+          }`}
         >
           {/* SVG Filter para colorização absoluta e agressiva */}
           <svg width="0" height="0" className="absolute pointer-events-none overflow-hidden h-0 w-0">
@@ -81,10 +77,7 @@ const BrandLoader: React.FC<BrandLoaderProps> = ({
             </filter>
           </svg>
 
-          <div 
-            className="w-full h-full transform-gpu"
-            style={{ filter: 'url(#brand-recolor-final)' }}
-          >
+          <div className="w-full h-full transform-gpu brand-loader-filter-layer">
             <DotLottieReact
               src="/animations/Logo-xproducoes-eventos.lottie"
               loop

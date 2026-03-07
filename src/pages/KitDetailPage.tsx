@@ -10,7 +10,7 @@ import { FavoriteButton } from '../components/ui/FavoriteButton';
 import CompareButton from '../components/ui/CompareButton';
 import { formatPrice } from '../utils/typeSafeFormatters';
 import { toNumber, calculateSavingsAmount } from '../utils/typeSafeFormatters';
-import type { Kit, ExperienceLevel } from '../types/types';
+import type { Kit, ExperienceLevel, Equipment } from '../types/types';
 import { SEO } from '../components/SEO';
 import { transformKit } from '../utils/transformKit';
 import { ExperienceLevelSelector } from '../components/kits/ExperienceLevelSelector';
@@ -131,12 +131,40 @@ export const KitDetailPage = () => {
     }
   };
 
+  const jsonLd = kit ? {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": kit.name,
+    "image": [
+      kit.imageUrl || "https://xproducoes.com.br/xproducoes-logo.svg"
+    ],
+    "description": kit.description || `Aluguel de ${kit.name} em Belo Horizonte. Kit completo para festas e eventos.`,
+    "sku": kit.id,
+    "brand": {
+      "@type": "Brand",
+      "name": "X Produções"
+    },
+    "offers": {
+      "@type": "Offer",
+      "url": typeof window !== 'undefined' ? `${window.location.origin}/kits/${kit.slug || kit.id}` : `https://xproducoes.com.br/kits/${kit.slug || kit.id}`,
+      "priceCurrency": "BRL",
+      "price": kit.price || 0,
+      "priceValidUntil": new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+      "availability": kit.isActive ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      "seller": {
+        "@type": "Organization",
+        "name": "X Produções"
+      }
+    }
+  } : undefined;
+
   return (
-    <div className="bg-card p-6 md:p-8 rounded-lg shadow-2xl border border-border">
+    <div className="card-glass p-6 md:p-8 rounded-2xl shadow-2xl border border-border/50">
       <SEO 
         title={kit.name}
         description={kit.description || `Aluguel de ${kit.name} em Belo Horizonte. Kit completo para festas e eventos.`}
         image={kit.imageUrl}
+        jsonLd={jsonLd}
       />
 
       {/* Navigation Arrows (Fixed sides for consistency) */}
@@ -201,8 +229,7 @@ export const KitDetailPage = () => {
           )}
           <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <FavoriteButton equipmentId={kit.id} equipmentName={kit.name} size="lg" />
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            <CompareButton equipment={{...kit, pricePerHour: kit.price} as any} size="lg" />
+            <CompareButton equipment={{...kit, pricePerHour: kit.price} as unknown as Equipment} size="lg" />
           </div>
         </div>
 
@@ -214,8 +241,7 @@ export const KitDetailPage = () => {
             </h1>
             <div className="hidden lg:flex space-x-2">
                 <FavoriteButton equipmentId={kit.id} equipmentName={kit.name} size="lg" />
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                <CompareButton equipment={{...kit, pricePerHour: kit.price} as any} size="lg" />
+                <CompareButton equipment={{...kit, pricePerHour: kit.price} as unknown as Equipment} size="lg" />
             </div>
           </div>
 

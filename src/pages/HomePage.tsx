@@ -196,7 +196,7 @@ export const HomePage = () => {
           </div>
 
           <div className="relative z-10">
-            <h1 ref={heroTitleRef} className="text-4xl sm:text-5xl lg:text-7xl font-extrabold mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70">
+            <h1 ref={heroTitleRef} className="text-5xl sm:text-6xl lg:text-8xl font-black mb-6 tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-primary via-foreground to-foreground/60 drop-shadow-sm">
               Locação de Som, Luz e LED em BH
             </h1>
             <p className="text-lg sm:text-xl lg:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto font-light leading-relaxed">
@@ -221,8 +221,8 @@ export const HomePage = () => {
         {kits && kits.length > 0 && (
           <section className="relative">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center px-4 py-2 bg-primary/10 border border-primary/20 backdrop-blur-md rounded-full text-primary font-semibold text-xs uppercase tracking-widest mb-4">
-                👑 Premium Selection
+              <div className="inline-flex items-center px-5 py-2 card-glass rounded-full text-primary font-bold text-xs uppercase tracking-widest mb-6">
+                ✨ Premium Selection
               </div>
               <h2 ref={kitsTitleRef} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Kits em Destaque</h2>
               <div className="w-24 h-1 bg-primary mx-auto rounded-full mb-6" />

@@ -1,5 +1,5 @@
 /* Import Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap");
 
 @import "tailwindcss";
 @config "../tailwind.config.js";
@@ -33,14 +33,21 @@
 @layer base {
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
   }
-  
+
   html {
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', 'Inter', sans-serif;
+    letter-spacing: -0.02em;
   }
 }
 
@@ -52,10 +59,16 @@
   }
 
   /* Recolor do conteúdo do SVG baseado em currentColor, respeitando 'none' */
-  .themed-logo-svg :where(path,rect,circle,ellipse,polygon,polyline,line,text):not([fill='none']) {
+  .themed-logo-svg
+    :where(path, rect, circle, ellipse, polygon, polyline, line, text):not(
+      [fill="none"]
+    ) {
     fill: currentColor !important;
   }
-  .themed-logo-svg :where(path,rect,circle,ellipse,polygon,polyline,line,text):not([stroke='none']) {
+  .themed-logo-svg
+    :where(path, rect, circle, ellipse, polygon, polyline, line, text):not(
+      [stroke="none"]
+    ) {
     stroke: currentColor !important;
   }
 
@@ -104,22 +117,54 @@
     background-color: hsl(var(--primary));
     border-radius: 9999px;
   }
-  .progress-green::-webkit-progress-value { background-color: hsl(var(--success)); }
-  .progress-blue::-webkit-progress-value { background-color: hsl(var(--info)); }
-  .progress-signal::-webkit-progress-value { background-color: hsl(var(--accent)); }
-  .progress-green::-moz-progress-bar { background-color: hsl(var(--success)); }
-  .progress-blue::-moz-progress-bar { background-color: hsl(var(--info)); }
-  .progress-signal::-moz-progress-bar { background-color: hsl(var(--accent)); }
-  .progress-primary::-webkit-progress-value { background-color: hsl(var(--primary)); }
-  .progress-success::-webkit-progress-value { background-color: hsl(var(--success)); }
-  .progress-warning::-webkit-progress-value { background-color: hsl(var(--warning)); }
-  .progress-destructive::-webkit-progress-value { background-color: hsl(var(--destructive)); }
-  .progress-info::-webkit-progress-value { background-color: hsl(var(--info)); }
-  .progress-primary::-moz-progress-bar { background-color: hsl(var(--primary)); }
-  .progress-success::-moz-progress-bar { background-color: hsl(var(--success)); }
-  .progress-warning::-moz-progress-bar { background-color: hsl(var(--warning)); }
-  .progress-destructive::-moz-progress-bar { background-color: hsl(var(--destructive)); }
-  .progress-info::-moz-progress-bar { background-color: hsl(var(--info)); }
+  .progress-green::-webkit-progress-value {
+    background-color: hsl(var(--success));
+  }
+  .progress-blue::-webkit-progress-value {
+    background-color: hsl(var(--info));
+  }
+  .progress-signal::-webkit-progress-value {
+    background-color: hsl(var(--accent));
+  }
+  .progress-green::-moz-progress-bar {
+    background-color: hsl(var(--success));
+  }
+  .progress-blue::-moz-progress-bar {
+    background-color: hsl(var(--info));
+  }
+  .progress-signal::-moz-progress-bar {
+    background-color: hsl(var(--accent));
+  }
+  .progress-primary::-webkit-progress-value {
+    background-color: hsl(var(--primary));
+  }
+  .progress-success::-webkit-progress-value {
+    background-color: hsl(var(--success));
+  }
+  .progress-warning::-webkit-progress-value {
+    background-color: hsl(var(--warning));
+  }
+  .progress-destructive::-webkit-progress-value {
+    background-color: hsl(var(--destructive));
+  }
+  .progress-info::-webkit-progress-value {
+    background-color: hsl(var(--info));
+  }
+  .progress-primary::-moz-progress-bar {
+    background-color: hsl(var(--primary));
+  }
+  .progress-success::-moz-progress-bar {
+    background-color: hsl(var(--success));
+  }
+  .progress-warning::-moz-progress-bar {
+    background-color: hsl(var(--warning));
+  }
+  .progress-destructive::-moz-progress-bar {
+    background-color: hsl(var(--destructive));
+  }
+  .progress-info::-moz-progress-bar {
+    background-color: hsl(var(--info));
+  }
 
   /* Brand Loader Lottie Theming */
   .brand-loader-animation svg *,
@@ -132,101 +177,112 @@
   .brand-loader-animation svg line {
     fill: currentColor !important;
     stroke: currentColor !important;
-    transition: fill 0.5s ease, stroke 0.5s ease;
+    transition:
+      fill 0.5s ease,
+      stroke 0.5s ease;
+  }
+
+  /* Glassmorphism Cards */
+  .card-glass {
+    @apply bg-background/80 backdrop-blur-xl border border-border/50 shadow-sm transition-all duration-300;
+  }
+  
+  .card-glass-hover {
+    @apply hover:shadow-lg hover:-translate-y-1 hover:border-primary/20 hover:bg-background/90;
   }
 
   /* Button Components */
   .btn {
     @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
   }
-  
+
   .btn-default {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+    @apply bg-primary text-primary-foreground hover:bg-primary/95 shadow-[0_4px_14px_0_hsl(var(--primary)/30%)] hover:shadow-[0_6px_20px_hsl(var(--primary)/40%)] hover:-translate-y-[2px] active:translate-y-[0px] transition-all duration-300;
   }
-  
+
   .btn-destructive {
     @apply bg-destructive text-destructive-foreground hover:bg-destructive/90;
   }
-  
+
   .btn-outline {
     @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground;
   }
-  
+
   .btn-secondary {
     @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
   }
-  
+
   .btn-ghost {
     @apply hover:bg-accent hover:text-accent-foreground;
   }
-  
+
   .btn-link {
     @apply text-primary underline-offset-4 hover:underline;
   }
-  
+
   .btn-sm {
     @apply h-9 rounded-md px-3;
   }
-  
+
   .btn-md {
     @apply h-10 px-4 py-2;
   }
-  
+
   .btn-lg {
     @apply h-11 rounded-md px-8;
   }
-  
+
   .btn-icon {
     @apply h-10 w-10;
   }
-  
+
   /* Card Components */
   .card {
     @apply rounded-lg border bg-card text-card-foreground shadow-sm;
   }
-  
+
   .card-header {
     @apply flex flex-col space-y-1.5 p-6;
   }
-  
+
   .card-title {
     @apply text-2xl font-semibold leading-none tracking-tight;
   }
-  
+
   .card-description {
     @apply text-sm text-muted-foreground;
   }
-  
+
   .card-content {
     @apply p-6 pt-0;
   }
-  
+
   .card-footer {
     @apply flex items-center p-6 pt-0;
   }
-  
+
   /* Input Components */
   .input {
     @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
   }
-  
+
   /* Badge Components */
   .badge {
     @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
   }
-  
+
   .badge-default {
     @apply border-transparent bg-primary text-primary-foreground hover:bg-primary/80;
   }
-  
+
   .badge-secondary {
     @apply border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80;
   }
-  
+
   .badge-destructive {
     @apply border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80;
   }
-  
+
   .badge-outline {
     @apply text-foreground;
   }
@@ -256,21 +312,21 @@
       text-wrap: balance;
     }
   }
-  
+
   /* Animações de Header e Footer */
   .mobile-menu-item {
     animation: slideInFromRight 0.3s ease-out forwards;
     opacity: 0;
     transform: translateX(20px);
   }
-  
+
   @keyframes slideInFromRight {
     to {
       opacity: 1;
       transform: translateX(0);
     }
   }
-  
+
   /* Glass Morphism Effect */
   .glass {
     background: rgba(255, 255, 255, 0.1);
@@ -278,63 +334,85 @@
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
-  
+
   /* Floating Animation */
   .float {
     animation: float 3s ease-in-out infinite;
   }
-  
+
   @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
   }
-  
+
   /* Pulse Glow */
   .pulse-glow {
     animation: pulseGlow 2s ease-in-out infinite alternate;
   }
-  
+
   @keyframes pulseGlow {
-    from { box-shadow: 0 0 5px rgba(var(--primary), 0.3); }
-    to { box-shadow: 0 0 20px rgba(var(--primary), 0.8), 0 0 30px rgba(var(--primary), 0.4); }
+    from {
+      box-shadow: 0 0 5px rgba(var(--primary), 0.3);
+    }
+    to {
+      box-shadow:
+        0 0 20px rgba(var(--primary), 0.8),
+        0 0 30px rgba(var(--primary), 0.4);
+    }
   }
-  
+
   /* Hover Effects */
   .hover-lift {
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition:
+      transform 0.3s ease,
+      box-shadow 0.3s ease;
   }
-  
+
   .hover-lift:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   }
-  
+
   /* Gradient Text */
   .gradient-text {
-    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)),
+      hsl(var(--accent))
+    );
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
   }
-  
+
   /* Interactive Button Animation */
   .btn-interactive {
     position: relative;
     overflow: hidden;
     transition: all 0.3s ease;
   }
-  
+
   .btn-interactive::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent
+    );
     transition: left 0.5s ease;
   }
-  
+
   .btn-interactive:hover::before {
     left: 100%;
   }
@@ -384,4 +462,13 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Custom properties for BrandLoader animations injected to remove inline lint warnings */
+.brand-loader-animation {
+  width: var(--loader-size, auto);
+  height: var(--loader-size, auto);
+}
+.brand-loader-filter-layer {
+  filter: url(#brand-recolor-final);
 }
