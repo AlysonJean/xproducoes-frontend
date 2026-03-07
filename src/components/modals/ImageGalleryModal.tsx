@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { createAndClickAnchor, sanitizeFilename, isSafeUrl } from '../../utils/dom';

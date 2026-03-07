@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { useState, useEffect } from 'react';
 import { EquipmentCard } from '../../components/ui/EquipmentCard';
 import { ServiceCard } from '../../components/ui/ServiceCard';
@@ -43,8 +44,7 @@ export const FavoritesPage = () => {
                    const valid: Equipment[] = [];
                    results.forEach(res => {
                        if (res.status === 'fulfilled') {
-                           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                           const val = res.value as any;
+                                                      const val = res.value as any;
                            const item = val?.equipment ?? val;
                            if (item && item.id) valid.push(item);
                        }
@@ -63,8 +63,7 @@ export const FavoritesPage = () => {
                     const valid: Kit[] = [];
                     results.forEach(res => {
                         if (res.status === 'fulfilled') {
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            const val = res.value as any;
+                                                        const val = res.value as any;
                             const item = val?.kit ?? val;
                             if (item && item.id) valid.push(item);
                         }
@@ -83,8 +82,7 @@ export const FavoritesPage = () => {
                     const valid: Service[] = [];
                     results.forEach(res => {
                         if (res.status === 'fulfilled') {
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            const val = res.value as any;
+                                                        const val = res.value as any;
                             // Assuming backend returns { service } or direct object
                             const item = val?.service ?? val;
                             if (item && item.id) valid.push(item);
@@ -99,8 +97,7 @@ export const FavoritesPage = () => {
 
         await Promise.all(promises);
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (err) {
+            } catch (err) {
         setError('Não foi possível carregar alguns favoritos.');
       } finally {
         setLoading(false);

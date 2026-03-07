@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -39,8 +40,7 @@ export const QuoteRequestPage: React.FC = () => {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<QuoteFormData>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(quoteRequestSchema) as any,
+        resolver: zodResolver(quoteRequestSchema) as any,
     defaultValues: {
       requiresStairs: 'no',
       isCovered: 'no',
@@ -80,8 +80,7 @@ export const QuoteRequestPage: React.FC = () => {
       const eventStart = new Date(yyyy, mon - 1, dd, hh, mm, 0, 0);
       const eventEnd = new Date(eventStart.getTime() + (data.duration * 3600 * 1000));
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const bookingData: any = {
+            const bookingData: any = {
         eventDate: eventStart.toISOString(),
         eventEndDate: eventEnd.toISOString(),
         eventDuration: data.duration,
@@ -100,10 +99,8 @@ export const QuoteRequestPage: React.FC = () => {
         status: 'PENDING',
         setupTime: eventStart.toISOString(),
         userId: user.id,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        clientName: (user as any)?.name || data.name || undefined,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        clientContact: (user as any)?.phone || (user as any)?.email || data.phone || data.email || undefined,
+                clientName: (user as any)?.name || data.name || undefined,
+                clientContact: (user as any)?.phone || (user as any)?.email || data.phone || data.email || undefined,
       };
 
       if (data.email) bookingData.clientEmail = data.email;
@@ -166,8 +163,7 @@ export const QuoteRequestPage: React.FC = () => {
       } else {
         navigate('/reserva-sucesso', { state: statePayload });
       }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+        } catch (err: any) {
       console.error('Erro ao criar booking', err);
       const msg = err?.response?.data?.message || err?.message || 'Erro ao salvar pedido.';
       setServerError(msg);

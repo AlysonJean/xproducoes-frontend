@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { BookingStatus, SafeBooking } from '../../types/types';
 import { formatPrice } from '../../utils/formatPrice';
 

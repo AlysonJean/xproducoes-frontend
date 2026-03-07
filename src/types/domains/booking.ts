@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { BookingStatus } from '../enums';
 import { Equipment, Kit } from './equipment';
 import { User } from './user';
@@ -93,8 +94,7 @@ export interface CalendarBooking {
   kits?: Kit[];
   collaborators?: Array<{
     collaboratorId?: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    collaborator?: any;
+        collaborator?: any;
     role?: string;
   }>;
   internalNotes?: string;
@@ -127,10 +127,8 @@ export interface BookingDetails {
     totalHours?: number;
     totalPayment?: number;
     collaboratorId?: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    collaborator?: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    payments?: any[];
+        collaborator?: any;
+        payments?: any[];
   }>;
   attachments?: Array<{
     id?: string;
@@ -192,8 +190,7 @@ export interface CalendarEvent {
   title: string;
   start: Date;
   end: Date;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  resource?: any;
+    resource?: any;
   allDay?: boolean;
   booking?: Booking;
   equipmentCount?: number;

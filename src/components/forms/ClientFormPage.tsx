@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -71,8 +72,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
     if (!validate()) return;
     try {
       setIsSubmitting(true);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let responseData: any = null;
+            let responseData: any = null;
 
       const fd = new FormData();
       
@@ -107,11 +107,9 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
       } else {
         // Create Mode
         if (avatarFile) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          responseData = await apiFetch<any>('/admin/clients', { method: 'POST', body: fd });
+                    responseData = await apiFetch<any>('/admin/clients', { method: 'POST', body: fd });
         } else {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          responseData = await apiFetch<any>('/admin/clients', {
+                    responseData = await apiFetch<any>('/admin/clients', {
             method: 'POST',
             body: JSON.stringify({
               name: name.trim(),
@@ -134,8 +132,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
         }
       }
     } catch (err) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const message = (err as any)?.message || `Falha ao ${isEditing ? 'atualizar' : 'criar'} cliente`;
+            const message = (err as any)?.message || `Falha ao ${isEditing ? 'atualizar' : 'criar'} cliente`;
       addNotification({ type: 'error', title: 'Erro', message });
     } finally {
       setIsSubmitting(false);

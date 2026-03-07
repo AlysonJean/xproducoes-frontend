@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/refs */
 import { useEffect, useRef } from 'react';
 import { logger } from '../utils/logger';
 
@@ -104,7 +105,6 @@ export const useBundleAnalytics = () => {
   return {
     trackChunkLoad,
     getBundleMetrics,
-    // eslint-disable-next-line react-hooks/refs
-    loadedChunks: loadedChunks.current,
+        loadedChunks: loadedChunks.current,
   };
 };

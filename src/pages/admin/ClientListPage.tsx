@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, 
@@ -303,16 +304,14 @@ export const ClientListPage: React.FC = () => {
                 <Select
                   className="pl-9 h-10 text-[10px] font-bold uppercase tracking-widest bg-card border-border/60"
                   value={statusFilter}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  onChange={(e: any) => setStatusFilter(e.target.value)}
+                                    onChange={(e: any) => setStatusFilter(e.target.value)}
                   options={STATUS_OPTIONS}
                 />
               </div>
               <Select
                 className="w-48 h-10 text-[10px] font-bold uppercase tracking-widest bg-card border-border/60"
                 value={sortBy}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                onChange={(e: any) => setSortBy(e.target.value)}
+                                onChange={(e: any) => setSortBy(e.target.value)}
                 options={SORT_OPTIONS}
               />
               <Button 
@@ -479,8 +478,7 @@ export const ClientListPage: React.FC = () => {
         size="lg"
       >
         <ClientForm
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          initialData={editingClient as any}
+                    initialData={editingClient as any}
           onSuccess={() => {
             setIsFormModalOpen(false);
             fetchClients();

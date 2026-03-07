@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { useRevealOnView } from '../hooks/useRevealOnView';
 import { useParams, Link } from 'react-router-dom';
@@ -54,20 +55,16 @@ export const ServiceDetailPage = () => {
         const transformed = transformService(data as Service);
         setService({
             ...transformed,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            prevSlug: (data as any).prevSlug,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            nextSlug: (data as any).nextSlug
+                        prevSlug: (data as any).prevSlug,
+                        nextSlug: (data as any).nextSlug
         });
 
         if (data) {
           ReactGA.event({
             category: "ecommerce",
             action: "view_item",
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            label: (data as any).name,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            value: Number((data as any).price || 0)
+                        label: (data as any).name,
+                        value: Number((data as any).price || 0)
           });
         }
 
@@ -91,8 +88,7 @@ export const ServiceDetailPage = () => {
         title: 'Adicionado ao Orçamento',
         message: `${service.name} foi adicionado ao seu orçamento.`
       });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (e: any) {
+        } catch (e: any) {
       addNotification({
         type: 'error',
         title: 'Erro',
@@ -201,8 +197,7 @@ export const ServiceDetailPage = () => {
           />
           <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="lg" isService={true} />
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            <CompareButton equipment={service as any} size="lg" />
+                        <CompareButton equipment={service as any} size="lg" />
           </div>
         </div>
 
@@ -214,8 +209,7 @@ export const ServiceDetailPage = () => {
             </h1>
             <div className="hidden lg:flex space-x-2">
                 <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="lg" isService={true} />
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                <CompareButton equipment={service as any} size="lg" />
+                                <CompareButton equipment={service as any} size="lg" />
             </div>
           </div>
           

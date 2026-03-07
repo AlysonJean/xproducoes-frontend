@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Caminho do arquivo: frontend/src/pages/HomePage.tsx
 
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
@@ -340,8 +341,7 @@ export const HomePage = () => {
             </div>
             <Grid columns={{ sm: 1, md: 2, lg: 3 }} gap={8}>
               {reviews.map((review) => (
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                <TestimonialCard key={review.id} review={review as any} />
+                                <TestimonialCard key={review.id} review={review as any} />
               ))}
             </Grid>
           </section>

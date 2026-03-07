@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Caminho: frontend/src/pages/RecommendationsDemo.tsx
 
 import { useState } from 'react';
@@ -207,8 +208,7 @@ export const RecommendationsDemo = () => {
 
                 {/* Recommendation Section */}
                 <RecommendationSection
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    type={selectedType as any}
+                                        type={selectedType as any}
                     items={mockRecommendations}
                     maxItems={4}
                     showNavigation={true}

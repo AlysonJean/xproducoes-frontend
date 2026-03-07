@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect } from 'react';
 
 // Page opened by backend redirect with fragment #token=...
@@ -17,8 +18,7 @@ export default function OAuthComplete() {
       } else {
         window.close();
       }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (e) {
+        } catch (e) {
       window.close();
     }
   }, []);

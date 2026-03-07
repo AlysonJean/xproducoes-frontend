@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/forms/CollaboratorFormPage.tsx
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -28,8 +29,7 @@ const collaboratorSchema = z.object({
 
 
 interface CollaboratorFormProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  initialData?: any;
+    initialData?: any;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -49,8 +49,7 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } = useForm<any>({
+    } = useForm<any>({
     resolver: zodResolver(collaboratorSchema),
     defaultValues: {
       name: '',
@@ -87,8 +86,7 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
     }
   }, [initialData, reset]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const onSubmit = async (data: any) => {
+    const onSubmit = async (data: any) => {
     try {
       // Tratamento manual dos dados para garantir que tipos como hourlyRate vão corretamente para o backend
       const payload = {
@@ -117,8 +115,7 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
   };
 
   return (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    <Form onSubmit={handleSubmit(onSubmit) as any} className="space-y-6">
+        <Form onSubmit={handleSubmit(onSubmit) as any} className="space-y-6">
       <FormSection title="Dados Pessoais" description="Informações básicas do colaborador">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input

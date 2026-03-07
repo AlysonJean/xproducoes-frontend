@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Equipment, Kit } from '@/types/domains/equipment';
 import type { Booking } from '@/types/domains/booking';
 import type { User } from '@/types/domains/user';
@@ -128,8 +129,7 @@ export const safeTransformKit = (kit: Partial<Kit>): Kit => {
     price: toNumber(kit.price),
     imageUrl: kit.imageUrl ?? '',
     equipments: kit.equipments?.map(safeTransformEquipment) || 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (Array.isArray(kit.items) ? kit.items.map((i: any) => i.equipment ? safeTransformEquipment(i.equipment) : null).filter(Boolean) as Equipment[] : []),
+            (Array.isArray(kit.items) ? kit.items.map((i: any) => i.equipment ? safeTransformEquipment(i.equipment) : null).filter(Boolean) as Equipment[] : []),
     items: Array.isArray(kit.items) ? kit.items : [],
     isActive: kit.isActive ?? true,
     createdAt: kit.createdAt || new Date(),

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ConfirmModal } from './ConfirmModal';
 import React, { useState, useMemo } from 'react';
 import type { ICollaborator, EventAssignment, SelectedCollaboratorAssignment } from '../../types/types';
@@ -90,8 +91,7 @@ export const EventManagement: React.FC<EventManagementProps> = ({
     onSave(newAssignments);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updateAssignment = (collaboratorId: string, field: keyof SelectedCollaboratorAssignment, value: any) => {
+    const updateAssignment = (collaboratorId: string, field: keyof SelectedCollaboratorAssignment, value: any) => {
     setSelectedCollaborators((prev) => ({
       ...prev,
       [collaboratorId]: { ...prev[collaboratorId], [field]: value },

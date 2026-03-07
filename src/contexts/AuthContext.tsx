@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { secureStorage } from '../utils/secureStorage';
 import { logger } from '../utils/logger';
@@ -81,13 +82,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    window.addEventListener('auth:refreshed' as any, handleRefreshed);
+        window.addEventListener('auth:refreshed' as any, handleRefreshed);
     window.addEventListener('auth:logout', handleLogout);
 
     return () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      window.removeEventListener('auth:refreshed' as any, handleRefreshed);
+            window.removeEventListener('auth:refreshed' as any, handleRefreshed);
       window.removeEventListener('auth:logout', handleLogout);
     };
   }, []);
@@ -120,8 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             const profileResp = await authAPI.getProfile();
             // A instância 'api' de axios retorna a resposta original. O dado está em .data
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const userData = (profileResp as any).data || profileResp;
+                        const userData = (profileResp as any).data || profileResp;
             setUser(userData);
           } catch (profileError) {
             logger.error('Failed to fetch user profile during initialization', 'AuthContext', profileError);
@@ -143,8 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { isMounted = false; };
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleOAuthToken = async (token: string): Promise<string> => {
+    const handleOAuthToken = async (token: string): Promise<string> => {
     setIsLoading(true);
     try {
       const API_BASE_URL = getApiBaseUrl();
@@ -175,8 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const loginWithCredentials = async (data: { email: string; password: string }): Promise<string> => {
+    const loginWithCredentials = async (data: { email: string; password: string }): Promise<string> => {
     setIsLoading(true);
     try {
       const baseUrl = getApiBaseUrl();

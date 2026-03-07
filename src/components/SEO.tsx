@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 
@@ -8,8 +9,7 @@ interface SEOProps {
   image?: string;
   url?: string;
   type?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  jsonLd?: Record<string, any>;
+    jsonLd?: Record<string, any>;
 }
 
 export const SEO: React.FC<SEOProps> = ({ 

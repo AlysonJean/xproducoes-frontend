@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
 import BrandLoader from '../../components/ui/BrandLoader';
@@ -58,25 +59,21 @@ const CollaboratorEarningsPage: React.FC = () => {
 
         // Processar dados mensais para o gráfico
         // O backend retorna month no formato "YYYY-MM"
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const monthlyData = stats.monthlyEarnings?.map((item: any) => ({
+                const monthlyData = stats.monthlyEarnings?.map((item: any) => ({
           month: item.month, // ex: "2024-01"
           earnings: Number(item.earnings),
           events: Number(item.events)
         })) || [];
 
         // Calcular ganhos anuais (soma dos últimos 12 meses)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const yearlyEarnings = monthlyData.reduce((acc: number, item: any) => acc + item.earnings, 0);
+                const yearlyEarnings = monthlyData.reduce((acc: number, item: any) => acc + item.earnings, 0);
         
         // Calcular ganho do mês atual
         const currentMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const currentMonthData = monthlyData.find((d: any) => d.month === currentMonth);
+                const currentMonthData = monthlyData.find((d: any) => d.month === currentMonth);
 
         // Mapear pagamentos recentes
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const recentPayments = Array.isArray(payments) ? payments.slice(0, 10).map((p: any) => ({
+                const recentPayments = Array.isArray(payments) ? payments.slice(0, 10).map((p: any) => ({
           id: p.id,
           eventTitle: p.description || 'Pagamento',
           amount: Number(p.amount),
@@ -86,8 +83,7 @@ const CollaboratorEarningsPage: React.FC = () => {
 
         // Calcular pendentes
         const pendingTotal = Array.isArray(payments) 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ? payments.filter((p: any) => p.status === 'PENDING').reduce((acc: number, p: any) => acc + Number(p.amount), 0)
+                    ? payments.filter((p: any) => p.status === 'PENDING').reduce((acc: number, p: any) => acc + Number(p.amount), 0)
           : 0;
 
         const data: EarningsData = {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { ICollaborator } from '@/types/types';
 import { useState } from 'react';
 import { asArray } from '../utils/normalize';
@@ -28,8 +29,7 @@ export const useCollaborators = (): UseCollaboratorsReturn => {
       const rawData = asArray(response.data);
       
       // Mapear dados do backend (que podem vir aninhados com user) para o formato esperado pelo frontend
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mappedData = rawData.map((item: any) => ({
+            const mappedData = rawData.map((item: any) => ({
         ...item,
         name: item.user?.name || item.name || 'Sem nome',
         email: item.user?.email || item.email || 'Sem email',

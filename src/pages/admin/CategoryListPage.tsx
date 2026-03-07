@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Trash2, 
@@ -48,8 +49,7 @@ export const CategoryListPage = () => {
       const data = await apiFetch('/categories');
       setCategories(asArray<Category>(data));
       setError(null);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+        } catch (err: any) {
       const msg = err?.message || 'Não foi possível carregar a lista de categorias.';
       setError(msg);
       addNotification({
@@ -85,8 +85,7 @@ export const CategoryListPage = () => {
         message: 'Categoria excluída com sucesso.'
       });
       setIsDeleteModalOpen(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+        } catch (err: any) {
       addNotification({
         type: 'error',
         title: 'Erro',

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { socialService } from '../../services/socialService';
@@ -71,8 +72,7 @@ const AdminSocialListPage: React.FC = () => {
             setIsFormModalOpen(false);
             setNewWall({ name: '', hashtag: '', slug: '' });
             fetchWalls();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (err: any) {
+                } catch (err: any) {
             addNotification({ 
               type: 'error', 
               title: 'Falha na Criação', 

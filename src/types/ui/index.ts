@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 // ================================
@@ -193,23 +194,15 @@ export type ModalNames =
   | 'invite';
 
 export type ModalPropsMap = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  booking: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  equipment: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  kit: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  payment: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  profile: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  contact: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  whatsapp: any;
+    booking: any;
+    equipment: any;
+    kit: any;
+    payment: any;
+    profile: any;
+    contact: any;
+    whatsapp: any;
   imageGallery: ImageGalleryModalProps;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  filter: any;
+    filter: any;
   confirm: ConfirmModalProps;
   alert: AlertModalProps;
   invite: {

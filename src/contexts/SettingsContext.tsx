@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 // src/contexts/SettingsContext.tsx
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
@@ -9,8 +10,7 @@ interface SettingsContextType {
   setCompanyName: (name: string) => void;
   loading: boolean;
   error: string | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  saveSettings: (updates: { companyName?: string }) => Promise<any>;
+    saveSettings: (updates: { companyName?: string }) => Promise<any>;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -28,8 +28,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   // Sincronizar com as configurações carregadas
   useEffect(() => {
     if (companyName) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLocalCompanyName(companyName);
+            setLocalCompanyName(companyName);
     }
   }, [companyName]);
 

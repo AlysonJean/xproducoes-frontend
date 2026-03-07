@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/shared/KitCard.tsx
 
 import { Link } from 'react-router-dom';

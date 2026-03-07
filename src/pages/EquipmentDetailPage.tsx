@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { useRevealOnView } from '../hooks/useRevealOnView';
 import { useParams, Link } from 'react-router-dom';
@@ -56,10 +57,8 @@ export const EquipmentDetailPage = () => {
         const transformed = transformEquipment(data as Equipment);
         setEquipment({
           ...transformed,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          prevSlug: (data as any).prevSlug,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          nextSlug: (data as any).nextSlug
+                    prevSlug: (data as any).prevSlug,
+                    nextSlug: (data as any).nextSlug
         });
 
         if (data) {
@@ -91,8 +90,7 @@ export const EquipmentDetailPage = () => {
         title: 'Adicionado ao Orçamento',
         message: `${equipment.name} foi adicionado ao seu carrinho.`
       });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (e: any) {
+        } catch (e: any) {
       addNotification({
         type: 'error',
         title: 'Erro',
@@ -120,8 +118,7 @@ export const EquipmentDetailPage = () => {
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const isAlreadyInCart = cart?.equipments?.some((e: any) => {
+    const isAlreadyInCart = cart?.equipments?.some((e: any) => {
     const id = e.id || e.equipmentId;
     return id === equipment.id;
   });
@@ -199,8 +196,7 @@ export const EquipmentDetailPage = () => {
           />
           <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <FavoriteButton equipmentId={equipment.id} equipmentName={equipment.name} size="lg" />
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            <CompareButton equipment={equipment as any} size="lg" />
+                        <CompareButton equipment={equipment as any} size="lg" />
           </div>
         </div>
 
@@ -212,8 +208,7 @@ export const EquipmentDetailPage = () => {
             </h1>
             <div className="hidden lg:flex space-x-2">
                 <FavoriteButton equipmentId={equipment.id} equipmentName={equipment.name} size="lg" />
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                <CompareButton equipment={equipment as any} size="lg" />
+                                <CompareButton equipment={equipment as any} size="lg" />
             </div>
           </div>
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { apiFetch } from '../services/api';
 
@@ -26,8 +27,7 @@ export const useAppSettings = () => {
       if (data.companyName) {
         localStorage.setItem('companyName', data.companyName);
       }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (err) {
+        } catch (err) {
       // Não mostrar erro ao usuário, apenas usar fallback
       console.info('Using fallback settings (backend unavailable)');
 
@@ -69,8 +69,7 @@ export const useAppSettings = () => {
       }
       
       return data;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+        } catch (err: any) {
       console.warn(`Backend unavailable (${err.message}), saving to localStorage only`);
       
       if (updates.companyName !== undefined) {

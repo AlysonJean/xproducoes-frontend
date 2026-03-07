@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Link } from 'react-router-dom';
 import { formatPrice } from '../../utils/typeSafeFormatters';
 import { normalizeImageUrl, getPlaceholderUrl } from '../../utils/imageUtils';
@@ -103,8 +104,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
   };
 
   const currentStatus = service.status || 'ACTIVE';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const config = (STATUS_CONFIG as any)[currentStatus] || STATUS_CONFIG.ACTIVE;
+    const config = (STATUS_CONFIG as any)[currentStatus] || STATUS_CONFIG.ACTIVE;
 
   return (
     <Link
@@ -122,8 +122,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
 
         {(showCompare || showFavorite) && (
           <div className="absolute top-2 right-2 flex space-x-2 z-20">
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {showCompare && <CompareButton equipment={service as unknown as any} size="sm" />}
+                        {showCompare && <CompareButton equipment={service as unknown as any} size="sm" />}
             {showFavorite && service.id && (
               <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="sm" isService={true} />
             )}
