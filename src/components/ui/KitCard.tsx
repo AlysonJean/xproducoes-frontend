@@ -90,7 +90,7 @@ export const KitCard: React.FC<KitCardProps> = ({
     <Link
       {...rest}
       to={`/kits/${kit.slug || kit.id}`}
-      className={`relative block bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02] ${className}`}
+      className={`relative block card-glass card-glass-hover rounded-2xl overflow-hidden ${className}`}
       aria-label={`Ver detalhes do kit ${kit.name}`}
     >
       <div className="relative">
@@ -149,10 +149,10 @@ export const KitCard: React.FC<KitCardProps> = ({
           <button
             onClick={handleQuickAdd}
             disabled={isAlreadyInCart}
-            className={`font-bold py-2 px-4 rounded transition-colors ${
+            className={`py-2 px-4 transition-colors ${
               isAlreadyInCart 
-                ? 'bg-muted text-muted-foreground cursor-not-allowed' 
-                : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
+                ? 'bg-muted text-muted-foreground cursor-not-allowed rounded-lg' 
+                : 'btn btn-default rounded-xl'
             }`}
             aria-label="Adicionar kit ao carrinho"
           >
