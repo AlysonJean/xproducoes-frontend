@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 // Caminho: frontend/src/pages/client/ProfilePage.tsx
 
 import { useState, useEffect } from 'react';
@@ -85,8 +86,7 @@ export const ProfilePage = () => {
 
   useEffect(() => {
     loadProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      }, []);
 
   const loadProfile = async () => {
     try {

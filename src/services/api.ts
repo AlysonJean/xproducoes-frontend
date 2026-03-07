@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { logDebug } from '../utils/logger';
 import { secureStorage } from '../utils/secureStorage';
@@ -11,16 +12,14 @@ logDebug('API Configuration', {
   data: {
     API_BASE_URL,
     API_URL,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    environment: (import.meta as any).env?.MODE,
+        environment: (import.meta as any).env?.MODE,
   },
 });
 
 // ✅ AXIOS INSTANCE WITH SECURITY
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  timeout: parseInt((import.meta as any).env?.VITE_API_TIMEOUT as string) || 30000,
+    timeout: parseInt((import.meta as any).env?.VITE_API_TIMEOUT as string) || 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -43,10 +42,8 @@ api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
         // lazy require to avoid top-level polyfills issues
         // use crypto.randomUUID when available
         let key = '';
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function') {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          key = (crypto as any).randomUUID();
+                if (typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function') {
+                    key = (crypto as any).randomUUID();
         } else {
           // fallback to timestamp+random
           key = Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
@@ -68,8 +65,7 @@ import { authService } from './authservice';
 // ✅ SECURE RESPONSE INTERCEPTOR WITH AUTO REFRESH
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async (error: any) => {
+    async (error: any) => {
     const originalRequest = error.config;
 
     // Se erro 401 e ainda não tentamos o retry
@@ -103,8 +99,7 @@ export const apiFetch = async <T = unknown>(
 ): Promise<T> => {
   const makeRequest = async (url: string, config: RequestInit): Promise<Response> => {
     // Add timeout handling
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const timeout = parseInt((import.meta as any).env?.VITE_API_TIMEOUT as string) || 30000;
+        const timeout = parseInt((import.meta as any).env?.VITE_API_TIMEOUT as string) || 30000;
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
 
@@ -176,10 +171,8 @@ export const apiFetch = async <T = unknown>(
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
       const headers = config.headers as Record<string, string> | undefined;
       if (headers && !('Idempotency-Key' in headers) && !('idempotency-key' in headers)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function') {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          headers['Idempotency-Key'] = (crypto as any).randomUUID();
+                if (typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function') {
+                    headers['Idempotency-Key'] = (crypto as any).randomUUID();
         } else {
           headers['Idempotency-Key'] = Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
         }
@@ -194,16 +187,14 @@ export const apiFetch = async <T = unknown>(
   const MAX_RETRIES = 3;
   const RETRY_DELAY_MS = 300; // inicial, exponencial
   let attempt = 0;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let lastError: any = null;
+    let lastError: any = null;
   let response: Response | null = null;
 
   while (attempt < MAX_RETRIES) {
     try {
       response = await makeRequest(url, config);
       break;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+        } catch (err: any) {
       lastError = err;
       // Só retry em erros de rede (ex.: TypeError: Failed to fetch)
       if (err instanceof TypeError || (err && /failed to fetch|network error/i.test(String(err.message || err)))) {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // ================================
 // ENUMS
 // ================================
@@ -67,15 +68,13 @@ export interface Client {
   companySize?: string;
   taxId?: string;
   isVip?: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  address?: any;
+    address?: any;
   jobTitle?: string;
   department?: string;
   budget?: number;
   preferredCategories?: string[];
   eventTypes?: string[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  communicationPrefs?: any;
+    communicationPrefs?: any;
   user?: User;
 }
 

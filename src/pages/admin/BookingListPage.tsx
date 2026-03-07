@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
@@ -63,8 +64,7 @@ export const BookingListPage = () => {
       const response = await apiFetch('/admin/bookings');
       setBookings(asArray(response));
       setError(null);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+        } catch (err: any) {
       setError(err?.message || 'Não foi possível carregar a lista de reservas.');
     } finally {
       setLoading(false);
@@ -130,8 +130,7 @@ export const BookingListPage = () => {
         title: 'Atualizado',
         message: `${field === 'status' ? 'Status' : 'Entrega'} atualizado com sucesso.`
       });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+        } catch (err: any) {
       addNotification({
         type: 'error',
         title: 'Erro',
@@ -316,8 +315,7 @@ export const BookingListPage = () => {
                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Select
                   value={filterStatus}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  onChange={(e: any) => setFilterStatus(e.target.value)}
+                                    onChange={(e: any) => setFilterStatus(e.target.value)}
                   className="pl-10 h-10 border-border bg-card rounded-xl text-[10px] font-black uppercase tracking-widest"
                   options={[
                     { value: 'all', label: 'TODOS OS STATUS' },
@@ -404,8 +402,7 @@ export const BookingListPage = () => {
                         <Select
                           className="h-9 min-w-[130px] border-border text-xs"
                           value={booking.status}
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          onChange={(e: any) => handleStatusChange(booking.id, 'status', e.target.value)}
+                                                    onChange={(e: any) => handleStatusChange(booking.id, 'status', e.target.value)}
                           options={[
                             { value: 'PENDING', label: 'Pendente' },
                             { value: 'CONFIRMED', label: 'Confirmada' },
@@ -418,8 +415,7 @@ export const BookingListPage = () => {
                         <Select
                           className="h-9 min-w-[150px] border-border text-xs"
                           value={booking.deliveryStatus || 'PENDING'}
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          onChange={(e: any) => handleStatusChange(booking.id, 'deliveryStatus', e.target.value)}
+                                                    onChange={(e: any) => handleStatusChange(booking.id, 'deliveryStatus', e.target.value)}
                           options={[
                             { value: 'PENDING', label: 'Pendente' },
                             { value: 'ON_THE_WAY', label: 'A caminho' },
@@ -481,8 +477,7 @@ export const BookingListPage = () => {
       >
         <div className="min-w-0">
           <BookingForm
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            initialData={editingBooking ? { ...editingBooking, totalPrice: Number(editingBooking.totalPrice) } as any : editingBooking}
+                        initialData={editingBooking ? { ...editingBooking, totalPrice: Number(editingBooking.totalPrice) } as any : editingBooking}
             defaultClientType={initialClientType}
             onSuccess={handleSuccess}
             onCancel={handleCancel}

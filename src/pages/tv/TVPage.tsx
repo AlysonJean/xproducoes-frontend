@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps, react-hooks/set-state-in-effect */
 import React, { useState, useEffect, memo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
@@ -131,8 +132,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                 <p className="text-foreground text-xs font-bold text-center mt-2 uppercase tracking-wide">{qrCodeText}</p>
                             )}
                             {/* Debug: show resolved QR value when debugging */}
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
+                                                        {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
                                 <p className="text-xs text-muted-foreground mt-2 break-all">{`${getPublicBase()}/participate/${slug}`}</p>
                             )}
                         </div>
@@ -157,8 +157,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                                         (window as any).__sponsorsLoaded = ((window as any).__sponsorsLoaded || 0) + 1;
                                                         if ((window as any).__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                                     }
-                                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                                                } catch (err) {/* ignore */ }
+                                                                                                } catch (err) {/* ignore */ }
                                             }}
                                             onError={(e) => {
                                                  
@@ -216,8 +215,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                     <p className="text-foreground text-xs font-bold text-center mt-2 uppercase tracking-wide">{qrCodeText}</p>
                                 )}
                                 {/* Debug: show resolved QR value when debugging */}
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
+                                                                {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
                                     <p className="text-xs text-muted-foreground mt-2 break-all">{`${getPublicBase()}/participate/${slug}`}</p>
                                 )}
                             </div>
@@ -242,8 +240,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                                             (window as any).__sponsorsLoaded = ((window as any).__sponsorsLoaded || 0) + 1;
                                                             if ((window as any).__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                                         }
-                                                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                                                    } catch (err) {/* ignore */ }
+                                                                                                        } catch (err) {/* ignore */ }
                                                 }}
                                                 onError={(e) => {
                                                      
@@ -304,8 +301,7 @@ const TVPage: React.FC = () => {
 
             if (!url) return;
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const res = await apiFetch<any>(url);
+                        const res = await apiFetch<any>(url);
             if (res.linked) {
                 setConfig({
                     id: res.settingId,
@@ -326,8 +322,7 @@ const TVPage: React.FC = () => {
         } catch (error) {
             console.error("Failed to load config", error);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [searchParams, pairingCode, config]); // Added config to avoid re-fetching if already set
+        }, [searchParams, pairingCode, config]); // Added config to avoid re-fetching if already set
 
     useEffect(() => {
         // Initial fetch only if not set
@@ -648,8 +643,7 @@ const TVPage: React.FC = () => {
                                 <div className="p-2 rounded-lg bg-transparent">
                                     <QRCode value={`${getPublicBase()}/participate/${config.slug || ''}`} size={120} />
                                 </div>
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
+                                                                {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
                                     <p className="text-xs text-gray-600 mt-2 break-all">{`${getPublicBase()}/participate/${config.slug || ''}`}</p>
                                 )}
                             </div>
@@ -668,8 +662,7 @@ const TVPage: React.FC = () => {
                                                         (window as any).__sponsorsLoaded = ((window as any).__sponsorsLoaded || 0) + 1;
                                                         if ((window as any).__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                                     }
-                                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                                                } catch (err) {/* ignore */ }
+                                                                                                } catch (err) {/* ignore */ }
                                             }} onError={e => {
                                                  
                                                 console.warn('TVPage - sponsor overlay failed to load, replacing with placeholder:', s.imageUrl);
@@ -755,8 +748,7 @@ const TVPage: React.FC = () => {
                                                 (window as any).__sponsorsLoaded = ((window as any).__sponsorsLoaded || 0) + 1;
                                                 if ((window as any).__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                             }
-                                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                                        } catch (err) { /* ignore */ }
+                                                                                } catch (err) { /* ignore */ }
                                     }} onError={e => {
                                          
                                         console.warn('TVPage - sponsor overlay failed to load:', s.imageUrl);

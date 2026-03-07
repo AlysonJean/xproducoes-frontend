@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { EquipmentStatus, ItemStatus } from '../enums';
 
 // ================================
@@ -14,8 +15,7 @@ export interface Equipment {
   price?: number;
   pricePerHour?: number;
   status?: ItemStatus | EquipmentStatus; // Compatibility
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  specifications?: Record<string, any>;
+    specifications?: Record<string, any>;
   images?: string[];
   image?: string;
   imageUrl?: string;

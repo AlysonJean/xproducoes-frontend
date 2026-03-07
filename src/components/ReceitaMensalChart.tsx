@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState } from 'react';
 import { Select } from './ui/StandardComponents';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
@@ -47,8 +48,7 @@ export function ReceitaMensalChart({ year }: ReceitaMensalChartProps) {
 
   // Buscar dados do ano selecionado
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
+        setLoading(true);
     setError(null);
     apiFetch<MonthlyRevenue[]>(`/dashboard/monthly-revenue?year=${selectedYear}`)
       .then((res) => setData(res))

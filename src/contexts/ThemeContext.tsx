@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { logger } from '../utils/logger';
 import type { ReactNode } from 'react';
@@ -39,8 +40,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('theme') as Theme;
       if (saved === 'light' || saved === 'dark' || saved === 'system') {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setThemeState(saved);
+                setThemeState(saved);
       }
     }
   }, []);
@@ -49,8 +49,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       if (theme === 'light' || theme === 'dark') {
-         // eslint-disable-next-line react-hooks/set-state-in-effect
-         setResolvedTheme(theme);
+                  setResolvedTheme(theme);
       } else {
          const mq = window.matchMedia('(prefers-color-scheme: dark)');
          setResolvedTheme(mq.matches ? 'dark' : 'light');
@@ -82,8 +81,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   // Atualiza resolvedTheme quando theme ou sistema mudam
   useEffect(() => {
     if (theme === 'light' || theme === 'dark') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setResolvedTheme(theme);
+            setResolvedTheme(theme);
       return;
     } else {
       const mq = window.matchMedia('(prefers-color-scheme: dark)');

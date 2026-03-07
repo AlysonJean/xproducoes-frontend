@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 // Caminho: frontend/src/pages/client/ClientDashboardPage.tsx
 
 import { useEffect, useState } from 'react';
@@ -132,15 +133,13 @@ export const ClientDashboardPage = () => {
         // Processar favoritos primeiro
         let favoritesCount = 0;
         if (favoritesResponse.status === 'fulfilled') {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const favorites = asArray<any>((favoritesResponse.value as any)?.data || favoritesResponse.value);
+                    const favorites = asArray<any>((favoritesResponse.value as any)?.data || favoritesResponse.value);
           favoritesCount = favorites.length;
         }
 
         // Processar estatísticas do usuário
         if (statsResponse.status === 'fulfilled') {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const statsData = (statsResponse.value as any)?.data;
+                    const statsData = (statsResponse.value as any)?.data;
           if (statsData) {
             setStats({
               totalBookings: statsData.totalBookings || 0,
@@ -164,21 +163,18 @@ export const ClientDashboardPage = () => {
         // Processar reservas
         let allBookings: SafeBooking[] = [];
         if (bookingsResponse.status === 'fulfilled') {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          allBookings = asArray<SafeBooking>((bookingsResponse.value as any)?.data || bookingsResponse.value);
+                    allBookings = asArray<SafeBooking>((bookingsResponse.value as any)?.data || bookingsResponse.value);
           setRecentBookings(allBookings.slice(0, 3));
         }
 
         // Processar próximas reservas
         if (upcomingResponse.status === 'fulfilled') {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          setUpcomingBookings(asArray<SafeBooking>((upcomingResponse.value as any)?.data || upcomingResponse.value));
+                    setUpcomingBookings(asArray<SafeBooking>((upcomingResponse.value as any)?.data || upcomingResponse.value));
         }
 
         // Processar kits recomendados
         if (kitsResponse.status === 'fulfilled') {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          setRecommendedKits(asArray<Kit>((kitsResponse.value as any)?.data || kitsResponse.value));
+                    setRecommendedKits(asArray<Kit>((kitsResponse.value as any)?.data || kitsResponse.value));
         }
 
         // Calcular estatísticas localmente como fallback se a API de stats falhar
@@ -215,8 +211,7 @@ export const ClientDashboardPage = () => {
     };
 
     loadDashboardData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    }, []);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-PT', {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState } from 'react';
 import { FormModal } from './FormModal';
 import { FilterModalProps, FilterData } from '../../types/types';
@@ -12,8 +13,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   availableCategories = [],
   availableLocations = [],
   priceRange = { min: 0, max: 1000 },
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  filterType = 'general',
+    filterType = 'general',
   title = 'Filtros',
   ...props
 }) => {

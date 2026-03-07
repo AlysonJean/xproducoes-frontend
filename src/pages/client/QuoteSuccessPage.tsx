@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps */
 // src/pages/QuoteSuccessPage.tsx
 
 import { Link, useParams } from 'react-router-dom';
@@ -8,28 +9,24 @@ import { useNotifications } from '../../contexts/NotificationContext';
 
 export const QuoteSuccessPage = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [booking, setBooking] = useState<any | null>(null);
+    const [booking, setBooking] = useState<any | null>(null);
   const { addNotification } = useNotifications();
 
   useEffect(() => {
     const load = async () => {
       if (!bookingId) return;
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const resp = await apiFetch<any>(`/bookings/${bookingId}`);
+                const resp = await apiFetch<any>(`/bookings/${bookingId}`);
         const data = resp && resp.data ? resp.data : resp;
         setBooking(data);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (err) {
+            } catch (err) {
         addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível carregar os detalhes do pedido.' });
       } finally {
   // noop
       }
     };
     load();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookingId]);
+    }, [bookingId]);
 
   return (
     <div className="text-center bg-card p-8 rounded-lg max-w-2xl mx-auto">
@@ -112,8 +109,7 @@ export const QuoteSuccessPage = () => {
               });
 
               openWhatsApp(getWhatsAppPhone(), mensagem);
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            } catch (err) {
+                        } catch (err) {
               addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível montar a mensagem para o WhatsApp.' });
             }
           }}

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import { createAndClickAnchor, appendScriptIfNotExists } from '../dom';
@@ -9,13 +10,10 @@ describe('dom utils', () => {
     // spy on document body appendChild/removeChild
     const appendSpy = vi.spyOn(document.body, 'appendChild');
     const removeSpy = vi.spyOn(Node.prototype, 'removeChild');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!(window.URL && (window.URL as any).revokeObjectURL)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window.URL as any).revokeObjectURL = () => undefined;
+        if (!(window.URL && (window.URL as any).revokeObjectURL)) {
+            (window.URL as any).revokeObjectURL = () => undefined;
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const revokeSpy = vi.spyOn((window.URL as any), 'revokeObjectURL').mockImplementation(() => undefined);
+        const revokeSpy = vi.spyOn((window.URL as any), 'revokeObjectURL').mockImplementation(() => undefined);
 
     createAndClickAnchor({ href: 'http://example.com/file.txt', download: 'file.txt' });
     expect(appendSpy).toHaveBeenCalled();
@@ -30,8 +28,7 @@ describe('dom utils', () => {
   });
 
   it('appendScriptIfNotExists blocks unsafe src and returns null', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = appendScriptIfNotExists({ src: 'javascript:alert(1)' as any, async: true });
+        const result = appendScriptIfNotExists({ src: 'javascript:alert(1)' as any, async: true });
     expect(result).toBeNull();
   });
 });

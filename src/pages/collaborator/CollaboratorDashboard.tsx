@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Navigate, Link } from 'react-router-dom';
@@ -18,7 +19,6 @@ import {
 } from 'lucide-react';
 
 // Componente de Métricas Profissionais com Dados Reais
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ProfessionalMetrics: React.FC<{ data: any | null }> = ({ data }) => {
   if (!data) return null;
 
@@ -168,7 +168,6 @@ const UpcomingEvents: React.FC<{ events: DashboardEvent[] }> = ({ events }) => (
 );
 
 // Componente de Atividades Recentes
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const RecentActivities: React.FC<{ activities: any[] }> = ({ activities }) => (
   <SimpleCard 
     title="Atividades Recentes" 
@@ -215,11 +214,9 @@ const RecentActivities: React.FC<{ activities: any[] }> = ({ activities }) => (
 // Componente principal melhorado
 const CollaboratorDashboard: React.FC = () => {
   const { user } = useAuth();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [dashboard, setDashboard] = useState<any | null>(null);
+    const [dashboard, setDashboard] = useState<any | null>(null);
   const [events, setEvents] = useState<DashboardEvent[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [activities, setActivities] = useState<any[]>([]);
+    const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

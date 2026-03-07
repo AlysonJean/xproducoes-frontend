@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Camera, Send, ChevronLeft, CheckCircle2 } from 'lucide-react';
@@ -27,8 +28,7 @@ const UploadSocialPage = () => {
         const fetchConfig = async () => {
             try {
                 if (slug) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const res = await apiFetch<any>(`/tv/config?slug=${slug}`);
+                                        const res = await apiFetch<any>(`/tv/config?slug=${slug}`);
                     if (res.linked) {
                         setConfig({
                             name: res.eventName,

@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // ================================
 // INTERFACES PARA REQUESTS E RESPONSES DA API
 // ================================
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -29,8 +29,7 @@ export interface ApiError {
   message: string;
   statusCode: number;
   error?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  details?: any;
+    details?: any;
 }
 
 // ================================
@@ -51,8 +50,7 @@ export interface RegisterRequest {
 }
 
 export interface AuthResponse {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  user: any;
+    user: any;
   token: string;
   refreshToken?: string;
   expiresIn: number;
@@ -263,13 +261,11 @@ export interface ReportRequest {
   startDate: string;
   endDate: string;
   format?: 'json' | 'csv' | 'pdf';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  filters?: Record<string, any>;
+    filters?: Record<string, any>;
 }
 
 export interface ReportResponse {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any;
+    data: any;
   generatedAt: string;
   period: {
     startDate: string;
@@ -283,16 +279,14 @@ export interface ReportResponse {
 
 export interface SettingsUpdateRequest {
   key: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  value: any;
+    value: any;
   category?: string;
 }
 
 export interface SettingsResponse {
   id: string;
   key: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  value: any;
+    value: any;
   category: string;
   updatedAt: string;
 }
@@ -303,8 +297,7 @@ export interface SettingsResponse {
 
 export interface WebhookRequest {
   event: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any;
+    data: any;
   timestamp: string;
   signature?: string;
 }
@@ -325,8 +318,7 @@ export interface PaymentRequest {
   method: string;
   installments?: number;
   cardToken?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  metadata?: Record<string, any>;
+    metadata?: Record<string, any>;
 }
 
 export interface PaymentResponse {
@@ -346,8 +338,7 @@ export interface PaymentResponse {
 export interface LogRequest {
   level: 'info' | 'warn' | 'error' | 'debug';
   message: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  context?: Record<string, any>;
+    context?: Record<string, any>;
   userId?: string;
   sessionId?: string;
 }
@@ -358,8 +349,7 @@ export interface AuditLogResponse {
   entityType: string;
   entityId: string;
   userId: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  changes: Record<string, any>;
+    changes: Record<string, any>;
   timestamp: string;
   ipAddress?: string;
   userAgent?: string;

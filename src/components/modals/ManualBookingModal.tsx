@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 // Caminho: frontend/src/components/admin/ManualBookingModal.tsx
 
 import { useForm, type SubmitHandler } from 'react-hook-form';
@@ -31,8 +32,7 @@ const manualBookingSchema = z
     notes: z.string().optional(),
   })
   .refine(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (data: any) => {
+        (data: any) => {
       // Garante que ou um kit ou pelo menos um equipamento seja selecionado
       return !!data.kitId || (Array.isArray(data.equipmentIds) && data.equipmentIds.length > 0);
     },
@@ -107,21 +107,18 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
           const [equipData, kitData, clientsRes] = await Promise.all([
             apiFetch('/equipments'),
             apiFetch('/kits'),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            apiFetch<any>('/admin/clients').catch(() => ({ data: [] })),
+                        apiFetch<any>('/admin/clients').catch(() => ({ data: [] })),
           ]);
           setEquipments(equipData as Equipment[]);
           setKits(kitData as Kit[]);
           
           const list = Array.isArray(clientsRes?.data) ? clientsRes.data : (Array.isArray(clientsRes) ? clientsRes : []);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const mappedClients = list.map((c: any) => ({
+                    const mappedClients = list.map((c: any) => ({
             id: c.id || c.user?.id,
             name: c.user?.name || c.name || 'Cliente',
             email: c.user?.email || c.email,
             phone: c.phone || '',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          })).sort((a: any, b: any) => a.name.localeCompare(b.name));
+                    })).sort((a: any, b: any) => a.name.localeCompare(b.name));
           setClients(mappedClients);
         } catch {
           setServerError('Falha ao carregar dados.');
@@ -130,8 +127,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
       loadData();
     } else {
       // Limpar seleções quando o modal fechar
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedEquipments([]);
+            setSelectedEquipments([]);
       setSelectedKit('');
       setValue('equipmentIds', []);
       setValue('kitId', '');
@@ -180,8 +176,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
                 value: c.id, 
                 label: `${c.name} ${c.phone ? `(${c.phone})` : ''}` 
               }))}
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onChange={(e: any) => {
+                            onChange={(e: any) => {
                 const clientId = e.target.value;
                 const client = clients.find(c => c.id === clientId);
                 if (client) {

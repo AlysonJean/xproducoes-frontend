@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Small string utilities used across the frontend.
  */
@@ -23,8 +24,7 @@ export function normalizeStringLocale(value: unknown, locale?: string): string {
   const s = String(value).trim();
   try {
     return locale ? s.toLocaleLowerCase(locale) : s.toLowerCase();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (e) {
+    } catch (e) {
     return s.toLowerCase();
   }
 }

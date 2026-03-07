@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, 
@@ -316,15 +317,13 @@ export const AdminCollaboratorsPage: React.FC = () => {
               <Select
                 className="w-48 h-10 text-[10px] font-bold uppercase tracking-widest bg-muted/30"
                 value={selectedRole}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                onChange={(e: any) => setSelectedRole(e.target.value)}
+                                onChange={(e: any) => setSelectedRole(e.target.value)}
                 options={ROLE_OPTIONS}
               />
               <Select
                 className="w-44 h-10 text-[10px] font-bold uppercase tracking-widest bg-muted/30"
                 value={selectedStatus}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                onChange={(e: any) => setSelectedStatus(e.target.value)}
+                                onChange={(e: any) => setSelectedStatus(e.target.value)}
                 options={STATUS_OPTIONS}
               />
               <Button 

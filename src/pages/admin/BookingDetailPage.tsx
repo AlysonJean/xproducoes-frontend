@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -81,16 +82,14 @@ export const BookingDetailPage = () => {
   const [confirmPrice, setConfirmPrice] = useState('');
   const [confirmCollaboratorId, setConfirmCollaboratorId] = useState('');
   const [confirmRole, setConfirmRole] = useState('ASSISTANT');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [availableCollaborators, setAvailableCollaborators] = useState<any[]>([]);
+    const [availableCollaborators, setAvailableCollaborators] = useState<any[]>([]);
 
   const fetchBooking = useCallback(async () => {
     if (!id) return;
     try {
       setLoading(true);
       const res = await bookingAPI.getById(id);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setBooking((res.data && (res.data as any).data) as BookingDetails);
+            setBooking((res.data && (res.data as any).data) as BookingDetails);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Falha ao sincronizar detalhes do contrato.');
     } finally {
@@ -105,13 +104,10 @@ export const BookingDetailPage = () => {
   const fetchAvailableCollaborators = async () => {
     try {
       const res = await collaboratorsAPI.getAll();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (res && res.data && (res.data as any).data && Array.isArray((res.data as any).data)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setAvailableCollaborators((res.data as any).data);
+            if (res && res.data && (res.data as any).data && Array.isArray((res.data as any).data)) {
+                setAvailableCollaborators((res.data as any).data);
       }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (e) { /* ignore */ }
+        } catch (e) { /* ignore */ }
   };
 
   const handleExportBooking = () => {
@@ -128,8 +124,7 @@ export const BookingDetailPage = () => {
       await bookingAPI.delete(booking.id);
       addNotification({ type: 'success', title: 'Purga Concluída', message: 'Contrato removido do repositório ativo.' });
       navigate('/admin/reservas');
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (err: unknown) {
+        } catch (err: unknown) {
       addNotification({ type: 'error', title: 'Falha Crítica', message: 'Erro ao processar exclusão do contrato.' });
     } finally {
       setActionLoading(false);
@@ -143,8 +138,7 @@ export const BookingDetailPage = () => {
       await bookingAPI.updateStatus(bookingId, value);
       await fetchBooking();
       addNotification({ type: 'success', title: 'Estado Sincronizado', message: 'Status operativo atualizado.' });
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (err: unknown) {
+        } catch (err: unknown) {
       addNotification({ type: 'error', title: 'Erro de Protocolo', message: 'Falha ao comunicar alteração de status.' });
     } finally {
       setActionLoading(false);
@@ -155,8 +149,7 @@ export const BookingDetailPage = () => {
     if (!booking?.id) return;
     try {
       setActionLoading(true);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const payload: any = {};
+            const payload: any = {};
       if (confirmPrice) payload.totalPrice = Number(confirmPrice);
       if (confirmCollaboratorId) {
         payload.collaborators = [
@@ -170,8 +163,7 @@ export const BookingDetailPage = () => {
       await fetchBooking();
       setConfirmModalOpen(false);
       addNotification({ type: 'success', title: 'Contrato Ativado', message: 'Reserva validada e sincronizada.' });
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (err: unknown) {
+        } catch (err: unknown) {
       addNotification({ type: 'error', title: 'Falha na Ativação', message: 'Não foi possível confirmar os parâmetros financeiros.' });
     } finally {
       setActionLoading(false);
@@ -221,14 +213,12 @@ export const BookingDetailPage = () => {
   const requiredServices = useMemo(() => {
     if (!booking) return [];
     const services = new Set<string>();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const process = (items: any[]) => items.forEach(i => {
+        const process = (items: any[]) => items.forEach(i => {
         if (i.service?.name) services.add(i.service.name);
         else if (i.itemType === 'SERVICE' && i.name) services.add(i.name);
     });
     if (booking.kit?.items) process(booking.kit.items);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (booking.kits) booking.kits.forEach((k: any) => process(k.items || k.kit?.items || []));
+        if (booking.kits) booking.kits.forEach((k: any) => process(k.items || k.kit?.items || []));
     if (booking.services) process(booking.services);
     return Array.from(services);
   }, [booking]);
@@ -423,8 +413,7 @@ export const BookingDetailPage = () => {
                             </div>
                             <div className="flex items-center gap-4 pt-4">
                                 <Badge variant="outline" className="bg-muted h-7 px-3 text-[10px] font-black uppercase border-border/60">
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                    Duração Estimada: {(booking as any).estimatedDuration || '4h'}
+                                                                        Duração Estimada: {(booking as any).estimatedDuration || '4h'}
                                 </Badge>
                                 {isToday(new Date(booking.eventDate)) && (
                                     <Badge variant="success" className="h-7 px-3 text-[10px] font-black uppercase animate-pulse">
@@ -474,8 +463,7 @@ export const BookingDetailPage = () => {
                             <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest border-b border-border pb-2">Hardware & Combos</h4>
                             <div className="space-y-4">
                                 {((booking.kits && booking.kits.length > 0) || booking.kit) ? (
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                    (booking.kits || [booking.kit]).map((k: any, idx: number) => (
+                                                                        (booking.kits || [booking.kit]).map((k: any, idx: number) => (
                                         <div key={idx} className="flex items-center gap-3 p-3 rounded-2xl bg-muted/30 border border-border/40 group hover:border-primary/30 transition-colors">
                                            <div className="h-10 w-10 rounded-xl bg-card border border-border overflow-hidden flex items-center justify-center">
                                               <Package className="text-muted-foreground/40" size={18} />
@@ -574,8 +562,7 @@ export const BookingDetailPage = () => {
 
                    {booking.attachments && booking.attachments.length > 0 ? (
                        <Grid columns={{ sm: 2, md: 3, lg: 4 }} gap={4}>
-                           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                           {booking.attachments.map((a: any) => (
+                                                      {booking.attachments.map((a: any) => (
                                <div key={a.id} className="relative group overflow-hidden rounded-2xl border border-border/60 aspect-[4/3] bg-muted/30">
                                    <img src={a.url} alt={a.filename} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 p-4 text-center">
@@ -729,8 +716,7 @@ export const BookingDetailPage = () => {
                 <Select
                   className="h-12 bg-muted/30"
                   value={confirmCollaboratorId}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  onChange={(e: any) => setConfirmCollaboratorId(e.target.value)}
+                                    onChange={(e: any) => setConfirmCollaboratorId(e.target.value)}
                   options={[
                     { value: '', label: 'Não Atribuir No Momento' },
                     ...availableCollaborators.map(c => ({ value: c.id, label: c.name }))
@@ -743,8 +729,7 @@ export const BookingDetailPage = () => {
                   <Select
                     className="h-12 bg-muted/30"
                     value={confirmRole}
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    onChange={(e: any) => setConfirmRole(e.target.value)}
+                                        onChange={(e: any) => setConfirmRole(e.target.value)}
                     options={[
                         { value: 'PHOTOGRAPHER', label: 'Fotógrafo Líder' },
                         { value: 'ASSISTANT', label: 'Assistente Operacional' },
@@ -778,8 +763,7 @@ export const BookingDetailPage = () => {
              if (!booking?.id) return;
              try {
                 setActionLoading(true);
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const payload = assignments.map((a: any) => ({
+                                const payload = assignments.map((a: any) => ({
                    collaboratorId: a.collaboratorId,
                    role: a.role || 'PHOTOGRAPHER',
                    totalHours: a.estimatedHours || 0,
@@ -787,8 +771,7 @@ export const BookingDetailPage = () => {
                    totalPayment: (a.hourlyRate || 0) * (a.estimatedHours || 0)
                 }));
                 let totalPrice = booking.totalPrice ?? 0;
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                if (!totalPrice) totalPrice = payload.reduce((sum: number, c: any) => sum + (c.totalPayment || 0), 0);
+                                if (!totalPrice) totalPrice = payload.reduce((sum: number, c: any) => sum + (c.totalPayment || 0), 0);
                 await bookingAPI.confirmWithDetails(booking.id, { totalPrice, collaborators: payload });
                 await fetchBooking();
                 setEventModalOpen(false);

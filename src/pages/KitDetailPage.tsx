@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, User, Package } from 'lucide-react';
@@ -56,10 +57,8 @@ export const KitDetailPage = () => {
         const transformed = transformKit(data as Kit);
         setKit({
             ...transformed,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            prevSlug: (data as any).prevSlug,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            nextSlug: (data as any).nextSlug
+                        prevSlug: (data as any).prevSlug,
+                        nextSlug: (data as any).nextSlug
         });
         
         if (data) {
@@ -119,8 +118,7 @@ export const KitDetailPage = () => {
           title: 'Combo Adicionado', 
           message: `${kit.name} foi incluído no seu orçamento com desconto.` 
       });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (e: any) {
+        } catch (e: any) {
       addNotification({ 
           type: 'error', 
           title: 'Erro', 
@@ -352,8 +350,7 @@ export const KitDetailPage = () => {
                       const entity = item.equipment || item.service;
                       if (!entity) return null;
                       const isService = !!item.serviceId;
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      const price = isService ? (entity as any).price : (entity as any).pricePerHour;
+                                            const price = isService ? (entity as any).price : (entity as any).pricePerHour;
 
                       return (
                         <div key={item.id} className="group bg-muted/10 rounded-2xl p-5 hover:bg-muted/20 transition-all border border-border hover:border-primary/20 shadow-sm hover:shadow-md">
@@ -384,8 +381,7 @@ export const KitDetailPage = () => {
                                   {formatPrice(Number(price))}{isService ? '/serviço' : '/h'}
                                 </span>
                                 <Link 
-                                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                  to={isService ? `/servicos/${(entity as any).slug}` : `/equipamentos/${(entity as any).slug || entity.id}`} 
+                                                                    to={isService ? `/servicos/${(entity as any).slug}` : `/equipamentos/${(entity as any).slug || entity.id}`} 
                                   className="text-[10px] font-bold text-muted-foreground hover:text-primary underline-offset-4 hover:underline transition-colors uppercase tracking-widest"
                                 >
                                   Detalhes

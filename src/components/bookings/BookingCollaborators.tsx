@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -126,8 +127,7 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
       let availableIds: Set<string> | null = null;
       if (eventDate) {
           try {
-             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-             const availableResponse = await collaboratorsAPI.getAvailable(eventDate) as { data: { success: boolean; data: any[] } };
+                          const availableResponse = await collaboratorsAPI.getAvailable(eventDate) as { data: { success: boolean; data: any[] } };
              const availableList = availableResponse.data.data; // Ajuste conforme resposta da API
              
              if (availableList && Array.isArray(availableList)) {

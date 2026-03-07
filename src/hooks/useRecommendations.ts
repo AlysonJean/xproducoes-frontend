@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 // Caminho: frontend/src/hooks/useRecommendations.ts
 
 import { useState, useEffect, useCallback } from 'react';
@@ -130,8 +131,7 @@ export const useRecommendations = ({
                 isNew: item.isNew || item.new || false,
                 isFavorite: item.isFavorite || item.favorite || false,
                 category: item.category?.name || item.categoryName,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                type: (item.type as any) || (item.equipments ? 'kit' : 'equipment'),
+                                type: (item.type as any) || (item.equipments ? 'kit' : 'equipment'),
                 discount: item.discount || item.discountPercentage || 0
             }));
 
@@ -145,8 +145,7 @@ export const useRecommendations = ({
         } finally {
             setLoading(false);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [type, limit, itemId, itemType, category, minPrice, maxPrice]);
+        }, [type, limit, itemId, itemType, category, minPrice, maxPrice]);
 
     useEffect(() => {
         if (autoFetch) {

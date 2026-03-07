@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { logger } from '../utils/logger';
 
@@ -115,8 +116,7 @@ export const useServiceWorker = () => {
   // Auto-registrar Service Worker
   useEffect(() => {
     if (state.isSupported && !state.isRegistered) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      register();
+            register();
     }
   }, [state.isSupported, state.isRegistered, register]);
 

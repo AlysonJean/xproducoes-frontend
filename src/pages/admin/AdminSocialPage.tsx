@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { socialService, SocialPost } from '../../services/socialService';
@@ -50,8 +51,7 @@ const AdminSocialPage: React.FC = () => {
   const [tab, setTab] = useState<'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
   const [pairingCode, setPairingCode] = useState('');
   const [pairingLoading, setPairingLoading] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [wall, setWall] = useState<any>(null);
+    const [wall, setWall] = useState<any>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [allSponsors, setAllSponsors] = useState<SponsorLogo[]>([]);
   const [selectedSponsorIds, setSelectedSponsorIds] = useState<string[]>([]);
@@ -73,8 +73,7 @@ const AdminSocialPage: React.FC = () => {
         if (targetId) {
             const configRes = await socialService.getAdminWall(targetId);
             setWall(configRes.data);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            setSelectedSponsorIds(configRes.data.sponsors?.map((s: any) => s.id) || []);
+                        setSelectedSponsorIds(configRes.data.sponsors?.map((s: any) => s.id) || []);
         }
     } catch (error) {
         console.error('Failed to fetch posts', error);
@@ -149,8 +148,7 @@ const AdminSocialPage: React.FC = () => {
         
         addNotification({ type: 'success', title: 'TV Pareada', message: 'Conexão estabelecida com o telão com sucesso!' });
         setPairingCode('');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
+        } catch (error: any) {
         addNotification({ type: 'error', title: 'Falha de Pareamento', message: error.message || 'Código inválido ou expirado.' });
     } finally {
         setPairingLoading(false);
@@ -213,8 +211,7 @@ const AdminSocialPage: React.FC = () => {
         const updated = await socialService.getAdminWall(wall.id);
         setWall(updated.data);
         addNotification({ type: 'success', title: 'Configurações Salvas', message: 'Parâmetros do mural atualizados com êxito.' });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+        } catch (err: any) {
         addNotification({ 
           type: 'error', 
           title: 'Erro de Validação', 
@@ -315,8 +312,7 @@ const AdminSocialPage: React.FC = () => {
                     ].map((status) => (
                         <button
                             key={status.id}
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            onClick={() => setTab(status.id as any)}
+                                                        onClick={() => setTab(status.id as any)}
                             className={`flex-1 min-w-[150px] py-5 px-6 text-[10px] font-black uppercase tracking-widest transition-all relative flex items-center justify-center gap-2.5 ${
                                 tab === status.id 
                                 ? 'text-primary bg-primary/5' 
