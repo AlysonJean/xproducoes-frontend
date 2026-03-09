@@ -492,6 +492,14 @@ export const collaboratorProfileAPI = {
   // Responder a uma avaliação
   respondToReview: (reviewId: string, response: string) =>
     api.post(`/collaborators/me/reviews/${reviewId}/respond`, { response }),
+
+  // Alternar status de tarefa (Checklist)
+  toggleTask: (taskId: string, isCompleted: boolean) =>
+    api.put(`/bookings/tasks/${taskId}/toggle`, { isCompleted }),
+
+  // Adicionar despesa para reembolso
+  addExpense: (bookingId: string, data: { amount: number, description: string, receiptUrl?: string }) =>
+    api.post(`/bookings/${bookingId}/expenses`, data),
 };
 
 // ✅ RECOMMENDATION ENGINE API
@@ -552,4 +560,11 @@ export const collaboratorMessagesAPI = {
   // Enviar mensagem
   sendMessage: (chatId: string, content: string, messageType?: string) =>
     api.post(`/collaborator/messages/chats/${chatId}/messages`, { content, messageType: messageType || 'TEXT' }),
+};
+
+// ✅ API DE UPLOAD (Cloudinary)
+export const uploadAPI = {
+  uploadFile: (formData: FormData) => api.post('/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
 };
