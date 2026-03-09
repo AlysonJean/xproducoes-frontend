@@ -77,7 +77,7 @@ export const AdminQuickProposalPage = () => {
           apiFetch<Service[]>('/services')
         ]);
         
-        setClients(Array.isArray(clientsRes) ? clientsRes : (clientsRes as any).data || []);
+        setClients(Array.isArray(clientsRes) ? clientsRes : (clientsRes as unknown as { data: Client[] }).data || []);
         setEquipments(equipsRes || []);
         setKits(kitsRes || []);
         setServices(servicesRes || []);
@@ -94,16 +94,16 @@ export const AdminQuickProposalPage = () => {
     return items.reduce((sum, item) => sum + item.totalPrice, 0);
   }, [items]);
 
-  const addItemToProposal = (type: ProposalItem['type'], item: any) => {
+  const addItemToProposal = (type: ProposalItem['type'], item: Equipment | Kit | Service) => {
     const newItem: ProposalItem = {
       id: Math.random().toString(36).substr(2, 9),
       type,
       sourceId: item.id,
       description: item.name,
       quantity: 1,
-      unitPrice: Number(item.dailyPrice || item.price || 0),
+      unitPrice: Number((item as Equipment).dailyPrice || (item as Kit | Service).price || 0),
       discount: 0,
-      totalPrice: Number(item.dailyPrice || item.price || 0),
+      totalPrice: Number((item as Equipment).dailyPrice || (item as Kit | Service).price || 0),
       imageUrl: item.imageUrl
     };
     setItems(prev => [...prev, newItem]);
