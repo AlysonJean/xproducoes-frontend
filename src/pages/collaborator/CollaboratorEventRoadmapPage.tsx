@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
 import { collaboratorProfileAPI, collaboratorMessagesAPI, uploadAPI } from '../../services/api';
