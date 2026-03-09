@@ -15,7 +15,9 @@ import {
   ArrowUpRight,
   CheckCircle,
   User,
-  Target
+  Target,
+  Clock,
+  MessageSquare
 } from 'lucide-react';
 
 // Componente de Métricas Profissionais com Dados Reais
@@ -71,8 +73,6 @@ const ProfessionalMetrics: React.FC<{ data: any | null }> = ({ data }) => {
   );
 };
 
-
-
 // Componente de Próximos Eventos Melhorado
 const UpcomingEvents: React.FC<{ events: DashboardEvent[] }> = ({ events }) => (
   <SimpleCard 
@@ -95,8 +95,9 @@ const UpcomingEvents: React.FC<{ events: DashboardEvent[] }> = ({ events }) => (
     ) : (
       <div className="space-y-4">
         {events.slice(0, 4).map((event: DashboardEvent, index: number) => (
-          <div
+          <Link
             key={event.id || index}
+            to={`/colaborador/evento/${event.id}/roadmap`}
             className="flex items-center justify-between p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors duration-200 border border-border/30 group cursor-pointer"
           >
             <div className="flex items-center space-x-4">
@@ -124,18 +125,9 @@ const UpcomingEvents: React.FC<{ events: DashboardEvent[] }> = ({ events }) => (
                     </svg>
                     {new Date(event.startTime).toLocaleDateString('pt-BR')}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                  <span className="flex items-center gap-1 text-xs">
+                    <Clock className="w-3.5 h-3.5" />
                     {new Date(event.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    {event.location || 'Local não definido'}
                   </span>
                 </div>
               </div>
@@ -160,7 +152,7 @@ const UpcomingEvents: React.FC<{ events: DashboardEvent[] }> = ({ events }) => (
                 {formatPrice(event.totalPayment || 0)}
               </p>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     )}
@@ -177,7 +169,6 @@ const RecentActivities: React.FC<{ activities: any[] }> = ({ activities }) => (
       </button>
     }
   >
-
     {activities.length === 0 ? (
       <div className="text-center py-8">
         <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
@@ -214,9 +205,9 @@ const RecentActivities: React.FC<{ activities: any[] }> = ({ activities }) => (
 // Componente principal melhorado
 const CollaboratorDashboard: React.FC = () => {
   const { user } = useAuth();
-    const [dashboard, setDashboard] = useState<any | null>(null);
+  const [dashboard, setDashboard] = useState<any | null>(null);
   const [events, setEvents] = useState<DashboardEvent[]>([]);
-    const [activities, setActivities] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -226,7 +217,6 @@ const CollaboratorDashboard: React.FC = () => {
         const payload = resp.data?.data ?? resp.data;
         setDashboard(payload);
 
-        // Usar dados reais da API
         if (payload.upcomingEvents) {
           setEvents(payload.upcomingEvents);
         }
@@ -243,7 +233,6 @@ const CollaboratorDashboard: React.FC = () => {
     fetchDashboardData();
   }, []);
 
-  // Redirect se não for colaborador
   if (user?.role !== 'COLLABORATOR') {
     return <Navigate to="/painel" replace />;
   }
@@ -265,7 +254,6 @@ const CollaboratorDashboard: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-8">
-          {/* Boas-vindas personalizada */}
           <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-6 rounded-xl">
             <div className="flex items-center justify-between">
               <div>
@@ -278,29 +266,22 @@ const CollaboratorDashboard: React.FC = () => {
               </div>
               <div className="hidden md:block">
                 <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
+                  <User className="w-8 h-8 text-white" />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Métricas Simples com Dados Reais */}
           <ProfessionalMetrics data={dashboard} />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Próximos Eventos */}
             <UpcomingEvents events={events} />
-
-            {/* Atividades Recentes */}
             <RecentActivities activities={activities} />
           </div>
 
-          {/* Ações Rápidas Melhoradas */}
           <SimpleCard title="Ações Rápidas">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Link to="/collaborator/schedule" className="flex flex-col items-center justify-center min-h-[120px] p-6 bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-xl transition-all group active:scale-95">
+              <Link to="/colaborador/agenda" className="flex flex-col items-center justify-center min-h-[120px] p-6 bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-xl transition-all group active:scale-95">
                 <div className="w-14 h-14 bg-primary/20 rounded-xl flex items-center justify-center mb-3 group-hover:bg-primary/30 transition-colors">
                   <Calendar className="w-7 h-7 text-primary" />
                 </div>
@@ -308,7 +289,7 @@ const CollaboratorDashboard: React.FC = () => {
                 <span className="text-xs text-muted-foreground mt-1 text-center">Calendário completo de eventos</span>
               </Link>
 
-              <Link to="/collaborator/profile" className="flex flex-col items-center justify-center min-h-[120px] p-6 bg-muted/30 hover:bg-muted/50 border border-border/30 rounded-xl transition-all group active:scale-95">
+              <Link to="/colaborador/perfil" className="flex flex-col items-center justify-center min-h-[120px] p-6 bg-muted/30 hover:bg-muted/50 border border-border/30 rounded-xl transition-all group active:scale-95">
                 <div className="w-14 h-14 bg-muted rounded-xl flex items-center justify-center mb-3 group-hover:bg-muted/80 transition-colors">
                   <User className="w-7 h-7 text-muted-foreground" />
                 </div>
@@ -316,23 +297,21 @@ const CollaboratorDashboard: React.FC = () => {
                 <span className="text-xs text-muted-foreground mt-1 text-center">Minhas informações</span>
               </Link>
 
-              <button className="flex flex-col items-center justify-center min-h-[120px] p-6 bg-muted/30 hover:bg-muted/50 border border-border/30 rounded-xl transition-all group active:scale-95">
+              <Link to="/colaborador/mensagens" className="flex flex-col items-center justify-center min-h-[120px] p-6 bg-muted/30 hover:bg-muted/50 border border-border/30 rounded-xl transition-all group active:scale-95">
                 <div className="w-14 h-14 bg-muted rounded-xl flex items-center justify-center mb-3 group-hover:bg-muted/80 transition-colors">
-                  <svg className="w-7 h-7 text-muted-foreground" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z" clipRule="evenodd" />
-                  </svg>
+                  <MessageSquare className="w-7 h-7 text-muted-foreground" />
                 </div>
                 <span className="font-semibold text-foreground text-sm">Mensagens</span>
                 <span className="text-xs text-muted-foreground mt-1 text-center">Falar com a base</span>
-              </button>
+              </Link>
 
-              <button className="flex flex-col items-center justify-center min-h-[120px] p-6 bg-muted/30 hover:bg-muted/50 border border-border/30 rounded-xl transition-all group active:scale-95">
+              <Link to="/colaborador/ganhos" className="flex flex-col items-center justify-center min-h-[120px] p-6 bg-muted/30 hover:bg-muted/50 border border-border/30 rounded-xl transition-all group active:scale-95">
                 <div className="w-14 h-14 bg-muted rounded-xl flex items-center justify-center mb-3 group-hover:bg-muted/80 transition-colors">
                   <CheckCircle className="w-7 h-7 text-muted-foreground" />
                 </div>
-                <span className="font-semibold text-foreground text-sm">Checklists</span>
-                <span className="text-xs text-muted-foreground mt-1 text-center">Tarefas do evento</span>
-              </button>
+                <span className="font-semibold text-foreground text-sm">Financeiro</span>
+                <span className="text-xs text-muted-foreground mt-1 text-center">Ganhos e pagamentos</span>
+              </Link>
             </div>
           </SimpleCard>
         </div>
@@ -342,4 +321,3 @@ const CollaboratorDashboard: React.FC = () => {
 };
 
 export default CollaboratorDashboard;
-

@@ -473,6 +473,9 @@ export const collaboratorProfileAPI = {
   // Obter todos os eventos do colaborador
   getMyEvents: () => api.get('/collaborators/me/events'),
 
+  // Obter roadmap detalhado de um evento
+  getEventRoadmap: (bookingId: string) => api.get(`/bookings/roadmap/${bookingId}`),
+
   // Obter notificações do colaborador
   getMyNotifications: () => api.get('/collaborators/me/notifications'),
 

@@ -140,6 +140,9 @@ const CollaboratorProfilePage = lazy(() =>
 const CollaboratorEarningsPage = lazy(() =>
   import('./pages/collaborator/CollaboratorEarningsPage').then((m) => ({ default: m.default }))
 );
+const CollaboratorEventRoadmapPage = lazy(() =>
+  import('./pages/collaborator/CollaboratorEventRoadmapPage').then((m) => ({ default: m.default }))
+);
 const CollaboratorReportsPage = lazy(() =>
   import('./pages/collaborator/CollaboratorReportsPage').then((m) => ({ default: m.default }))
 );
@@ -489,6 +492,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute role="COLLABORATOR">
             <CollaboratorProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/colaborador/evento/:id/roadmap"
+        element={
+          <ProtectedRoute role="COLLABORATOR">
+            <CollaboratorEventRoadmapPage />
           </ProtectedRoute>
         }
       />
