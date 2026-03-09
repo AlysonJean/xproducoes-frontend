@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { describe, it, expect } from 'vitest';
 import {
   toNumber,
@@ -39,8 +39,8 @@ describe('typeSafeFormatters utilities', () => {
 
   describe('formatDate and formatDateTime', () => {
     it('returns empty string for null/undefined/invalid dates', () => {
-            expect(formatDate(null as any)).toBe('');
-            expect(formatDateTime(undefined as any)).toBe('');
+            expect(formatDate(null as unknown as Date)).toBe('');
+            expect(formatDateTime(undefined as unknown as Date)).toBe('');
       expect(formatDate('invalid-date')).toBe('');
     });
 
@@ -102,8 +102,8 @@ describe('typeSafeFormatters utilities', () => {
     it('safely applies defaults and parses numeric fields', () => {
       const input: Partial<Equipment> = {
         id: 'eq1',
-                name: undefined as any,
-                dailyPrice: '199,90' as any,
+                name: undefined,
+                dailyPrice: '199,90' as unknown as number,
         status: undefined,
       };
       const eq = safeTransformEquipment(input);
@@ -117,9 +117,9 @@ describe('typeSafeFormatters utilities', () => {
 
   describe('validateKit', () => {
     it('validates required fields: name, positive price, non-empty equipments', () => {
-            const invalid1: Partial<Kit> = { name: 'Kit', price: 0, equipments: [] as any };
-            const invalid2: Partial<Kit> = { name: 'Kit', price: 'abc' as any, equipments: [] as any };
-            const invalid3: Partial<Kit> = { name: '', price: 100, equipments: [{ id: 'e1', name: 'E', equipments: [] } as any] };
+            const invalid1: Partial<Kit> = { name: 'Kit', price: 0, equipments: [] as unknown as Equipment[] };
+            const invalid2: Partial<Kit> = { name: 'Kit', price: 'abc' as unknown as number, equipments: [] as unknown as Equipment[] };
+            const invalid3: Partial<Kit> = { name: '', price: 100, equipments: [{ id: 'e1', name: 'E', equipments: [] } as unknown as Equipment] };
 
       expect(validateKit(invalid1)).toBe(false);
       expect(validateKit(invalid2)).toBe(false);
@@ -127,8 +127,8 @@ describe('typeSafeFormatters utilities', () => {
 
       const valid: Partial<Kit> = {
         name: 'Bundle',
-                price: '1.000,00' as any,
-                equipments: [{ id: 'e1', name: 'E1' } as any],
+                price: '1.000,00' as unknown as number,
+                equipments: [{ id: 'e1', name: 'E1' } as unknown as Equipment],
       };
       expect(validateKit(valid)).toBe(true);
     });

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import api from './api';
 
 export interface SocialPost {
@@ -62,12 +62,12 @@ export const socialService = {
 
   // Standalone Features
   createWall: async (data: { name: string; hashtag: string; slug?: string; autoApprove?: boolean }) => {
-        const response = await api.post<{ data: any }>('/admin/social/create', data);
+        const response = await api.post<{ data: Record<string, unknown> }>('/admin/social/create', data);
     return response.data;
   },
 
   listWalls: async () => {
-        const response = await api.get<{ data: any[] }>('/admin/social/walls');
+        const response = await api.get<{ data: Record<string, unknown>[] }>('/admin/social/walls');
     return response.data;
   },
 
@@ -94,22 +94,22 @@ export const socialService = {
   },
 
   pairDevice: async (data: { pairingCode: string; settingId?: string; eventId?: string; deviceName?: string }) => {
-        const response = await api.post<{ data: any }>('/tv/pair', data);
+        const response = await api.post<{ data: Record<string, unknown> }>('/tv/pair', data);
     return response.data;
   },
 
   getWallConfig: async (id: string) => {
-        const response = await api.get<any>(`/tv/config?settingId=${id}`);
+        const response = await api.get<Record<string, unknown>>(`/tv/config?settingId=${id}`);
     return response.data;
   },
 
   getAdminWall: async (id: string) => {
-        const response = await api.get<{ data: any }>(`/admin/social/walls/${id}`);
+        const response = await api.get<{ data: Record<string, unknown> }>(`/admin/social/walls/${id}`);
     return response.data;
   },
 
-    updateWall: async (id: string, data: any) => {
-        const response = await api.put<{ data: any }>(`/admin/social/walls/${id}`, data);
+    updateWall: async (id: string, data: Record<string, unknown>) => {
+        const response = await api.put<{ data: Record<string, unknown> }>(`/admin/social/walls/${id}`, data);
     return response.data;
   }
 };

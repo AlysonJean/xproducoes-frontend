@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { BookingStatus } from '../enums';
 import { Equipment, Kit } from './equipment';
 import { User } from './user';
@@ -94,7 +94,7 @@ export interface CalendarBooking {
   kits?: Kit[];
   collaborators?: Array<{
     collaboratorId?: string;
-        collaborator?: any;
+        collaborator?: unknown;
     role?: string;
   }>;
   internalNotes?: string;
@@ -127,8 +127,8 @@ export interface BookingDetails {
     totalHours?: number;
     totalPayment?: number;
     collaboratorId?: string;
-        collaborator?: any;
-        payments?: any[];
+        collaborator?: unknown;
+        payments?: unknown[];
   }>;
   attachments?: Array<{
     id?: string;
@@ -190,7 +190,7 @@ export interface CalendarEvent {
   title: string;
   start: Date;
   end: Date;
-    resource?: any;
+    resource?: unknown;
   allDay?: boolean;
   booking?: Booking;
   equipmentCount?: number;

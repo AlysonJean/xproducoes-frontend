@@ -18,7 +18,7 @@ import { ExperienceLevelSelector } from '../components/kits/ExperienceLevelSelec
 import { RecommendationSection } from '../components/ui/RecommendationSection';
 import { useRecommendations } from '../hooks/useRecommendations';
 import { PageLayout } from '../components/layouts/PageLayout';
-// import { Skeleton } from '../components/ui/StandardComponents';
+import { OptimizedImage } from '@/components/ui/OptimizedImage';
 
 export const KitDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -57,8 +57,8 @@ export const KitDetailPage = () => {
         const transformed = transformKit(data as Kit);
         setKit({
             ...transformed,
-                        prevSlug: (data as any).prevSlug,
-                        nextSlug: (data as any).nextSlug
+            prevSlug: (data as any).prevSlug,
+            nextSlug: (data as any).nextSlug
         });
         
         if (data) {
@@ -153,6 +153,11 @@ export const KitDetailPage = () => {
         "@type": "Organization",
         "name": "X Produções"
       }
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "5.0",
+      "reviewCount": "12"
     }
   } : undefined;
 
@@ -212,12 +217,13 @@ export const KitDetailPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative mb-12">
         {/* Kit Image Section */}
         <div className="relative group">
-          <img
+          <OptimizedImage
             src={
               kit.imageUrl ||
               `https://placehold.co/800x600/1a202c/ffffff?text=${kit.name.replace(/\s/g, '+')}`
             }
             alt={kit.name}
+            priority={true}
             className="w-full h-auto rounded-xl object-cover shadow-lg border border-border"
           />
           {savings > 0 && (
@@ -249,7 +255,7 @@ export const KitDetailPage = () => {
 
           <div className="bg-muted/30 p-6 rounded-2xl mb-8 border border-border shadow-inner">
             <div className="flex justify-between items-baseline mb-4">
-              <span className="text-muted-foreground font-semibold">Valor Especial do Kit</span>
+              <span className="text-muted-foreground font-semibold">Valor da Locação</span>
               <div className="text-right">
                 <div className="text-sm text-muted-foreground line-through opacity-60">
                     {formatPrice(totalItemsPrice)}
@@ -357,7 +363,7 @@ export const KitDetailPage = () => {
                           <div className="flex items-center space-x-5">
                             <div className="w-20 h-20 rounded-xl overflow-hidden shadow-inner flex-shrink-0 bg-card flex items-center justify-center relative">
                                 {entity.imageUrl ? (
-                                  <img
+                                  <OptimizedImage
                                     src={entity.imageUrl}
                                     alt={entity.name}
                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"

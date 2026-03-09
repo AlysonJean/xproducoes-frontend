@@ -219,9 +219,11 @@ const AdminServiceListPage = lazy(() => import('./pages/admin/AdminServiceListPa
 const AdminKitListPage = lazy(() => import('./pages/admin/AdminKitListPage').then((m) => ({ default: m.AdminKitListPage })));
 const ClientListPage = lazy(() => import('./pages/admin/ClientListPage'));
 const ClientEditPage = lazy(() => import('./pages/admin/ClientEditPage').then((m) => ({ default: m.ClientEditPage })));
+const AdminQuickProposalPage = lazy(() => import('./pages/admin/AdminQuickProposalPage'));
 
 // TV Page
 const TVPage = lazy(() => import('./pages/tv/TVPage'));
+const ProposalViewPage = lazy(() => import('./pages/ProposalViewPage'));
 const AdminBookingDetailPage = lazy(() => import('./pages/admin/BookingDetailPage').then((m) => ({ default: m.BookingDetailPage })));
 const AdminAnnouncementPage = lazy(() => import('./pages/admin/AdminAnnouncementPage'));
 
@@ -381,6 +383,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/orcamento-sucesso" element={<QuoteSuccessPage />} />
       <Route path="/reserva-sucesso" element={<BookingSuccessPage />} />
       <Route path="/reserva-sucesso/:id" element={<BookingSuccessPage />} />
+      <Route path="/proposta/:id" element={<ProposalViewPage />} />
 
       {/* Blog / Guides Routes */}
       <Route path="/guias" element={<GuideListPage />} />
@@ -632,6 +635,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute adminOnly>
             <AdminBookingDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/orcamentos/novo"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminQuickProposalPage />
           </ProtectedRoute>
         }
       />

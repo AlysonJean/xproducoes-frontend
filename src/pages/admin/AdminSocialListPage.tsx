@@ -51,7 +51,7 @@ const AdminSocialListPage: React.FC = () => {
         try {
             setLoading(true);
             const response = await socialService.listWalls();
-            setWalls(response.data || []);
+            setWalls((response.data as unknown as SocialWall[]) || []);
         } catch (error) {
             console.error('Failed to fetch walls', error);
             addNotification({ type: 'error', title: 'Erro', message: 'Falha ao sincronizar murais sociais.' });

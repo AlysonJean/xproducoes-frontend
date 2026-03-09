@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+
 // Utilitários para integração com WhatsApp
 // - Centraliza normalização de telefone, construção de mensagens e abertura do WhatsApp
 
@@ -12,7 +12,7 @@ export const getWhatsAppPhone = (opts?: { countryCode?: string }): string => {
   // .env (frontend):
   // VITE_WHATSAPP_PHONE -> número destino (pode conter +, espaços, etc.)
   // VITE_WHATSAPP_DDI   -> DDI para prefixar quando o número parecer local (ex.: 55 BR, 351 PT)
-    const envObj = (import.meta as any)?.env ?? {};
+    const envObj = (import.meta as unknown as { env?: Record<string, string> })?.env ?? {};
   const raw = (envObj.VITE_WHATSAPP_PHONE as string | undefined) || '';
   const ddi = (opts?.countryCode || (envObj.VITE_WHATSAPP_DDI as string) || '55').replace(/\D/g, '');
   const digits = normalizePhone(raw);
@@ -53,7 +53,7 @@ export const openWhatsApp = (phone: string, message: string): void => {
     // Fallback para casos de bloqueio de popup: cria um link e clica programaticamente
       try {
         createAndClickAnchor({ href: url, target: '_blank', rel: 'noopener noreferrer' });
-            } catch (err) {
+            } catch {
         console.warn('Não foi possível abrir o WhatsApp automaticamente.');
       }
   }
@@ -62,7 +62,7 @@ export const openWhatsApp = (phone: string, message: string): void => {
 export const buildQuoteMessage = (p: QuoteMessageParams): string => {
   const equipamentos = (p.items || [])
     .map((eq) => {
-            const name = (eq as any)?.name || (eq as any)?.equipment?.name;
+            const name = (eq as { name?: string })?.name || (eq as { equipment?: { name?: string } })?.equipment?.name;
       return name ? `- ${name}` : '';
     })
     .filter(Boolean)

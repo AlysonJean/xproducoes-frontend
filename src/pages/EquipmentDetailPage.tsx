@@ -15,9 +15,9 @@ import { RecommendationSection } from '../components/ui/RecommendationSection';
 import { useRecommendations } from '../hooks/useRecommendations';
 import { useNotifications } from '../contexts/NotificationContext';
 import { generateProductSchema } from '../utils/schemaGenerator';
-import { StructuredData } from '../components/seo/StructuredData';
 import { FavoriteButton } from '../components/ui/FavoriteButton';
 import CompareButton from '../components/ui/CompareButton';
+import { OptimizedImage } from '@/components/ui/OptimizedImage';
 
 export const EquipmentDetailPage = () => {
   const { ref: titleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
@@ -57,8 +57,8 @@ export const EquipmentDetailPage = () => {
         const transformed = transformEquipment(data as Equipment);
         setEquipment({
           ...transformed,
-                    prevSlug: (data as any).prevSlug,
-                    nextSlug: (data as any).nextSlug
+          prevSlug: (data as any).prevSlug,
+          nextSlug: (data as any).nextSlug
         });
 
         if (data) {
@@ -123,25 +123,25 @@ export const EquipmentDetailPage = () => {
     return id === equipment.id;
   });
 
+  // Generate the product schema using the centralized generator
+  const productSchema = generateProductSchema({
+    name: equipment.name,
+    description: equipment.description || `Aluguel de ${equipment.name} em BH`,
+    image: equipment.imageUrl || '',
+    sku: equipment.id,
+    price: equipment.pricePerHour,
+    availability: equipment.isAvailable ? 'InStock' : 'OutOfStock'
+  });
+
   return (
     <div className="bg-card p-6 md:p-8 rounded-lg shadow-2xl border border-border">
       <SEO
         title={equipment.name}
         description={equipment.description || `Aluguel de ${equipment.name} em Belo Horizonte. Equipamento profissional para eventos.`}
         image={equipment.imageUrl}
+        jsonLd={productSchema as any}
       />
       
-      <StructuredData 
-        schema={generateProductSchema({
-          name: equipment.name,
-          description: equipment.description || `Aluguel de ${equipment.name} em BH`,
-          image: equipment.imageUrl || '',
-          sku: equipment.id,
-          price: equipment.pricePerHour,
-          availability: equipment.isAvailable ? 'InStock' : 'OutOfStock'
-        })}
-      />
-
       {/* Navigation Arrows (Sidebar) */}
       {equipment.prevSlug && (
         <Link
@@ -189,9 +189,10 @@ export const EquipmentDetailPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative mb-12">
         {/* Image Section */}
         <div className="relative group">
-          <img
+          <OptimizedImage
             src={equipment.imageUrl || `https://placehold.co/800x600/1a202c/ffffff?text=${equipment.name.replace(/\s/g, '+')}`}
             alt={equipment.name}
+            priority={true}
             className="w-full h-auto rounded-xl object-cover shadow-lg border border-border"
           />
           <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

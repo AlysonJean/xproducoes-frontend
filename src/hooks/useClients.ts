@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useState, useCallback } from 'react';
 import type { Client } from '@/types/types';
 import { clientAPI } from '../services/api';
@@ -8,18 +8,18 @@ interface UseClientsReturn {
   clients: Client[];
   isLoading: boolean;
   error: string | null;
-    fetchClients: (filters?: any) => Promise<void>;
+    fetchClients: (filters?: Record<string, unknown>) => Promise<void>;
   deleteClient: (id: string) => Promise<void>;
-    meta: any;
+    meta: Record<string, unknown> | null;
 }
 
 export const useClients = (): UseClientsReturn => {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-    const [meta, setMeta] = useState<any>(null);
+    const [meta, setMeta] = useState<Record<string, unknown> | null>(null);
 
-    const fetchClients = useCallback(async (filters?: any) => {
+    const fetchClients = useCallback(async (filters?: Record<string, unknown>) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -33,8 +33,8 @@ export const useClients = (): UseClientsReturn => {
       } else {
         setClients(asArray(result));
       }
-        } catch (err: any) {
-      setError(err?.message || 'Erro ao buscar clientes');
+        } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : String(err)) || 'Erro ao buscar clientes');
     } finally {
       setIsLoading(false);
     }
@@ -45,8 +45,8 @@ export const useClients = (): UseClientsReturn => {
       setError(null);
       await clientAPI.delete(id);
       setClients((prev) => prev.filter((c) => c.id !== id));
-        } catch (err: any) {
-      setError(err?.message || 'Erro ao remover cliente');
+        } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : String(err)) || 'Erro ao remover cliente');
       throw err;
     }
   };

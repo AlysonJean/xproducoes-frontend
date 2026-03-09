@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 // src/utils/sentry.ts
 import * as Sentry from '@sentry/react';
 import { SentryErrorFallback } from '@/components/SentryErrorFallback';
@@ -10,10 +10,10 @@ export const initSentry = () => {
   if (!SENTRY_DSN) {
     console.warn('⚠️ Sentry DSN não configurado. Monitoramento de erros desativado.');
     // Sentry is optional. Return a safe no-op API so callers don't need to null-check.
-        const noop = () => undefined as any;
+        const noop = () => undefined;
     return {
       setUserContext: noop,
-            ErrorBoundary: ({ children }: any) => children,
+            ErrorBoundary: ({ children }: { children: React.ReactNode }) => children,
       ErrorFallback: SentryErrorFallback,
       captureException: noop,
       captureMessage: noop,
@@ -101,7 +101,7 @@ export const initSentry = () => {
   }
 
   // Set user context if available
-    const setUserContext = (user: any) => {
+    const setUserContext = (user: { id?: string; email?: string; name?: string; role?: string } | null) => {
     if (user) {
       Sentry.setUser({
         id: user.id,

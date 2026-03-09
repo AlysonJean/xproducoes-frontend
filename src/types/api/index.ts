@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 // ================================
 // INTERFACES PARA REQUESTS E RESPONSES DA API
 // ================================
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
@@ -29,7 +29,7 @@ export interface ApiError {
   message: string;
   statusCode: number;
   error?: string;
-    details?: any;
+    details?: unknown;
 }
 
 // ================================
@@ -50,7 +50,7 @@ export interface RegisterRequest {
 }
 
 export interface AuthResponse {
-    user: any;
+    user: unknown;
   token: string;
   refreshToken?: string;
   expiresIn: number;
@@ -261,11 +261,11 @@ export interface ReportRequest {
   startDate: string;
   endDate: string;
   format?: 'json' | 'csv' | 'pdf';
-    filters?: Record<string, any>;
+    filters?: Record<string, unknown>;
 }
 
 export interface ReportResponse {
-    data: any;
+    data: unknown;
   generatedAt: string;
   period: {
     startDate: string;
@@ -279,14 +279,14 @@ export interface ReportResponse {
 
 export interface SettingsUpdateRequest {
   key: string;
-    value: any;
+    value: unknown;
   category?: string;
 }
 
 export interface SettingsResponse {
   id: string;
   key: string;
-    value: any;
+    value: unknown;
   category: string;
   updatedAt: string;
 }
@@ -297,7 +297,7 @@ export interface SettingsResponse {
 
 export interface WebhookRequest {
   event: string;
-    data: any;
+    data: unknown;
   timestamp: string;
   signature?: string;
 }
@@ -318,7 +318,7 @@ export interface PaymentRequest {
   method: string;
   installments?: number;
   cardToken?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 
 export interface PaymentResponse {
@@ -338,7 +338,7 @@ export interface PaymentResponse {
 export interface LogRequest {
   level: 'info' | 'warn' | 'error' | 'debug';
   message: string;
-    context?: Record<string, any>;
+    context?: Record<string, unknown>;
   userId?: string;
   sessionId?: string;
 }
@@ -349,7 +349,7 @@ export interface AuditLogResponse {
   entityType: string;
   entityId: string;
   userId: string;
-    changes: Record<string, any>;
+    changes: Record<string, unknown>;
   timestamp: string;
   ipAddress?: string;
   userAgent?: string;
