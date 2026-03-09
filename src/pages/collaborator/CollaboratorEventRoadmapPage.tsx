@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
 import { collaboratorProfileAPI, collaboratorMessagesAPI, uploadAPI } from '../../services/api';
@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { useSocket } from '../../hooks/useSocket';
+
 const CollaboratorEventRoadmapPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [booking, setBooking] = useState<any>(null);
@@ -36,8 +38,8 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'roadmap' | 'rider' | 'checklist' | 'logistics' | 'team' | 'chat'>('roadmap');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
-  
-  // Expense Form State
+
+  // Expense Form State (Restored)
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseDesc, setExpenseDesc] = useState('');
@@ -47,6 +49,47 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Socket.IO Integration
+  const { on, emit, isConnected } = useSocket(id ? `event:${id}` : undefined);
+
+  // Listen for real-time updates
+  useEffect(() => {
+    if (!isConnected) return;
+
+    const cleanupMessage = on('new_message', (newMessage: any) => {
+      setBooking((prev: any) => {
+        if (!prev || !prev.chats?.[0]) return prev;
+        const chat = prev.chats[0];
+        // Evita duplicados se o remetente for eu (já add localmente ou via refetch)
+        const exists = chat.messages?.some((m: any) => m.id === newMessage.id);
+        if (exists) return prev;
+
+        return {
+          ...prev,
+          chats: [{
+            ...chat,
+            messages: [...(chat.messages || []), newMessage]
+          }]
+        };
+      });
+    });
+
+    const cleanupTask = on('task_updated', (updatedTask: any) => {
+      setBooking((prev: any) => {
+        if (!prev || !prev.tasks) return prev;
+        return {
+          ...prev,
+          tasks: prev.tasks.map((t: any) => t.id === updatedTask.id ? updatedTask : t)
+        };
+      });
+    });
+
+    return () => {
+      cleanupMessage();
+      cleanupTask();
+    };
+  }, [isConnected, on]);
 
   const fetchRoadmap = React.useCallback(async () => {
     try {
@@ -54,12 +97,17 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
       const resp = await collaboratorProfileAPI.getEventRoadmap(id);
       const data = resp.data?.data || resp.data;
       setBooking(data);
+      
+      // Entrar na sala do chat especificamente se houver chat
+      if (data.chats?.[0]?.id) {
+        emit('join_chat', data.chats[0].id);
+      }
     } catch (error) {
       console.error('Erro ao carregar roadmap:', error);
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, emit]);
 
   useEffect(() => {
     fetchRoadmap();
@@ -78,9 +126,10 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
     setSending(true);
     try {
       const chatId = booking.chats[0].id;
+      // Enviamos via API mas o Socket.IO vai emitir para todos na sala
       await collaboratorMessagesAPI.sendMessage(chatId, message);
       setMessage('');
-      await fetchRoadmap();
+      // Não precisamos mais de fetchRoadmap() aqui, o socket tratará o update
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
     } finally {
@@ -91,6 +140,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
   const handleToggleTask = async (taskId: string, currentStatus: boolean) => {
     try {
       await collaboratorProfileAPI.toggleTask(taskId, !currentStatus);
+      // Update local otimista (será reforçado pelo evento do socket se o backend emitir)
       setBooking((prev: any) => ({
         ...prev,
         tasks: prev.tasks.map((t: any) => 
@@ -352,6 +402,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 bg-primary text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-primary/90 transition-all shadow-md active:scale-95"
+                            aria-label="Abrir localização no Google Maps"
                           >
                             <Navigation className="w-3.5 h-3.5" /> Abrir GPS
                           </a>
@@ -375,6 +426,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
                              <a 
                                href={`tel:${booking.venueContactPhone.replace(/\D/g,'')}`}
                                className="p-2.5 bg-accent text-accent-light rounded-xl shadow-md active:scale-90"
+                               aria-label={`Ligar para ${booking.venueContactName || 'Staff Local'}`}
                              >
                                <Phone className="w-4 h-4" />
                              </a>
@@ -432,6 +484,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
                                           type="button" 
                                           onClick={()=>setReceiptUrl('')}
                                           className="p-1.5 bg-success/20 rounded-lg text-success hover:bg-success/30"
+                                          aria-label="Remover recibo carregado"
                                        >
                                           <X className="w-3.5 h-3.5" />
                                        </button>
@@ -442,7 +495,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
                                       onClick={() => fileInputRef.current?.click()}
                                       disabled={uploadingReceipt}
                                       className="flex-1 flex items-center justify-center gap-2 p-3 bg-white border border-dashed border-primary/30 rounded-xl text-primary hover:bg-primary/5 transition-all text-xs font-bold"
-                                      title="Tirar Foto ou Upload de Recibo"
+                                      aria-label="Tirar Foto ou Upload de Recibo"
                                     >
                                       {uploadingReceipt ? <BrandLoader size="sm" /> : <><Camera className="w-4 h-4" /> Tirar Foto / Upload</>}
                                     </button>
@@ -453,6 +506,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
                                     ref={fileInputRef} 
                                     accept="image/*" 
                                     onChange={handleFileUpload}
+                                    aria-label="Selecionar foto do recibo"
                                   />
                                </div>
                             </div>
@@ -671,7 +725,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
                     type="submit" 
                     className="aspect-square w-16 flex items-center justify-center bg-primary text-white rounded-2xl hover:bg-primary/90 transition-all shadow-xl active:scale-90 disabled:opacity-50 group shrink-0"
                     disabled={sending || !message.trim()}
-                    title="Enviar Mensagem"
+                    aria-label="Enviar Mensagem"
                   >
                     {sending ? <BrandLoader size="sm" /> : <Send className="w-7 h-7 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />}
                   </button>
