@@ -49,8 +49,8 @@ export default function ProposalViewPage() {
   useEffect(() => {
     const fetchProposal = async () => {
       try {
-        const data = await apiFetch<any>(`/bookings/${id}`);
-        const result = data.data || data;
+        const data = await apiFetch<Proposal | { data: Proposal }>(`/bookings/${id}`);
+        const result = 'data' in data ? data.data : data;
         setProposal(result);
       } catch (error) {
         console.error('Erro ao buscar proposta:', error);
