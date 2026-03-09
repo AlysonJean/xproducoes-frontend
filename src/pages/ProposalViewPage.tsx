@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch } from '@/services/api';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { 
@@ -37,6 +37,7 @@ interface Proposal {
   location: string;
   totalPrice: number;
   items: ProposalItem[];
+  clientId?: string;
 }
 
 export default function ProposalViewPage() {

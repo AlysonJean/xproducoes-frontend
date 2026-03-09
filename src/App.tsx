@@ -219,7 +219,7 @@ const AdminServiceListPage = lazy(() => import('./pages/admin/AdminServiceListPa
 const AdminKitListPage = lazy(() => import('./pages/admin/AdminKitListPage').then((m) => ({ default: m.AdminKitListPage })));
 const ClientListPage = lazy(() => import('./pages/admin/ClientListPage'));
 const ClientEditPage = lazy(() => import('./pages/admin/ClientEditPage').then((m) => ({ default: m.ClientEditPage })));
-const AdminQuickProposalPage = lazy(() => import('./pages/admin/AdminQuickProposalPage'));
+const AdminQuickProposalPage = lazy(() => import('./pages/admin/AdminQuickProposalPage').then(m => ({ default: m.default })));
 
 // TV Page
 const TVPage = lazy(() => import('./pages/tv/TVPage'));
