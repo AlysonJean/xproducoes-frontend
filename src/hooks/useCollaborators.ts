@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import type { ICollaborator } from '@/types/types';
 import { useState } from 'react';
 import { asArray } from '../utils/normalize';
@@ -26,14 +26,24 @@ export const useCollaborators = (): UseCollaboratorsReturn => {
 
       // Busca dados reais da API
       const response = await api.get('/collaborators');
-      const rawData = asArray(response.data);
+      type RawCollaborator = {
+        id: string;
+        name?: string;
+        email?: string;
+        collaboratorRole?: string;
+        role?: string;
+        avatar?: string;
+        user?: { name?: string; email?: string; avatar?: string; avatarUrl?: string };
+      };
+      
+      const rawData = asArray<RawCollaborator>(response.data);
       
       // Mapear dados do backend (que podem vir aninhados com user) para o formato esperado pelo frontend
-            const mappedData = rawData.map((item: any) => ({
+            const mappedData = rawData.map((item) => ({
         ...item,
         name: item.user?.name || item.name || 'Sem nome',
         email: item.user?.email || item.email || 'Sem email',
-        role: item.collaboratorRole || item.role,
+        role: (item.collaboratorRole || item.role) as ICollaborator['role'],
         avatar: item.user?.avatar || item.user?.avatarUrl || item.avatar,
       }));
 

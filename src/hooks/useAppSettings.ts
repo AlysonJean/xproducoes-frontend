@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
+
 import { useState, useEffect } from 'react';
 import { apiFetch } from '../services/api';
 
@@ -69,8 +69,8 @@ export const useAppSettings = () => {
       }
       
       return data;
-        } catch (err: any) {
-      console.warn(`Backend unavailable (${err.message}), saving to localStorage only`);
+        } catch (err: unknown) {
+      console.warn(`Backend unavailable (${err instanceof Error ? err.message : String(err)}), saving to localStorage only`);
       
       if (updates.companyName !== undefined) {
         localStorage.setItem('companyName', updates.companyName || 'X Produções e Eventos');

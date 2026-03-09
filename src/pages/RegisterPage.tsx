@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
 import ReactGA from 'react-ga4';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -26,6 +26,8 @@ export const RegisterPage = () => {
   const [error, setError] = useState<string | null>(null);
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const bookingId = searchParams.get('bookingId');
 
   const {
     register,
@@ -45,7 +47,7 @@ export const RegisterPage = () => {
     setError(null);
     setLoading(true);
     try {
-      await authAPI.register(data);
+      await authAPI.register({ ...data, bookingId: bookingId || undefined });
       
       ReactGA.event({
         category: "auth",
@@ -81,8 +83,8 @@ export const RegisterPage = () => {
 
   return (
     <PageLayout
-      title="Criar Conta"
-      description="Preencha os dados abaixo para criar sua conta e aproveitar todos os benefícios."
+      title={bookingId ? 'Rastrear Proposta' : 'Criar Conta'}
+      description={bookingId ? 'Finalize seu cadastro para acompanhar seu orçamento' : 'Preencha os dados abaixo para criar sua conta e aproveitar todos os benefícios.'}
     >
       <div className="max-w-md mx-auto py-8">
         <Card className="p-8 shadow-xl border-border">
@@ -90,8 +92,14 @@ export const RegisterPage = () => {
             <div className="mx-auto h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
               <UserPlus className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Criar Conta</h1>
-            <p className="text-muted-foreground mt-1">Junte-se à nossa comunidade</p>
+            <h1 className="text-2xl font-bold text-foreground">
+              {bookingId ? 'Rastrear meu Orçamento' : 'Criar Conta'}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {bookingId 
+                ? `Finalize seu cadastro para acompanhar a proposta #${bookingId}` 
+                : 'Junte-se à nossa comunidade'}
+            </p>
           </div>
 
           {error && (

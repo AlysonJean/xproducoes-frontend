@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Booking, Equipment } from '@/types/types';
@@ -45,7 +45,7 @@ export const useDashboard = () => {
     try {
       // Busca dados reais do dashboard
       const data = await (await import('@/services/api')).apiFetch('/dashboard/stats');
-            setStats((data as any)?.data || {});
+            setStats((data as { data?: DashboardStats })?.data || {} as DashboardStats);
         } catch (error) {
       setError('Erro ao carregar dados do dashboard');
     } finally {

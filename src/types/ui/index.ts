@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 // ================================
@@ -194,15 +194,15 @@ export type ModalNames =
   | 'invite';
 
 export type ModalPropsMap = {
-    booking: any;
-    equipment: any;
-    kit: any;
-    payment: any;
-    profile: any;
-    contact: any;
-    whatsapp: any;
+    booking: unknown;
+    equipment: unknown;
+    kit: unknown;
+    payment: unknown;
+    profile: unknown;
+    contact: unknown;
+    whatsapp: unknown;
   imageGallery: ImageGalleryModalProps;
-    filter: any;
+    filter: unknown;
   confirm: ConfirmModalProps;
   alert: AlertModalProps;
   invite: {

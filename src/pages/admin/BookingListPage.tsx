@@ -33,7 +33,9 @@ import {
   Eye,
   Edit2,
   Download,
-  Filter
+  Filter,
+  Zap,
+  MessageSquare
 } from 'lucide-react';
 
 // Aux function for safe price parsing
@@ -219,6 +221,11 @@ export const BookingListPage = () => {
             <Button onClick={handleCreateManual} variant="outline" className="gap-2 border-primary/20 hover:border-primary/40">
               <Plus className="h-4 w-4" /> Reserva Manual
             </Button>
+            <Link to="/admin/orcamentos/novo">
+              <Button className="gap-2 bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white transition-all shadow-lg shadow-primary/5">
+                <Zap className="h-4 w-4" /> Criar Proposta Rápida
+              </Button>
+            </Link>
             <Button onClick={handleCreate} className="gap-2 shadow-lg shadow-primary/20">
               <Plus className="h-5 w-5" /> Nova Reserva
             </Button>
@@ -431,6 +438,20 @@ export const BookingListPage = () => {
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
                           </Link>
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-8 w-8 text-green-600 hover:bg-green-50 border-green-200" 
+                            onClick={() => {
+                              const url = `${window.location.origin}/proposta/${booking.id}`;
+                              const text = `Olá! Sou da X Produções. Segue o link com a sua proposta comercial exclusiva para o evento: ${url}`;
+                              const phone = (booking.client?.phone || '').replace(/\D/g, '');
+                              window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+                            }} 
+                            title="WhatsApp"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                          </Button>
                           <Button 
                             variant="outline" 
                             size="icon" 

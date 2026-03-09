@@ -1,19 +1,24 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 // ✅ PRODUCTION-SAFE LOGGING SYSTEM
 import type { LogLevel, LogEntry } from '@/types';
 
-// Lazy sentry getter to avoid circular dependency with main.tsx
-const getSentry = () => {
+interface SentryType {
+  addBreadcrumb?: (val: Record<string, unknown>) => void;
+  captureException?: (val: unknown, hints?: Record<string, unknown>) => void;
+  captureMessage?: (val: string, level?: string) => void;
+}
+
+const getSentry = (): SentryType | null => {
   try {
     // Dynamic import to avoid circular dependency
-        return (window as any).__SENTRY__;
+        return (window as unknown as { __SENTRY__?: SentryType }).__SENTRY__ || null;
   } catch {
     return null;
   }
 };
 
 class Logger {
-    private isDevelopment = (import.meta as any).env?.MODE === 'development';
+    private isDevelopment = (import.meta as unknown as { env?: { MODE?: string } }).env?.MODE === 'development';
 
   private formatMessage(level: LogLevel, message: string, context?: string): string {
     const prefix = context ? `[${context}]` : '';
@@ -101,8 +106,8 @@ class Logger {
 export const logger = new Logger();
 
 // Backward compatibility
-export function logDebug(...args: any[]) {
-    if ((import.meta as any).env?.MODE === 'development') {
+export function logDebug(...args: unknown[]) {
+    if ((import.meta as unknown as { env?: { MODE?: string } }).env?.MODE === 'development') {
     console.debug('[DEBUG]', ...args);
   }
 }

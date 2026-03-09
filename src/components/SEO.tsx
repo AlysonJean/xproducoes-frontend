@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 
@@ -9,7 +8,7 @@ interface SEOProps {
   image?: string;
   url?: string;
   type?: string;
-    jsonLd?: Record<string, any>;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
 }
 
 export const SEO: React.FC<SEOProps> = ({ 
@@ -35,7 +34,7 @@ export const SEO: React.FC<SEOProps> = ({
     "image": [image],
     "@id": "https://xproducoes.com.br",
     "url": "https://xproducoes.com.br",
-    "telephone": "+5531999999999", // Placeholder, deve ser substituído pelo real
+    "telephone": "+5531998522380", // Real phone
     "priceRange": "$$",
     "address": {
       "@type": "PostalAddress",
@@ -62,6 +61,13 @@ export const SEO: React.FC<SEOProps> = ({
     }
   };
 
+  // Logic to build a hybrid schema array (LocalBusiness + custom jsonLd from page)
+  const jsonLdArray = Array.isArray(jsonLd) 
+    ? [structuredData, ...jsonLd] 
+    : jsonLd 
+        ? [structuredData, jsonLd] 
+        : [structuredData];
+
   return (
     <Helmet>
       {/* Standard Metadata */}
@@ -85,9 +91,9 @@ export const SEO: React.FC<SEOProps> = ({
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={image} />
 
-      {/* Structured Data (JSON-LD) */}
+      {/* Structured Data (JSON-LD) Array-Based for rich hybrid snippets */}
       <script type="application/ld+json">
-        {JSON.stringify(jsonLd || structuredData)}
+        {JSON.stringify(jsonLdArray)}
       </script>
     </Helmet>
   );

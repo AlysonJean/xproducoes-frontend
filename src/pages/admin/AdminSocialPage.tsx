@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { socialService, SocialPost } from '../../services/socialService';
@@ -51,7 +51,7 @@ const AdminSocialPage: React.FC = () => {
   const [tab, setTab] = useState<'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
   const [pairingCode, setPairingCode] = useState('');
   const [pairingLoading, setPairingLoading] = useState(false);
-    const [wall, setWall] = useState<any>(null);
+    const [wall, setWall] = useState<Record<string, unknown> | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [allSponsors, setAllSponsors] = useState<SponsorLogo[]>([]);
   const [selectedSponsorIds, setSelectedSponsorIds] = useState<string[]>([]);
@@ -73,7 +73,7 @@ const AdminSocialPage: React.FC = () => {
         if (targetId) {
             const configRes = await socialService.getAdminWall(targetId);
             setWall(configRes.data);
-                        setSelectedSponsorIds(configRes.data.sponsors?.map((s: any) => s.id) || []);
+                        setSelectedSponsorIds((configRes.data.sponsors as {id: string}[] | undefined)?.map(s => s.id) || []);
         }
     } catch (error) {
         console.error('Failed to fetch posts', error);
@@ -148,8 +148,8 @@ const AdminSocialPage: React.FC = () => {
         
         addNotification({ type: 'success', title: 'TV Pareada', message: 'Conexão estabelecida com o telão com sucesso!' });
         setPairingCode('');
-        } catch (error: any) {
-        addNotification({ type: 'error', title: 'Falha de Pareamento', message: error.message || 'Código inválido ou expirado.' });
+        } catch (error: unknown) {
+        addNotification({ type: 'error', title: 'Falha de Pareamento', message: (error instanceof Error ? error.message : String(error)) || 'Código inválido ou expirado.' });
     } finally {
         setPairingLoading(false);
     }
@@ -193,12 +193,12 @@ const AdminSocialPage: React.FC = () => {
           setSavingSettings(true);
           const form = e.target as HTMLFormElement;
           const formData = new FormData(form);
-          const data = {
-              name: formData.get('name'),
-              slug: formData.get('slug'),
-              hashtag: formData.get('hashtag'),
-              layoutMode: formData.get('layoutMode'),
-              qrCodeText: formData.get('qrCodeText'),
+          const data: Record<string, unknown> = {
+              name: formData.get('name') as string,
+              slug: formData.get('slug') as string,
+              hashtag: formData.get('hashtag') as string,
+              layoutMode: formData.get('layoutMode') as string,
+              qrCodeText: formData.get('qrCodeText') as string,
               enableQrCode: formData.get('enableQrCode') === 'on',
               autoApprove: formData.get('autoApprove') === 'on',
               enableMosaic: formData.get('enableMosaic') === 'on',
@@ -206,16 +206,16 @@ const AdminSocialPage: React.FC = () => {
               sponsorIds: selectedSponsorIds
           };
 
-        await socialService.updateWall(wall.id, data);
+        await socialService.updateWall(wall.id as string, data);
         setIsSettingsOpen(false);
-        const updated = await socialService.getAdminWall(wall.id);
+        const updated = await socialService.getAdminWall(wall.id as string);
         setWall(updated.data);
         addNotification({ type: 'success', title: 'Configurações Salvas', message: 'Parâmetros do mural atualizados com êxito.' });
-        } catch (err: any) {
+        } catch (err: unknown) {
         addNotification({ 
           type: 'error', 
           title: 'Erro de Validação', 
-          message: err.response?.data?.error || 'Verifique se o slug ou hashtag já estão em uso.' 
+          message: (err as {response?: {data?: {error?: string}}})?.response?.data?.error || 'Verifique se o slug ou hashtag já estão em uso.' 
         });
     } finally {
         setSavingSettings(false);
@@ -240,11 +240,11 @@ const AdminSocialPage: React.FC = () => {
 
   return (
     <AdminLayout 
-        title={wall?.name ? `Mural: ${wall.name}` : "Social Moderation"}
+        title={wall?.name ? `Mural: ${wall.name as string}` : "Social Moderation"}
         breadcrumbs={[
             { name: 'Admin', href: '/admin/painel' },
             { name: 'Social Walls', href: '/admin/social' },
-            { name: wall?.name || 'Mural Operativo' }
+            { name: (wall?.name as string) || 'Mural Operativo' }
         ]}
     >
         <div className="space-y-8">
@@ -260,7 +260,7 @@ const AdminSocialPage: React.FC = () => {
                              <Badge variant="primary" className="text-[9px] font-black uppercase ring-1 ring-primary/20">LIVE</Badge>
                         </div>
                         <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 mt-0.5">
-                            Monitorando hashtag <span className="text-pink-600 font-black italic">#{stats.hashtag}</span>
+                            Monitorando hashtag <span className="text-pink-600 font-black italic">#{(stats.hashtag as string) || ''}</span>
                         </p>
                     </div>
                 </div>
@@ -312,7 +312,7 @@ const AdminSocialPage: React.FC = () => {
                     ].map((status) => (
                         <button
                             key={status.id}
-                                                        onClick={() => setTab(status.id as any)}
+                                                        onClick={() => setTab(status.id as 'PENDING' | 'APPROVED' | 'REJECTED')}
                             className={`flex-1 min-w-[150px] py-5 px-6 text-[10px] font-black uppercase tracking-widest transition-all relative flex items-center justify-center gap-2.5 ${
                                 tab === status.id 
                                 ? 'text-primary bg-primary/5' 
@@ -368,15 +368,15 @@ const AdminSocialPage: React.FC = () => {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Nome do Mural</label>
-                                <Input name="name" defaultValue={wall?.name} placeholder="Ex: Casamento Premium" />
+                                <Input name="name" defaultValue={(wall?.name as string) || ''} placeholder="Ex: Casamento Premium" />
                             </div>
                             <div>
                                 <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Hashtag Principal (#)</label>
-                                <Input name="hashtag" defaultValue={wall?.hashtag} placeholder="festa2024" />
+                                <Input name="hashtag" defaultValue={(wall?.hashtag as string) || ''} placeholder="festa2024" />
                             </div>
                             <div>
                                 <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Slug da URL (TV View)</label>
-                                <Input name="slug" defaultValue={wall?.slug} placeholder="festa-exclusiva" />
+                                <Input name="slug" defaultValue={(wall?.slug as string) || ''} placeholder="festa-exclusiva" />
                                 <p className="text-[9px] text-muted-foreground mt-1.5 font-medium italic">Acesso via: /tv?slug=seu-val</p>
                             </div>
                         </div>
@@ -390,25 +390,25 @@ const AdminSocialPage: React.FC = () => {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Orientação Física</label>
-                                <select name="layoutMode" defaultValue={wall?.layoutMode} className="w-full flex h-10 rounded-xl border border-input bg-card px-3 text-sm font-bold text-foreground" title="Selecione a orientação do layout">
+                                <select name="layoutMode" defaultValue={(wall?.layoutMode as string) || 'LANDSCAPE'} className="w-full flex h-10 rounded-xl border border-input bg-card px-3 text-sm font-bold text-foreground" title="Selecione a orientação do layout">
                                     <option value="LANDSCAPE">Horizontal (Padrão TV)</option>
                                     <option value="PORTRAIT">Vertical (Totem)</option>
                                 </select>
                             </div>
                             <div>
                                 <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Call-to-Action QR Code</label>
-                                <Input name="qrCodeText" defaultValue={wall?.qrCodeText} placeholder="Escaneie para participar" />
+                                <Input name="qrCodeText" defaultValue={(wall?.qrCodeText as string) || ''} placeholder="Escaneie para participar" />
                             </div>
                             <div className="grid grid-cols-1 gap-3 pt-2">
                                 <label className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors">
-                                    <input type="checkbox" name="enableQrCode" defaultChecked={wall?.enableQrCode} className="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
+                                    <input type="checkbox" name="enableQrCode" defaultChecked={Boolean(wall?.enableQrCode)} className="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
                                     <div className="flex flex-col">
                                         <span className="text-xs font-bold text-foreground uppercase tracking-widest">Ativar Instruções QR</span>
                                         <span className="text-[9px] text-muted-foreground font-medium">Renderiza o card de instruções na TV</span>
                                     </div>
                                 </label>
                                 <label className="flex items-center gap-3 p-3 rounded-xl border border-destructive/20 bg-destructive/5 cursor-pointer hover:bg-destructive/10 transition-colors">
-                                    <input type="checkbox" name="autoApprove" defaultChecked={wall?.autoApprove} className="w-4 h-4 rounded border-border text-destructive focus:ring-destructive" />
+                                    <input type="checkbox" name="autoApprove" defaultChecked={Boolean(wall?.autoApprove)} className="w-4 h-4 rounded border-border text-destructive focus:ring-destructive" />
                                     <div className="flex flex-col">
                                         <span className="text-xs font-bold text-destructive uppercase tracking-widest">Aprovação Automática</span>
                                         <span className="text-[9px] text-destructive/70 font-medium">Bypass total de moderação (Risco Crítico)</span>
