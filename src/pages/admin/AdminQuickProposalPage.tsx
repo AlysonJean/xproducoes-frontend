@@ -77,7 +77,7 @@ export const AdminQuickProposalPage = () => {
           apiFetch<Service[]>('/services')
         ]);
         
-        setClients(Array.isArray(clientsRes) ? clientsRes : clientsRes.data || []);
+        setClients(Array.isArray(clientsRes) ? clientsRes : (clientsRes as any).data || []);
         setEquipments(equipsRes || []);
         setKits(kitsRes || []);
         setServices(servicesRes || []);
@@ -388,4 +388,6 @@ export const AdminQuickProposalPage = () => {
       </div>
     </AdminLayout>
   );
-}
+};
+
+export default AdminQuickProposalPage;
