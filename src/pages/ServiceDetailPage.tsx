@@ -197,7 +197,7 @@ export const ServiceDetailPage = () => {
           />
           <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="lg" isService={true} />
-                        <CompareButton equipment={service as any} size="lg" />
+                        <CompareButton equipment={service as any} size="lg" itemType="service" />
           </div>
         </div>
 
@@ -209,7 +209,7 @@ export const ServiceDetailPage = () => {
             </h1>
             <div className="hidden lg:flex space-x-2">
                 <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="lg" isService={true} />
-                                <CompareButton equipment={service as any} size="lg" />
+                                <CompareButton equipment={service as any} size="lg" itemType="service" />
             </div>
           </div>
           

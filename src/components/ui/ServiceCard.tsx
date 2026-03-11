@@ -122,7 +122,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
 
         {(showCompare || showFavorite) && (
           <div className="absolute top-2 right-2 flex space-x-2 z-20">
-                        {showCompare && <CompareButton equipment={service as unknown as any} size="sm" />}
+            {showCompare && <CompareButton equipment={service as unknown as any} size="sm" itemType="service" />}
             {showFavorite && service.id && (
               <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="sm" isService={true} />
             )}
