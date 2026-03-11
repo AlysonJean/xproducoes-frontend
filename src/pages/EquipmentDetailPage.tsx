@@ -197,7 +197,7 @@ export const EquipmentDetailPage = () => {
           />
           <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <FavoriteButton equipmentId={equipment.id} equipmentName={equipment.name} size="lg" />
-                        <CompareButton equipment={equipment as any} size="lg" />
+                        <CompareButton equipment={equipment as any} size="lg" itemType="equipment" />
           </div>
         </div>
 
@@ -209,7 +209,7 @@ export const EquipmentDetailPage = () => {
             </h1>
             <div className="hidden lg:flex space-x-2">
                 <FavoriteButton equipmentId={equipment.id} equipmentName={equipment.name} size="lg" />
-                                <CompareButton equipment={equipment as any} size="lg" />
+                                <CompareButton equipment={equipment as any} size="lg" itemType="equipment" />
             </div>
           </div>
 

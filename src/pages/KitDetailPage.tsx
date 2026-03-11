@@ -233,7 +233,7 @@ export const KitDetailPage = () => {
           )}
           <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <FavoriteButton equipmentId={kit.id} equipmentName={kit.name} size="lg" />
-            <CompareButton equipment={{...kit, pricePerHour: kit.price} as unknown as Equipment} size="lg" />
+            <CompareButton equipment={{...kit, pricePerHour: kit.price} as unknown as Equipment} size="lg" itemType="kit" />
           </div>
         </div>
 
@@ -245,7 +245,7 @@ export const KitDetailPage = () => {
             </h1>
             <div className="hidden lg:flex space-x-2">
                 <FavoriteButton equipmentId={kit.id} equipmentName={kit.name} size="lg" />
-                <CompareButton equipment={{...kit, pricePerHour: kit.price} as unknown as Equipment} size="lg" />
+                <CompareButton equipment={{...kit, pricePerHour: kit.price} as unknown as Equipment} size="lg" itemType="kit" />
             </div>
           </div>
 

@@ -6,9 +6,10 @@ interface CompareButtonProps {
   equipment: Equipment;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
+  itemType?: 'equipment' | 'kit' | 'service';
 }
 
-const CompareButton = ({ equipment, className = '', size = 'md' }: CompareButtonProps) => {
+const CompareButton = ({ equipment, className = '', size = 'md', itemType }: CompareButtonProps) => {
   const { addItem: addToCompare, removeItem: removeFromCompare, isInCompare, items } = useCompare();
   const canAddMore = items.length < 4;
   const { addNotification } = useNotifications();
@@ -35,7 +36,7 @@ const CompareButton = ({ equipment, className = '', size = 'md' }: CompareButton
         return;
       }
 
-      addToCompare({ ...equipment, price: equipment.pricePerHour });
+      addToCompare({ ...equipment, price: equipment.pricePerHour || equipment.price, type: itemType || equipment.type || 'equipment' });
       addNotification({
         type: 'success',
         title: 'Adicionado à comparação',

@@ -135,7 +135,7 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
         {/* Botões de Favoritar e Comparar */}
         {(showCompare || showFavorite) && (
           <div className="absolute top-2 right-2 flex space-x-2 z-20">
-            {showCompare && <CompareButton equipment={equipment} size="sm" />}
+            {showCompare && <CompareButton equipment={equipment} size="sm" itemType="equipment" />}
             {showFavorite && equipment.id && (
               <FavoriteButton equipmentId={equipment.id} equipmentName={equipment.name} size="sm" />
             )}
