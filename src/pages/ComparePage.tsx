@@ -33,7 +33,7 @@ export const ComparePage = () => {
     addNotification({
       type: 'info',
       title: 'Comparação limpa',
-      message: 'Todos os equipamentos foram removidos da comparação',
+      message: 'Todos os itens foram removidos da comparação',
     });
   };
 
@@ -60,17 +60,29 @@ export const ComparePage = () => {
     }
   };
 
+  const getLinkPrefix = (type?: string) => {
+    if (type === 'service') return '/servicos';
+    if (type === 'kit') return '/kits';
+    return '/equipamentos';
+  };
+
+  const getTypeLabel = (type?: string) => {
+    if (type === 'kit') return 'Kit';
+    if (type === 'service') return 'Serviço';
+    return 'Equipamento';
+  };
+
   if (compareItems.length === 0) {
     return (
       <div className="text-center py-20">
         <SEO 
-          title="Comparar Equipamentos | X-Produções" 
-          description="Compare equipamentos lado a lado para escolher a melhor opção para seu evento."
+          title="Comparar Itens | X-Produções" 
+          description="Compare equipamentos, kits e serviços lado a lado para escolher a melhor opção para seu evento."
         />
         <div className="max-w-md mx-auto">
-      <div className="w-24 h-24 mx-auto mb-6 bg-muted rounded-full flex items-center justify-center">
+          <div className="w-24 h-24 mx-auto mb-6 bg-muted rounded-full flex items-center justify-center">
             <svg
-        className="w-12 h-12 text-muted-foreground"
+              className="w-12 h-12 text-muted-foreground"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -84,16 +96,16 @@ export const ComparePage = () => {
             </svg>
           </div>
           <h2 className="text-2xl font-bold mb-2 text-foreground">
-            Nenhum equipamento para comparar
+            Nenhum item para comparar
           </h2>
           <p className="text-muted-foreground mb-6">
-            Adicione equipamentos à comparação para ver as diferenças lado a lado.
+            Adicione equipamentos, kits ou serviços à comparação para ver as diferenças lado a lado.
           </p>
           <a
             href="/"
-            className="inline-flex items-center px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            className="btn btn-default btn-md rounded-lg"
           >
-            Explorar Equipamentos
+            Explorar Catálogo
           </a>
         </div>
       </div>
@@ -103,33 +115,33 @@ export const ComparePage = () => {
   return (
     <div className="space-y-6">
       <SEO 
-        title="Comparar Equipamentos | X-Produções" 
-        description="Compare as especificações técnicas, preços e detalhes dos equipamentos para seu evento."
+        title="Comparar Itens | X-Produções" 
+        description="Compare as especificações técnicas, preços e detalhes dos itens para seu evento."
       />
       <div className="flex justify-between items-center">
         <div>
-          <h1 ref={titleRef} className="text-3xl font-bold text-foreground heading-elegant">Comparar Equipamentos</h1>
-          <p className="text-muted-foreground">
-            Comparando {compareItems.length} equipamentos
+          <h1 ref={titleRef} className="text-3xl font-bold text-foreground heading-elegant">Comparar Itens</h1>
+          <p className="text-muted-foreground mt-1">
+            Comparando {compareItems.length} {compareItems.length === 1 ? 'item' : 'itens'}
           </p>
         </div>
         <button
           onClick={handleClearAll}
-          className="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors"
+          className="btn btn-destructive btn-sm"
         >
           Limpar Todos
         </button>
       </div>
 
-      <div className="overflow-x-auto">
-  <table className="w-full bg-card rounded-lg overflow-hidden border border-border">
+      <div className="overflow-x-auto rounded-lg border border-border">
+        <table className="w-full bg-card">
           <thead>
-            <tr>
-              <td className="p-4 font-semibold text-muted-foreground bg-muted sticky left-0 z-10 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
+            <tr className="bg-muted/50">
+              <td className="p-4 font-semibold text-foreground/70 sticky left-0 z-10 bg-muted/50 min-w-[140px]">
                 Atributo
               </td>
               {compareItems.map((item) => (
-                <td key={item.id} className="p-4 text-center bg-muted">
+                <td key={item.id} className="p-4 text-center min-w-[200px]">
                   <div className="relative">
                     <img
                       src={
@@ -140,11 +152,11 @@ export const ComparePage = () => {
                       onError={(e) => {
                         e.currentTarget.src = `https://placehold.co/200x150/1f2937/ffffff?text=${item.name.replace(/\s/g, '+')}`;
                       }}
-                      className="w-32 h-24 object-cover rounded-lg mx-auto mb-2"
+                      className="w-32 h-24 object-cover rounded-lg mx-auto mb-3"
                     />
                     <button
                       onClick={() => handleRemove(item.id, item.name)}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 transition-colors"
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 transition-colors text-xs flex items-center justify-center"
                       title="Remover da comparação"
                     >
                       ×
@@ -158,112 +170,70 @@ export const ComparePage = () => {
             </tr>
           </thead>
           <tbody>
+            {/* Tipo */}
             <tr className="border-t border-border">
-              <td className="p-4 font-medium sticky left-0 z-10 bg-card border-r border-border shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">Descrição</td>
+              <td className="p-4 font-medium text-foreground sticky left-0 z-10 bg-card">Tipo</td>
               {compareItems.map((item) => (
-                <td key={item.id} className="p-4 text-center text-sm text-muted-foreground">
-                  <p className="line-clamp-3 hover:line-clamp-none transition-all duration-300">
-                    {item.description || <span className="italic">Sem descrição</span>}
+                <td key={item.id} className="p-4 text-center">
+                  <span className="badge badge-secondary">
+                    {getTypeLabel(item.type)}
+                  </span>
+                </td>
+              ))}
+            </tr>
+
+            {/* Descrição */}
+            <tr className="border-t border-border bg-muted/30">
+              <td className="p-4 font-medium text-foreground sticky left-0 z-10 bg-muted/30">Descrição</td>
+              {compareItems.map((item) => (
+                <td key={item.id} className="p-4 text-sm text-foreground/80 text-left align-top">
+                  <p className="leading-relaxed whitespace-pre-line">
+                    {item.description || <span className="italic text-muted-foreground">Sem descrição</span>}
                   </p>
                 </td>
               ))}
             </tr>
-            <tr className="border-t border-border bg-muted">
-              <td className="p-4 font-medium sticky left-0 z-10 bg-muted border-r border-border shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">Preço</td>
+
+            {/* Preço */}
+            <tr className="border-t border-border">
+              <td className="p-4 font-medium text-foreground sticky left-0 z-10 bg-card">Preço</td>
               {compareItems.map((item) => (
                 <td key={item.id} className="p-4 text-center">
-                  <span className="text-lg font-semibold text-accent">
+                  <span className="text-xl font-bold text-foreground">
                     {formatPrice(item.price ?? 0)}
-                    <span className="text-sm font-normal ml-1">
-                      {item.type === 'service' ? '/ serviço' : '/ hora'}
-                    </span>
+                  </span>
+                  <span className="text-xs text-muted-foreground ml-1">
+                    {item.type === 'service' ? '/ serviço' : '/ hora'}
                   </span>
                 </td>
               ))}
             </tr>
-            <tr className="border-t border-border bg-muted">
-              <td className="p-4 font-medium sticky left-0 z-10 bg-muted border-r border-border shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">Tipo</td>
+
+            {/* Ações */}
+            <tr className="border-t border-border bg-muted/30">
+              <td className="p-4 font-medium text-foreground sticky left-0 z-10 bg-muted/30">Ações</td>
               {compareItems.map((item) => (
                 <td key={item.id} className="p-4 text-center">
-                  <span className="px-2 py-1 bg-accent/10 text-accent rounded-full text-xs">
-                    {item.type === 'kit' ? 'Kit' : item.type === 'service' ? 'Serviço' : 'Equipamento'}
-                  </span>
+                  <div className="space-y-2">
+                    <a
+                      href={`${getLinkPrefix(item.type)}/${(item as CompareItem).slug || item.id}`}
+                      className="btn btn-default btn-sm w-full justify-center text-sm"
+                    >
+                      Ver Detalhes
+                    </a>
+                    <button 
+                      onClick={() => handleAddToCart(item as CompareItem)}
+                      disabled={cart ? isItemInCart(item as CompareItem) : false}
+                      className={`btn btn-sm w-full justify-center text-sm
+                        ${cart && isItemInCart(item as CompareItem) 
+                          ? 'bg-success/10 text-success border border-success/20 cursor-not-allowed' 
+                          : 'btn-outline'}`}
+                    >
+                      {cart && isItemInCart(item as CompareItem) ? '✓ No Orçamento' : 'Adicionar ao Orçamento'}
+                    </button>
+                  </div>
                 </td>
               ))}
-            </tr>
-            <tr className="border-t border-border">
-              <td className="p-4 font-medium sticky left-0 z-10 bg-card border-r border-border shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">Especificações e Detalhes</td>
-              {compareItems.map((item) => {
-                const currentItem = item as CompareItem;
-                return (
-                  <td key={item.id} className="p-4 text-center text-sm text-muted-foreground">
-                    <div className="space-y-1">
-                      {item.type === 'service' ? (
-                        <div>
-                          <strong>Duração:</strong> {currentItem.duration ? `${(currentItem.duration / 60).toFixed(1).replace('.0', '')}h` : 'A combinar'}
-                        </div>
-                      ) : item.type === 'kit' ? (
-                        <div>
-                          <strong>Níveis Recomendados:</strong> {currentItem.experienceLevels ? currentItem.experienceLevels.join(', ') : 'Todos'}
-                        </div>
-                      ) : item.specifications ? (
-                        Object.entries(item.specifications).map(([key, value]) => (
-                          <div key={key}>
-                            <strong>{key}:</strong> {String(value)}
-                          </div>
-                        ))
-                      ) : (
-                        <span className="italic text-muted-foreground">Sem especificações</span>
-                      )}
-                    </div>
-                  </td>
-                );
-              })}
-            </tr>
-            <tr className="border-t border-border bg-muted">
-              <td className="p-4 font-medium sticky left-0 z-10 bg-muted border-r border-border shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">Adicionado em</td>
-              {compareItems.map((item) => (
-                <td key={item.id} className="p-4 text-center text-sm text-muted-foreground">
-                  {item.addedAt ? (
-                    item.addedAt.toLocaleDateString('pt-PT')
-                  ) : (
-                    <span className="italic text-muted-foreground">-</span>
-                  )}
-                </td>
-              ))}
-            </tr>
-            <tr className="border-t border-border">
-              <td className="p-4 font-medium sticky left-0 z-10 bg-card border-r border-border shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">Ações</td>
-              {compareItems.map((item) => {
-                const getLinkPrefix = (type?: string) => {
-                  if (type === 'service') return '/servicos';
-                  if (type === 'kit') return '/kits';
-                  return '/equipamentos';
-                };
-                
-                return (
-                  <td key={item.id} className="p-4 text-center">
-                    <div className="space-y-2">
-                      <a
-                        href={`${getLinkPrefix(item.type)}/${(item as CompareItem).slug || item.id}`}
-                        className="block w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors text-sm"
-                      >
-                        Ver Detalhes
-                      </a>
-                      <button 
-                        onClick={() => handleAddToCart(item as CompareItem)}
-                        disabled={cart ? isItemInCart(item as CompareItem) : false}
-                        className={`w-full py-2 px-4 rounded-lg transition-colors text-sm font-semibold
-                          ${cart && isItemInCart(item as CompareItem) 
-                            ? 'bg-success/10 text-success cursor-not-allowed' 
-                            : 'bg-muted text-foreground hover:bg-muted/70'}`}
-                      >
-                        {cart && isItemInCart(item as CompareItem) ? '✓ No Orçamento' : 'Adicionar ao Orçamento'}
-                      </button>
-                    </div>
-                  </td>
-                );
-              })}
             </tr>
           </tbody>
         </table>
