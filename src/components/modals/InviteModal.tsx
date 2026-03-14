@@ -12,8 +12,6 @@ export const InviteModal: React.FC<{
   const copy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-       
-      console.log('copied');
     } catch (e) {
        
       console.error('failed copy', e);

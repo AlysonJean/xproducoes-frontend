@@ -215,7 +215,6 @@ export const RecommendationsDemo = () => {
                     viewAllText="Ver Todos os Produtos"
                     columns={{ sm: 1, md: 2, lg: 4 }}
                     onItemClick={(item) => {
-                        console.log('Item clicado:', item);
                         addNotification({
                             type: 'info',
                             title: 'Item Clicado',
@@ -223,7 +222,6 @@ export const RecommendationsDemo = () => {
                         });
                     }}
                     onViewAll={() => {
-                        console.log('Ver todos clicado');
                         addNotification({
                             type: 'info',
                             title: 'Navegação',

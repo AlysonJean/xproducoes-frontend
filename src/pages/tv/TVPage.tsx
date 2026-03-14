@@ -330,21 +330,6 @@ const TVPage: React.FC = () => {
             fetchConfig();
         }
 
-        // Log para depuração
-        if (config) {
-             
-            console.log('Config carregado:', config);
-        }
-
-        // Diagnostic logs when config changes
-         
-        console.log('TV Debug - derived:', {
-            sponsorsCount: config?.sponsors?.length ?? 0,
-            enableQr: !!config?.enableQrCode,
-            slug: config?.slug,
-            layoutMode: config?.layoutMode,
-        });
-
         // Polling loop if not linked
         const interval = setInterval(() => {
             if (document.hidden) return; // Pausa polling se a aba não estiver visível
@@ -413,7 +398,6 @@ const TVPage: React.FC = () => {
 
         // Conecta sempre na porta correta do backend
         const socketUrl = window.location.hostname === 'localhost' ? 'http://localhost:4000' : API_URL;
-        console.log('Connecting to socket at:', socketUrl);
         const socket = io(socketUrl, {
             path: '/socket.io',
             transports: ['websocket', 'polling']
@@ -422,9 +406,7 @@ const TVPage: React.FC = () => {
         const roomId = config.settingId ? `wall:${config.settingId}` : `event:${config.eventId}`;
 
         socket.on('connect', () => {
-            console.log('Connected to WebSocket server');
             socket.emit('join', roomId);
-            console.log(`Joined room: ${roomId}`);
         });
 
         socket.on('connect_error', (error) => {
@@ -447,7 +429,6 @@ const TVPage: React.FC = () => {
         });
 
         socket.on('config:update', () => {
-            console.log('Real-time config update received');
             fetchConfig();
         });
 
@@ -562,28 +543,6 @@ const TVPage: React.FC = () => {
         setPosts(samplePosts);
     }, [config]);
 
-    // Debug: Inspect DOM for sponsor images when sponsors or posts change
-    useEffect(() => {
-        console.debug('TV Debug - sponsors changed', config?.sponsors);
-
-        const runCheck = (note: string) => {
-            if (typeof document !== 'undefined') {
-                const imgs = Array.from(document.querySelectorAll('.sponsor-debug-img')) as HTMLImageElement[];
-                console.log(`DOM sponsor imgs count (${note}):`, imgs.length, imgs.map(i => i.src));
-            }
-        };
-
-        // Run immediate and delayed checks to catch DOM updates after render
-        runCheck('immediate');
-        const t1 = setTimeout(() => runCheck('100ms'), 100);
-        const t2 = setTimeout(() => runCheck('500ms'), 500);
-
-        return () => {
-            clearTimeout(t1);
-            clearTimeout(t2);
-        };
-    }, [config?.sponsors, posts.length, activeIndex]);
-
     // Render Loading / Pairing / Error states
     if (!config && pairingCode) {
         return (
@@ -598,10 +557,6 @@ const TVPage: React.FC = () => {
 
     const isVerticalContent = true; // Match SlideComponent logic
     const showSidebarsAtMain = config?.layoutMode === 'LANDSCAPE' && isVerticalContent && ((config?.sponsors && config.sponsors.length > 0) || config?.enableQrCode);
-
-    // Diagnostic: log why sidebars may or may not display
-     
-    console.log('TV Debug - showSidebarsAtMain', { showSidebarsAtMain, layoutMode: config?.layoutMode, sponsorsCount: config?.sponsors?.length ?? 0, enableQr: !!config?.enableQrCode });
 
     if (posts.length === 0) {
         // Render a placeholder slide so sponsors and QR are visible even when there
