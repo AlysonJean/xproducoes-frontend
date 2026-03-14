@@ -51,6 +51,8 @@ export const AdminQuickProposalPage = () => {
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [clientContact, setClientContact] = useState('');
+  // Erros de campos (escopo global)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Form State - Evento
   const [eventTitle, setEventTitle] = useState('');
