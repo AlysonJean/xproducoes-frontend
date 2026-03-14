@@ -18,9 +18,14 @@ import {
   Settings,
   Send,
   Zap,
-  ArrowRight
+  ArrowRight,
+  AlertCircle
 } from 'lucide-react';
 import type { Client, Equipment, Kit, Service } from '@/types/types';
+import { apiFetch } from '@/services/api';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { BrandLoader } from '@/components/ui/BrandLoader';
+import { formatPrice } from '@/utils/formatPrice';
 
 interface ProposalItem {
   id: string;
@@ -33,28 +38,34 @@ interface ProposalItem {
   totalPrice: number;
   imageUrl?: string;
 }
-import { apiFetch } from '@/services/api';
-import { useNotifications } from '@/contexts/NotificationContext';
-import { BrandLoader } from '@/components/ui/BrandLoader';
-import { formatPrice } from '@/utils/formatPrice';
 
 export const AdminQuickProposalPage = () => {
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Form State
+  // Form State - Cliente
   const [clientType, setClientType] = useState<'registered' | 'manual'>('manual');
   const [selectedClientId, setSelectedClientId] = useState('');
   const [clientName, setClientName] = useState('');
-  const [clientEmail] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
   const [clientContact, setClientContact] = useState('');
+
+  // Form State - Evento
   const [eventTitle, setEventTitle] = useState('');
   const [location, setLocation] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventEndDate, setEventEndDate] = useState('');
   const [notes, setNotes] = useState('');
+
+  // Form State - Endereço (obrigatórios pelo backend)
+  const [street, setStreet] = useState('');
+  const [addressNumber, setAddressNumber] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [zipCode, setZipCode] = useState('');
 
   // Items State
   const [items, setItems] = useState<ProposalItem[]>([]);
@@ -70,19 +81,19 @@ export const AdminQuickProposalPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         const [clientsRes, equipsRes, kitsRes, servicesRes] = await Promise.all([
           apiFetch<Client[]>('/admin/clients'),
           apiFetch<Equipment[]>('/equipments'),
           apiFetch<Kit[]>('/kits'),
           apiFetch<Service[]>('/services')
         ]);
-        
         setClients(Array.isArray(clientsRes) ? clientsRes : (clientsRes as unknown as { data: Client[] }).data || []);
-        setEquipments(equipsRes || []);
-        setKits(kitsRes || []);
-        setServices(servicesRes || []);
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error);
+        setEquipments(Array.isArray(equipsRes) ? equipsRes : (equipsRes as unknown as { data: Equipment[] }).data || []);
+        setKits(Array.isArray(kitsRes) ? kitsRes : (kitsRes as unknown as { data: Kit[] }).data || []);
+        setServices(Array.isArray(servicesRes) ? servicesRes : (servicesRes as unknown as { data: Service[] }).data || []);
+      } catch (error: any) {
+        addNotification({ type: 'error', title: 'Erro ao carregar catálogo', message: error?.message || 'Falha ao buscar dados. Recarregue a página.' });
       } finally {
         setLoading(false);
       }
@@ -93,6 +104,13 @@ export const AdminQuickProposalPage = () => {
   const subtotal = useMemo(() => {
     return items.reduce((sum, item) => sum + item.totalPrice, 0);
   }, [items]);
+
+  const filteredCatalogItems = useMemo(() => {
+    const source = searchType === 'EQUIPMENT' ? equipments : searchType === 'KIT' ? kits : services;
+    if (!searchTerm.trim()) return source;
+    const lower = searchTerm.toLowerCase();
+    return source.filter((item: any) => item.name?.toLowerCase().includes(lower));
+  }, [searchType, searchTerm, equipments, kits, services]);
 
   const addItemToProposal = (type: ProposalItem['type'], item: Equipment | Kit | Service) => {
     const newItem: ProposalItem = {
@@ -136,49 +154,88 @@ export const AdminQuickProposalPage = () => {
     setItems(items.filter(i => i.id !== id));
   };
 
+  const validate = (): string | null => {
+    if (items.length === 0) return 'Adicione pelo menos um item ao orçamento.';
+    if (!eventDate) return 'Informe a data de início do evento.';
+    if (!eventEndDate) return 'Informe a data de término do evento.';
+    if (new Date(eventEndDate) <= new Date(eventDate)) return 'A data de término deve ser posterior à data de início.';
+    if (!location.trim()) return 'Informe o local do evento.';
+    if (!street.trim()) return 'Informe a rua do evento.';
+    if (!addressNumber.trim()) return 'Informe o número do endereço.';
+    if (!neighborhood.trim()) return 'Informe o bairro.';
+    if (!city.trim()) return 'Informe a cidade.';
+    if (!state.trim()) return 'Informe o estado (UF).';
+    if (!zipCode.trim()) return 'Informe o CEP.';
+    if (clientType === 'manual') {
+      if (!clientName.trim()) return 'Informe o nome do cliente.';
+      if (!clientContact.trim()) return 'Informe o contato (WhatsApp) do cliente.';
+    } else if (clientType === 'registered' && !selectedClientId) {
+      return 'Selecione um cliente cadastrado.';
+    }
+    // Garantir que há pelo menos um item de catálogo (schema exige kitId ou equipmentIds ou serviceIds)
+    const hasCatalogItem = items.some(i => i.type !== 'CUSTOM' && i.sourceId);
+    if (!hasCatalogItem) return 'Adicione pelo menos um equipamento, kit ou serviço do catálogo.';
+    return null;
+  };
+
   const handleSave = async (status: 'DRAFT' | 'PENDING') => {
-    if (items.length === 0) {
-      addNotification({ type: 'error', title: 'Vazio', message: 'Adicione pelo menos um item.' });
+    const validationError = validate();
+    if (validationError) {
+      addNotification({ type: 'error', title: 'Campo obrigatório', message: validationError });
       return;
     }
 
     try {
       setSaving(true);
-      const payload = {
-        clientType,
+
+      // Extrair IDs de cada tipo de item (como o backend espera)
+      const equipmentIds = items.filter(i => i.type === 'EQUIPMENT' && i.sourceId).map(i => i.sourceId!);
+      const serviceIds = items.filter(i => i.type === 'SERVICE' && i.sourceId).map(i => i.sourceId!);
+      const kitIdItem = items.find(i => i.type === 'KIT' && i.sourceId);
+
+      // Itens CUSTOM entram nas observações
+      const customItemsText = items
+        .filter(i => i.type === 'CUSTOM')
+        .map(i => `• ${i.description} (R$ ${i.unitPrice} x ${i.quantity})`)
+        .join('\n');
+      const fullNotes = customItemsText ? `${notes}\n\nItens personalizados:\n${customItemsText}`.trim() : notes;
+
+      const payload: Record<string, unknown> = {
         clientId: clientType === 'registered' ? selectedClientId : undefined,
-        clientName,
-        clientEmail,
-        clientContact,
-        eventTitle,
+        clientName: clientType === 'manual' ? clientName : undefined,
+        clientContact: clientType === 'manual' ? clientContact : undefined,
+        clientEmail: clientType === 'manual' ? clientEmail : undefined,
+        eventTitle: eventTitle || 'Proposta Rápida',
         location,
-        eventDate: eventDate || new Date().toISOString(),
-        eventEndDate: eventEndDate || new Date().toISOString(),
-        notes,
+        street,
+        addressNumber,
+        neighborhood,
+        city,
+        state,
+        zipCode,
+        eventDate: new Date(eventDate).toISOString(),
+        eventEndDate: new Date(eventEndDate).toISOString(),
+        notes: fullNotes,
         totalPrice: subtotal,
         status,
-        items: items.map(i => ({
-          description: i.description,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-          discount: i.discount,
-          totalPrice: i.totalPrice,
-          itemType: i.type,
-          equipmentId: i.type === 'EQUIPMENT' ? i.sourceId : undefined,
-          serviceId: i.type === 'SERVICE' ? i.sourceId : undefined,
-          kitId: i.type === 'KIT' ? i.sourceId : undefined
-        }))
+        ...(equipmentIds.length > 0 && { equipmentIds }),
+        ...(serviceIds.length > 0 && { serviceIds }),
+        ...(kitIdItem?.sourceId && { kitId: kitIdItem.sourceId }),
       };
 
-      const response = await apiFetch<any>('/bookings', {
+      const response = await apiFetch<{ success: boolean; data: { id: string } }>('/bookings', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
 
-      addNotification({ type: 'success', title: 'Sucesso', message: 'Orçamento criado!' });
-      navigate(`/admin/reservas/${response.id || response.data?.id}`);
+      const bookingId = response?.data?.id;
+      if (!bookingId) throw new Error('Reserva criada mas ID não retornado.');
+
+      addNotification({ type: 'success', title: 'Proposta gerada!', message: 'O link de proposta está disponível na página da reserva.' });
+      navigate(`/admin/reservas/${bookingId}`);
     } catch (error: any) {
-      addNotification({ type: 'error', title: 'Erro', message: error.message || 'Falha ao salvar.' });
+      const msg = error?.message || 'Falha ao salvar. Verifique os campos e tente novamente.';
+      addNotification({ type: 'error', title: 'Erro ao gerar proposta', message: msg });
     } finally {
       setSaving(false);
     }
@@ -234,12 +291,13 @@ export const AdminQuickProposalPage = () => {
                       label="Selecionar Cliente"
                       value={selectedClientId}
                       onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedClientId(e.target.value)}
-                      options={clients.map(c => ({ value: c.id, label: c.user?.name || c.name }))}
+                      options={[{ value: '', label: 'Selecione...' }, ...clients.map(c => ({ value: c.id, label: c.user?.name || c.name }))]}
                     />
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Input label="Nome Completo" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Ex: João Silva" />
-                      <Input label="WhatsApp / Celular" value={clientContact} onChange={e => setClientContact(e.target.value)} placeholder="(00) 00000-0000" />
+                      <Input label="Nome Completo *" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Ex: João Silva" />
+                      <Input label="WhatsApp / Celular *" value={clientContact} onChange={e => setClientContact(e.target.value)} placeholder="(00) 00000-0000" />
+                      <Input label="E-mail" value={clientEmail} onChange={e => setClientEmail(e.target.value)} placeholder="Ex: joao@email.com" type="email" />
                     </div>
                   )}
                </div>
@@ -326,9 +384,25 @@ export const AdminQuickProposalPage = () => {
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <Input label="Título do Evento" value={eventTitle} onChange={e => setEventTitle(e.target.value)} placeholder="Ex: Casamento João & Maria" />
-                 <Input label="Local / Salão" value={location} onChange={e => setLocation(e.target.value)} placeholder="Ex: Espaço VIP" />
-                 <Input label="Início Previsto" type="datetime-local" value={eventDate} onChange={e => setEventDate(e.target.value)} />
-                 <Input label="Término Previsto" type="datetime-local" value={eventEndDate} onChange={e => setEventEndDate(e.target.value)} />
+                 <Input label="Local / Salão *" value={location} onChange={e => setLocation(e.target.value)} placeholder="Ex: Espaço VIP" />
+                 <Input label="Início Previsto *" type="datetime-local" value={eventDate} onChange={e => setEventDate(e.target.value)} />
+                 <Input label="Término Previsto *" type="datetime-local" value={eventEndDate} onChange={e => setEventEndDate(e.target.value)} />
+               </div>
+
+               <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+                 <div className="flex items-center gap-2 text-muted-foreground font-bold uppercase text-[10px] tracking-widest">
+                   <AlertCircle className="h-3 w-3" /> Endereço do Evento (obrigatório)
+                 </div>
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                   <Input label="CEP *" value={zipCode} onChange={e => setZipCode(e.target.value)} placeholder="00000-000" className="md:col-span-1" />
+                   <Input label="Rua *" value={street} onChange={e => setStreet(e.target.value)} placeholder="Ex: Av. Brasil" className="md:col-span-2" />
+                 </div>
+                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                   <Input label="Número *" value={addressNumber} onChange={e => setAddressNumber(e.target.value)} placeholder="Ex: 123" />
+                   <Input label="Bairro *" value={neighborhood} onChange={e => setNeighborhood(e.target.value)} placeholder="Ex: Centro" />
+                   <Input label="Cidade *" value={city} onChange={e => setCity(e.target.value)} placeholder="Ex: Belo Horizonte" />
+                   <Input label="UF *" value={state} onChange={e => setState(e.target.value)} placeholder="Ex: MG" maxLength={2} />
+                 </div>
                </div>
                <div className="mt-4">
                  <Textarea label="Observações Internas (Não aparecem na proposta)" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Ex: Cliente chorou desconto, negociar frete se fechar hoje." />
@@ -349,7 +423,7 @@ export const AdminQuickProposalPage = () => {
                        key={type}
                        onClick={() => setSearchType(type)}
                        className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${
-                         searchType === type ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'
+                         searchType === type ? 'bg-card shadow-sm text-primary dark:bg-card' : 'text-muted-foreground hover:text-foreground'
                        }`}
                      >
                        {type === 'EQUIPMENT' ? 'Equips' : type === 'KIT' ? 'Kits' : 'Serviços'}
@@ -359,15 +433,17 @@ export const AdminQuickProposalPage = () => {
 
                 <Input 
                   placeholder="Pesquisar..." 
-                  className="bg-white border-none h-10 mb-4" 
+                  className="bg-background border-none h-10 mb-4" 
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                 />
 
                 <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                  {(searchType === 'EQUIPMENT' ? equipments : searchType === 'KIT' ? kits : services)
-                    .map((item: any) => (
-                      <div key={item.id} className="group p-3 rounded-xl border border-border bg-white hover:border-primary/40 transition-all cursor-pointer shadow-sm hover:shadow-md" onClick={() => addItemToProposal(searchType, item)}>
+                  {filteredCatalogItems.length === 0 && (
+                    <p className="text-center text-xs text-muted-foreground py-6">Nenhum item encontrado.</p>
+                  )}
+                  {filteredCatalogItems.map((item: any) => (
+                      <div key={item.id} className="group p-3 rounded-xl border border-border bg-card hover:border-primary/40 transition-all cursor-pointer hover:shadow-md" onClick={() => addItemToProposal(searchType, item)}>
                         <div className="flex justify-between items-start gap-2">
                            <div className="min-w-0">
                              <p className="font-bold text-xs truncate group-hover:text-primary transition-colors">{item.name}</p>
@@ -380,7 +456,7 @@ export const AdminQuickProposalPage = () => {
                            </div>
                         </div>
                       </div>
-                    ))}
+                  ))}
                 </div>
              </Card>
           </div>
