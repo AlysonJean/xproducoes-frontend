@@ -106,7 +106,6 @@ export const EventManagement: React.FC<EventManagementProps> = ({
   const confirmDeleteProof = () => {
     if (proofToDelete) {
       // Aqui seria chamada a API para excluir o comprovante
-      console.log('Excluindo comprovante:', proofToDelete);
       // Por enquanto, apenas fecha o modal
       setShowDeleteProofModal(false);
       setProofToDelete(null);

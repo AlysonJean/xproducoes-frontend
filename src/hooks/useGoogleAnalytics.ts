@@ -15,7 +15,6 @@ export const useGoogleAnalytics = () => {
       const timeoutId = setTimeout(() => {
         ReactGA.initialize(gaId);
         setInitialized(true);
-        console.log('Google Analytics Initialized (Deferred)');
       }, 3000); // 3 second delay
 
       return () => clearTimeout(timeoutId);

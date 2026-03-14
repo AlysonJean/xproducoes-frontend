@@ -74,8 +74,6 @@ export const BookingDetailsPage = () => {
       setShowDeleteProofModal(false);
       setProofToDelete(null);
 
-      // Aqui você pode adicionar uma notificação de sucesso
-      console.log('Comprovante excluído com sucesso');
     } catch (error) {
       console.error('Erro ao excluir comprovante:', error);
       // Aqui você pode adicionar uma notificação de erro
@@ -125,8 +123,6 @@ export const BookingDetailsPage = () => {
       if (fileInput) {
         fileInput.value = '';
       }
-
-      console.log('Comprovante enviado com sucesso');
     } catch (error) {
       console.error('Erro ao enviar comprovante:', error);
     } finally {
