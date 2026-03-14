@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   Card, 
   Button, 
@@ -42,6 +43,7 @@ interface ProposalItem {
 export const AdminQuickProposalPage = () => {
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -203,6 +205,7 @@ export const AdminQuickProposalPage = () => {
       const fullNotes = customItemsText ? `${notes}\n\nItens personalizados:\n${customItemsText}`.trim() : notes;
 
       const payload: Record<string, unknown> = {
+        userId: user?.id,
         clientId: clientType === 'registered' ? selectedClientId : undefined,
         clientName: clientType === 'manual' ? clientName : undefined,
         clientContact: clientType === 'manual' ? clientContact : undefined,
