@@ -16,13 +16,14 @@ export default function WhatsappPage() {
       const data = await apiFetch('/whatsapp/status') as { isReady: boolean; qrCode: string | null };
       setStatus(data);
     } catch (error) {
-      console.error('Erro ao buscar status do WhatsApp', error);
+      // Silenciar erro - tentará novamente na próxima iteração
     }
   };
 
   useEffect(() => {
     fetchStatus();
-    const interval = setInterval(fetchStatus, 3000); // Polling a cada 3s
+    // Polling a cada 30s (otimizado para Free Tier Neon: 1.200 → 120 requests/hora)
+    const interval = setInterval(fetchStatus, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -33,7 +34,6 @@ export default function WhatsappPage() {
       addNotification({ type: 'success', title: 'Sucesso', message: 'Serviço reiniciado. Aguarde novo QR Code.' });
       setStatus({ isReady: false, qrCode: null });
     } catch (error) {
-        console.error(error);
         addNotification({ type: 'error', title: 'Erro', message: 'Falha ao reiniciar serviço.' });
     } finally {
       setLoading(false);
@@ -48,7 +48,6 @@ export default function WhatsappPage() {
       addNotification({ type: 'success', title: 'Sucesso', message: 'Desconectado.' });
       setStatus({ isReady: false, qrCode: null });
     } catch (error) {
-        console.error(error);
         addNotification({ type: 'error', title: 'Erro', message: 'Falha ao desconectar.' });
     } finally {
       setLoading(false);
