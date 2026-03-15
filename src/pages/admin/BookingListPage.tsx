@@ -222,7 +222,7 @@ export const BookingListPage = () => {
               <Plus className="h-4 w-4" /> Reserva Manual
             </Button>
             <Link to="/admin/orcamentos/novo">
-              <Button className="gap-2 bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white transition-all shadow-lg shadow-primary/5">
+              <Button className="gap-2 bg-primary text-white border border-primary/20 hover:bg-primary/80 hover:text-white transition-all shadow-lg shadow-primary/5 focus:ring-2 focus:ring-primary focus:ring-offset-2">
                 <Zap className="h-4 w-4" /> Criar Proposta Rápida
               </Button>
             </Link>
@@ -441,7 +441,7 @@ export const BookingListPage = () => {
                           <Button 
                             variant="outline" 
                             size="icon" 
-                            className="h-8 w-8 text-green-600 hover:bg-green-50 border-green-200" 
+                            className="h-8 w-8 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900 border-green-200 dark:border-green-400 focus:ring-2 focus:ring-green-500 focus:ring-offset-2" 
                             onClick={() => {
                               const url = `${window.location.origin}/proposta/${booking.id}`;
                               const text = `Olá! Sou da X Produções. Segue o link com a sua proposta comercial exclusiva para o evento: ${url}`;
