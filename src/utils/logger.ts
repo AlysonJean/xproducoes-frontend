@@ -10,8 +10,11 @@ interface SentryType {
 
 const getSentry = (): SentryType | null => {
   try {
+    if (typeof window === 'undefined') {
+      return null;
+    }
     // Dynamic import to avoid circular dependency
-        return (window as unknown as { __SENTRY__?: SentryType }).__SENTRY__ || null;
+    return (window as unknown as { __SENTRY__?: SentryType }).__SENTRY__ || null;
   } catch {
     return null;
   }
