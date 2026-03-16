@@ -35,7 +35,7 @@ async function getCsrfToken(): Promise<string> {
   if (csrfToken) return csrfToken;
   
   try {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/csrf-token`, {
+    const response = await axios.get(`${API_BASE_URL}/csrf-token`, {
       withCredentials: true,
     });
     csrfToken = response.data?.data?.csrfToken;
