@@ -3,6 +3,7 @@ import React from 'react'
 import { HelmetProvider } from 'react-helmet-async'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { initSentry } from './utils/sentry'
+import { useWebVitals } from './hooks/useWebVitals'
 import './styles/themes/theme-variables.css'
 import './index.css'
 // Initialize Sentry
@@ -13,6 +14,12 @@ if (typeof window !== 'undefined') {
   import('./styles/headingReveal');
 }
 const SentryErrorBoundary = (sentry && (sentry as any).ErrorBoundary) || (({ children }: any) => children)
+
+// ✅ Web Vitals monitoring wrapper component
+const WebVitalsMonitor: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  useWebVitals()
+  return <>{children}</>
+}
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
@@ -25,12 +32,14 @@ const GoogleWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <GoogleWrapper>
-      <HelmetProvider>
-        <SentryErrorBoundary>
-          {children}
-        </SentryErrorBoundary>
-      </HelmetProvider>
-    </GoogleWrapper>
+    <WebVitalsMonitor>
+      <GoogleWrapper>
+        <HelmetProvider>
+          <SentryErrorBoundary>
+            {children}
+          </SentryErrorBoundary>
+        </HelmetProvider>
+      </GoogleWrapper>
+    </WebVitalsMonitor>
   )
 }
