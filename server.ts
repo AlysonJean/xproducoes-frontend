@@ -124,9 +124,26 @@ Sitemap: ${BASE_URL}/sitemap.xml`;
     headers.forEach(([name, value]: [string, string]) => res.setHeader(name, value))
   }
 
-  const port = process.env.PORT || 3000
-  app.listen(port)
-  console.log(`Server running at http://localhost:${port}`)
+  const preferredPort = Number(process.env.PORT) || 3000
+
+  const listenWithFallback = (startPort: number) => {
+    const server = app.listen(startPort, () => {
+      console.log(`Server running at http://localhost:${startPort}`)
+    })
+
+    server.on('error', (error: NodeJS.ErrnoException) => {
+      if (error.code === 'EADDRINUSE' && !process.env.PORT) {
+        const nextPort = startPort + 1
+        console.warn(`Port ${startPort} is in use. Retrying on ${nextPort}...`)
+        server.close(() => listenWithFallback(nextPort))
+        return
+      }
+
+      throw error
+    })
+  }
+
+  listenWithFallback(preferredPort)
 }
 
 startServer()
