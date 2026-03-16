@@ -45,7 +45,10 @@
   ],
   "functions": {
     "api/ssr.js": {
-      "includeFiles": "dist/server/**"
+      "includeFiles": [
+        "dist/server/**",
+        "dist/client/.vite/manifest.json"
+      ]
     }
   }
 }
