@@ -22,9 +22,11 @@ export default async function handler(request, response) {
       const renderError = pageContext?.errorWhileRendering
 
       response.setHeader('x-ssr-diagnostic', vikeFallback ? 'vike-fallback-500' : 'generic-500')
+      response.setHeader('x-ssr-has-render-error', renderError ? '1' : '0')
 
       if (renderError) {
         const message = String(renderError?.message || '').slice(0, 200)
+        response.setHeader('x-ssr-error-message', message || 'unknown')
         console.error('[SSR_RENDER_ERROR]', {
           url,
           message,
