@@ -27,11 +27,44 @@ export const api = axios.create({
 });
 
 // ✅ SECURE REQUEST INTERCEPTOR WITH TOKEN REFRESH
+// ✅ CSRF TOKEN INTERCEPTOR (2026 Security Pattern)
+let csrfToken: string | null = null;
+
+// Fetch CSRF token on first request
+async function getCsrfToken(): Promise<string> {
+  if (csrfToken) return csrfToken;
+  
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/v1/csrf-token`, {
+      withCredentials: true,
+    });
+    csrfToken = response.data?.data?.csrfToken;
+    return csrfToken || '';
+  } catch (error) {
+    logDebug('Failed to fetch CSRF token', { error });
+    return '';
+  }
+}
+
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   // Get fresh token from secure storage
   const token = secureStorage.get('accessToken');
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  // ✅ Add CSRF token for mutating requests
+  try {
+    const method = normalizeString(String(config.method || 'get'));
+    if ((method === 'post' || method === 'put' || method === 'patch' || method === 'delete') && config.headers) {
+      // Get and add CSRF token
+      const token = await getCsrfToken();
+      if (token) {
+        config.headers['X-CSRF-Token'] = token;
+      }
+    }
+  } catch (e) {
+    logDebug('CSRF token addition failed', { e });
   }
 
   // Add Idempotency-Key for mutating requests if not provided
@@ -62,12 +95,30 @@ import { authService } from './authservice';
 
 // ✅ CIRCUIT BREAKER REMOVED - HANDLED BY AUTH SERVICE QUEUING
 
-// ✅ SECURE RESPONSE INTERCEPTOR WITH AUTO REFRESH
+// ✅ SECURE RESPONSE INTERCEPTOR WITH AUTO REFRESH + CSRF
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
     async (error: unknown) => {
-    const errorObj = error as { config?: InternalAxiosRequestConfig & { _retry?: boolean }; response?: { status?: number } };
+    const errorObj = error as { config?: InternalAxiosRequestConfig & { _retry?: boolean; _csrf_retry?: boolean }; response?: { status?: number } };
     const originalRequest = errorObj.config;
+
+    // Handle CSRF token validation error (403)
+    if (errorObj.response?.status === 403 && originalRequest && !originalRequest._csrf_retry) {
+      originalRequest._csrf_retry = true;
+      
+      try {
+        // Refresh CSRF token
+        csrfToken = null;
+        const newToken = await getCsrfToken();
+        
+        if (newToken && originalRequest.headers) {
+          originalRequest.headers['X-CSRF-Token'] = newToken;
+          return api(originalRequest);
+        }
+      } catch (csrfError) {
+        logDebug('CSRF token refresh failed', { csrfError });
+      }
+    }
 
     // Se erro 401 e ainda não tentamos o retry
     if (errorObj.response?.status === 401 && originalRequest && !originalRequest._retry) {
