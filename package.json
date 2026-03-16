@@ -5,8 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "generate-favicons": "node scripts/generate-favicons.js",
-    "prebuild": "npm run generate-favicons",
     "build": "tsc && vike build",
     "build:analyze": "tsc && vite build --mode analyze",
     "server": "node server",
