@@ -29,8 +29,21 @@ type PageContext = PageContextServer & {
 export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageContextServer): ReturnType<OnRenderHtmlAsync> => {
   const pageContext = pageContextServer as unknown as PageContext
   const { Page, pageProps } = pageContext
-  // This onRenderHtml() hook only supports SSR, see https://vike.dev/render-modes for how to modify onRenderHtml() to support SPA
-  if (!Page) throw new Error('My render() hook expects pageContext.Page to be defined')
+  // Keep SSR resilient in production: avoid throwing when Page is temporarily unavailable.
+  if (!Page) {
+    const fallbackHtml = escapeInject`<!DOCTYPE html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>X-Produções</title>
+        </head>
+        <body>
+          <div id="root"></div>
+        </body>
+      </html>`
+    return fallbackHtml
+  }
   
   // Alternatively, providing a fallback for SPA only pages
   // const pageHtml = Page ? ReactDOMServer.renderToString(
