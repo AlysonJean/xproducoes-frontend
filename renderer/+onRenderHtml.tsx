@@ -44,13 +44,6 @@ export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageCon
       </html>`
     return fallbackHtml
   }
-  
-  // Alternatively, providing a fallback for SPA only pages
-  // const pageHtml = Page ? ReactDOMServer.renderToString(
-  //   <PageShell pageContext={pageContext}>
-  //     <Page {...pageProps} />
-  //   </PageShell>
-  // ) : ''
 
   const pageHtml = ReactDOMServer.renderToString(
     <PageShell pageContext={pageContext}>
