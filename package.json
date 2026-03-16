@@ -17,7 +17,9 @@
     "test:e2e": "playwright test",
     "snyk:test": "snyk test || true",
     "type-check": "tsc --noEmit",
-    "seed": "ts-node --esm src/services/seedBackend.ts"
+    "seed": "ts-node --esm src/services/seedBackend.ts",
+    "optimize:images": "node scripts/imageOptimization.js analyze",
+    "analyze:bundle": "node scripts/performanceAnalysis.js"
   },
   "overrides": {
     "react": "$react",

@@ -130,11 +130,9 @@ test.describe('Performance & Load Testing', () => {
       await page.goto(route, { waitUntil: 'load' });
       
       // Check no errors in console
-      let hasError = false;
       page.on('console', (msg) => {
         if (msg.type() === 'error') {
           console.log(`Console error on ${route}: ${msg.text()}`);
-          hasError = true;
         }
       });
       

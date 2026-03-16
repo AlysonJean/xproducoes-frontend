@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect } from 'react';
 
 // Page opened by backend redirect with fragment #token=...

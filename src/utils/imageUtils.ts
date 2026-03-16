@@ -1,7 +1,6 @@
 /**
  * Utilitários para manipulação de URLs de imagens
  */
-import { logger } from './logger';
 
 /**
  * Normaliza URLs do Cloudinary que usam cloud "demo" para paths locais

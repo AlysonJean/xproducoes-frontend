@@ -15,7 +15,7 @@ export default function WhatsappPage() {
       // Cast the response since apiFetch returns Promise<unknown> or Promise<any>
       const data = await apiFetch('/whatsapp/status') as { isReady: boolean; qrCode: string | null };
       setStatus(data);
-    } catch (error) {
+    } catch {
       // Silenciar erro - tentará novamente na próxima iteração
     }
   };
@@ -33,7 +33,7 @@ export default function WhatsappPage() {
       await apiFetch('/whatsapp/restart', { method: 'POST' });
       addNotification({ type: 'success', title: 'Sucesso', message: 'Serviço reiniciado. Aguarde novo QR Code.' });
       setStatus({ isReady: false, qrCode: null });
-    } catch (error) {
+    } catch {
         addNotification({ type: 'error', title: 'Erro', message: 'Falha ao reiniciar serviço.' });
     } finally {
       setLoading(false);
@@ -47,7 +47,7 @@ export default function WhatsappPage() {
       await apiFetch('/whatsapp/logout', { method: 'POST' });
       addNotification({ type: 'success', title: 'Sucesso', message: 'Desconectado.' });
       setStatus({ isReady: false, qrCode: null });
-    } catch (error) {
+    } catch {
         addNotification({ type: 'error', title: 'Erro', message: 'Falha ao desconectar.' });
     } finally {
       setLoading(false);

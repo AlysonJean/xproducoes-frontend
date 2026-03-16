@@ -1,6 +1,4 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
-import React from 'react';
 
 // Mock tests for frontend hooks - these demonstrate the structure
 
@@ -173,9 +171,9 @@ describe('Event Handlers', () => {
   });
 
   it('should debounce search input', async () => {
-    const debounce = (fn: Function, delay: number) => {
+    const debounce = (fn: (...args: unknown[]) => void, delay: number) => {
       let timeout: NodeJS.Timeout;
-      return (...args: any[]) => {
+      return (...args: unknown[]) => {
         clearTimeout(timeout);
         timeout = setTimeout(() => fn(...args), delay);
       };
@@ -215,15 +213,15 @@ describe('Event Handlers', () => {
 
 describe('Cart Operations', () => {
   it('should add item to cart', () => {
-    let cart: any[] = [];
+    const cart: Record<string, unknown>[] = [];
 
-    const addToCart = (item: any) => {
+    const addToCart = (item: Record<string, unknown>) => {
       cart.push(item);
     };
 
     addToCart({ id: 1, name: 'Camera', price: 500 });
     expect(cart.length).toBe(1);
-    expect(cart[0].name).toBe('Camera');
+    expect((cart[0] as { name: string }).name).toBe('Camera');
   });
 
   it('should calculate cart total', () => {
@@ -232,7 +230,7 @@ describe('Cart Operations', () => {
       { id: 2, price: 50, quantity: 3 },
     ];
 
-    const calculateTotal = (items: any[]) => {
+    const calculateTotal = (items: Array<{ price: number; quantity: number }>) => {
       return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     };
 
@@ -260,7 +258,7 @@ describe('Cart Operations', () => {
       { price: 50, quantity: 1 },
     ];
 
-    const applyDiscount = (items: any[], discountPercent: number) => {
+    const applyDiscount = (items: Array<{ price: number; quantity: number }>, discountPercent: number) => {
       const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
       return total - (total * discountPercent / 100);
     };
