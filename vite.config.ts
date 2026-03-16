@@ -196,12 +196,16 @@ export default defineConfig({
   },
   ssr: {
     noExternal: [
-      'react-helmet-async', 
-      '@mui/material', 
-      '@mui/system', 
-      '@mui/base', 
+      'react-helmet-async',
+      '@mui/material',
+      '@mui/system',
+      '@mui/base',
       '@mui/utils',
-      '@lottiefiles/dotlottie-react'
+      '@lottiefiles/dotlottie-react',
+      // Bundle these inline to avoid opening hundreds of individual files in
+      // Vercel serverless (EMFILE: too many open files)
+      'date-fns',
+      'react-big-calendar'
     ]
   },
   resolve: {

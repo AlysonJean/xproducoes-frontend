@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import { Calendar, dateFnsLocalizer, type Event, type SlotInfo, Views, type View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, isValid } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { ptBR } from 'date-fns/locale/pt-BR';
 import { apiFetch } from '@/services/api';
 import { asArray } from '@/utils/normalize';
 import { BookingStatus, ECollaboratorRole } from '@/types/enums';
