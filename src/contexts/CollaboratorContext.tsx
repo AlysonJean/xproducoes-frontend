@@ -52,7 +52,6 @@ export const CollaboratorProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const getCollaboratorEvents = (_id: string): Event[] => {
-    // TODO: Implementar busca de eventos do colaborador
     return [];
   };
 

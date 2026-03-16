@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { recommendationAPI } from '../services/api';
+import { logger } from '../utils/logger';
 import { RecommendationItem, RecommendationType } from '../components/ui/RecommendationSection';
 import { asArray } from '../utils/normalize';
 
@@ -137,7 +138,7 @@ export const useRecommendations = ({
 
             setRecommendations(mappedData);
         } catch (err) {
-            console.error('Erro ao buscar recomendações:', err);
+            logger.error('Erro ao buscar recomendações', 'useRecommendations', err);
             setError(err instanceof Error ? err.message : 'Erro ao carregar recomendações');
 
             // Em caso de erro, tentar usar dados mockados como fallback
