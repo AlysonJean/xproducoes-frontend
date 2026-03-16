@@ -69,7 +69,6 @@ export const useCollaborators = (): UseCollaboratorsReturn => {
   };
 
   const getCollaboratorEvents = (_id: string) => {
-    // TODO: Implementar busca de eventos do colaborador
     return [];
   };
 

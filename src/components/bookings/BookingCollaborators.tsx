@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { logger } from '@/utils/logger';
 import { apiFetch, collaboratorsAPI } from '../../services/api';
 import { useNotifications } from '@/contexts/NotificationContext';
 import {
@@ -112,7 +113,7 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
       const data = await apiFetch<EventCollaborator[] | { success: boolean; data: EventCollaborator[] }>(`/collaborators/events/${bookingId}/collaborators`);
       setCollaborators(Array.isArray(data) ? data : data?.data || []);
     } catch (error) {
-      console.error('Erro ao buscar colaboradores da reserva:', error);
+      logger.error('Erro ao buscar colaboradores da reserva', 'BookingCollaborators', error);
     } finally {
       setIsLoading(false);
     }
@@ -134,7 +135,7 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
                  availableIds = new Set(availableList.map((c: { id: string }) => c.id));
              }
           } catch (err) {
-              console.error("Erro ao checar disponibilidade", err);
+              logger.error('Erro ao checar disponibilidade', 'BookingCollaborators', err);
           }
       }
 
@@ -157,7 +158,7 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
       }
 
     } catch (error) {
-       console.error('Erro ao buscar opções de colaboradores:', error);
+       logger.error('Erro ao buscar opções de colaboradores', 'BookingCollaborators', error);
     }
   }, [eventDate]);
 
@@ -235,7 +236,7 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
       fetchCollaborators();
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
-      console.error('Newsletter error:', err);
+      logger.error('Newsletter error', 'BookingCollaborators', err);
       addNotification({
         type: 'error',
         title: 'Atenção',

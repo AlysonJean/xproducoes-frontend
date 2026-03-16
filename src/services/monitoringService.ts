@@ -1,4 +1,5 @@
 import { api } from './api';
+import { logger } from '../utils/logger';
 
 // ===== INTERFACES =====
 export interface IntegrationHealth {
@@ -156,7 +157,7 @@ export class MonitoringService {
     try {
       return await monitoringAPI.getDashboard();
     } catch (error) {
-      console.error('Erro ao buscar dashboard:', error);
+      logger.error('Erro ao buscar dashboard', 'monitoringService', error);
       throw error;
     }
   }
@@ -165,7 +166,7 @@ export class MonitoringService {
     try {
       return await monitoringAPI.getHealthSummary();
     } catch (error) {
-      console.error('Erro ao buscar resumo de saúde:', error);
+      logger.error('Erro ao buscar resumo de saúde', 'monitoringService', error);
       throw error;
     }
   }
@@ -174,7 +175,7 @@ export class MonitoringService {
     try {
       return await monitoringAPI.getIntegrationsOverview();
     } catch (error) {
-      console.error('Erro ao buscar integrações:', error);
+      logger.error('Erro ao buscar integrações', 'monitoringService', error);
       throw error;
     }
   }
@@ -183,7 +184,7 @@ export class MonitoringService {
     try {
       return await monitoringAPI.testIntegration(name);
     } catch (error) {
-      console.error(`Erro ao testar integração ${name}:`, error);
+      logger.error(`Erro ao testar integração ${name}`, 'monitoringService', error);
       throw error;
     }
   }
@@ -192,7 +193,7 @@ export class MonitoringService {
     try {
       return await monitoringAPI.getActiveAlerts();
     } catch (error) {
-      console.error('Erro ao buscar alertas:', error);
+      logger.error('Erro ao buscar alertas', 'monitoringService', error);
       throw error;
     }
   }
@@ -201,7 +202,7 @@ export class MonitoringService {
     try {
       return await monitoringAPI.getSystemHealth();
     } catch (error) {
-      console.error('Erro ao buscar saúde do sistema:', error);
+      logger.error('Erro ao buscar saúde do sistema', 'monitoringService', error);
       throw error;
     }
   }
@@ -210,7 +211,7 @@ export class MonitoringService {
     try {
       return await monitoringAPI.getPerformanceMetrics();
     } catch (error) {
-      console.error('Erro ao buscar métricas de performance:', error);
+      logger.error('Erro ao buscar métricas de performance', 'monitoringService', error);
       throw error;
     }
   }
@@ -219,7 +220,7 @@ export class MonitoringService {
     try {
       return await monitoringAPI.getResourceUsage();
     } catch (error) {
-      console.error('Erro ao buscar uso de recursos:', error);
+      logger.error('Erro ao buscar uso de recursos', 'monitoringService', error);
       throw error;
     }
   }

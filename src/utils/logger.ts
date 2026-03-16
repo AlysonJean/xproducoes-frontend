@@ -82,8 +82,7 @@ class Logger {
   }
 
   private sendToMonitoringService(_entry: LogEntry): void {
-    // TODO: Integrar com serviço de monitoramento adicional (DataDog, etc.)
-    // Example: datadog.captureLog(entry);
+    // Integração com serviço de monitoramento pode ser adicionada aqui
   }
 
   debug(message: string, context?: string, data?: unknown): void {
