@@ -11,10 +11,11 @@ interface ServiceWorkerState {
 }
 
 export const useServiceWorker = () => {
+  const isBrowser = typeof window !== 'undefined' && typeof navigator !== 'undefined';
   const [state, setState] = useState<ServiceWorkerState>({
-    isSupported: 'serviceWorker' in navigator,
+    isSupported: isBrowser && 'serviceWorker' in navigator,
     isRegistered: false,
-    isOnline: navigator.onLine,
+    isOnline: isBrowser ? navigator.onLine : true,
     updateAvailable: false,
     registration: null,
   });
@@ -101,6 +102,8 @@ export const useServiceWorker = () => {
 
   // Monitorar status online/offline
   useEffect(() => {
+    if (!isBrowser) return;
+
     const handleOnline = () => setState((prev) => ({ ...prev, isOnline: true }));
     const handleOffline = () => setState((prev) => ({ ...prev, isOnline: false }));
 
@@ -111,7 +114,7 @@ export const useServiceWorker = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [isBrowser]);
 
   // Auto-registrar Service Worker
   useEffect(() => {
@@ -161,14 +164,18 @@ export const useServiceWorker = () => {
 
 // Hook para detectar modo offline (SSR safe com React 18+)
 export function useOfflineDetector() {
+  const isBrowser = typeof window !== 'undefined';
+
   const subscribe = useCallback((callback: () => void) => {
+    if (!isBrowser) return () => undefined;
+
     window.addEventListener('online', callback);
     window.addEventListener('offline', callback);
     return () => {
       window.removeEventListener('online', callback);
       window.removeEventListener('offline', callback);
     };
-  }, []);
+  }, [isBrowser]);
 
   const getSnapshot = () => (typeof navigator !== 'undefined' ? !navigator.onLine : false);
   const getServerSnapshot = () => false; // No servidor, assumimos online para evitar banner falso
