@@ -11,7 +11,7 @@ const root = __dirname
 
 
 // Local SEO Configuration (Inlined for Server Reliability)
-const BASE_URL = 'https://www.xproduceoseeventos.com.br';
+const BASE_URL = 'https://www.xproducoeseeventos.com.br';
 const TARGET_CITIES = [
   { slug: 'belo-horizonte', name: 'Belo Horizonte' },
   { slug: 'nova-lima', name: 'Nova Lima' },

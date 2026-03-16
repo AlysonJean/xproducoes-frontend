@@ -7,9 +7,9 @@ import { useWebVitals } from './hooks/useWebVitals'
 import './styles/themes/theme-variables.css'
 import './index.css'
 // Initialize Sentry
-const sentry = initSentry()
-if (typeof window !== 'undefined') {
-    (window as any).__SENTRY__ = sentry
+const sentry = typeof window !== 'undefined' ? initSentry() : null
+if (typeof window !== 'undefined' && sentry) {
+  (window as any).__SENTRY__ = sentry
   // Load heading reveal only on client side
   import('./styles/headingReveal');
 }
