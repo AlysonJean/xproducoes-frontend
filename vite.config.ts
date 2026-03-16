@@ -147,8 +147,8 @@ export default defineConfig({
             // Animation library
             if (id.includes('framer-motion')) return 'vendor-animation';
 
-            // Utilities & helpers
-            return 'vendor';
+            // Let Rollup decide for uncategorized dependencies to avoid circular manual chunks.
+            return null;
           }
 
           // ✅ FEATURE CHUNKS (lazy-loaded on demand - change frequently)
