@@ -1,7 +1,6 @@
-import { renderPage } from 'vike/server'
-
 export default async function handler(request, response) {
   try {
+    const { renderPage } = await import('vike/server')
     const { url } = request
 
     const pageContextInit = {
@@ -20,6 +19,7 @@ export default async function handler(request, response) {
     return response.status(statusCode).send(body)
   } catch (error) {
     console.error('[SSR_HANDLER_ERROR]', error)
+    response.setHeader('Content-Type', 'text/html; charset=utf-8')
     return response.status(500).send('<p>An error occurred.</p>')
   }
 }
