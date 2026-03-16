@@ -1,7 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { secureStorage } from '../utils/secureStorage';
 import { logger } from '../utils/logger';
 import { getApiBaseUrl } from '../utils/apiConfig';
 import { authService } from '../services/authservice';

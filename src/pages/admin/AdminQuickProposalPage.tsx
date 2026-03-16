@@ -96,14 +96,15 @@ export const AdminQuickProposalPage = () => {
         setEquipments(Array.isArray(equipsRes) ? equipsRes : (equipsRes as unknown as { data: Equipment[] }).data || []);
         setKits(Array.isArray(kitsRes) ? kitsRes : (kitsRes as unknown as { data: Kit[] }).data || []);
         setServices(Array.isArray(servicesRes) ? servicesRes : (servicesRes as unknown as { data: Service[] }).data || []);
-      } catch (error: any) {
-        addNotification({ type: 'error', title: 'Erro ao carregar catálogo', message: error?.message || 'Falha ao buscar dados. Recarregue a página.' });
+      } catch (error: unknown) {
+        const err = error as { message?: string } | null;
+        addNotification({ type: 'error', title: 'Erro ao carregar catálogo', message: err?.message || 'Falha ao buscar dados. Recarregue a página.' });
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [addNotification]);
 
   const subtotal = useMemo(() => {
     return items.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -113,7 +114,7 @@ export const AdminQuickProposalPage = () => {
     const source = searchType === 'EQUIPMENT' ? equipments : searchType === 'KIT' ? kits : services;
     if (!searchTerm.trim()) return source;
     const lower = searchTerm.toLowerCase();
-    return source.filter((item: any) => item.name?.toLowerCase().includes(lower));
+    return source.filter((item: Equipment | Kit | Service) => item.name?.toLowerCase().includes(lower));
   }, [searchType, searchTerm, equipments, kits, services]);
 
   const addItemToProposal = (type: ProposalItem['type'], item: Equipment | Kit | Service) => {
@@ -238,8 +239,9 @@ export const AdminQuickProposalPage = () => {
 
       addNotification({ type: 'success', title: 'Proposta gerada!', message: 'O link de proposta está disponível na página da reserva.' });
       navigate(`/admin/reservas/${bookingId}`);
-    } catch (error: any) {
-      const msg = error?.message || 'Falha ao salvar. Verifique os campos e tente novamente.';
+    } catch (error: unknown) {
+      const err = error as { message?: string } | null;
+      const msg = err?.message || 'Falha ao salvar. Verifique os campos e tente novamente.';
       addNotification({ type: 'error', title: 'Erro ao gerar proposta', message: msg });
     } finally {
       setSaving(false);
@@ -284,7 +286,7 @@ export const AdminQuickProposalPage = () => {
                   <Select 
                     label="Origem do Cliente"
                     value={clientType}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setClientType(e.target.value as any)}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setClientType(e.target.value as 'manual' | 'registered')}
                     options={[
                       { value: 'manual', label: 'Manual (Conversa do WhatsApp)' },
                       { value: 'registered', label: 'Base de Clientes Cadastrados' }
@@ -447,13 +449,13 @@ export const AdminQuickProposalPage = () => {
                   {filteredCatalogItems.length === 0 && (
                     <p className="text-center text-xs text-muted-foreground py-6">Nenhum item encontrado.</p>
                   )}
-                  {filteredCatalogItems.map((item: any) => (
+                  {filteredCatalogItems.map((item: Equipment | Kit | Service) => (
                       <div key={item.id} className="group p-3 rounded-xl border border-border bg-card hover:border-primary/40 transition-all cursor-pointer hover:shadow-md" onClick={() => addItemToProposal(searchType, item)}>
                         <div className="flex justify-between items-start gap-2">
                            <div className="min-w-0">
                              <p className="font-bold text-xs truncate group-hover:text-primary transition-colors">{item.name}</p>
                              <p className="text-[10px] text-muted-foreground font-mono">
-                               {formatPrice(Number((item as any).dailyPrice || (item as any).pricePerHour || (item as any).price || 0))}
+                               {formatPrice(Number(((item as Equipment).dailyPrice || (item as Kit | Service).price) || 0))}
                              </p>
                            </div>
                            <div className="h-6 w-6 rounded-lg bg-primary/5 group-hover:bg-primary group-hover:text-white flex items-center justify-center transition-all">

@@ -109,38 +109,71 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        // Refina divisão de chunks para dependências pesadas e páginas grandes
+        // 2026 Strategic code-splitting: vendor + feature chunks for optimal caching
         manualChunks(id) {
           if (!id) return null;
 
-          // Node modules -> vendor groups
+          // ✅ VENDOR CHUNKS (long-term cache - change infrequently)
           if (id.includes('node_modules')) {
-            if (id.includes('recharts') || id.includes('date-fns') || id.includes('chart.js')) return 'charts-vendor';
-            if (id.includes('react-big-calendar')) return 'calendar-vendor';
-            if (id.includes('xlsx-js-style') || id.includes('xlsx')) return 'xlsx-vendor';
-            if (id.includes('@mui/material') || id.includes('react-icons') || id.includes('lucide-react') || id.includes('@heroicons')) return 'ui-vendor';
-            if (id.includes('axios')) return 'network-vendor';
-            // React e libs principais agora ficam só no vendor
+            // React core - always separate for framework updates
             if (
-              id.includes('react') ||
-              id.includes('react-dom') ||
+              id.includes('react/') ||
+              id.includes('react-dom/') ||
               id.includes('react-router-dom')
-            ) return 'vendor';
-            // Outras libs pesadas podem ser agrupadas aqui
+            ) return 'vendor-react';
+
+            // UI Library components
+            if (
+              id.includes('@heroicons/react') ||
+              id.includes('@headlessui/react') ||
+              id.includes('lucide-react')
+            ) return 'vendor-ui';
+
+            // Data & state management
+            if (
+              id.includes('axios') ||
+              id.includes('zustand') ||
+              id.includes('@tanstack/react-query')
+            ) return 'vendor-data';
+
+            // Charting & visualization
+            if (
+              id.includes('recharts') ||
+              id.includes('chart.js') ||
+              id.includes('date-fns')
+            ) return 'vendor-charts';
+
+            // Animation library
+            if (id.includes('framer-motion')) return 'vendor-animation';
+
+            // Utilities & helpers
             return 'vendor';
           }
 
-          // Project pages -> dedicated chunks
-          if (id.includes('/src/pages/admin/') || id.includes('src\\pages\\admin\\')) return 'admin-chunk';
+          // ✅ FEATURE CHUNKS (lazy-loaded on demand - change frequently)
+          // Admin dashboard and related pages
           if (
-            id.includes('/src/pages/client/') ||
-            id.includes('/src/pages/collaborator/') ||
-            id.includes('/src/pages/freelancer/') ||
-            id.includes('src\\pages\\client\\')
-          )
-            return 'dashboard-chunk';
+            id.includes('/src/pages/admin/') ||
+            id.includes('src\\pages\\admin\\')
+          ) return 'feature-admin';
 
-          // Outras páginas grandes podem ser separadas aqui
+          // Collaborator workspace
+          if (
+            id.includes('/src/pages/collaborator/') ||
+            id.includes('src\\pages\\collaborator\\')
+          ) return 'feature-collaborator';
+
+          // Booking pages and components
+          if (
+            id.includes('/src/pages/booking/') ||
+            id.includes('src\\pages\\booking\\')
+          ) return 'feature-booking';
+
+          // Shop and equipment pages
+          if (
+            id.includes('/src/pages/shop/') ||
+            id.includes('src\\pages\\shop\\')
+          ) return 'feature-shop';
 
           return null;
         }
@@ -157,8 +190,8 @@ export default defineConfig({
     },
     // Code splitting
     cssCodeSplit: true,
-    // Chunk size warnings
-    chunkSizeWarningLimit: 2000
+    // Chunk size warnings - increased for large feature chunks
+    chunkSizeWarningLimit: 1000
   },
   ssr: {
     noExternal: [

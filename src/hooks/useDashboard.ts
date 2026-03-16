@@ -46,7 +46,7 @@ export const useDashboard = () => {
       // Busca dados reais do dashboard
       const data = await (await import('@/services/api')).apiFetch('/dashboard/stats');
             setStats((data as { data?: DashboardStats })?.data || {} as DashboardStats);
-        } catch (error) {
+        } catch {
       setError('Erro ao carregar dados do dashboard');
     } finally {
       setIsLoading(false);

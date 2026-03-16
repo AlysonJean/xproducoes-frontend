@@ -65,8 +65,6 @@ export const useRecommendations = ({
     itemId,
     itemType = 'equipment',
     category,
-    minPrice,
-    maxPrice,
     autoFetch = true
 }: UseRecommendationsOptions): UseRecommendationsResult => {
     const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
@@ -146,7 +144,7 @@ export const useRecommendations = ({
         } finally {
             setLoading(false);
         }
-        }, [type, limit, itemId, itemType, category, minPrice, maxPrice]);
+        }, [type, limit, itemId, itemType, category]);
 
     useEffect(() => {
         if (autoFetch) {

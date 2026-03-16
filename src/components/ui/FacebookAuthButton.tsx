@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { FacebookAuthButtonProps } from '@/types/ui';
 import { useNotifications } from '@/contexts/NotificationContext';
 import axios from 'axios';
-import { secureStorage } from '@/utils/secureStorage';
 
 // Declaração do SDK do Facebook
 declare global {
@@ -103,17 +102,16 @@ const FacebookAuthButton: React.FC<FacebookAuthButtonProps> = ({ onSuccess }) =>
               message: `Bem-vindo, ${backendResponse.data.user?.name || 'Usuário'}!`,
             });
 
-              if (onSuccess) onSuccess(backendResponse.data);
-              
-              // Aguardar um pouco para o AuthContext detectar o novo token antes de redirecionar
-              setTimeout(() => {
-                if (backendResponse.data.shouldCompleteProfile) {
-                  window.location.href = '/completar-perfil';
-                } else {
-                  window.location.href = '/cliente/painel';
-                }
-              }, 500);
-            }
+            if (onSuccess) onSuccess(backendResponse.data);
+            
+            // Aguardar um pouco para o AuthContext detectar o novo token antes de redirecionar
+            setTimeout(() => {
+              if (backendResponse.data.shouldCompleteProfile) {
+                window.location.href = '/completar-perfil';
+              } else {
+                window.location.href = '/cliente/painel';
+              }
+            }, 500);
           } catch (error) {
             console.error('Erro no login Facebook:', error);
             addNotification({

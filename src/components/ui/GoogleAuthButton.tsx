@@ -3,7 +3,6 @@ import { useGoogleLogin } from '@react-oauth/google';
 import type { GoogleAuthButtonProps } from '@/types/ui';
 import { useNotifications } from '@/contexts/NotificationContext';
 import axios from 'axios';
-import { secureStorage } from '@/utils/secureStorage';
 
 const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -42,14 +41,12 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
         
         // Aguardar um pouco para o AuthContext detectar o novo cookie antes de redirecionar
         setTimeout(() => {
-             if (response.data.shouldCompleteProfile) {
-               window.location.href = '/completar-perfil';
-             } else {
-               window.location.href = response.data.redirectTo || '/painel';
-             }
-           }, 500);
-        }
-
+          if (response.data.shouldCompleteProfile) {
+            window.location.href = '/completar-perfil';
+          } else {
+            window.location.href = response.data.redirectTo || '/painel';
+          }
+        }, 500);
       } catch (error) {
         if (axios.isAxiosError(error)) {
           console.error('Erro no login Google:', error.response?.data);
