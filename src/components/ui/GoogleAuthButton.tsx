@@ -18,37 +18,30 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
       setLoading(true);
       try {
         // Enviar access_token para o backend validar diretamente com Google
+        // Backend irá configurar httpOnly cookies automaticamente
         const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
         
         const response = await axios.post(`${API_BASE_URL}/auth/social/google`, {
           provider: 'google',
           accessToken: tokenResponse.access_token
+        }, {
+          withCredentials: true, // Include cookies
         });
 
-        // 3. Processar login no frontend
-        if (response.data.token) {
-           // Salvar tokens usando secureStorage (mesmo método do AuthContext)
-           secureStorage.set('accessToken', response.data.token);
-           if (response.data.refreshToken) {
-             secureStorage.set('refreshToken', response.data.refreshToken);
-           }
-           // Calcular expiração (15 min para access token)
-           const expiresAt = Date.now() + 15 * 60 * 1000;
-           secureStorage.set('tokenExpiresAt', expiresAt.toString());
-           
-           // Salvar dados do usuário (incluindo avatarUrl se disponível)
-           localStorage.setItem('user', JSON.stringify(response.data.user));
-           
-           addNotification({
-             type: 'success',
-             title: 'Login com Google',
-             message: `Bem-vindo, ${response.data.user?.name || 'Usuário'}!`
-           });
+        // ✅ Backend handles cookie setup - no need to store tokens
+        // Tokens are in httpOnly cookies, not accessible from JS
+        
+        // Just use the user data and redirect
+        addNotification({
+          type: 'success',
+          title: 'Login com Google',
+          message: `Bem-vindo, ${response.data.user?.name || 'Usuário'}!`
+        });
 
-           if (onSuccess) onSuccess(response.data);
-           
-           // Aguardar um pouco para o AuthContext detectar o novo token antes de redirecionar
-           setTimeout(() => {
+        if (onSuccess) onSuccess(response.data);
+        
+        // Aguardar um pouco para o AuthContext detectar o novo cookie antes de redirecionar
+        setTimeout(() => {
              if (response.data.shouldCompleteProfile) {
                window.location.href = '/completar-perfil';
              } else {

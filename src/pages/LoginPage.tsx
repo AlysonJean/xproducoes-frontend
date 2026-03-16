@@ -94,36 +94,34 @@ export const LoginPage = () => {
     }
   };
 
+  // ✅ REFACTORED: Social success - rely on cookie, not localStorage
   const handleSocialSuccess = async () => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      try {
-        let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-        if (!API_BASE_URL) {
-          API_BASE_URL = window.location.hostname.includes('xproducoeseeventos.com.br')
-            ? 'https://api.xproducoeseeventos.com.br/api/v1'
-            : 'http://localhost:4000/api/v1';
-        }
+    try {
+      let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+      if (!API_BASE_URL) {
+        API_BASE_URL = window.location.hostname.includes('xproducoeseeventos.com.br')
+          ? 'https://api.xproducoeseeventos.com.br/api/v1'
+          : 'http://localhost:4000/api/v1';
+      }
 
-        const response = await fetch(`${API_BASE_URL}/auth/me`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (response.ok) {
-          const userData = await response.json();
-          const dashboardRoute = getDashboardRoute(userData.role);
-          navigate(dashboardRoute);
-        } else {
-          navigate('/painel');
-        }
-      } catch (error) {
-        console.error('Erro ao buscar dados do usuário:', error);
+      // Backend has already set httpOnly cookie
+      // Just fetch profile to confirm auth
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        credentials: 'include', // Include cookies
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        const dashboardRoute = getDashboardRoute(userData.role);
+        navigate(dashboardRoute);
+      } else {
         navigate('/painel');
       }
-    } else {
+    } catch (error) {
+      console.error('Erro ao buscar dados do usuário:', error);
       navigate('/painel');
     }
   };
