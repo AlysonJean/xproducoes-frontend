@@ -90,24 +90,18 @@ const FacebookAuthButton: React.FC<FacebookAuthButtonProps> = ({ onSuccess }) =>
             
             const backendResponse = await axios.post(`${API_BASE_URL}/auth/social/facebook`, {
               accessToken,
+            }, {
+              withCredentials: true, // Include cookies
             });
 
-            if (backendResponse.data.token) {
-              // Salvar tokens
-              secureStorage.set('accessToken', backendResponse.data.token);
-              if (backendResponse.data.refreshToken) {
-                secureStorage.set('refreshToken', backendResponse.data.refreshToken);
-              }
-              const expiresAt = Date.now() + 15 * 60 * 1000;
-              secureStorage.set('tokenExpiresAt', expiresAt.toString());
-              
-              localStorage.setItem('user', JSON.stringify(backendResponse.data.user));
-              
-              addNotification({
-                type: 'success',
-                title: 'Login com Facebook',
-                message: `Bem-vindo, ${backendResponse.data.user?.name || 'Usuário'}!`,
-              });
+            // ✅ Backend handles cookie setup - no need to store tokens
+            // Tokens are in httpOnly cookies, not accessible from JS
+            
+            addNotification({
+              type: 'success',
+              title: 'Login com Facebook',
+              message: `Bem-vindo, ${backendResponse.data.user?.name || 'Usuário'}!`,
+            });
 
               if (onSuccess) onSuccess(backendResponse.data);
               

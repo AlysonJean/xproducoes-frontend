@@ -51,14 +51,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Verificar se o token está expirado
+  // ✅ NEW: Token validation via cookie (not localStorage)
+  // Cookies are httpOnly and managed by browser - NO JS access needed
   const isTokenExpired = useCallback(() => {
-    const expiresAt = secureStorage.get('tokenExpiresAt');
-    if (!expiresAt) return true;
-    return Date.now() >= parseInt(expiresAt);
+    // Note: We cannot check cookie expiry from JS (httpOnly cookies)
+    // Instead, we'll let the backend validate via API response
+    // If 401 received, token is expired and interceptor will refresh
+    return false; // Browser handles cookie lifecycle
   }, []);
 
-  // Refresh token usando o serviço centralizado
+  // Refresh token using centralized service
   const refreshToken = useCallback(async (): Promise<boolean> => {
     const newToken = await authService.refreshToken();
     return !!newToken;
@@ -91,7 +93,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Verificar autenticação ao carregar
+  // ✅ REFACTORED: Check auth via API call (not localStorage)
+  // Cookies are sent automatically via axios (withCredentials: true)
+  // If user has valid httpOnly cookie, API returns profile
+  // If not, API returns 401 and user is logged out
   useEffect(() => {
     let isMounted = true;
     const initializeAuth = async () => {
@@ -99,32 +104,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const timeout = setTimeout(() => controller.abort(), 8000);
 
       try {
-        const accessToken = secureStorage.get('accessToken');
-        const refreshTokenVal = secureStorage.get('refreshToken');
-        const expiresAt = secureStorage.get('tokenExpiresAt');
-
-        if (accessToken && refreshTokenVal && expiresAt && isMounted) {
-          const expired = Date.now() >= parseInt(expiresAt);
-
-          if (expired) {
-            const refreshed = await authService.refreshToken();
-            if (!refreshed) {
-              setIsLoading(false);
-              return;
-            }
-            // Token refreshed successfully
-          }
-
-          // Buscar perfil usando a instância api para aproveitar o interceptor de refresh automático
-          try {
-            const profileResp = await authAPI.getProfile();
-            // A instância 'api' de axios retorna a resposta original. O dado está em .data
-                        const userData = (profileResp as any).data || profileResp;
+        // ✅ NEW: No token checks - just try to fetch profile
+        // If cookie is valid, backend will recognize it
+        // If not, we'll get 401 and stay logged out
+        try {
+          const profileResp = await authAPI.getProfile();
+          const userData = (profileResp as any).data || profileResp;
+          if (isMounted) {
             setUser(userData);
-          } catch (profileError) {
-            logger.error('Failed to fetch user profile during initialization', 'AuthContext', profileError);
-            // Se falhou mesmo após o refresh do interceptor, o usuário não está autenticado
-            setUser(null);
+          }
+        } catch (profileError: any) {
+          // 401 means no valid cookie - user is not authenticated
+          if (profileError?.response?.status === 401) {
+            if (isMounted) {
+              setUser(null);
+            }
+          } else {
+            logger.warn('Profile fetch failed during init', 'AuthContext', profileError);
           }
         }
       } catch (error) {
@@ -141,20 +137,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { isMounted = false; };
   }, []);
 
-    const handleOAuthToken = async (token: string): Promise<string> => {
+  const handleOAuthToken = async (token: string): Promise<string> => {
     setIsLoading(true);
     try {
       const API_BASE_URL = getApiBaseUrl();
+      // ✅ Backend handles cookie setup automatically
+      // Just send token for validation, backend returns user data
       const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'GET',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        credentials: 'include', // Include cookies in request
       });
 
       if (!response.ok) throw new Error('Invalid OAuth token');
       const userData = await response.json();
 
-      secureStorage.set('accessToken', token);
-      secureStorage.set('refreshToken', token);
-      secureStorage.set('tokenExpiresAt', (Date.now() + (60 * 60 * 1000)).toString());
+      // ✅ NO LONGER storing tokens - they're in httpOnly cookies
+      // secureStorage.set('accessToken', token);
+      // secureStorage.set('refreshToken', token);
+      // secureStorage.set('tokenExpiresAt', ...);
       
       setUser(userData);
       
@@ -172,13 +173,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-    const loginWithCredentials = async (data: { email: string; password: string }): Promise<string> => {
+  const loginWithCredentials = async (data: { email: string; password: string }): Promise<string> => {
     setIsLoading(true);
     try {
       const baseUrl = getApiBaseUrl();
       const response = await fetch(`${baseUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Important: include=send+receive cookies
         body: JSON.stringify({ ...data, email: data.email.toLowerCase().trim() }),
       });
 
@@ -187,11 +189,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error(errorData.message || 'Login failed');
       }
 
-      const { token, refreshToken: rToken, user: userData, redirectTo } = await response.json();
+      const { user: userData, redirectTo } = await response.json();
 
-      secureStorage.set('accessToken', token);
-      secureStorage.set('refreshToken', rToken || token);
-      secureStorage.set('tokenExpiresAt', (Date.now() + (15 * 60 * 1000)).toString());
+      // ✅ NO LONGER storing tokens - backend sets httpOnly cookies automatically
+      // secureStorage.set('accessToken', token);
+      // secureStorage.set('refreshToken', rToken);
+      // secureStorage.set('tokenExpiresAt', ...);
       
       setUser(userData);
 
