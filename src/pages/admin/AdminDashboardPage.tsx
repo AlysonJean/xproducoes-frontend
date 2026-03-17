@@ -5,7 +5,6 @@ import { GoogleCalendarIntegration } from '../../components/GoogleCalendarIntegr
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../services/api';
-import { useNotifications } from '@/contexts/NotificationContext';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { 
   Users, 
@@ -187,7 +186,6 @@ const EfficiencyStats = ({ stats, loading }: { stats: AdminDashboardStats | null
 export const AdminDashboardPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { addNotification } = useNotifications();
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [activities, setActivities] = useState<DashboardActivity[]>([]);
   const [loading, setLoading] = useState(true);
