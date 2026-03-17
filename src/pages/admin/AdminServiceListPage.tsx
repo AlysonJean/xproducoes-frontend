@@ -20,7 +20,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import type { Service } from '../../types/types';
-import { formatMoney } from '../../utils/typeSafeFormatters'; 
+import { formatMoney, toNumber } from '../../utils/typeSafeFormatters'; 
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { BrandLoader } from '../../components/ui/BrandLoader';
 import { 
@@ -151,7 +151,7 @@ export const AdminServiceListPage = () => {
     total: services.length,
     active: services.filter(s => s.status === 'ACTIVE').length,
     avgPrice: services.length > 0 
-      ? services.reduce((acc, curr) => acc + (curr.price || 0), 0) / services.length 
+      ? services.reduce((acc, curr) => acc + toNumber(curr.price), 0) / services.length 
       : 0
   }), [services]);
 
