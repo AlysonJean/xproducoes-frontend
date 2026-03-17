@@ -198,6 +198,8 @@ export const apiFetch = async <T = unknown>(
 
   const config: RequestInit = {
     ...options,
+    // ✅ REQUIRED: send httpOnly cookies (x_access_token, x_refresh_token) on every request
+    credentials: 'include',
     headers: {
       // Só definir Content-Type se não for FormData
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
@@ -205,9 +207,7 @@ export const apiFetch = async <T = unknown>(
     },
   };
 
-
-
-  // Add current access token
+  // Add current access token from secureStorage if present (legacy fallback)
   const token = secureStorage.get('accessToken');
   if (token) {
     config.headers = {
