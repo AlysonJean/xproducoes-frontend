@@ -204,7 +204,7 @@ export const AdminDashboardPage = () => {
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      const [statsRes, actsRes, liveRes, , equipRes, collabRes] = await Promise.all([
+      const [statsRes, actsRes, liveRes, , equipRes, collabRes] = await Promise.allSettled([
         apiFetch<AdminDashboardStats>('/dashboard/stats'),
         apiFetch<DashboardActivity[]>('/dashboard/recent-activities'),
         apiFetch<{ todayBookings: number; todayRevenue: number; activeUsers: number }>('/dashboard/live-stats'),
@@ -213,29 +213,31 @@ export const AdminDashboardPage = () => {
         apiFetch<{ collaborator: { id: string; name: string; role: string }; rating: number; eventCount: number }[]>('/dashboard/top-collaborators')
       ]);
 
-      setStats(statsRes);
-      setActivities(actsRes || []);
-      setLiveStats(liveRes);
-      // setUnreadNotifications((notifsRes || []).filter(n => !n.read).length);
-      setTopEquipment(equipRes || []);
-      setTopCollaborators(collabRes || []);
+      if (statsRes.status === 'fulfilled') setStats(statsRes.value);
+      if (actsRes.status === 'fulfilled') setActivities(actsRes.value || []);
+      if (liveRes.status === 'fulfilled') setLiveStats(liveRes.value);
+      if (equipRes.status === 'fulfilled') setTopEquipment(equipRes.value || []);
+      if (collabRes.status === 'fulfilled') setTopCollaborators(collabRes.value || []);
 
-      const bookingsResp = await apiFetch<BookingListItem[] | { data: BookingListItem[] }>('/admin/bookings');
-      const allBookings = Array.isArray(bookingsResp) ? bookingsResp : Array.isArray(bookingsResp?.data) ? bookingsResp.data : [];
-      const now = new Date();
-      const upcoming = allBookings
-        .filter((b: BookingListItem) => b?.eventDate && new Date(b.eventDate) >= new Date(now.getFullYear(), now.getMonth(), now.getDate()))
-        .sort((a: BookingListItem, b: BookingListItem) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime())
-        .slice(0, 5);
-      setNextBookings(upcoming);
+      try {
+        const bookingsResp = await apiFetch<BookingListItem[] | { data: BookingListItem[] }>('/admin/bookings');
+        const allBookings = Array.isArray(bookingsResp) ? bookingsResp : Array.isArray(bookingsResp?.data) ? bookingsResp.data : [];
+        const now = new Date();
+        const upcoming = allBookings
+          .filter((b: BookingListItem) => b?.eventDate && new Date(b.eventDate) >= new Date(now.getFullYear(), now.getMonth(), now.getDate()))
+          .sort((a: BookingListItem, b: BookingListItem) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime())
+          .slice(0, 5);
+        setNextBookings(upcoming);
+      } catch {
+        // bookings are non-critical — leave list empty on failure
+      }
 
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error);
-      addNotification({ type: 'error', title: 'Falha Critical', message: 'Erro na sincronização dos dados mestres.' });
     } finally {
       setLoading(false);
     }
-  }, [addNotification]);
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
