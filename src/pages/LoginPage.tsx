@@ -97,12 +97,7 @@ export const LoginPage = () => {
   // ✅ REFACTORED: Social success - rely on cookie, not localStorage
   const handleSocialSuccess = async () => {
     try {
-      let API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-      if (!API_BASE_URL) {
-        API_BASE_URL = window.location.hostname.includes('xproducoeseeventos.com.br')
-          ? 'https://api.xproducoeseeventos.com.br/api/v1'
-          : 'http://localhost:4000/api/v1';
-      }
+      const { API_BASE_URL } = await import('../utils/apiConfig');
 
       // Backend has already set httpOnly cookie
       // Just fetch profile to confirm auth
