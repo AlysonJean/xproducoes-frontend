@@ -3,7 +3,7 @@ import React, { useState, useEffect, memo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { apiFetch } from '../../services/api';
-import { API_URL } from '../../utils/apiConfig';
+import { SOCKET_URL } from '../../utils/apiConfig';
 import QRCode from 'react-qr-code';
 
 // Helper: prefer configured public base URL for QR codes in production
@@ -397,8 +397,7 @@ const TVPage: React.FC = () => {
         if (!config) return;
 
         // Conecta sempre na porta correta do backend
-        const socketUrl = window.location.hostname === 'localhost' ? 'http://localhost:4000' : API_URL;
-        const socket = io(socketUrl, {
+        const socket = io(SOCKET_URL, {
             path: '/socket.io',
             transports: ['websocket', 'polling']
         });

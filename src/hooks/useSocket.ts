@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { secureStorage } from '../utils/secureStorage';
-import { API_URL } from '../utils/apiConfig';
+import { SOCKET_URL } from '../utils/apiConfig';
 import { logDebug } from '../utils/logger';
 
 export const useSocket = (room?: string) => {
@@ -12,7 +12,7 @@ export const useSocket = (room?: string) => {
     const token = secureStorage.get('accessToken');
     
     if (!socketRef.current) {
-      const socket = io(API_URL, {
+      const socket = io(SOCKET_URL, {
         auth: { token },
         transports: ['websocket', 'polling'],
         withCredentials: true,

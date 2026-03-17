@@ -84,8 +84,8 @@ const FacebookAuthButton: React.FC<FacebookAuthButtonProps> = ({ onSuccess }) =>
           try {
             const accessToken = response.authResponse.accessToken;
             
-            // Enviar para o backend validar
-            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.xproducoeseeventos.com.br/api/v1';
+            // Enviar para o backend validar — uses centralized API config
+            const { API_BASE_URL } = await import('../../utils/apiConfig');
             
             const backendResponse = await axios.post(`${API_BASE_URL}/auth/social/facebook`, {
               accessToken,
