@@ -49,17 +49,21 @@ const CollaboratorEarningsPage: React.FC = () => {
         setLoading(true);
         
         // Buscar estatísticas e pagamentos reais
-        const [statsResponse, paymentsResponse] = await Promise.all([
+        const [statsResult, paymentsResult] = await Promise.allSettled([
           collaboratorProfileAPI.getStats(),
           collaboratorsAPI.getMyPayments() // Mapeado para /me/payments
         ]);
 
-        const stats = statsResponse.data?.data ?? statsResponse.data;
-        const payments = paymentsResponse.data?.data ?? paymentsResponse.data;
+        const stats = statsResult.status === 'fulfilled'
+          ? (statsResult.value.data?.data ?? statsResult.value.data)
+          : null;
+        const payments = paymentsResult.status === 'fulfilled'
+          ? (paymentsResult.value.data?.data ?? paymentsResult.value.data)
+          : null;
 
         // Processar dados mensais para o gráfico
         // O backend retorna month no formato "YYYY-MM"
-                const monthlyData = stats.monthlyEarnings?.map((item: any) => ({
+                const monthlyData = stats?.monthlyEarnings?.map((item: any) => ({
           month: item.month, // ex: "2024-01"
           earnings: Number(item.earnings),
           events: Number(item.events)
@@ -87,12 +91,12 @@ const CollaboratorEarningsPage: React.FC = () => {
           : 0;
 
         const data: EarningsData = {
-          totalEarnings: Number(stats.totalEarnings || 0),
+          totalEarnings: Number(stats?.totalEarnings || 0),
           monthlyEarnings: currentMonthData ? currentMonthData.earnings : 0,
           yearlyEarnings: yearlyEarnings,
           pendingPayments: pendingTotal,
-          averagePerEvent: stats.totalEvents > 0 ? Number(stats.totalEarnings) / Number(stats.totalEvents) : 0,
-          eventsCompleted: Number(stats.totalEvents || 0),
+          averagePerEvent: stats?.totalEvents > 0 ? Number(stats.totalEarnings) / Number(stats.totalEvents) : 0,
+          eventsCompleted: Number(stats?.totalEvents || 0),
           earningsGrowth: 0, // Backend não fornece ainda comparativo com mês anterior
           monthlyData: monthlyData, // Dados reais do gráfico
           recentPayments: recentPayments
