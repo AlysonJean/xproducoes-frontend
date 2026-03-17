@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { generateSeoFilename } from '../../utils/seoUtils';
 import { apiFetch } from '../../services/api';
-import { formatPrice } from '../../utils/typeSafeFormatters';
+import { formatPrice, toNumber } from '../../utils/typeSafeFormatters';
 import type { Kit, Equipment, Service, KitExperienceLevel, Category } from '../../types/types';
 import { ItemStatus } from '../../types/types';
 import { BrandLoader } from '../ui/BrandLoader';
@@ -173,7 +173,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
     if (!watchedItems) return 0;
     return watchedItems.reduce((acc, item) => {
       const found = allItems.find(i => i.id === item.itemId && i.type === item.type);
-      return acc + ((found?.price || 0) * item.quantity);
+      return acc + (toNumber(found?.price) * item.quantity);
     }, 0);
   }, [watchedItems, allItems]);
 

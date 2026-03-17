@@ -22,6 +22,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { toNumber } from '../../utils/typeSafeFormatters';
 
 export type RecommendationType = 
   | 'personalized' // Baseado no histórico do usuário
@@ -333,7 +334,7 @@ export const RecommendationSection = ({
                           {item.discount && item.discount > 0 ? (
                             <>
                               <span className="text-lg font-bold text-primary">
-                                {formatCurrency(item.price * (1 - item.discount / 100))}
+                                {formatCurrency(toNumber(item.price) * (1 - item.discount / 100))}
                               </span>
                               <span className="text-sm text-muted-foreground line-through">
                                 {formatCurrency(item.price)}

@@ -20,7 +20,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import type { Equipment } from '../../types/types';
-import { formatMoney } from '../../utils/typeSafeFormatters'; 
+import { formatMoney, toNumber } from '../../utils/typeSafeFormatters'; 
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { 
@@ -161,7 +161,7 @@ export const EquipmentListPage = () => {
     total: equipments.length,
     active: equipments.filter(e => e.status === 'ACTIVE' || e.status === 'AVAILABLE').length,
     maintenance: equipments.filter(e => e.status === 'MAINTENANCE').length,
-    valuation: equipments.reduce((acc, curr) => acc + (curr.pricePerHour || 0) * 10, 0) // Arbitrary valuation for UI
+    valuation: equipments.reduce((acc, curr) => acc + toNumber(curr.pricePerHour) * 10, 0) // Arbitrary valuation for UI
   }), [equipments]);
 
   if (loading && equipments.length === 0) {

@@ -184,7 +184,7 @@ export const ClientDashboardPage = () => {
             ['PENDING', 'CONFIRMED', 'IN_PROGRESS'].includes(b.status)
           );
 
-          const totalSpent = completedBookings.reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
+          const totalSpent = completedBookings.reduce((sum, booking) => sum + Number(booking.totalPrice || 0), 0);
           const averageValue = completedBookings.length > 0 ? totalSpent / completedBookings.length : 0;
 
           const sortedBookings = [...allBookings].sort((a, b) =>

@@ -172,7 +172,7 @@ export const useMultipleRecommendations = () => {
         newItems,
         loading: personalized.loading || trending.loading || newItems.loading,
         refetchAll: async () => {
-            await Promise.all([
+            await Promise.allSettled([
                 personalized.refetch(),
                 trending.refetch(),
                 newItems.refetch()

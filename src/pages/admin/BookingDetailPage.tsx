@@ -768,10 +768,10 @@ export const BookingDetailPage = () => {
                    role: a.role || 'PHOTOGRAPHER',
                    totalHours: a.estimatedHours || 0,
                    hourlyRate: a.hourlyRate || 0,
-                   totalPayment: (a.hourlyRate || 0) * (a.estimatedHours || 0)
+                   totalPayment: Number(a.hourlyRate || 0) * (a.estimatedHours || 0)
                 }));
-                let totalPrice = booking.totalPrice ?? 0;
-                                if (!totalPrice) totalPrice = payload.reduce((sum: number, c: any) => sum + (c.totalPayment || 0), 0);
+                let totalPrice = Number(booking.totalPrice ?? 0);
+                                if (!totalPrice) totalPrice = payload.reduce((sum: number, c: any) => sum + Number(c.totalPayment || 0), 0);
                 await bookingAPI.confirmWithDetails(booking.id, { totalPrice, collaborators: payload });
                 await fetchBooking();
                 setEventModalOpen(false);
