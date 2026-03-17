@@ -202,10 +202,9 @@ export default defineConfig({
       '@mui/base',
       '@mui/utils',
       '@lottiefiles/dotlottie-react',
-      // Bundle these inline to avoid opening hundreds of individual files in
+      // Bundle date-fns inline to avoid opening hundreds of individual files in
       // Vercel serverless (EMFILE: too many open files)
-      'date-fns',
-      'react-big-calendar'
+      'date-fns'
     ]
   },
   resolve: {
