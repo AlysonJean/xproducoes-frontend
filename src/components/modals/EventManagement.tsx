@@ -5,7 +5,8 @@ import type { ICollaborator, EventAssignment, SelectedCollaboratorAssignment } f
 import { ECollaboratorRole } from '../../types/types';
 import type { Event } from '../../types/domains/dashboard';
 import { Modal } from '../ui/StandardComponents'; // Added Input and Button if needed, or just Modal
-import { Search, X, Calendar, MapPin, Inbox } from 'lucide-react'; // Using Lucide icons for consistency if possible, or keep SVGs
+import { Search, X, Calendar, MapPin, Inbox } from 'lucide-react';
+import { toNumber } from '../../utils/typeSafeFormatters'; // Using Lucide icons for consistency if possible, or keep SVGs
 
 interface EventManagementProps {
   event: Event;
@@ -40,7 +41,7 @@ export const EventManagement: React.FC<EventManagementProps> = ({
   const totals = useMemo(() => {
     const assignments = Object.values(selectedCollaborators);
     const totalHours = assignments.reduce((sum, item) => sum + item.estimatedHours, 0);
-    const totalCost = assignments.reduce((sum, item) => sum + (item.hourlyRate * item.estimatedHours), 0);
+    const totalCost = assignments.reduce((sum, item) => sum + (toNumber(item.hourlyRate) * item.estimatedHours), 0);
     const totalCollaborators = assignments.length;
     return { totalHours, totalCost, totalCollaborators };
   }, [selectedCollaborators]);
@@ -307,7 +308,7 @@ export const EventManagement: React.FC<EventManagementProps> = ({
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-muted-foreground">Total estimado:</span>
                           <span className="font-semibold text-success">
-                            R$ {(assignment.hourlyRate * assignment.estimatedHours).toFixed(2)}
+                            R$ {(toNumber(assignment.hourlyRate) * assignment.estimatedHours).toFixed(2)}
                           </span>
                         </div>
                       </div>

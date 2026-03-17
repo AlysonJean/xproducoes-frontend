@@ -10,6 +10,7 @@ import {
   Button,
   Alert
 } from '../ui/StandardComponents';
+import { toNumber } from '../../utils/typeSafeFormatters';
 
 export const KitModal: React.FC<KitModalProps> = ({
   isOpen,
@@ -72,7 +73,7 @@ export const KitModal: React.FC<KitModalProps> = ({
   const calculateTotalPrice = () => {
     return selectedEquipment.reduce((total, equipmentId) => {
       const equipment = availableEquipment.find((eq) => eq.id === equipmentId);
-      return total + (equipment?.price || 0);
+      return total + toNumber(equipment?.price);
     }, 0);
   };
 

@@ -27,6 +27,7 @@ import { apiFetch } from '@/services/api';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { formatPrice } from '@/utils/formatPrice';
+import { toNumber } from '@/utils/typeSafeFormatters';
 
 interface ProposalItem {
   id: string;
@@ -107,7 +108,7 @@ export const AdminQuickProposalPage = () => {
   }, [addNotification]);
 
   const subtotal = useMemo(() => {
-    return items.reduce((sum, item) => sum + item.totalPrice, 0);
+    return items.reduce((sum, item) => sum + toNumber(item.totalPrice), 0);
   }, [items]);
 
   const filteredCatalogItems = useMemo(() => {

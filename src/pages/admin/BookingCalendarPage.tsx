@@ -5,6 +5,7 @@ import { format, parse, startOfWeek, getDay, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { apiFetch } from '@/services/api';
 import { asArray } from '@/utils/normalize';
+import { toNumber } from '@/utils/typeSafeFormatters';
 import { BookingStatus, ECollaboratorRole } from '@/types/enums';
 import type { Equipment, Kit, ICollaborator, CalendarBooking } from '@/types/types';
 import { BrandLoader } from '@/components/ui/BrandLoader';
@@ -742,7 +743,7 @@ export const BookingCalendarPage = () => {
                             </div>
                             <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">
                                 <span>Investimento</span>
-                                <span className="text-foreground">R$ {(hovered.resource.serviceValue || hovered.resource.totalPrice || 0).toLocaleString()}</span>
+                                <span className="text-foreground">R$ {toNumber(hovered.resource.serviceValue || hovered.resource.totalPrice).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                             </div>
                         </div>
                         <div className="p-3 bg-muted/30 grid grid-cols-2 gap-2">

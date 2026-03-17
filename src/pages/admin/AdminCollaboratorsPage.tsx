@@ -23,6 +23,7 @@ import { useNotifications } from '../../contexts/NotificationContext';
 import { useModal } from '@/components/modals/ModalContext';
 import { api } from '@/services/api';
 import type { CollaboratorDashboard } from '../../types/types';
+import { toNumber } from '../../utils/typeSafeFormatters';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { 
   Button, 
@@ -104,7 +105,7 @@ export const AdminCollaboratorsPage: React.FC = () => {
     total: collaborators.length,
     active: collaborators.filter(c => c.status === 'ACTIVE').length,
     inactive: collaborators.filter(c => c.status === 'INACTIVE').length,
-    earnings: collaborators.reduce((acc, c) => acc + (c.totalEarnings || 0), 0),
+    earnings: collaborators.reduce((acc, c) => acc + toNumber(c.totalEarnings), 0),
   }), [collaborators]);
 
   const filteredCollaborators = useMemo(() => {

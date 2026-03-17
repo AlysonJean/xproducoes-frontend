@@ -5,6 +5,7 @@ import { format, parse, startOfWeek, getDay, isValid, differenceInDays } from 'd
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { apiFetch } from '@/services/api';
 import { asArray } from '@/utils/normalize';
+import { toNumber } from '@/utils/typeSafeFormatters';
 import type { SafeBooking } from '@/types/types';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import {
@@ -74,7 +75,7 @@ function generateGoogleCalendarUrl(booking: SafeBooking): string {
   const details = [
     equipNames ? `Equipamentos: ${equipNames}` : '',
     `Status: ${booking.status}`,
-    `Valor: R$ ${(booking.totalPrice || 0).toFixed(2)}`,
+    `Valor: R$ ${toNumber(booking.totalPrice).toFixed(2)}`,
   ]
     .filter(Boolean)
     .join('\n');
@@ -683,7 +684,7 @@ export const ClientCalendarPage = () => {
                     <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                       <DollarSign className="h-3 w-3" />
                       R${' '}
-                      {(hovered.resource.totalPrice || 0).toLocaleString('pt-BR', {
+                      {toNumber(hovered.resource.totalPrice).toLocaleString('pt-BR', {
                         minimumFractionDigits: 2,
                       })}
                     </div>

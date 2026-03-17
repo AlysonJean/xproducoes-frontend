@@ -19,7 +19,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import { transformKit } from '../../utils/transformKit';
-import { formatPrice } from '../../utils/typeSafeFormatters';
+import { formatPrice, toNumber } from '../../utils/typeSafeFormatters';
 import type { Kit } from '../../types/types';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { AdminLayout } from '../../components/admin/AdminLayout';
@@ -155,7 +155,7 @@ export const AdminKitListPage = () => {
     total: kits.length,
     active: kits.filter(k => k.status === 'ACTIVE' || k.status === 'AVAILABLE').length,
     avgPrice: kits.length > 0 
-      ? kits.reduce((acc, curr) => acc + (curr.price || 0), 0) / kits.length 
+      ? kits.reduce((acc, curr) => acc + toNumber(curr.price), 0) / kits.length 
       : 0
   }), [kits]);
 
