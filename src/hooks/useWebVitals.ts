@@ -77,47 +77,72 @@ export function useWebVitals() {
       return;
     }
 
+    const observers: PerformanceObserver[] = [];
+
+    const supportsEntryType = (entryType: string): boolean => {
+      try {
+        const supported = (PerformanceObserver as typeof PerformanceObserver & { supportedEntryTypes?: string[] }).supportedEntryTypes;
+        return Array.isArray(supported) && supported.includes(entryType);
+      } catch {
+        return false;
+      }
+    };
+
+    const observeEntryType = (observer: PerformanceObserver, entryType: string, durationThreshold?: number) => {
+      const baseConfig: Record<string, unknown> = { type: entryType };
+      if (typeof durationThreshold === 'number') {
+        baseConfig.durationThreshold = durationThreshold;
+      }
+
+      try {
+        observer.observe({ ...baseConfig, buffered: true } as PerformanceObserverInit);
+      } catch {
+        // Safari/older browsers can reject `buffered` when using specific observe signatures.
+        observer.observe(baseConfig as PerformanceObserverInit);
+      }
+    };
+
     try {
       // Monitor Largest Contentful Paint (LCP)
-      const lcpObserver = new PerformanceObserver((entryList) => {
-        const entries = entryList.getEntries();
-        if (entries.length > 0) {
-          const lastEntry = entries[entries.length - 1];
-          const metric: WebVitalMetric = {
-            name: 'LCP',
-            value: Math.round(lastEntry.startTime),
-            rating: getRating('LCP', lastEntry.startTime),
-          };
-          reportToSentry(metric);
-        }
-      });
+      if (supportsEntryType('largest-contentful-paint')) {
+        const lcpObserver = new PerformanceObserver((entryList) => {
+          const entries = entryList.getEntries();
+          if (entries.length > 0) {
+            const lastEntry = entries[entries.length - 1];
+            const metric: WebVitalMetric = {
+              name: 'LCP',
+              value: Math.round(lastEntry.startTime),
+              rating: getRating('LCP', lastEntry.startTime),
+            };
+            reportToSentry(metric);
+          }
+        });
 
-      lcpObserver.observe({ 
-        entryTypes: ['largest-contentful-paint'],
-        buffered: true 
-      });
+        observeEntryType(lcpObserver, 'largest-contentful-paint');
+        observers.push(lcpObserver);
+      }
 
       // Monitor Cumulative Layout Shift (CLS)
       let clsValue = 0;
-      const clsObserver = new PerformanceObserver((entryList) => {
-        for (const entry of entryList.getEntries()) {
-          const layoutEntry = entry as LayoutShiftLike;
-          if (!layoutEntry.hadRecentInput) {
-            clsValue += layoutEntry.value ?? 0;
+      if (supportsEntryType('layout-shift')) {
+        const clsObserver = new PerformanceObserver((entryList) => {
+          for (const entry of entryList.getEntries()) {
+            const layoutEntry = entry as LayoutShiftLike;
+            if (!layoutEntry.hadRecentInput) {
+              clsValue += layoutEntry.value ?? 0;
+            }
           }
-        }
-        const metric: WebVitalMetric = {
-          name: 'CLS',
-          value: Math.round(clsValue * 1000) / 1000,
-          rating: getRating('CLS', clsValue),
-        };
-        reportToSentry(metric);
-      });
+          const metric: WebVitalMetric = {
+            name: 'CLS',
+            value: Math.round(clsValue * 1000) / 1000,
+            rating: getRating('CLS', clsValue),
+          };
+          reportToSentry(metric);
+        });
 
-      clsObserver.observe({ 
-        entryTypes: ['layout-shift'],
-        buffered: true 
-      });
+        observeEntryType(clsObserver, 'layout-shift');
+        observers.push(clsObserver);
+      }
 
       // Monitor Time to First Byte (TTFB)
       const navigationTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
@@ -132,7 +157,13 @@ export function useWebVitals() {
       }
 
       // Monitor Interaction to Next Paint (INP)
-      try {
+      const inpEntryType = supportsEntryType('interaction')
+        ? 'interaction'
+        : supportsEntryType('event')
+          ? 'event'
+          : null;
+
+      if (inpEntryType) {
         const inpObserver = new PerformanceObserver((entryList) => {
           const entries = entryList.getEntries();
           if (entries.length > 0) {
@@ -147,27 +178,20 @@ export function useWebVitals() {
           }
         });
 
-        inpObserver.observe({
-          entryTypes: ['interaction'],
-          buffered: true,
-        } as PerformanceObserverInit);
-
-        return () => {
-          lcpObserver.disconnect();
-          clsObserver.disconnect();
-          inpObserver.disconnect();
-        };
-      } catch {
+        observeEntryType(inpObserver, inpEntryType, 40);
+        observers.push(inpObserver);
+      } else {
         console.debug('INP monitoring not available');
-        
-        return () => {
-          lcpObserver.disconnect();
-          clsObserver.disconnect();
-        };
       }
     } catch (error) {
       console.error('Error setting up Web Vitals monitoring:', error);
     }
+
+    return () => {
+      for (const observer of observers) {
+        observer.disconnect();
+      }
+    };
   }, []);
 }
 
