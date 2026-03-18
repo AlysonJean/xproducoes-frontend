@@ -29,9 +29,11 @@ import {
   ShieldCheck,
   CreditCard,
   Paperclip,
-  Share2,
   Package
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { formatPrice } from '@/utils/formatPrice';
 import { isToday } from 'date-fns';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { useAuth } from '../../contexts/AuthContext';
@@ -77,6 +79,8 @@ export const BookingDetailPage = () => {
   const [isEventModalOpen, setEventModalOpen] = useState(false);
   
   const [actionLoading, setActionLoading] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   
   // Confirmation form states
   const [confirmPrice, setConfirmPrice] = useState('');
@@ -210,6 +214,160 @@ export const BookingDetailPage = () => {
     setWppModalOpen(true);
   };
 
+  // ─── PDF / WhatsApp helpers ────────────────────────────────────────────────
+  const loadLogoAsDataUrl = async (): Promise<string | null> => {
+    try {
+      const response = await fetch('/xproducoes-logo.png');
+      if (!response.ok) return null;
+      const blob = await response.blob();
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Falha ao converter logo'));
+        reader.readAsDataURL(blob);
+      });
+    } catch { return null; }
+  };
+
+  const normalizeWhatsAppNumber = (raw: string): string | null => {
+    const digits = raw.replace(/\D/g, '');
+    if (!digits) return null;
+    if (digits.startsWith('55') && digits.length >= 12) return digits;
+    if (digits.length === 10 || digits.length === 11) return `55${digits}`;
+    if (digits.length >= 12) return digits;
+    return null;
+  };
+
+  const buildWhatsappText = (b: typeof booking): string => {
+    if (!b) return '';
+    const name = b.client?.name || b.clientName || 'cliente';
+    const progressUrl = typeof window !== 'undefined' ? `${window.location.origin}/cliente/painel` : 'https://xproducoeseeventos.com.br/cliente/painel';
+    const registrationUrl = typeof window !== 'undefined' ? `${window.location.origin}/cadastro` : 'https://xproducoeseeventos.com.br/cadastro';
+    return [
+      `Olá, ${name}! Segue a proposta comercial do seu evento.`,
+      `Total: ${formatPrice(b.totalPrice || 0)}.`,
+      `Acompanhe sua reserva em: ${progressUrl}`,
+      `Ainda não tem cadastro? Crie aqui: ${registrationUrl}`,
+    ].join(' ');
+  };
+
+  const generateBookingPdf = async (): Promise<void> => {
+    if (!booking) return;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const logoDataUrl = await loadLogoAsDataUrl();
+    if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', 14, 10, 42, 14);
+
+    doc.setFontSize(16);
+    doc.text('Proposta Comercial', 14, 32);
+    doc.setFontSize(10);
+    doc.text(`Gerada em: ${new Date().toLocaleString('pt-BR')}`, 14, 38);
+    doc.text(`Responsavel: ${user?.name || 'Equipe X Producoes'}`, 14, 43);
+
+    const clientName = booking.client?.name || booking.clientName || 'Nao informado';
+    const clientPhone = booking.client?.phone || booking.clientContact || '-';
+    const clientEmail = booking.client?.email || booking.clientEmail || '-';
+
+    doc.setFontSize(11);
+    doc.text('Cliente', 14, 52);
+    doc.setFontSize(10);
+    doc.text(`Nome: ${clientName}`, 14, 57);
+    doc.text(`WhatsApp: ${clientPhone}`, 14, 62);
+    doc.text(`Email: ${clientEmail}`, 14, 67);
+
+    const eventLabel = booking.location || booking.eventLocation || 'Evento';
+    const startDate = new Date(booking.eventDate).toLocaleString('pt-BR');
+    const endDate = booking.eventEndDate ? new Date(booking.eventEndDate).toLocaleString('pt-BR') : '-';
+    const fullAddress = [booking.street, booking.addressNumber, booking.neighborhood, booking.city, booking.state, booking.zipCode].filter(Boolean).join(', ');
+
+    doc.setFontSize(11);
+    doc.text('Evento', 14, 77);
+    doc.setFontSize(10);
+    doc.text(`Local: ${eventLabel}`, 14, 82);
+    doc.text(`Inicio: ${startDate}`, 14, 87);
+    doc.text(`Termino: ${endDate}`, 14, 92);
+    const addressLines = doc.splitTextToSize(`Endereco: ${fullAddress || '-'}`, 180);
+    doc.text(addressLines, 14, 97);
+
+    // Items table
+    const itemRows: string[][] = [];
+    (booking.equipments || []).forEach((e: any) => {
+      itemRows.push([e.name || 'Equipamento', 'EQUIPMENT', '1', formatPrice(e.dailyPrice || 0), '-', formatPrice(e.dailyPrice || 0)]);
+    });
+    (booking.kits || (booking.kit ? [booking.kit] : [])).forEach((k: any) => {
+      const kit = k.kit || k;
+      itemRows.push([kit.name || 'Kit', 'KIT', '1', formatPrice(kit.price || 0), '-', formatPrice(kit.price || 0)]);
+    });
+    (booking.services || []).forEach((s: any) => {
+      itemRows.push([s.name || 'Servico', 'SERVICE', '1', formatPrice(s.price || 0), '-', formatPrice(s.price || 0)]);
+    });
+
+    autoTable(doc, {
+      startY: 110,
+      head: [['Item', 'Tipo', 'Qtd', 'Unitario', 'Desconto', 'Total']],
+      body: itemRows.length > 0 ? itemRows : [['(conforme contrato)', '', '', '', '', formatPrice(booking.totalPrice || 0)]],
+      styles: { fontSize: 9, cellPadding: 2 },
+      headStyles: { fillColor: [25, 118, 210] },
+    });
+
+    const tableEndY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || 120;
+    doc.setFontSize(12);
+    doc.text(`Total: ${formatPrice(booking.totalPrice || 0)}`, 14, tableEndY + 10);
+
+    // Collaborators
+    if (booking.eventCollaborators && booking.eventCollaborators.length > 0) {
+      doc.setFontSize(11);
+      doc.text('Equipe Tecnica', 14, tableEndY + 20);
+      doc.setFontSize(10);
+      booking.eventCollaborators.forEach((ec, idx) => {
+        const cName = ec.collaborator?.name || ec.collaborator?.user?.name || `Colaborador ${idx + 1}`;
+        doc.text(`• ${cName} - ${ec.role || 'ASSISTANT'}`, 14, tableEndY + 26 + idx * 6);
+      });
+    }
+
+    if (booking.notes?.trim()) {
+      const notesY = tableEndY + 30 + (booking.eventCollaborators?.length || 0) * 6;
+      const notesLines = doc.splitTextToSize(`Obs: ${booking.notes.trim()}`, 180);
+      doc.setFontSize(10);
+      doc.text(notesLines, 14, notesY);
+    }
+
+    const filenameClient = clientName.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
+    doc.save(`proposta-${filenameClient}-${booking.id?.substring(0, 8)}.pdf`);
+  };
+
+  const handleDownloadBookingPdf = async () => {
+    try {
+      setGeneratingPdf(true);
+      await generateBookingPdf();
+      addNotification({ type: 'success', title: 'PDF pronto', message: 'Arquivo gerado com sucesso.' });
+    } catch (err: any) {
+      addNotification({ type: 'error', title: 'Falha no PDF', message: err?.message || 'Nao foi possivel gerar o PDF.' });
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  const handleDownloadAndWhatsApp = async () => {
+    const rawPhone = booking?.client?.phone || booking?.clientContact || '';
+    const normalizedPhone = normalizeWhatsAppNumber(rawPhone);
+    if (!normalizedPhone) {
+      addNotification({ type: 'error', title: 'WhatsApp invalido', message: 'O cliente nao possui telefone valido cadastrado.' });
+      return;
+    }
+    try {
+      setSendingWhatsApp(true);
+      await generateBookingPdf();
+      const waUrl = `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(buildWhatsappText(booking))}`;
+      window.open(waUrl, '_blank', 'noopener,noreferrer');
+      addNotification({ type: 'success', title: 'WhatsApp aberto', message: 'PDF baixado. Anexe-o na conversa do WhatsApp.' });
+    } catch (err: any) {
+      addNotification({ type: 'error', title: 'Falha', message: err?.message || 'Nao foi possivel abrir o WhatsApp.' });
+    } finally {
+      setSendingWhatsApp(false);
+    }
+  };
+  // ─────────────────────────────────────────────────────────────────────────────
+
   const requiredServices = useMemo(() => {
     if (!booking) return [];
     const services = new Set<string>();
@@ -311,6 +469,12 @@ export const BookingDetailPage = () => {
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
+             <Button variant="outline" onClick={handleDownloadBookingPdf} isLoading={generatingPdf} className="h-11 px-5 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/5">
+               <FileText className="h-4 w-4 mr-2" /> Baixar PDF
+             </Button>
+             <Button variant="outline" onClick={handleDownloadAndWhatsApp} isLoading={sendingWhatsApp} className="h-11 px-5 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/5">
+               <MessageSquare className="h-4 w-4 mr-2" /> PDF + WhatsApp
+             </Button>
              <Button variant="outline" onClick={handleExportBooking} className="h-11 px-5 border-border/60 hover:bg-muted">
                <Download className="h-4 w-4 mr-2" /> JSON Payload
              </Button>
@@ -368,14 +532,17 @@ export const BookingDetailPage = () => {
                 <div>
                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">Ações Rápidas</p>
                     <div className="space-y-2">
+                        <Button variant="outline" className="w-full h-10 text-[9px] font-black uppercase text-left justify-start" onClick={handleDownloadBookingPdf} isLoading={generatingPdf}>
+                           <FileText className="mr-3 h-4 w-4 text-emerald-500" /> Baixar PDF da Proposta
+                        </Button>
+                        <Button variant="outline" className="w-full h-10 text-[9px] font-black uppercase text-left justify-start" onClick={handleDownloadAndWhatsApp} isLoading={sendingWhatsApp}>
+                           <MessageSquare className="mr-3 h-4 w-4 text-emerald-500" /> PDF + Abrir WhatsApp
+                        </Button>
                         <Button variant="outline" className="w-full h-10 text-[9px] font-black uppercase text-left justify-start" onClick={() => handleExportBooking()}>
                            <Download className="mr-3 h-4 w-4 text-primary" /> Download Offline Payload
                         </Button>
                         <Button variant="outline" className="w-full h-10 text-[9px] font-black uppercase text-left justify-start" onClick={() => navigate('/admin/producao')}>
                            <Calendar className="mr-3 h-4 w-4 text-amber-500" /> Visualizar na Agenda Global
-                        </Button>
-                        <Button variant="outline" className="w-full h-10 text-[9px] font-black uppercase text-left justify-start">
-                           <Share2 className="mr-3 h-4 w-4 text-indigo-500" /> Compartilhar Link Público
                         </Button>
                     </div>
                 </div>
