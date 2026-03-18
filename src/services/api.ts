@@ -234,6 +234,22 @@ export const apiFetch = async <T = unknown>(
     // ignore
   }
 
+  // ✅ Add CSRF token for mutating requests (mirrors Axios interceptor behaviour)
+  try {
+    const method = (config.method || 'GET').toUpperCase();
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+      const csrf = await getCsrfToken();
+      if (csrf) {
+        config.headers = {
+          ...config.headers,
+          'X-CSRF-Token': csrf,
+        };
+      }
+    }
+  } catch {
+    // don't block the request on CSRF fetch failures
+  }
+
   // Retry logic para falhas de rede transitórias
   const MAX_RETRIES = 3;
   const RETRY_DELAY_MS = 300; // inicial, exponencial
