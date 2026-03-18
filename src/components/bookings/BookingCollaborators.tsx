@@ -221,7 +221,7 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          eventId: bookingId,
+          bookingId,
           ...data
         })
       });
@@ -235,12 +235,12 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
       setIsModalOpen(false);
       fetchCollaborators();
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { error?: string } } };
+      const err = error as { response?: { data?: { error?: string; message?: string } }; message?: string };
       logger.error('Newsletter error', 'BookingCollaborators', err);
       addNotification({
         type: 'error',
         title: 'Atenção',
-        message: err.response?.data?.error || 'Não foi possível atribuir o colaborador. Tente novamente.',
+        message: err.response?.data?.message || err.response?.data?.error || err.message || 'Não foi possível atribuir o colaborador. Tente novamente.',
       });
     } finally {
       setIsSubmitting(false);

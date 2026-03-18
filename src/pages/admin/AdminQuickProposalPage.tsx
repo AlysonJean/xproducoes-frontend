@@ -28,6 +28,8 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { formatPrice } from '@/utils/formatPrice';
 import { toNumber } from '@/utils/typeSafeFormatters';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface ProposalItem {
   id: string;
@@ -47,6 +49,8 @@ export const AdminQuickProposalPage = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
 
   // Form State - Cliente
   const [clientType, setClientType] = useState<'registered' | 'manual'>('manual');
@@ -249,6 +253,225 @@ export const AdminQuickProposalPage = () => {
     }
   };
 
+  const formatDateTime = (value: string): string => {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString('pt-BR');
+  };
+
+  const loadLogoAsDataUrl = async (): Promise<string | null> => {
+    try {
+      const response = await fetch('/xproducoes-logo.png');
+      if (!response.ok) return null;
+      const blob = await response.blob();
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Falha ao converter logo em base64'));
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
+  };
+
+  const getClientDisplayName = (): string => {
+    if (clientType === 'registered') {
+      const found = clients.find((c) => c.id === selectedClientId);
+      return found?.user?.name || found?.name || 'Cliente cadastrado';
+    }
+    return clientName || 'Cliente não informado';
+  };
+
+  const getClientPhone = (): string => {
+    if (clientType === 'registered') {
+      const found = clients.find((c) => c.id === selectedClientId);
+      return found?.phone || found?.user?.phone || '';
+    }
+    return clientContact || '';
+  };
+
+  const getClientEmail = (): string => {
+    if (clientType === 'registered') {
+      const found = clients.find((c) => c.id === selectedClientId);
+      return found?.email || found?.user?.email || '';
+    }
+    return clientEmail || '';
+  };
+
+  const getRegistrationUrl = (): string => {
+    if (typeof window === 'undefined') return 'https://xproducoeseeventos.com.br/cadastro';
+    return `${window.location.origin}/cadastro`;
+  };
+
+  const buildWhatsappInviteText = (): string => {
+    const eventName = eventTitle || 'seu evento';
+    const registrationUrl = getRegistrationUrl();
+    const progressUrl = typeof window !== 'undefined' ? `${window.location.origin}/cliente/painel` : 'https://xproducoeseeventos.com.br/cliente/painel';
+    return [
+      `Olá! A proposta comercial do evento "${eventName}" está pronta.` ,
+      `Total estimado: ${formatPrice(subtotal)}.`,
+      'Acabei de gerar o PDF para envio neste atendimento.',
+      `Para acompanhar o progresso da reserva em tempo real, acesse: ${progressUrl}`,
+      `Se ainda não tiver cadastro, crie aqui: ${registrationUrl}`,
+      'Assim que concluir, nossa equipe vincula sua proposta ao seu acesso.',
+    ].join(' ');
+  };
+
+  const normalizeWhatsAppNumber = (raw: string): string | null => {
+    const digits = raw.replace(/\D/g, '');
+    if (!digits) return null;
+
+    if (digits.startsWith('55') && digits.length >= 12) return digits;
+    if (digits.length === 10 || digits.length === 11) return `55${digits}`;
+    if (digits.length >= 12) return digits;
+
+    return null;
+  };
+
+  const generateProposalPdf = async (): Promise<void> => {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const logoDataUrl = await loadLogoAsDataUrl();
+
+    if (logoDataUrl) {
+      doc.addImage(logoDataUrl, 'PNG', 14, 10, 42, 14);
+    }
+
+    doc.setFontSize(16);
+    doc.text('Proposta Comercial', 14, 32);
+
+    doc.setFontSize(10);
+    doc.text(`Gerada em: ${new Date().toLocaleString('pt-BR')}`, 14, 38);
+    doc.text(`Responsavel: ${user?.name || 'Equipe X Producoes'}`, 14, 43);
+
+    doc.setFontSize(11);
+    doc.text('Cliente', 14, 52);
+    doc.setFontSize(10);
+    doc.text(`Nome: ${getClientDisplayName()}`, 14, 57);
+    doc.text(`WhatsApp: ${getClientPhone() || '-'}`, 14, 62);
+    doc.text(`Email: ${getClientEmail() || '-'}`, 14, 67);
+
+    doc.setFontSize(11);
+    doc.text('Evento', 14, 77);
+    doc.setFontSize(10);
+    doc.text(`Titulo: ${eventTitle || 'Proposta Rapida'}`, 14, 82);
+    doc.text(`Inicio: ${formatDateTime(eventDate)}`, 14, 87);
+    doc.text(`Termino: ${formatDateTime(eventEndDate)}`, 14, 92);
+    doc.text(`Local: ${location || '-'}`, 14, 97);
+
+    const fullAddress = [street, addressNumber, neighborhood, city, state, zipCode]
+      .filter(Boolean)
+      .join(', ');
+    const addressLines = doc.splitTextToSize(`Endereco: ${fullAddress || '-'}`, 180);
+    doc.text(addressLines, 14, 102);
+
+    autoTable(doc, {
+      startY: 112,
+      head: [['Item', 'Tipo', 'Qtd', 'Unitario', 'Desconto', 'Total']],
+      body: items.map((item) => [
+        item.description,
+        item.type,
+        String(item.quantity),
+        formatPrice(item.unitPrice),
+        formatPrice(item.discount),
+        formatPrice(item.totalPrice),
+      ]),
+      styles: { fontSize: 9, cellPadding: 2 },
+      headStyles: { fillColor: [25, 118, 210] },
+    });
+
+    const tableEndY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || 120;
+    doc.setFontSize(12);
+    doc.text(`Total estimado: ${formatPrice(subtotal)}`, 14, tableEndY + 10);
+
+    doc.setFontSize(10);
+    const notesText = notes?.trim() ? notes.trim() : 'Sem observacoes internas.';
+    const notesLines = doc.splitTextToSize(`Observacoes: ${notesText}`, 180);
+    doc.text(notesLines, 14, tableEndY + 18);
+
+    const inviteTitleY = tableEndY + 34;
+    doc.setFontSize(11);
+    doc.text('Mensagem sugerida para WhatsApp', 14, inviteTitleY);
+    doc.setFontSize(10);
+    const inviteLines = doc.splitTextToSize(buildWhatsappInviteText(), 180);
+    doc.text(inviteLines, 14, inviteTitleY + 6);
+
+    const filenameClient = getClientDisplayName().replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
+    const fileName = `proposta-${filenameClient || 'cliente'}-${Date.now()}.pdf`;
+    doc.save(fileName);
+  };
+
+  const handleDownloadPdf = async () => {
+    const validationError = validate();
+    if (validationError) {
+      addNotification({ type: 'error', title: 'Campos pendentes', message: validationError });
+      return;
+    }
+
+    try {
+      setGeneratingPdf(true);
+      await generateProposalPdf();
+
+      addNotification({
+        type: 'success',
+        title: 'PDF pronto',
+        message: 'Arquivo gerado com sucesso para envio via WhatsApp.',
+      });
+    } catch (error: unknown) {
+      const err = error as { message?: string } | null;
+      addNotification({
+        type: 'error',
+        title: 'Falha no PDF',
+        message: err?.message || 'Nao foi possivel gerar o PDF da proposta.',
+      });
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  const handleDownloadAndOpenWhatsApp = async () => {
+    const validationError = validate();
+    if (validationError) {
+      addNotification({ type: 'error', title: 'Campos pendentes', message: validationError });
+      return;
+    }
+
+    const normalizedPhone = normalizeWhatsAppNumber(getClientPhone());
+    if (!normalizedPhone) {
+      addNotification({
+        type: 'error',
+        title: 'WhatsApp inválido',
+        message: 'Informe um telefone de cliente válido para abrir o WhatsApp automaticamente.',
+      });
+      return;
+    }
+
+    try {
+      setSendingWhatsApp(true);
+      await generateProposalPdf();
+
+      const whatsappText = buildWhatsappInviteText();
+      const waUrl = `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(whatsappText)}`;
+      window.open(waUrl, '_blank', 'noopener,noreferrer');
+
+      addNotification({
+        type: 'success',
+        title: 'WhatsApp aberto',
+        message: 'PDF baixado. O WhatsApp foi aberto com mensagem pronta. Anexe o PDF na conversa para enviar.',
+      });
+    } catch (error: unknown) {
+      const err = error as { message?: string } | null;
+      addNotification({
+        type: 'error',
+        title: 'Falha no envio',
+        message: err?.message || 'Nao foi possivel abrir o WhatsApp com a proposta.',
+      });
+    } finally {
+      setSendingWhatsApp(false);
+    }
+  };
+
   if (loading) return <BrandLoader fullScreen size="xl" label="Carregando catálogo X Produções..." />;
 
   return (
@@ -267,6 +490,12 @@ export const AdminQuickProposalPage = () => {
           </div>
           <div className="flex gap-2">
              <Button variant="outline" onClick={() => navigate(-1)}>Cancelar</Button>
+             <Button variant="outline" onClick={handleDownloadPdf} isLoading={generatingPdf} className="gap-2">
+              Baixar PDF
+             </Button>
+             <Button variant="outline" onClick={handleDownloadAndOpenWhatsApp} isLoading={sendingWhatsApp} className="gap-2">
+              PDF + WhatsApp
+             </Button>
              <Button onClick={() => handleSave('PENDING')} isLoading={saving} className="gap-2 shadow-lg shadow-primary/20">
                 <Send className="h-4 w-4" /> Gerar Link de Proposta
              </Button>
