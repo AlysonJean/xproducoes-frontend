@@ -288,7 +288,7 @@ export const apiFetch = async <T = unknown>(
       if (text) {
         try {
           const data = JSON.parse(text);
-          message = (data.error || data.message || message) as string;
+          message = (data.message || data.error || message) as string;
         } catch {
           // não é JSON, usa texto puro
           message = text;
