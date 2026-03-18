@@ -3,6 +3,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import type { GoogleAuthButtonProps } from '@/types/ui';
 import { useNotifications } from '@/contexts/NotificationContext';
 import axios from 'axios';
+import { API_BASE_URL } from '@/utils/apiConfig';
 
 const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -18,8 +19,6 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
       try {
         // Enviar access_token para o backend validar diretamente com Google
         // Backend irá configurar httpOnly cookies automaticamente
-        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-        
         const response = await axios.post(`${API_BASE_URL}/auth/social/google`, {
           provider: 'google',
           accessToken: tokenResponse.access_token
