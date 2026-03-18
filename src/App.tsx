@@ -543,6 +543,25 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      {/* Legacy aliases for collaborator routes (EN -> PT-BR) */}
+      <Route path="/collaborator" element={<Navigate to="/colaborador/painel" replace />} />
+      <Route path="/collaborator/dashboard" element={<Navigate to="/colaborador/painel" replace />} />
+      <Route path="/collaborator/schedule" element={<Navigate to="/colaborador/agenda" replace />} />
+      <Route path="/collaborator/events" element={<Navigate to="/colaborador/agenda" replace />} />
+      <Route path="/collaborator/profile" element={<Navigate to="/colaborador/perfil" replace />} />
+      <Route path="/collaborator/earnings" element={<Navigate to="/colaborador/ganhos" replace />} />
+      <Route path="/collaborator/reports" element={<Navigate to="/colaborador/relatorios" replace />} />
+      <Route path="/collaborator/availability" element={<Navigate to="/colaborador/disponibilidade" replace />} />
+      <Route path="/collaborator/notifications" element={<Navigate to="/colaborador/notificacoes" replace />} />
+      <Route path="/collaborator/settings" element={<Navigate to="/colaborador/configuracoes" replace />} />
+      <Route
+        path="/collaborator/event/:id/roadmap"
+        element={
+          <ProtectedRoute role="COLLABORATOR">
+            <CollaboratorEventRoadmapPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/freelancer/painel"
         element={
