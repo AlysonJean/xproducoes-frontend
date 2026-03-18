@@ -7,14 +7,9 @@
  * Returns the base URL for the API (including /api/v1 suffix)
  */
 export function getApiBaseUrl(): string {
-  // Production: use same-origin proxy (Vercel rewrites /api/v1/* to Render)
-  // This enables sameSite:'lax' cookies and eliminates CORS overhead
+  // Production: always use same-origin proxy (Vercel rewrites /api/v1/* to Render)
+  // This guarantees httpOnly cookies are included and avoids cross-site cookie drops.
   if (import.meta.env.MODE === 'production') {
-    const value = import.meta.env.VITE_API_BASE_URL;
-    if (value) {
-      return value.endsWith('/') ? value.slice(0, -1) : value;
-    }
-    // Same-origin: Vercel proxy handles forwarding to Render backend
     return '/api/v1';
   }
 
@@ -41,10 +36,6 @@ export function getApiBaseUrl(): string {
 export function getApiRootUrl(): string {
   // Production: same-origin via Vercel proxy
   if (import.meta.env.MODE === 'production') {
-    const value = import.meta.env.VITE_API_URL;
-    if (value) {
-      return value.endsWith('/') ? value.slice(0, -1) : value;
-    }
     return '';
   }
 
