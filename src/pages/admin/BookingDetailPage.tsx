@@ -344,14 +344,14 @@ export const BookingDetailPage = () => {
     doc.setFontSize(18);
     doc.text('Proposta Comercial', 70, 18);
     doc.setFontSize(10);
-    doc.text(`Gerada em: ${new Date().toLocaleString('pt-BR')}`, 150, 26);
-    doc.setTextColor('#172554');
+    doc.text('Validade: 7 dias', 150, 26);
+    doc.setTextColor('#003049');
     doc.setFontSize(12);
     doc.text(`Responsável: ${user?.name || 'Equipe X Produções'}`, 14, 38);
 
     // Cliente
     doc.setFontSize(11);
-    doc.setTextColor('#2563eb');
+    doc.setTextColor('#003049');
     doc.text('Cliente', 14, 48);
     doc.setTextColor('#222');
     const clientName = booking.client?.name || booking.clientName || 'Não informado';
@@ -364,7 +364,7 @@ export const BookingDetailPage = () => {
 
     // Evento
     doc.setFontSize(11);
-    doc.setTextColor('#2563eb');
+    doc.setTextColor('#003049');
     doc.text('Evento', 14, 73);
     doc.setTextColor('#222');
     const eventLabel = booking.location || booking.eventLocation || 'Evento';
@@ -381,7 +381,7 @@ export const BookingDetailPage = () => {
     // Duração
     const duracao = booking.eventDuration || 4;
     doc.setFontSize(10);
-    doc.setTextColor('#2563eb');
+    doc.setTextColor('#003049');
     doc.text(`Duração do evento: ${duracao}h`, 14, 98);
     doc.setTextColor('#222');
 
@@ -525,6 +525,39 @@ export const BookingDetailPage = () => {
       doc.text(notesLines, 14, notesY);
     }
 
+    // Rodapé personalizado
+    const footerY = doc.internal.pageSize.getHeight() - 60;
+    // Fundo do rodapé
+    doc.setFillColor('#f8fafc'); // background/card
+    doc.rect(10, footerY - 8, 190, 70, 'F');
+
+    doc.setFontSize(11);
+    doc.setTextColor('#2563eb'); // primária
+    doc.text('Agradecemos por considerar a X-Produções. Estamos à disposição para dúvidas ou ajustes.', 14, footerY);
+    doc.setFontSize(10);
+    doc.setTextColor('#222'); // texto
+    doc.text('📞 Contato: (31) 98925-2272', 14, footerY + 8);
+    doc.text('📧 E-mail: suporte@xproducoeseventos.com.br', 14, footerY + 14);
+    doc.text('🟢 WhatsApp: (31) 98925-2272', 14, footerY + 20);
+    doc.setTextColor('#2563eb'); // primária
+    doc.text('Instagram: @x_producoeseventos', 14, footerY + 28);
+    doc.text('Facebook: facebook.com/XProducoeseEventos', 14, footerY + 34);
+    doc.setTextColor('#64748b'); // muted
+    doc.text('YouTube: (em breve)', 14, footerY + 40);
+    doc.text('LinkedIn: (em breve)', 14, footerY + 46);
+    doc.setTextColor('#222'); // texto
+    doc.text('Atenciosamente,', 14, footerY + 54);
+    doc.text(`${user?.name || 'Equipe X Produções'}`, 14, footerY + 60);
+    // Destaques
+    doc.setTextColor('#22c55e'); // verde
+    doc.text('🔒 SSL Seguro', 120, footerY + 8);
+    doc.setTextColor('#2563eb'); // primária
+    doc.text('⚡ Entrega Rápida', 120, footerY + 14);
+    // Links
+    doc.setTextColor('#2563eb');
+    doc.textWithLink('suporte@xproducoeseventos.com.br', 80, footerY + 14, { url: 'mailto:suporte@xproducoeseventos.com.br' });
+    doc.textWithLink('Instagram', 80, footerY + 28, { url: 'https://www.instagram.com/x_producoeseventos' });
+    doc.textWithLink('Facebook', 80, footerY + 34, { url: 'https://www.facebook.com/XProducoeseEventos/?locale=pt_BR' });
     const filenameClient = clientName.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
     doc.save(`proposta-${filenameClient}-${booking.id?.substring(0, 8)}.pdf`);
   };
