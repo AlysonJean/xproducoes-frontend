@@ -339,7 +339,7 @@ export const BookingDetailsPage = () => {
                 <div className="flex justify-between text-lg font-bold">
                   <span className="text-foreground">Total:</span>
                   <span className="text-primary">
-                    {formatPrice((booking.totalPrice || 0) + (booking.serviceValue || 0))}
+                    {formatPrice((Number(booking.totalPrice) || 0) + (booking.serviceValue || 0))}
                   </span>
                 </div>
               </div>

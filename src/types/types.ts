@@ -714,6 +714,29 @@ export interface BookingDetails {
   eventTitle?: string;
 }
 
+export interface BookingListItem {
+  id: string;
+  client: {
+    id: string;
+    phone?: string;
+    companyName?: string;
+    user: {
+      id: string;
+      name: string;
+      email: string;
+      avatarUrl?: string;
+    };
+  };
+  status: string;
+  deliveryStatus?: string;
+  totalPrice: string;
+  eventDate: string;
+  eventTitle?: string;
+  eventEndDate?: string;
+  location?: string;
+  notes?: string;
+}
+
 export interface ContactSubmission {
   id: string;
   name: string;
