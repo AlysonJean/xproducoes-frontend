@@ -14,6 +14,8 @@ export interface Equipment {
   monthlyPrice?: number;
   price?: number;
   pricePerHour?: number;
+  hourlyRate?: number;
+  discount?: number;
   status?: ItemStatus | EquipmentStatus; // Compatibility
     specifications?: Record<string, unknown>;
   images?: string[];
@@ -48,8 +50,11 @@ export interface Service {
   description: string;
   price: number;
   duration: number;
+  hourlyRate?: number;
+  discount?: number;
   status?: ItemStatus | EquipmentStatus;
   isActive?: boolean;
+  imageUrl?: string;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
@@ -72,6 +77,8 @@ export interface Kit {
   imageUrl?: string;
   description?: string;
   price?: number;
+  hourlyRate?: number;
+  discount?: number;
   status?: ItemStatus | EquipmentStatus;
   isActive?: boolean;
   createdAt?: Date | string;

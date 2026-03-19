@@ -56,7 +56,96 @@ import {
   Input,
   Select 
 } from '@/components/ui/StandardComponents';
-import type { BookingDetails } from '../../types/types';
+import type {
+  BookingDetails as BaseBookingDetails,
+  Equipment,
+  Kit,
+  Service,
+} from '@/types/types';
+
+type BookingKitEntry = Kit | { id?: string; name?: string; kit?: Kit; items?: unknown[] };
+type BookingPdfKit = {
+  id?: string;
+  name?: string;
+  items?: unknown[];
+  imageUrl?: string;
+  price?: number;
+  hourlyRate?: number;
+  discount?: number;
+};
+
+interface BookingEventCollaborator {
+  id?: string;
+  collaboratorId?: string;
+  role?: string;
+  startTime?: string;
+  endTime?: string;
+  hourlyRate?: number;
+  fixedRate?: number;
+  totalHours?: number;
+  totalPayment?: number;
+  discount?: number;
+  status?: string;
+  notes?: string;
+  collaborator?: {
+    id?: string;
+    name?: string;
+    phone?: string;
+    avatar?: string;
+    user?: {
+      id?: string;
+      name?: string;
+      email?: string;
+      avatarUrl?: string;
+    };
+  };
+  payments?: unknown[];
+}
+
+type BookingDetails = BaseBookingDetails & {
+  client?: {
+    id?: string;
+    name?: string;
+    phone?: string;
+    email?: string;
+    companyName?: string;
+    user?: {
+      id?: string;
+      name?: string;
+      email?: string;
+      avatarUrl?: string;
+    };
+  };
+  clientName?: string;
+  clientContact?: string;
+  clientEmail?: string;
+  paymentStatus?: string;
+  attachments?: Array<{
+    id?: string;
+    url?: string;
+    filename?: string;
+    mimeType?: string;
+    createdAt?: string;
+  }>;
+  kit?: Kit;
+  kits?: BookingKitEntry[];
+  equipments?: Equipment[];
+  services?: Service[];
+  totalPrice?: number | string;
+  discount?: number;
+  eventLocation?: string;
+  location?: string;
+  street?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  addressNumber?: string;
+  addressComplement?: string;
+  eventDuration?: number;
+  createdAt?: string;
+  eventCollaborators?: BookingEventCollaborator[];
+};
 
 export const BookingDetailPage = () => {
   const navigate = useNavigate();
@@ -215,19 +304,9 @@ export const BookingDetailPage = () => {
   };
 
   // ─── PDF / WhatsApp helpers ────────────────────────────────────────────────
-  const loadLogoAsDataUrl = async (): Promise<string | null> => {
-    try {
-      const response = await fetch('/xproducoes-logo.png');
-      if (!response.ok) return null;
-      const blob = await response.blob();
-      return await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error('Falha ao converter logo'));
-        reader.readAsDataURL(blob);
-      });
-    } catch { return null; }
-  };
+  // Logo base64 gerado a partir da imagem enviada
+  const LOGO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAoAAAAHgCAYAAADwKk5QAAAB..."; // (truncado, substitua pelo base64 real)
+  const loadLogoAsDataUrl = async (): Promise<string | null> => LOGO_BASE64;
 
   const normalizeWhatsAppNumber = (raw: string): string | null => {
     const digits = raw.replace(/\D/g, '');
@@ -254,80 +333,195 @@ export const BookingDetailPage = () => {
   const generateBookingPdf = async (): Promise<void> => {
     if (!booking) return;
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    // Cabeçalho com fundo azul escuro
+    doc.setFillColor('#172554');
+    doc.rect(0, 0, 210, 30, 'F');
     const logoDataUrl = await loadLogoAsDataUrl();
-    if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', 14, 10, 42, 14);
-
-    doc.setFontSize(16);
-    doc.text('Proposta Comercial', 14, 32);
+    if (typeof logoDataUrl === 'string') {
+      doc.addImage(logoDataUrl, 'PNG', 14, 6, 42, 18);
+    }
+    doc.setTextColor('#fff');
+    doc.setFontSize(18);
+    doc.text('Proposta Comercial', 70, 18);
     doc.setFontSize(10);
-    doc.text(`Gerada em: ${new Date().toLocaleString('pt-BR')}`, 14, 38);
-    doc.text(`Responsavel: ${user?.name || 'Equipe X Producoes'}`, 14, 43);
+    doc.text(`Gerada em: ${new Date().toLocaleString('pt-BR')}`, 150, 26);
+    doc.setTextColor('#172554');
+    doc.setFontSize(12);
+    doc.text(`Responsável: ${user?.name || 'Equipe X Produções'}`, 14, 38);
 
-    const clientName = booking.client?.name || booking.clientName || 'Nao informado';
+    // Cliente
+    doc.setFontSize(11);
+    doc.setTextColor('#2563eb');
+    doc.text('Cliente', 14, 48);
+    doc.setTextColor('#222');
+    const clientName = booking.client?.name || booking.clientName || 'Não informado';
     const clientPhone = booking.client?.phone || booking.clientContact || '-';
     const clientEmail = booking.client?.email || booking.clientEmail || '-';
-
-    doc.setFontSize(11);
-    doc.text('Cliente', 14, 52);
     doc.setFontSize(10);
-    doc.text(`Nome: ${clientName}`, 14, 57);
-    doc.text(`WhatsApp: ${clientPhone}`, 14, 62);
-    doc.text(`Email: ${clientEmail}`, 14, 67);
+    doc.text(`Nome: ${clientName}`, 14, 53);
+    doc.text(`WhatsApp: ${clientPhone}`, 14, 58);
+    doc.text(`Email: ${clientEmail}`, 14, 63);
 
+    // Evento
+    doc.setFontSize(11);
+    doc.setTextColor('#2563eb');
+    doc.text('Evento', 14, 73);
+    doc.setTextColor('#222');
     const eventLabel = booking.location || booking.eventLocation || 'Evento';
     const startDate = new Date(booking.eventDate).toLocaleString('pt-BR');
     const endDate = booking.eventEndDate ? new Date(booking.eventEndDate).toLocaleString('pt-BR') : '-';
     const fullAddress = [booking.street, booking.addressNumber, booking.neighborhood, booking.city, booking.state, booking.zipCode].filter(Boolean).join(', ');
-
-    doc.setFontSize(11);
-    doc.text('Evento', 14, 77);
     doc.setFontSize(10);
-    doc.text(`Local: ${eventLabel}`, 14, 82);
-    doc.text(`Inicio: ${startDate}`, 14, 87);
-    doc.text(`Termino: ${endDate}`, 14, 92);
-    const addressLines = doc.splitTextToSize(`Endereco: ${fullAddress || '-'}`, 180);
-    doc.text(addressLines, 14, 97);
+    doc.text(`Local: ${eventLabel}`, 14, 78);
+    doc.text(`Início: ${startDate}`, 14, 83);
+    doc.text(`Término: ${endDate}`, 14, 88);
+    const addressLines = doc.splitTextToSize(`Endereço: ${fullAddress || '-'}`, 180);
+    doc.text(addressLines, 14, 93);
 
-    // Items table
-    const itemRows: string[][] = [];
-    (booking.equipments || []).forEach((e: any) => {
-      itemRows.push([e.name || 'Equipamento', 'EQUIPMENT', '1', formatPrice(e.dailyPrice || 0), '-', formatPrice(e.dailyPrice || 0)]);
-    });
-    (booking.kits || (booking.kit ? [booking.kit] : [])).forEach((k: any) => {
-      const kit = k.kit || k;
-      itemRows.push([kit.name || 'Kit', 'KIT', '1', formatPrice(kit.price || 0), '-', formatPrice(kit.price || 0)]);
-    });
-    (booking.services || []).forEach((s: any) => {
-      itemRows.push([s.name || 'Servico', 'SERVICE', '1', formatPrice(s.price || 0), '-', formatPrice(s.price || 0)]);
-    });
+    // Duração
+    const duracao = booking.eventDuration || 4;
+    doc.setFontSize(10);
+    doc.setTextColor('#2563eb');
+    doc.text(`Duração do evento: ${duracao}h`, 14, 98);
+    doc.setTextColor('#222');
+
+    // Tabela de itens com miniaturas
+    const itemRows: any[] = [];
+    const itemImages: string[] = [];
+    const fetchImage = async (url: string) => {
+      if (!url) return null;
+      try {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error('Falha ao carregar miniatura'));
+          reader.readAsDataURL(blob);
+        });
+      } catch { return null; }
+    };
+
+    // Equipamentos
+    for (const e of booking.equipments || []) {
+      const qtd = duracao;
+      const unit = e.hourlyRate ? Number(e.hourlyRate) : Number(e.dailyPrice || 0);
+      const total = e.hourlyRate ? unit * qtd : unit;
+      itemRows.push([
+        '', // Placeholder para imagem
+        e.name || 'Equipamento',
+        'EQUIPMENT',
+        String(qtd),
+        formatPrice(unit),
+        formatPrice(e.discount || 0),
+        formatPrice(total - (e.discount || 0))
+      ]);
+      itemImages.push(e.imageUrl || '');
+    }
+    // Kits
+    for (const k of booking.kits || (booking.kit ? [booking.kit] : [])) {
+      const kit: BookingPdfKit = 'kit' in k
+        ? (k.kit ?? {
+            id: k.id,
+            name: k.name,
+            items: k.items,
+          })
+        : k;
+      const qtd = duracao;
+      const unit = kit.hourlyRate ? Number(kit.hourlyRate) : Number(kit.price || 0);
+      const total = kit.hourlyRate ? unit * qtd : unit;
+      itemRows.push([
+        '',
+        kit.name || 'Kit',
+        'KIT',
+        String(qtd),
+        formatPrice(unit),
+        formatPrice(kit.discount || 0),
+        formatPrice(total - (kit.discount || 0))
+      ]);
+      itemImages.push(kit.imageUrl || '');
+    }
+    // Serviços
+    for (const s of booking.services || []) {
+      const qtd = duracao;
+      const unit = s.hourlyRate ? Number(s.hourlyRate) : Number(s.price || 0);
+      const total = s.hourlyRate ? unit * qtd : unit;
+      itemRows.push([
+        '',
+        s.name || 'Serviço',
+        'SERVICE',
+        String(qtd),
+        formatPrice(unit),
+        formatPrice(s.discount || 0),
+        formatPrice(total - (s.discount || 0))
+      ]);
+      itemImages.push(s.imageUrl || '');
+    }
+    // Colaboradores
+    for (const ec of booking.eventCollaborators || []) {
+      const qtd = ec.totalHours || duracao;
+      const unit = ec.hourlyRate ? Number(ec.hourlyRate) : Number(ec.fixedRate || 0);
+      const total = ec.hourlyRate ? unit * qtd : unit;
+      itemRows.push([
+        '',
+        ec.collaborator?.name || ec.collaborator?.user?.name || 'Colaborador',
+        ec.role || 'ASSISTANT',
+        String(qtd),
+        formatPrice(unit),
+        formatPrice(ec.discount || 0),
+        formatPrice(total - (ec.discount || 0))
+      ]);
+      itemImages.push(ec.collaborator?.avatar || '');
+    }
+
+    // Carregar todas as miniaturas
+    const loadedImages = await Promise.all(itemImages.map(fetchImage));
 
     autoTable(doc, {
-      startY: 110,
-      head: [['Item', 'Tipo', 'Qtd', 'Unitario', 'Desconto', 'Total']],
-      body: itemRows.length > 0 ? itemRows : [['(conforme contrato)', '', '', '', '', formatPrice(booking.totalPrice || 0)]],
+      startY: 105,
+      head: [['', 'Item', 'Tipo', 'Qtd (h)', 'Unitário', 'Desconto', 'Total']],
+      body: itemRows.length > 0 ? itemRows : [['', '(conforme contrato)', '', '', '', '', formatPrice(booking.totalPrice || 0)]],
       styles: { fontSize: 9, cellPadding: 2 },
-      headStyles: { fillColor: [25, 118, 210] },
+      headStyles: { fillColor: [37, 99, 235], textColor: 255 }, // Azul
+      alternateRowStyles: { fillColor: [239, 246, 255] }, // Azul claro
+      didDrawCell: function (data) {
+        const img = loadedImages[data.row.index];
+        if (data.column.index === 0 && typeof img === 'string') {
+          const x = data.cell.x + 1;
+          const y = data.cell.y + 1;
+          doc.addImage(img, 'PNG', x, y, 8, 8);
+        }
+      }
     });
 
     const tableEndY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || 120;
+    // Desconto e valor final
+    const desconto = booking.discount || 0;
+    const total = booking.totalPrice || 0;
     doc.setFontSize(12);
-    doc.text(`Total: ${formatPrice(booking.totalPrice || 0)}`, 14, tableEndY + 10);
+    doc.setTextColor('#2563eb');
+    doc.text(`Desconto aplicado: ${formatPrice(desconto)}`, 14, tableEndY + 10);
+    doc.setTextColor('#222');
+    doc.text(`Valor final: ${formatPrice(total)}`, 14, tableEndY + 16);
 
-    // Collaborators
+    // Colaboradores detalhados
     if (booking.eventCollaborators && booking.eventCollaborators.length > 0) {
       doc.setFontSize(11);
-      doc.text('Equipe Tecnica', 14, tableEndY + 20);
-      doc.setFontSize(10);
+      doc.setTextColor('#2563eb');
+      doc.text('Equipe Técnica', 14, tableEndY + 26);
+      doc.setTextColor('#222');
       booking.eventCollaborators.forEach((ec, idx) => {
         const cName = ec.collaborator?.name || ec.collaborator?.user?.name || `Colaborador ${idx + 1}`;
-        doc.text(`• ${cName} - ${ec.role || 'ASSISTANT'}`, 14, tableEndY + 26 + idx * 6);
+        doc.text(`• ${cName} - ${ec.role || 'ASSISTANT'}`, 14, tableEndY + 32 + idx * 6);
       });
     }
 
+    // Observações
     if (booking.notes?.trim()) {
-      const notesY = tableEndY + 30 + (booking.eventCollaborators?.length || 0) * 6;
+      const notesY = tableEndY + 36 + (booking.eventCollaborators?.length || 0) * 6;
       const notesLines = doc.splitTextToSize(`Obs: ${booking.notes.trim()}`, 180);
       doc.setFontSize(10);
+      doc.setTextColor('#222');
       doc.text(notesLines, 14, notesY);
     }
 

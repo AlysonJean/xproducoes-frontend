@@ -1,6 +1,6 @@
 
 import { BookingStatus } from '../enums';
-import { Equipment, Kit } from './equipment';
+import { Equipment, Kit, KitItem, Service } from './equipment';
 import { User } from './user';
 
 // ================================
@@ -106,29 +106,72 @@ export interface BookingDetails {
   id: string;
   eventDate: string;
   eventEndDate?: string;
-  client?: { name?: string; phone?: string; email?: string };
+  client?: {
+    id?: string;
+    name?: string;
+    phone?: string;
+    email?: string;
+    companyName?: string;
+    user?: {
+      id?: string;
+      name?: string;
+      email?: string;
+      avatarUrl?: string;
+    };
+  };
   clientName?: string;
   clientContact?: string;
   clientEmail?: string;
   status?: string;
   deliveryStatus?: string;
+  paymentStatus?: string;
   kit?: Kit;
   kits?: Array<{
     id?: string;
     name?: string;
     kit?: Kit;
+    items?: KitItem[];
   }> | Kit[];
-  totalPrice?: number;
+  equipments?: Equipment[];
+  services?: Service[];
+  totalPrice?: number | string;
+  discount?: number;
   serviceValue?: number;
   paymentProofUrl?: string;
+  street?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  addressNumber?: string;
+  addressComplement?: string;
+  eventDuration?: number;
   eventCollaborators?: Array<{
     id?: string;
+    collaboratorId?: string;
     role?: string;
+    startTime?: string;
+    endTime?: string;
+    hourlyRate?: number;
+    fixedRate?: number;
     totalHours?: number;
     totalPayment?: number;
-    collaboratorId?: string;
-        collaborator?: unknown;
-        payments?: unknown[];
+    discount?: number;
+    status?: string;
+    notes?: string;
+    collaborator?: {
+      id?: string;
+      name?: string;
+      phone?: string;
+      avatar?: string;
+      user?: {
+        id?: string;
+        name?: string;
+        email?: string;
+        avatarUrl?: string;
+      };
+    };
+    payments?: unknown[];
   }>;
   attachments?: Array<{
     id?: string;
@@ -140,6 +183,12 @@ export interface BookingDetails {
   location?: string;
   eventLocation?: string;
   notes?: string;
+  internalNotes?: string;
+  specialRequests?: string;
+  setupTime?: string;
+  pickupTime?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface BookingListItem {

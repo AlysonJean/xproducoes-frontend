@@ -89,6 +89,8 @@ export interface Equipment {
   monthlyPrice?: number;
   price?: number;
   pricePerHour?: number;
+  hourlyRate?: number;
+  discount?: number;
   category?: string | Category;
   categoryId?: string;
   images?: string[];
@@ -126,6 +128,8 @@ export interface Service {
   description: string;
   price: number;
   duration: number;
+  hourlyRate?: number;
+  discount?: number;
   status?: ItemStatus | EquipmentStatus;
   isActive?: boolean;
   imageUrl?: string;
@@ -169,6 +173,8 @@ export interface Kit {
   imageUrl?: string;
   description?: string;
   price?: number;
+  hourlyRate?: number;
+  discount?: number;
   status?: ItemStatus | EquipmentStatus;
   isActive?: boolean; // Deprecated, kept for compatibility
   createdAt?: Date | string;
@@ -185,6 +191,7 @@ export interface Booking {
   eventEndDate?: string;
   totalAmount?: number;
   totalPrice?: number;
+  discount?: number;
   status?: BookingStatus;
   notes?: string;
   userId?: string;
@@ -623,6 +630,7 @@ export interface BookingDetails {
     name?: string;
     phone?: string;
     email?: string;
+    companyName?: string;
     user?: {
       id?: string;
       name?: string;
@@ -637,8 +645,8 @@ export interface BookingDetails {
   deliveryStatus?: string;
   paymentStatus?: string;
   attachments?: Array<{
-    id: string;
-    url: string;
+    id?: string;
+    url?: string;
     filename?: string;
     mimeType?: string;
     createdAt?: string;
@@ -648,10 +656,12 @@ export interface BookingDetails {
     id?: string;
     name?: string;
     kit?: Kit;
+    items?: KitItem[];
   }> | Kit[];
   equipments?: Equipment[];
   services?: Service[];
-  totalPrice?: number;
+  totalPrice?: number | string;
+  discount?: number;
   serviceValue?: number;
   paymentProofUrl?: string;
   eventLocation?: string;
@@ -684,6 +694,7 @@ export interface BookingDetails {
     fixedRate?: number;
     totalHours?: number;
     totalPayment?: number;
+    discount?: number;
     status?: string;
     notes?: string;
     collaborator?: {
@@ -698,30 +709,9 @@ export interface BookingDetails {
         avatarUrl?: string;
       };
     };
+    payments?: unknown[];
   }>;
-}
-
-export interface BookingListItem {
-  id: string;
-  client: {
-    id: string;
-    phone?: string;
-    companyName?: string;
-    user: {
-      id: string;
-      name: string;
-      email: string;
-      avatarUrl?: string;
-    };
-  };
-  status: string;
-  deliveryStatus?: string;
-  totalPrice: string; // Note: API returns as string
-  eventDate: string;
   eventTitle?: string;
-  eventEndDate?: string;
-  location?: string;
-  notes?: string;
 }
 
 export interface ContactSubmission {
