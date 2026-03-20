@@ -159,7 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userData);
       
       switch (userData.role) {
-        case 'ADMIN': return '/admin/dashboard';
+        case 'ADMIN': return '/admin/painel';
         case 'COLLABORATOR': return '/collaborator/dashboard';
         case 'CLIENT': return '/client/dashboard';
         default: return '/dashboard';
@@ -199,7 +199,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (redirectTo) return redirectTo;
       switch (userData.role) {
-        case 'ADMIN': return '/admin/dashboard';
+        case 'ADMIN': return '/admin/painel';
         case 'COLLABORATOR': return '/collaborator/dashboard';
         case 'CLIENT': return '/client/dashboard';
         default: return '/dashboard';

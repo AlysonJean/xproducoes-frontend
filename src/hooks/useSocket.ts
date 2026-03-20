@@ -8,9 +8,10 @@ export const useSocket = (room?: string) => {
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
+  // Create socket ONCE — not on every room change
   useEffect(() => {
     const token = secureStorage.get('accessToken');
-    
+
     if (!socketRef.current) {
       const socket = io(SOCKET_URL, {
         auth: { token },
@@ -25,9 +26,6 @@ export const useSocket = (room?: string) => {
       socket.on('connect', () => {
         setIsConnected(true);
         logDebug('Socket.IO Connected', { socketId: socket.id });
-        if (room) {
-          socket.emit('join', room);
-        }
       });
 
       socket.on('disconnect', () => {
@@ -47,6 +45,21 @@ export const useSocket = (room?: string) => {
         setIsConnected(false);
       }
     };
+  }, []);
+
+  // Join/leave room when it changes — no reconnect needed
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket || !room) return;
+
+    if (socket.connected) {
+      socket.emit('join', room);
+    } else {
+      // Wait for connection then join
+      const onConnect = () => socket.emit('join', room);
+      socket.once('connect', onConnect);
+      return () => { socket.off('connect', onConnect); };
+    }
   }, [room]);
 
   const emit = useCallback((event: string, data: unknown) => {

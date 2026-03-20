@@ -64,15 +64,6 @@ import type {
 } from '@/types/types';
 
 type BookingKitEntry = Kit | { id?: string; name?: string; kit?: Kit; items?: unknown[] };
-type BookingPdfKit = {
-  id?: string;
-  name?: string;
-  items?: unknown[];
-  imageUrl?: string;
-  price?: number;
-  hourlyRate?: number;
-  discount?: number;
-};
 
 interface BookingEventCollaborator {
   id?: string;
@@ -304,10 +295,6 @@ export const BookingDetailPage = () => {
   };
 
   // ─── PDF / WhatsApp helpers ────────────────────────────────────────────────
-  // Logo base64 gerado a partir da imagem enviada
-  const LOGO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAoAAAAHgCAYAAADwKk5QAAAB..."; // (truncado, substitua pelo base64 real)
-  const loadLogoAsDataUrl = async (): Promise<string | null> => LOGO_BASE64;
-
   const normalizeWhatsAppNumber = (raw: string): string | null => {
     const digits = raw.replace(/\D/g, '');
     if (!digits) return null;
@@ -332,63 +319,133 @@ export const BookingDetailPage = () => {
 
   const generateBookingPdf = async (): Promise<void> => {
     if (!booking) return;
-    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-    // Cabeçalho com fundo azul escuro
-    doc.setFillColor('#172554');
-    doc.rect(0, 0, 210, 30, 'F');
-    const logoDataUrl = await loadLogoAsDataUrl();
-    if (typeof logoDataUrl === 'string') {
-      doc.addImage(logoDataUrl, 'PNG', 14, 6, 42, 18);
-    }
-    doc.setTextColor('#fff');
-    doc.setFontSize(18);
-    doc.text('Proposta Comercial', 70, 18);
-    doc.setFontSize(10);
-    doc.text('Validade: 7 dias', 150, 26);
-    doc.setTextColor('#003049');
-    doc.setFontSize(12);
-    doc.text(`Responsável: ${user?.name || 'Equipe X Produções'}`, 14, 38);
 
-    // Cliente
-    doc.setFontSize(11);
-    doc.setTextColor('#003049');
-    doc.text('Cliente', 14, 48);
-    doc.setTextColor('#222');
-    const clientName = booking.client?.name || booking.clientName || 'Não informado';
+    // ── Paleta de cores da marca ─────────────────────────────────────────────
+    const C_DARK:  [number, number, number] = [23,  37,  84];   // #172554 azul escuro
+    const C_BLUE:  [number, number, number] = [37,  99,  235];  // #2563eb azul primário
+    const C_LIGHT: [number, number, number] = [239, 246, 255];  // #eff6ff azul muito claro
+    const C_MUTED: [number, number, number] = [100, 116, 139];  // #64748b cinza
+    const C_TEXT:  [number, number, number] = [30,  30,  30];   // #1e1e1e texto
+    const C_WHITE: [number, number, number] = [255, 255, 255];
+    const C_RED:   [number, number, number] = [220, 38,  38];   // #dc2626 para desconto
+    const C_CARD:  [number, number, number] = [248, 250, 252];  // #f8fafc fundo card
+
+    const MARGIN = 14;
+    const PAGE_W = 210;
+    const PAGE_H = 297;
+    const dataEmissao = new Date().toLocaleDateString('pt-BR');
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+    // ── Logo embutido (base64) ───────────────────────────────────────────────
+    const LOGO_DATA = "data:image/png;base64,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";
+
+    // ── Cabeçalho ────────────────────────────────────────────────────────────
+    doc.setFillColor(...C_DARK);
+    doc.rect(0, 0, PAGE_W, 33, 'F');
+
+    const logoData = LOGO_DATA;
+    if (logoData) {
+      doc.addImage(logoData, 'PNG', MARGIN, 5, 46, 23);
+    }
+
+    doc.setTextColor(...C_WHITE);
+    doc.setFontSize(19);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PROPOSTA COMERCIAL', 72, 16);
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Emitida em: ${dataEmissao}   |   Validade: 7 dias   |   Ref: #${booking.id?.substring(0, 8).toUpperCase()}`, 72, 23);
+
+    // ── Responsável ──────────────────────────────────────────────────────────
+    let curY = 42;
+    doc.setTextColor(...C_BLUE);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Responsavel: ${user?.name || 'Equipe X Producoes'}`, MARGIN, curY);
+
+    // ── Seção Cliente ────────────────────────────────────────────────────────
+    curY += 8;
+    doc.setFillColor(...C_DARK);
+    doc.rect(MARGIN, curY, PAGE_W - MARGIN * 2, 6, 'F');
+    doc.setTextColor(...C_WHITE);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CLIENTE', MARGIN + 3, curY + 4.2);
+
+    curY += 9;
+    const clientName = booking.client?.name || booking.clientName || 'Nao informado';
     const clientPhone = booking.client?.phone || booking.clientContact || '-';
     const clientEmail = booking.client?.email || booking.clientEmail || '-';
-    doc.setFontSize(10);
-    doc.text(`Nome: ${clientName}`, 14, 53);
-    doc.text(`WhatsApp: ${clientPhone}`, 14, 58);
-    doc.text(`Email: ${clientEmail}`, 14, 63);
+    doc.setFontSize(9);
+    doc.setTextColor(...C_TEXT);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Nome:', MARGIN, curY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(clientName, MARGIN + 14, curY);
+    curY += 5;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Tel/WhatsApp:', MARGIN, curY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(clientPhone, MARGIN + 26, curY);
+    doc.setFont('helvetica', 'bold');
+    doc.text('E-mail:', 100, curY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(clientEmail, 112, curY);
 
-    // Evento
-    doc.setFontSize(11);
-    doc.setTextColor('#003049');
-    doc.text('Evento', 14, 73);
-    doc.setTextColor('#222');
-    const eventLabel = booking.location || booking.eventLocation || 'Evento';
+    // ── Seção Evento ─────────────────────────────────────────────────────────
+    curY += 10;
+    doc.setFillColor(...C_DARK);
+    doc.rect(MARGIN, curY, PAGE_W - MARGIN * 2, 6, 'F');
+    doc.setTextColor(...C_WHITE);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('EVENTO', MARGIN + 3, curY + 4.2);
+
+    curY += 9;
+    const duracao = booking.eventDuration || 4;
+    const eventLabel = booking.location || booking.eventLocation || '-';
     const startDate = new Date(booking.eventDate).toLocaleString('pt-BR');
     const endDate = booking.eventEndDate ? new Date(booking.eventEndDate).toLocaleString('pt-BR') : '-';
     const fullAddress = [booking.street, booking.addressNumber, booking.neighborhood, booking.city, booking.state, booking.zipCode].filter(Boolean).join(', ');
-    doc.setFontSize(10);
-    doc.text(`Local: ${eventLabel}`, 14, 78);
-    doc.text(`Início: ${startDate}`, 14, 83);
-    doc.text(`Término: ${endDate}`, 14, 88);
-    const addressLines = doc.splitTextToSize(`Endereço: ${fullAddress || '-'}`, 180);
-    doc.text(addressLines, 14, 93);
 
-    // Duração
-    const duracao = booking.eventDuration || 4;
-    doc.setFontSize(10);
-    doc.setTextColor('#003049');
-    doc.text(`Duração do evento: ${duracao}h`, 14, 98);
-    doc.setTextColor('#222');
+    doc.setFontSize(9);
+    doc.setTextColor(...C_TEXT);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Local:', MARGIN, curY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(eventLabel, MARGIN + 12, curY);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Duracao:', 110, curY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${duracao}h`, 125, curY);
+    curY += 5;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Inicio:', MARGIN, curY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(startDate, MARGIN + 12, curY);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Termino:', 110, curY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(endDate, 125, curY);
 
-    // Tabela de itens com miniaturas
+    if (fullAddress) {
+      curY += 5;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Endereco:', MARGIN, curY);
+      doc.setFont('helvetica', 'normal');
+      const addrLines = doc.splitTextToSize(fullAddress, 148);
+      doc.text(addrLines, MARGIN + 20, curY);
+      curY += (addrLines.length - 1) * 4.5;
+    }
+
+    // ── Montagem da tabela de itens ───────────────────────────────────────────
     const itemRows: any[] = [];
     const itemImages: string[] = [];
-    const fetchImage = async (url: string) => {
+    let subtotalBruto = 0;
+    let totalDescontos = 0;
+
+    const fetchItemImage = async (url: string): Promise<string | null> => {
       if (!url) return null;
       try {
         const res = await fetch(url);
@@ -396,168 +453,182 @@ export const BookingDetailPage = () => {
         return await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = () => reject(new Error('Falha ao carregar miniatura'));
+          reader.onerror = () => reject(new Error('img'));
           reader.readAsDataURL(blob);
         });
       } catch { return null; }
     };
 
-    // Equipamentos
+    // Equipamentos → preço/hora × duração do evento
     for (const e of booking.equipments || []) {
       const qtd = duracao;
-      const unit = e.hourlyRate ? Number(e.hourlyRate) : Number(e.dailyPrice || 0);
-      const total = e.hourlyRate ? unit * qtd : unit;
-      itemRows.push([
-        '', // Placeholder para imagem
-        e.name || 'Equipamento',
-        'EQUIPMENT',
-        String(qtd),
-        formatPrice(unit),
-        formatPrice(e.discount || 0),
-        formatPrice(total - (e.discount || 0))
-      ]);
+      const unitVal = Number(e.hourlyRate || 0) || Number(e.dailyPrice || 0);
+      const subtotal = unitVal * qtd;
+      const desc = Number(e.discount || 0);
+      subtotalBruto += subtotal;
+      totalDescontos += desc;
+      itemRows.push(['', e.name || 'Equipamento', 'Equipamento', `${qtd}h`, formatPrice(unitVal), formatPrice(desc), formatPrice(subtotal - desc)]);
       itemImages.push(e.imageUrl || '');
     }
-    // Kits
+
+    // Kits → preço/hora × duração do evento
     for (const k of booking.kits || (booking.kit ? [booking.kit] : [])) {
-      const kit: BookingPdfKit = 'kit' in k
-        ? (k.kit ?? {
-            id: k.id,
-            name: k.name,
-            items: k.items,
-          })
-        : k;
+      const kit: any = 'kit' in (k as any) ? ((k as any).kit ?? k) : k;
       const qtd = duracao;
-      const unit = kit.hourlyRate ? Number(kit.hourlyRate) : Number(kit.price || 0);
-      const total = kit.hourlyRate ? unit * qtd : unit;
-      itemRows.push([
-        '',
-        kit.name || 'Kit',
-        'KIT',
-        String(qtd),
-        formatPrice(unit),
-        formatPrice(kit.discount || 0),
-        formatPrice(total - (kit.discount || 0))
-      ]);
+      const unitVal = Number(kit.hourlyRate || 0) || Number(kit.price || 0);
+      const subtotal = unitVal * qtd;
+      const desc = Number(kit.discount || 0);
+      subtotalBruto += subtotal;
+      totalDescontos += desc;
+      itemRows.push(['', kit.name || 'Kit', 'Kit', `${qtd}h`, formatPrice(unitVal), formatPrice(desc), formatPrice(subtotal - desc)]);
       itemImages.push(kit.imageUrl || '');
     }
-    // Serviços
+
+    // Serviços → preço/hora × duração do evento
     for (const s of booking.services || []) {
       const qtd = duracao;
-      const unit = s.hourlyRate ? Number(s.hourlyRate) : Number(s.price || 0);
-      const total = s.hourlyRate ? unit * qtd : unit;
-      itemRows.push([
-        '',
-        s.name || 'Serviço',
-        'SERVICE',
-        String(qtd),
-        formatPrice(unit),
-        formatPrice(s.discount || 0),
-        formatPrice(total - (s.discount || 0))
-      ]);
-      itemImages.push(s.imageUrl || '');
+      const unitVal = Number(s.hourlyRate || 0) || Number(s.price || 0);
+      const subtotal = unitVal * qtd;
+      const desc = Number(s.discount || 0);
+      subtotalBruto += subtotal;
+      totalDescontos += desc;
+      itemRows.push(['', s.name || 'Servico', 'Servico', `${qtd}h`, formatPrice(unitVal), formatPrice(desc), formatPrice(subtotal - desc)]);
+      itemImages.push((s as any).imageUrl || '');
     }
-    // Colaboradores
+
+    // Colaboradores → valor/hora × horas contratadas
     for (const ec of booking.eventCollaborators || []) {
       const qtd = ec.totalHours || duracao;
-      const unit = ec.hourlyRate ? Number(ec.hourlyRate) : Number(ec.fixedRate || 0);
-      const total = ec.hourlyRate ? unit * qtd : unit;
-      itemRows.push([
-        '',
-        ec.collaborator?.name || ec.collaborator?.user?.name || 'Colaborador',
-        ec.role || 'ASSISTANT',
-        String(qtd),
-        formatPrice(unit),
-        formatPrice(ec.discount || 0),
-        formatPrice(total - (ec.discount || 0))
-      ]);
+      const unitVal = Number(ec.hourlyRate || 0) || Number(ec.fixedRate || 0);
+      const subtotal = unitVal * qtd;
+      const desc = Number(ec.discount || 0);
+      subtotalBruto += subtotal;
+      totalDescontos += desc;
+      const cName = ec.collaborator?.name || ec.collaborator?.user?.name || 'Colaborador';
+      itemRows.push(['', cName, ec.role || 'Assistente', `${qtd}h`, formatPrice(unitVal), formatPrice(desc), formatPrice(subtotal - desc)]);
       itemImages.push(ec.collaborator?.avatar || '');
     }
 
-    // Carregar todas as miniaturas
-    const loadedImages = await Promise.all(itemImages.map(fetchImage));
+    const loadedImages = await Promise.all(itemImages.map(fetchItemImage));
 
+    // ── Tabela de itens ───────────────────────────────────────────────────────
+    const tableStartY = curY + 8;
     autoTable(doc, {
-      startY: 105,
-      head: [['', 'Item', 'Tipo', 'Qtd (h)', 'Unitário', 'Desconto', 'Total']],
-      body: itemRows.length > 0 ? itemRows : [['', '(conforme contrato)', '', '', '', '', formatPrice(booking.totalPrice || 0)]],
-      styles: { fontSize: 9, cellPadding: 2 },
-      headStyles: { fillColor: [37, 99, 235], textColor: 255 }, // Azul
-      alternateRowStyles: { fillColor: [239, 246, 255] }, // Azul claro
-      didDrawCell: function (data) {
+      startY: tableStartY,
+      head: [['', 'Item / Descricao', 'Tipo', 'Qtd', 'Vlr/h', 'Desconto', 'Total']],
+      body: itemRows.length > 0
+        ? itemRows
+        : [['', '(conforme contrato)', '', `${duracao}h`, '-', '-', formatPrice(booking.totalPrice || 0)]],
+      styles: { fontSize: 8.5, cellPadding: 2.5, textColor: C_TEXT },
+      headStyles: { fillColor: C_DARK, textColor: C_WHITE, fontStyle: 'bold', fontSize: 8 },
+      alternateRowStyles: { fillColor: C_LIGHT },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 58 },
+        2: { cellWidth: 25, halign: 'center' },
+        3: { cellWidth: 16, halign: 'center' },
+        4: { cellWidth: 23, halign: 'right' },
+        5: { cellWidth: 23, halign: 'right' },
+        6: { cellWidth: 24, halign: 'right' },
+      },
+      didDrawCell: (data) => {
         const img = loadedImages[data.row.index];
-        if (data.column.index === 0 && typeof img === 'string') {
-          const x = data.cell.x + 1;
-          const y = data.cell.y + 1;
-          doc.addImage(img, 'PNG', x, y, 8, 8);
+        if (data.column.index === 0 && typeof img === 'string' && data.section === 'body') {
+          doc.addImage(img, 'PNG', data.cell.x + 1, data.cell.y + 1, 8, 8);
         }
-      }
+      },
     });
 
-    const tableEndY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || 120;
-    // Desconto e valor final
-    const desconto = booking.discount || 0;
-    const total = booking.totalPrice || 0;
-    doc.setFontSize(12);
-    doc.setTextColor('#2563eb');
-    doc.text(`Desconto aplicado: ${formatPrice(desconto)}`, 14, tableEndY + 10);
-    doc.setTextColor('#222');
-    doc.text(`Valor final: ${formatPrice(total)}`, 14, tableEndY + 16);
+    const tableEndY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? tableStartY + 20;
 
-    // Colaboradores detalhados
-    if (booking.eventCollaborators && booking.eventCollaborators.length > 0) {
-      doc.setFontSize(11);
-      doc.setTextColor('#2563eb');
-      doc.text('Equipe Técnica', 14, tableEndY + 26);
-      doc.setTextColor('#222');
-      booking.eventCollaborators.forEach((ec, idx) => {
-        const cName = ec.collaborator?.name || ec.collaborator?.user?.name || `Colaborador ${idx + 1}`;
-        doc.text(`• ${cName} - ${ec.role || 'ASSISTANT'}`, 14, tableEndY + 32 + idx * 6);
-      });
-    }
+    // ── Resumo financeiro (caixa à direita) ──────────────────────────────────
+    const valorFinal = Number(booking.totalPrice || 0) || Math.max(0, subtotalBruto - totalDescontos);
+    const descontoExibido = Number(booking.discount || 0) || totalDescontos;
 
-    // Observações
-    if (booking.notes?.trim()) {
-      const notesY = tableEndY + 36 + (booking.eventCollaborators?.length || 0) * 6;
-      const notesLines = doc.splitTextToSize(`Obs: ${booking.notes.trim()}`, 180);
-      doc.setFontSize(10);
-      doc.setTextColor('#222');
-      doc.text(notesLines, 14, notesY);
-    }
+    const boxX = PAGE_W - MARGIN - 86;
+    const boxW = 86;
+    let finY = tableEndY + 5;
 
-    // Rodapé personalizado
-    const footerY = doc.internal.pageSize.getHeight() - 60;
-    // Fundo do rodapé
-    doc.setFillColor('#f8fafc'); // background/card
-    doc.rect(10, footerY - 8, 190, 70, 'F');
+    doc.setFillColor(...C_CARD);
+    doc.setDrawColor(...C_BLUE);
+    doc.setLineWidth(0.4);
+    doc.rect(boxX, finY, boxW, 34, 'FD');
 
-    doc.setFontSize(11);
-    doc.setTextColor('#2563eb'); // primária
-    doc.text('Agradecemos por considerar a X-Produções. Estamos à disposição para dúvidas ou ajustes.', 14, footerY);
+    finY += 6;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...C_TEXT);
+    doc.text('Subtotal bruto:', boxX + 4, finY);
+    doc.text(formatPrice(subtotalBruto), boxX + boxW - 4, finY, { align: 'right' });
+
+    finY += 6;
+    doc.setTextColor(...C_RED);
+    doc.text('Desconto concedido ao cliente:', boxX + 4, finY);
+    doc.text(`- ${formatPrice(descontoExibido)}`, boxX + boxW - 4, finY, { align: 'right' });
+
+    finY += 3;
+    doc.setDrawColor(...C_MUTED);
+    doc.setLineWidth(0.2);
+    doc.line(boxX + 4, finY + 1, boxX + boxW - 4, finY + 1);
+
+    finY += 5;
+    doc.setFillColor(...C_BLUE);
+    doc.rect(boxX, finY - 1, boxW, 9, 'F');
+    doc.setTextColor(...C_WHITE);
     doc.setFontSize(10);
-    doc.setTextColor('#222'); // texto
-    doc.text('📞 Contato: (31) 98925-2272', 14, footerY + 8);
-    doc.text('📧 E-mail: suporte@xproducoeseventos.com.br', 14, footerY + 14);
-    doc.text('🟢 WhatsApp: (31) 98925-2272', 14, footerY + 20);
-    doc.setTextColor('#2563eb'); // primária
-    doc.text('Instagram: @x_producoeseventos', 14, footerY + 28);
-    doc.text('Facebook: facebook.com/XProducoeseEventos', 14, footerY + 34);
-    doc.setTextColor('#64748b'); // muted
-    doc.text('YouTube: (em breve)', 14, footerY + 40);
-    doc.text('LinkedIn: (em breve)', 14, footerY + 46);
-    doc.setTextColor('#222'); // texto
-    doc.text('Atenciosamente,', 14, footerY + 54);
-    doc.text(`${user?.name || 'Equipe X Produções'}`, 14, footerY + 60);
-    // Destaques
-    doc.setTextColor('#22c55e'); // verde
-    doc.text('🔒 SSL Seguro', 120, footerY + 8);
-    doc.setTextColor('#2563eb'); // primária
-    doc.text('⚡ Entrega Rápida', 120, footerY + 14);
-    // Links
-    doc.setTextColor('#2563eb');
-    doc.textWithLink('suporte@xproducoeseventos.com.br', 80, footerY + 14, { url: 'mailto:suporte@xproducoeseventos.com.br' });
-    doc.textWithLink('Instagram', 80, footerY + 28, { url: 'https://www.instagram.com/x_producoeseventos' });
-    doc.textWithLink('Facebook', 80, footerY + 34, { url: 'https://www.facebook.com/XProducoeseEventos/?locale=pt_BR' });
+    doc.setFont('helvetica', 'bold');
+    doc.text('VALOR FINAL DA PROPOSTA:', boxX + 4, finY + 5.5);
+    doc.text(formatPrice(valorFinal), boxX + boxW - 4, finY + 5.5, { align: 'right' });
+
+    // ── Observações (à esquerda do resumo financeiro) ─────────────────────────
+    if (booking.notes?.trim()) {
+      const obsLines = doc.splitTextToSize(`Obs: ${booking.notes.trim()}`, 82);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(...C_MUTED);
+      doc.text(obsLines, MARGIN, tableEndY + 8);
+    }
+
+    // ── Rodapé institucional ──────────────────────────────────────────────────
+    const footerH = 30;
+    const footerY = PAGE_H - footerH - 3;
+
+    doc.setFillColor(...C_DARK);
+    doc.rect(0, footerY, PAGE_W, footerH + 3, 'F');
+
+    let fy = footerY + 7;
+    doc.setTextColor(...C_WHITE);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('X Producoes & Eventos', MARGIN, fy);
+
+    fy += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text('Tel/WhatsApp: (31) 98925-2272', MARGIN, fy);
+    doc.text('Email: suporte@xproducoeseventos.com.br', 95, fy);
+
+    fy += 5;
+    doc.setTextColor(167, 202, 255);
+    doc.textWithLink('Instagram: @x_producoeseventos', MARGIN, fy, { url: 'https://www.instagram.com/x_producoeseventos' });
+    doc.textWithLink('Facebook: /XProducoeseEventos', 95, fy, { url: 'https://www.facebook.com/XProducoeseEventos/?locale=pt_BR' });
+
+    fy += 5;
+    doc.setTextColor(...C_WHITE);
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7.5);
+    doc.text('Agradecemos a preferencia! Estamos a disposicao para qualquer duvida ou ajuste nesta proposta.', MARGIN, fy);
+
+    fy += 5;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text(`Atenciosamente, ${user?.name || 'Equipe X Producoes'}`, MARGIN, fy);
+
+    doc.setTextColor(167, 202, 255);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.text(`Emitido em ${dataEmissao}`, PAGE_W - MARGIN, fy, { align: 'right' });
+
     const filenameClient = clientName.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
     doc.save(`proposta-${filenameClient}-${booking.id?.substring(0, 8)}.pdf`);
   };

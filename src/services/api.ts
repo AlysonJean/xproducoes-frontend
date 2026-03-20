@@ -342,9 +342,14 @@ export const categoryAPI = {
 export const bookingAPI = {
   getAll: (filters?: Record<string, unknown>) => api.get('/bookings', { params: filters }),
   getById: (id: string) => api.get(`/bookings/${id}`),
+  getRoadmap: (id: string) => api.get(`/bookings/roadmap/${id}`),
   create: (data: Record<string, unknown>) => api.post('/bookings', data),
   update: (id: string, data: Record<string, unknown>) => api.put(`/bookings/${id}`, data),
   delete: (id: string) => api.delete(`/bookings/${id}`),
+  createTask: (id: string, data: { title: string; description?: string }) =>
+    api.post(`/bookings/${id}/tasks`, data),
+  toggleTask: (taskId: string, isCompleted: boolean) =>
+    api.put(`/bookings/tasks/${taskId}/toggle`, { isCompleted }),
   updateStatus: (id: string, status: string) => api.patch(`/bookings/${id}/status`, { status }),
   confirm: (id: string) => api.post(`/bookings/${id}/confirm`),
   // Confirma a reserva com preço e colaboradores (admin)

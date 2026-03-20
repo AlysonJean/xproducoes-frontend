@@ -11,7 +11,7 @@ import { logDebug } from '../utils/logger';
 class AuthService {
   private static instance: AuthService;
   private isRefreshing = false;
-  private refreshSubscribers: ((token: string) => void)[] = [];
+  private refreshSubscribers: ((token: string | null) => void)[] = [];
 
   private constructor() {}
 
@@ -34,14 +34,9 @@ class AuthService {
       });
     }
 
-    const refreshToken = secureStorage.get('refreshToken');
-    if (!refreshToken) {
-      logDebug('No refresh token found in storage');
-      return null;
-    }
-
     this.isRefreshing = true;
     const API_BASE_URL = getApiBaseUrl();
+    const refreshToken = secureStorage.get('refreshToken');
 
     try {
       logDebug('Attempting token refresh...', { url: `${API_BASE_URL}/auth/refresh` });
@@ -49,15 +44,28 @@ class AuthService {
       const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
+        credentials: 'include',
+        // Cookie-first: mantém compatibilidade com instalações legadas que ainda usam body.
+        body: JSON.stringify(refreshToken ? { refreshToken } : {}),
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          logDebug('Refresh token rejected by API', { status: response.status });
+          this.notifyRefreshSubscribers(null);
+          this.logout();
+          return null;
+        }
+
         throw new Error(`Refresh API returned ${response.status}`);
       }
 
       const data = await response.json();
       const accessToken = data.accessToken;
+
+      if (!accessToken) {
+        throw new Error('Refresh API did not return access token');
+      }
       
       // Update secure storage
       secureStorage.set('accessToken', accessToken);
@@ -70,19 +78,20 @@ class AuthService {
       
       // Notify subscribers and update state
       window.dispatchEvent(new CustomEvent('auth:refreshed', { detail: { accessToken } }));
-      this.onRefreshed(accessToken);
+      this.notifyRefreshSubscribers(accessToken);
       
       return accessToken;
     } catch (error) {
       logDebug('Critical error during token refresh', { error });
-      this.logout();
+      // Em falhas transitórias (rede/cold start), não derrubar sessão imediatamente.
+      this.notifyRefreshSubscribers(null);
       return null;
     } finally {
       this.isRefreshing = false;
     }
   }
 
-  private onRefreshed(token: string) {
+  private notifyRefreshSubscribers(token: string | null) {
     this.refreshSubscribers.map((callback) => callback(token));
     this.refreshSubscribers = [];
   }
