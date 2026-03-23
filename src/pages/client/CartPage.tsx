@@ -8,12 +8,13 @@ import { useNotifications } from '../../contexts/NotificationContext';
 import { formatPrice } from '../../utils/formatPrice';
 import { RecommendationSection } from '../../components/ui/RecommendationSection';
 import { useRecommendations } from '../../hooks/useRecommendations';
+import { asArray } from '../../utils/normalize';
 
 export const CartPage = () => {
   const { cart, removeItem, itemCount, clearCart } = useCart();
   
   // Equipamentos
-    const equipmentItems = (cart?.equipments || []).map((item: any) => {
+    const equipmentItems = asArray<any>(cart?.equipments).map((item: any) => {
     if ('equipmentId' in item) {
       return {
         id: item.equipmentId,
@@ -33,7 +34,7 @@ export const CartPage = () => {
   });
 
   // Serviços
-    const serviceItems = ((cart as any)?.services || []).map((item: any) => ({
+    const serviceItems = asArray<any>((cart as any)?.services).map((item: any) => ({
     id: item.id,
     name: item.name,
     price: item.price || 0,

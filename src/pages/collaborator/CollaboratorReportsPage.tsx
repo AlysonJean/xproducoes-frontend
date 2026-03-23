@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { collaboratorProfileAPI } from '../../services/api';
+import { asArray } from '../../utils/normalize';
 
 import { ReportData } from '@/types/types';
 
@@ -40,13 +41,13 @@ const CollaboratorReportsPage: React.FC = () => {
             averageRating: Number(apiStats.averageRating || 0),
             onTimeDelivery: 100 // Mock: Backend ainda não calcula pontualidade baseado em check-in/out
           },
-          // Mapear ganhos mensais do backend
-                    monthly: apiStats.monthlyEarnings ? apiStats.monthlyEarnings.map((m: any) => ({
+           // Mapear ganhos mensais do backend
+                  monthly: asArray<any>(apiStats?.monthlyEarnings).map((m: any) => ({
              month: m.month,
              events: Number(m.events),
              rating: Number(apiStats.averageRating), // Backend ainda não tem rating mensal histórico, usando média geral
              earnings: Number(m.earnings)
-          })).slice(0, 6) : [],
+           })).slice(0, 6),
           // Mock: Backend ainda não retorna distribuição por tipos
           eventTypes: [
             { type: 'Geral', count: Number(apiStats.totalEvents || 0), percentage: 100, color: '#3b82f6' }

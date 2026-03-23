@@ -19,6 +19,7 @@ import { TestimonialCard } from '../components/ui/TestimonialCard';
 import { BannerCarousel } from '../components/ui/BannerCarousel';
 import { CategoryEquipmentRow } from '../components/ui/CategoryEquipmentRow';
 import { SEO } from '../components/SEO';
+import { asArray } from '../utils/normalize';
 
 const FloatingGlow = () => (
   <div className="absolute inset-0 -z-20 overflow-hidden pointer-events-none">
@@ -106,12 +107,12 @@ export const HomePage = () => {
         safeFetch(apiFetch('/portfolio?limit=3'), []),
       ]);
 
-      setCategories(catsData as Category[]);
+      setCategories(asArray<Category>(catsData));
       
-      const transformedKits = (kitsData as Kit[]).map(kit => transformKit(kit));
+      const transformedKits = asArray<Kit>(kitsData).map(kit => transformKit(kit));
       setKits(transformedKits);
       
-      setPortfolio(portfolioData as PortfolioItem[]);
+      setPortfolio(asArray<PortfolioItem>(portfolioData));
     } catch (err) {
       console.error('Erro detalhado no fetchPageData:', err);
       // Não bloqueia mais a renderização com tela de erro fatal
@@ -127,14 +128,14 @@ export const HomePage = () => {
     setReviewsLoading(true);
     try {
       // Preferir endpoint recente para limitar quantidade, caindo para /reviews/public
-      let data: ReviewItem[] | null = null;
+      let data: unknown = null;
       try {
   data = await apiFetch('/reviews/recent?limit=8');
       } catch {
         // fallback
   data = await apiFetch('/reviews/public');
       }
-      const normalized = (data || []).map((r: ReviewItem) => ({
+      const normalized = asArray<ReviewItem>(data).map((r: ReviewItem) => ({
         id: r.id,
         rating: r.rating,
         comment: r.comment,
