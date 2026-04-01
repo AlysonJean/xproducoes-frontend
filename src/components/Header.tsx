@@ -22,6 +22,7 @@ import { ThemeToggle } from './ui/ThemeToggle';
 import ThemedLogo from './ui/ThemedLogo';
 import RequestQuoteButton from './RequestQuoteButton';
 import { useWhatsAppModal } from './modals/ModalContext';
+import { getDashboardRoute } from '@/utils/authUtils';
 
 export const Header = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -33,6 +34,8 @@ export const Header = () => {
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const userDisplayName = user?.name?.trim() || 'Usuario';
+  const userDashboardRoute = user ? getDashboardRoute(user.role) : '/painel';
 
   // Formata contador para badges (padrão grandes e-commerces)
   const formatCount = (n: number) => (n > 99 ? '99+' : String(n));
@@ -160,7 +163,7 @@ export const Header = () => {
             {isAuthenticated ? (
               <div className="flex items-center space-x-3">
                 <Link
-                  to="/painel"
+                  to={userDashboardRoute}
                   className="hidden lg:flex items-center space-x-2 text-sm font-medium text-foreground/80 hover:text-foreground transition-all duration-300 group"
                 >
                   <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-primary/20 group-hover:border-primary transition-all duration-300">
@@ -178,13 +181,7 @@ export const Header = () => {
                     )}
                   </div>
                   <span className="max-w-[100px] truncate">
-                    {user?.role === 'ADMIN'
-                      ? 'Admin'
-                      : user?.role === 'COLLABORATOR'
-                      ? 'Colaborador'
-                      : user?.role === 'FREELANCER'
-                      ? 'Freelancer'
-                      : user?.name?.split(' ')[0] || 'Usuario'}
+                    {userDisplayName}
                   </span>
                 </Link>
                 <button
@@ -324,7 +321,7 @@ export const Header = () => {
               <div className="space-y-2">
                 {/* Dashboard/Conta */}
                 <Link
-                  to="/painel"
+                  to={userDashboardRoute}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center space-x-4 p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
                 >
@@ -343,13 +340,7 @@ export const Header = () => {
                     )}
                   </div>
                   <span>
-                    {user?.role === 'ADMIN'
-                      ? 'Painel Admin'
-                      : user?.role === 'COLLABORATOR'
-                      ? 'Painel Colaborador'
-                      : user?.role === 'FREELANCER'
-                      ? 'Painel Freelancer'
-                      : 'Minha Conta'}
+                    {userDisplayName}
                   </span>
                 </Link>
 
