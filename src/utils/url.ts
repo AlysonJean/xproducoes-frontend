@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // utilidades de validação e abertura segura de URLs usadas no frontend
 export const isIPv4 = (host: string) => /^\d+\.\d+\.\d+\.\d+$/.test(host);
-export const isPrivateIPv4 = (ip: string) => {
+export const isPrivateIPv4 = (ip?: string | null) => {
+  if (!ip || typeof ip !== 'string') return false;
   const parts = ip.split('.').map((p) => Number(p));
   if (parts.length !== 4 || parts.some(isNaN)) return false;
   const [a, b] = parts;

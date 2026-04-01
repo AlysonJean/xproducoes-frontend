@@ -22,9 +22,10 @@ export const SEO: React.FC<SEOProps> = ({
 }) => {
   const siteTitle = "X Produções";
   const fullTitle = `${title} | ${siteTitle}`;
+  const safeUrl = typeof url === 'string' ? url : '';
   
   // Canonical URL logic: remove query params to avoid duplicate content issues
-  const canonicalUrl = url.split('?')[0];
+  const canonicalUrl = safeUrl.split('?')[0];
 
   // Schema.org Local Business data
   const structuredData = {
@@ -86,7 +87,7 @@ export const SEO: React.FC<SEOProps> = ({
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:url" content={url} />
+      <meta name="twitter:url" content={safeUrl} />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={image} />

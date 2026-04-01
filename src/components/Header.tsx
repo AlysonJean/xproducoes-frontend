@@ -184,7 +184,7 @@ export const Header = () => {
                       ? 'Colaborador'
                       : user?.role === 'FREELANCER'
                       ? 'Freelancer'
-                      : user?.name.split(' ')[0]}
+                      : user?.name?.split(' ')[0] || 'Usuario'}
                   </span>
                 </Link>
                 <button

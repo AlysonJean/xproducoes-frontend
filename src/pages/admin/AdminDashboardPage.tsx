@@ -271,7 +271,7 @@ export const AdminDashboardPage = () => {
                 Status: Operação Nominal
               </Badge>
               <h1 className="text-3xl md:text-4xl font-black tracking-tighter mb-2">
-                Olá, {user?.name?.split(' ')[0]}! 👋
+                Olá, {user?.name?.split(' ')[0] || 'Admin'}! 👋
               </h1>
               <p className="text-white/70 font-medium max-w-md">
                 O ecossistema está estável. Temos <span className="text-white font-bold">{liveStats?.todayBookings || 0} eventos</span> programados para hoje.
