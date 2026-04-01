@@ -101,13 +101,6 @@ export const ClientDashboardPage = () => {
     }
   ];
 
-  // Efeito para redirecionar se um admin tentar aceder a esta página
-  useEffect(() => {
-    if (user?.role === 'ADMIN') {
-      navigate('/admin', { replace: true });
-    }
-  }, [user, navigate]);
-
   // Carregar dados do dashboard
   useEffect(() => {
     const loadDashboardData = async () => {

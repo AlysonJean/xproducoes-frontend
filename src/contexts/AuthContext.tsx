@@ -108,7 +108,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // If not, we'll get 401 and stay logged out
         try {
           const profileResp = await authAPI.getProfile();
-          const userData = (profileResp as any).data || profileResp;
+          const responseData = (profileResp as any).data || profileResp;
+          const userData = responseData.data || responseData;
           if (isMounted) {
             setUser(userData);
           }
@@ -149,7 +150,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (!response.ok) throw new Error('Invalid OAuth token');
-      const userData = await response.json();
+      const rawData = await response.json();
+      const userData = rawData.data || rawData;
 
       // ✅ NO LONGER storing tokens - they're in httpOnly cookies
       // secureStorage.set('accessToken', token);

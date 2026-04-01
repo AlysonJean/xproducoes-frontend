@@ -303,6 +303,17 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   return <>{children}</>;
 };
 
+// Canonical dashboard entrypoint by role to avoid redirect chains.
+const DashboardRedirect: React.FC = () => {
+  const { user } = useAuth();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Navigate to={getDashboardRoute(user.role)} replace />;
+};
+
 // Component para notificação offline
 function OfflineNotification() {
   const isOffline = useOfflineDetector();
@@ -451,7 +462,7 @@ const AppRoutes: React.FC = () => {
         path="/painel"
         element={
           <ProtectedRoute>
-            <Navigate to="/cliente/painel" replace />
+            <DashboardRedirect />
           </ProtectedRoute>
         }
       />
