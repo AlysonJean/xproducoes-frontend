@@ -554,6 +554,10 @@ const AppRoutes: React.FC = () => {
       <Route path="/collaborator/availability" element={<Navigate to="/colaborador/disponibilidade" replace />} />
       <Route path="/collaborator/notifications" element={<Navigate to="/colaborador/notificacoes" replace />} />
       <Route path="/collaborator/settings" element={<Navigate to="/colaborador/configuracoes" replace />} />
+      {/* Legacy aliases from old dashboard routes */}
+      <Route path="/dashboard" element={<Navigate to="/painel" replace />} />
+      <Route path="/client/dashboard" element={<Navigate to="/cliente/painel" replace />} />
+      <Route path="/admin/dashboard" element={<Navigate to="/admin/painel" replace />} />
       <Route
         path="/collaborator/event/:id/roadmap"
         element={
