@@ -128,8 +128,8 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
       let availableIds: Set<string> | null = null;
       if (eventDate) {
           try {
-                          const availableResponse = await collaboratorsAPI.getAvailable(eventDate) as { data: { success: boolean; data: any[] } };
-             const availableList = availableResponse.data.data; // Ajuste conforme resposta da API
+                          const availableResponse = await collaboratorsAPI.getAvailable(eventDate);
+             const availableList = availableResponse.data;
              
              if (availableList && Array.isArray(availableList)) {
                  availableIds = new Set(availableList.map((c: { id: string }) => c.id));

@@ -94,9 +94,16 @@ import { authService } from './authservice';
 
 // ✅ CIRCUIT BREAKER REMOVED - HANDLED BY AUTH SERVICE QUEUING
 
-// ✅ SECURE RESPONSE INTERCEPTOR WITH AUTO REFRESH + CSRF
+// ✅ SECURE RESPONSE INTERCEPTOR WITH AUTO REFRESH + CSRF + AUTO UNWRAP
 api.interceptors.response.use(
-  (response: AxiosResponse) => response,
+  (response: AxiosResponse) => {
+    // Auto-unwrap backend envelope { success, data } so callers get the inner data directly
+    const body = response.data;
+    if (body && typeof body === 'object' && 'success' in body && 'data' in body) {
+      response.data = body.data;
+    }
+    return response;
+  },
     async (error: unknown) => {
     const errorObj = error as { config?: InternalAxiosRequestConfig & { _retry?: boolean; _csrf_retry?: boolean }; response?: { status?: number } };
     const originalRequest = errorObj.config;

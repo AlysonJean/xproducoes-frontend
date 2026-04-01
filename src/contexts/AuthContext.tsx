@@ -108,9 +108,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // If not, we'll get 401 and stay logged out
         try {
           const profileResp = await authAPI.getProfile();
-          const responseData = (profileResp as any).data || profileResp;
-          const userData = responseData.data || responseData;
-          if (isMounted) {
+          const userData = profileResp.data;
+          if (isMounted && userData) {
             setUser(userData);
           }
         } catch (profileError: any) {

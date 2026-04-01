@@ -173,7 +173,7 @@ export const BookingDetailPage = () => {
     try {
       setLoading(true);
       const res = await bookingAPI.getById(id);
-            setBooking((res.data && (res.data as any).data) as BookingDetails);
+            setBooking(res.data as BookingDetails);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Falha ao sincronizar detalhes do contrato.');
     } finally {
@@ -188,9 +188,8 @@ export const BookingDetailPage = () => {
   const fetchAvailableCollaborators = async () => {
     try {
       const res = await collaboratorsAPI.getAll();
-            if (res && res.data && (res.data as any).data && Array.isArray((res.data as any).data)) {
-                setAvailableCollaborators((res.data as any).data);
-      }
+            const list = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+            setAvailableCollaborators(list);
         } catch (e) { /* ignore */ }
   };
 

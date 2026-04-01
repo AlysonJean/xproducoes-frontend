@@ -72,8 +72,6 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
         if (!mounted) return;
         if (Array.isArray(res)) {
           setCategories(res as Category[]);
-                } else if ((res as any)?.data && Array.isArray((res as any).data)) {
-                    setCategories((res as any).data as Category[]);
         } else {
           // fallback to default list transformed to Category shape
           setCategories(defaultCategories.map((name, idx) => ({ id: String(idx), name })));
