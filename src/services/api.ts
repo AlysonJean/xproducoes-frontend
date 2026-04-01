@@ -304,7 +304,14 @@ export const apiFetch = async <T = unknown>(
     return {} as T;
   }
 
-  return response.json() as Promise<T>;
+  const json = await response.json();
+
+  // Auto-unwrap standard backend envelope { success: true, data: ... }
+  if (json && typeof json === 'object' && 'success' in json && 'data' in json) {
+    return json.data as T;
+  }
+
+  return json as T;
 };
 
 // ===== 🔗 API ENDPOINTS =====

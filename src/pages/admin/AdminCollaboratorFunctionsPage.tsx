@@ -42,7 +42,8 @@ export const AdminCollaboratorFunctionsPage: React.FC = () => {
     try {
       setLoading(true);
       const resp = await collaboratorFunctionsAPI.getAll();
-      setFunctions(resp.data || []);
+      const raw = resp.data;
+      setFunctions(Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : []);
     } catch (err: unknown) {
       console.error(err);
       addNotification({

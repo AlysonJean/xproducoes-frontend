@@ -28,7 +28,6 @@ import {
   Alert
 } from '../../components/ui/StandardComponents';
 import { BrandLoader } from '@/components/ui/BrandLoader';
-import type { ApiResponse } from '../../types/api';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { Pagination } from '../../components/ui/Pagination';
 
@@ -62,8 +61,8 @@ export default function ReviewManagementPage() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiFetch(`/reviews${minRating ? `?rating=${minRating}` : ''}`);
-      const data = Array.isArray(res) ? res : ((res as ApiResponse<AdminReview[]>)?.data ?? []);
+      const res = await apiFetch<AdminReview[]>(`/reviews${minRating ? `?rating=${minRating}` : ''}`);
+      const data = Array.isArray(res) ? res : [];
       setItems(data);
       setError(null);
         } catch (e: any) {

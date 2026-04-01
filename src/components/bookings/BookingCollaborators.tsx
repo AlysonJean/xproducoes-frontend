@@ -110,8 +110,8 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
   // Fetch data
   const fetchCollaborators = useCallback(async () => {
     try {
-      const data = await apiFetch<EventCollaborator[] | { success: boolean; data: EventCollaborator[] }>(`/collaborators/events/${bookingId}/collaborators`);
-      setCollaborators(Array.isArray(data) ? data : data?.data || []);
+      const data = await apiFetch<EventCollaborator[]>(`/collaborators/events/${bookingId}/collaborators`);
+      setCollaborators(Array.isArray(data) ? data : []);
     } catch (error) {
       logger.error('Erro ao buscar colaboradores da reserva', 'BookingCollaborators', error);
     } finally {

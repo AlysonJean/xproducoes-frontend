@@ -97,10 +97,10 @@ export const AdminQuickProposalPage = () => {
           apiFetch<Kit[]>('/kits'),
           apiFetch<Service[]>('/services')
         ]);
-        setClients(Array.isArray(clientsRes) ? clientsRes : (clientsRes as unknown as { data: Client[] }).data || []);
-        setEquipments(Array.isArray(equipsRes) ? equipsRes : (equipsRes as unknown as { data: Equipment[] }).data || []);
-        setKits(Array.isArray(kitsRes) ? kitsRes : (kitsRes as unknown as { data: Kit[] }).data || []);
-        setServices(Array.isArray(servicesRes) ? servicesRes : (servicesRes as unknown as { data: Service[] }).data || []);
+        setClients(Array.isArray(clientsRes) ? clientsRes : []);
+        setEquipments(Array.isArray(equipsRes) ? equipsRes : []);
+        setKits(Array.isArray(kitsRes) ? kitsRes : []);
+        setServices(Array.isArray(servicesRes) ? servicesRes : []);
       } catch (error: unknown) {
         const err = error as { message?: string } | null;
         addNotification({ type: 'error', title: 'Erro ao carregar catálogo', message: err?.message || 'Falha ao buscar dados. Recarregue a página.' });

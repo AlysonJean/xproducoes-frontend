@@ -147,10 +147,10 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
         }
         
         let list: ClientData[] = [];
-        if ('data' in clientsRes && Array.isArray(clientsRes.data)) {
-          list = clientsRes.data;
-        } else if (Array.isArray(clientsRes)) {
+        if (Array.isArray(clientsRes)) {
           list = clientsRes;
+        } else if (clientsRes && 'data' in clientsRes && Array.isArray(clientsRes.data)) {
+          list = clientsRes.data;
         }
 
         // Sort clients alphabetically
