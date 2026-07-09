@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/shared/KitCard.tsx
 
 import { Link } from 'react-router-dom';
-import type { Kit } from '../../types/types';
+import type { Kit, Equipment } from '../../types/types';
 import { formatPrice } from '../../utils/typeSafeFormatters';
 import { normalizeImageUrl, getPlaceholderUrl } from '../../utils/imageUtils';
 import { FavoriteButton } from './FavoriteButton';
@@ -103,7 +102,7 @@ export const KitCard: React.FC<KitCardProps> = ({
         {(showCompare || showFavorite) && (
           <div className="absolute top-2 right-2 flex space-x-2 z-20">
             {showCompare && (
-              <CompareButton 
+              <CompareButton
                 equipment={{
                   id: kit.id,
                   name: kit.name,
@@ -111,8 +110,9 @@ export const KitCard: React.FC<KitCardProps> = ({
                   pricePerHour: kit.price,
                   imageUrl: kit.imageUrl,
                   isAvailable: kit.isActive ?? true
-                } as unknown as any} 
-                size="sm" 
+                } satisfies Equipment}
+                itemType="kit"
+                size="sm"
               />
             )}
             {showFavorite && kit.id && (

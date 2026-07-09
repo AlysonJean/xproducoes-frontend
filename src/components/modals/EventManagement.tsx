@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ConfirmModal } from './ConfirmModal';
 import React, { useState, useMemo } from 'react';
 import type { ICollaborator, EventAssignment, SelectedCollaboratorAssignment } from '../../types/types';
@@ -92,7 +91,11 @@ export const EventManagement: React.FC<EventManagementProps> = ({
     onSave(newAssignments);
   };
 
-    const updateAssignment = (collaboratorId: string, field: keyof SelectedCollaboratorAssignment, value: any) => {
+    const updateAssignment = <K extends keyof SelectedCollaboratorAssignment>(
+      collaboratorId: string,
+      field: K,
+      value: SelectedCollaboratorAssignment[K],
+    ) => {
     setSelectedCollaborators((prev) => ({
       ...prev,
       [collaboratorId]: { ...prev[collaboratorId], [field]: value },
@@ -266,7 +269,7 @@ export const EventManagement: React.FC<EventManagementProps> = ({
                           <label className="block text-xs font-medium text-foreground mb-1">Função</label>
                           <select
                             value={assignment.role}
-                            onChange={(e) => updateAssignment(id, 'role', e.target.value)}
+                            onChange={(e) => updateAssignment(id, 'role', e.target.value as ECollaboratorRole)}
                             className="w-full px-2 py-1 text-sm border border-input bg-background rounded focus:ring-1 focus:ring-primary focus:border-transparent"
                             aria-label={`Função para ${assignment.collaborator.name}`}
                           >

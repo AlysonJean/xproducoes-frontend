@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect } from 'react';
+import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -46,9 +46,12 @@ export const CompleteRegistrationPage: React.FC = () => {
       addNotification({ type: 'success', title: 'Registro completo', message: 'Sua conta foi ativada. Faça login.' });
       // redireciona para login após sucesso
       navigate('/login?registered=1');
-        } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      addNotification({ type: 'error', title: 'Erro', message: err?.response?.data?.message || 'Erro ao completar registro' });
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.message || 'Erro ao completar registro'
+        : 'Erro ao completar registro';
+      addNotification({ type: 'error', title: 'Erro', message });
     }
   }
 

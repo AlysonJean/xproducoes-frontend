@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
@@ -27,8 +26,8 @@ export const CityLandingPage = () => {
   const service = TARGET_SERVICES.find(s => s.slug === serviceSlug);
 
   useEffect(() => {
-    const statsPromise = apiFetch('/reviews/stats')
-            .then((data: any) => setReviewStats(data))
+    const statsPromise = apiFetch<{ total: number; averageRating: number }>('/reviews/stats')
+            .then((data) => setReviewStats(data))
       .catch(err => console.error('Failed to fetch stats', err));
 
     const minTimer = new Promise(resolve => setTimeout(resolve, 800));

@@ -1,16 +1,16 @@
 /* eslint-disable react-refresh/only-export-components */
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
+/* eslint-disable react-hooks/set-state-in-effect */
 // src/contexts/SettingsContext.tsx
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { useAppSettings } from '../hooks/useAppSettings';
+import { useAppSettings, type AppSettings } from '../hooks/useAppSettings';
 
 interface SettingsContextType {
   companyName: string;
   setCompanyName: (name: string) => void;
   loading: boolean;
   error: string | null;
-    saveSettings: (updates: { companyName?: string }) => Promise<any>;
+    saveSettings: (updates: { companyName?: string }) => Promise<AppSettings | undefined>;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

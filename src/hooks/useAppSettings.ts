@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '../services/api';
 
-interface AppSettings {
+export interface AppSettings {
   id: string;
   companyName: string;
   createdAt: string;

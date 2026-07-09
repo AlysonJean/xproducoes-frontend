@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { socialService } from '../../services/socialService';
 import { 
@@ -72,11 +72,14 @@ const AdminSocialListPage: React.FC = () => {
             setIsFormModalOpen(false);
             setNewWall({ name: '', hashtag: '', slug: '' });
             fetchWalls();
-                } catch (err: any) {
-            addNotification({ 
-              type: 'error', 
-              title: 'Falha na Criação', 
-              message: err?.response?.data?.error || err?.message || 'Erro desconhecido' 
+        } catch (err: unknown) {
+            const message = axios.isAxiosError(err)
+              ? err.response?.data?.error || err.message
+              : err instanceof Error ? err.message : 'Erro desconhecido';
+            addNotification({
+              type: 'error',
+              title: 'Falha na Criação',
+              message
             });
         }
     };

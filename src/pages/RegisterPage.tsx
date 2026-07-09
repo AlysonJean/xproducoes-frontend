@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
+import axios from 'axios';
 import ReactGA from 'react-ga4';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -65,9 +65,8 @@ export const RegisterPage = () => {
       let errorMessage = 'Falha ao criar conta. O e-mail pode já estar em uso.';
       if (err instanceof Error) {
         errorMessage = err.message;
-                const axiosError = err as any;
-        if (axiosError.response?.data) {
-          errorMessage = axiosError.response.data.message || axiosError.response.data.error || errorMessage;
+        if (axios.isAxiosError(err) && err.response?.data) {
+          errorMessage = err.response.data.message || err.response.data.error || errorMessage;
         }
       }
       setError(errorMessage);
