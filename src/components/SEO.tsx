@@ -15,7 +15,7 @@ export const SEO: React.FC<SEOProps> = ({
   title, 
   description = "Líder em aluguel de som, iluminação, painel de LED e equipamentos audiovisuais em Belo Horizonte e região.",
   keywords = "aluguel de som, iluminação, painel de led, eventos, belo horizonte",
-  image = "/xproducoes-logo.svg",
+  image = "https://www.xproducoeseeventos.com.br/xproducoes-logo.png",
   url = typeof window !== 'undefined' ? window.location.href : '',
   type = 'website',
   jsonLd
@@ -33,8 +33,8 @@ export const SEO: React.FC<SEOProps> = ({
     "@type": "LocalBusiness",
     "name": "X Produções",
     "image": [image],
-    "@id": "https://xproducoes.com.br",
-    "url": "https://xproducoes.com.br",
+    "@id": "https://www.xproducoeseeventos.com.br",
+    "url": "https://www.xproducoeseeventos.com.br",
     "telephone": "+5531998522380", // Real phone
     "priceRange": "$$",
     "address": {

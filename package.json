@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
+    "generate:sitemap": "tsx scripts/generateSitemap.ts",
+    "prebuild": "npm run generate:sitemap",
     "build": "tsc && vike build",
     "build:analyze": "tsc && vite build --mode analyze",
     "server": "node server",

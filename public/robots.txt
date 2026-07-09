@@ -1,8 +1,9 @@
 User-agent: *
 Allow: /
 Disallow: /admin
-Disallow: /admin/*
 Disallow: /painel
-Disallow: /painel/*
+Disallow: /cliente
+Disallow: /colaborador
+Disallow: /api/
 
-Sitemap: https://xproducoes.com.br/sitemap.xml
+Sitemap: https://www.xproducoeseeventos.com.br/sitemap.xml

@@ -91,7 +91,7 @@ export const CityLandingPage = () => {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     "name": "X Produções",
-    "image": "https://xproducoes.com.br/xproducoes-logo.svg", // Absolute URL preferred
+    "image": "https://www.xproducoeseeventos.com.br/xproducoes-logo.png", // Absolute URL preferred
     ...faqSchema,
     ...reviewSchema
   };

@@ -1,6 +1,6 @@
 import { TARGET_CITIES, TARGET_SERVICES } from './localSeoConfig';
 
-const BASE_URL = 'https://www.xproduceoseeventos.com.br';
+const BASE_URL = 'https://www.xproducoeseeventos.com.br';
 
 export const STATIC_ROUTES = [
   '/',
@@ -51,12 +51,16 @@ ${localSeoUrls}
 }
 
 export function generateRobotsTxt(): string {
+  // Lista derivada das rotas privadas reais em src/App.tsx (não apenas /admin — os
+  // painéis de cliente e colaborador também ficam atrás de login e não devem ser
+  // indexados). Mantenha isso em sincronia se novas áreas privadas forem adicionadas.
   return `User-agent: *
 Allow: /
-Disallow: /admin/
+Disallow: /admin
+Disallow: /painel
+Disallow: /cliente
+Disallow: /colaborador
 Disallow: /api/
-Disallow: /cliente/painel/
-Disallow: /colaborador/main/
 
 Sitemap: ${BASE_URL}/sitemap.xml
 `;

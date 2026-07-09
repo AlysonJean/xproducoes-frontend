@@ -3,8 +3,8 @@ export type SchemaType = 'Organization' | 'LocalBusiness' | 'Product' | 'Breadcr
 
 export const COMPANY_INFO = {
   name: 'X-Produções',
-  url: 'https://xproducoes.com.br', // Replace with actual domain
-  logo: 'https://xproducoes.com.br/logo-complete.png', // Replace with actual logo URL
+  url: 'https://www.xproducoeseeventos.com.br',
+  logo: 'https://www.xproducoeseeventos.com.br/xproducoes-logo.png',
   description: 'Referência em aluguel de som, luz, painel de LED e estruturas para eventos em Belo Horizonte e região.',
   address: {
     streetAddress: 'Belo Horizonte', // Placeholder, update if real address found

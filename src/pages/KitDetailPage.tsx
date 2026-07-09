@@ -134,7 +134,7 @@ export const KitDetailPage = () => {
     "@type": "Product",
     "name": kit.name,
     "image": [
-      kit.imageUrl || "https://xproducoes.com.br/xproducoes-logo.svg"
+      kit.imageUrl || "https://www.xproducoeseeventos.com.br/xproducoes-logo.png"
     ],
     "description": kit.description || `Aluguel de ${kit.name} em Belo Horizonte. Kit completo para festas e eventos.`,
     "sku": kit.id,
@@ -144,7 +144,7 @@ export const KitDetailPage = () => {
     },
     "offers": {
       "@type": "Offer",
-      "url": typeof window !== 'undefined' ? `${window.location.origin}/kits/${kit.slug || kit.id}` : `https://xproducoes.com.br/kits/${kit.slug || kit.id}`,
+      "url": typeof window !== 'undefined' ? `${window.location.origin}/kits/${kit.slug || kit.id}` : `https://www.xproducoeseeventos.com.br/kits/${kit.slug || kit.id}`,
       "priceCurrency": "BRL",
       "price": kit.price || 0,
       "priceValidUntil": new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],

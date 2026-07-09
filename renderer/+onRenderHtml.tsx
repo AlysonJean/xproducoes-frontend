@@ -56,7 +56,7 @@ export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageCon
   const { documentProps } = pageContext.data || pageContext.exports
   const title = (documentProps && documentProps.title) || 'X-Produções - Aluguel de Equipamentos'
   const desc = (documentProps && documentProps.description) || 'Soluções completas em audiovisuais para seu evento em BH'
-  const image = (documentProps && documentProps.image) || '/xproducoes-logo.svg'
+  const image = (documentProps && documentProps.image) || 'https://www.xproducoeseeventos.com.br/xproducoes-logo.png'
   const url = pageContext.urlOriginal
     ? `https://www.xproducoeseeventos.com.br${pageContext.urlOriginal}`
     : 'https://www.xproducoeseeventos.com.br'
