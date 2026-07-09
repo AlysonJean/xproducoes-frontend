@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
@@ -31,9 +30,69 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import { useSocket } from '../../hooks/useSocket';
 
+interface RoadmapTask {
+  id: string;
+  title: string;
+  description?: string;
+  isCompleted: boolean;
+}
+
+interface RoadmapExpense {
+  id: string;
+  description: string;
+  amount: number;
+  createdAt: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+}
+
+interface RoadmapChatMessage {
+  id: string;
+  senderId: string;
+  content: string;
+  createdAt: string;
+}
+
+interface RoadmapChat {
+  id: string;
+  messages?: RoadmapChatMessage[];
+}
+
+interface RoadmapEventCollaborator {
+  collaborator: {
+    userId?: string;
+    user: {
+      name: string;
+      avatarUrl?: string;
+    };
+  };
+  function?: { name?: string };
+  totalPayment?: number;
+}
+
+interface RoadmapBooking {
+  id: string;
+  userId?: string;
+  eventTitle?: string;
+  eventDate: string;
+  city?: string;
+  street?: string;
+  addressNumber?: string;
+  state?: string;
+  location?: string;
+  locationUrl?: string;
+  venueContactName?: string;
+  venueContactPhone?: string;
+  technicalRider?: string;
+  technicalRiderUrl?: string;
+  tasks?: RoadmapTask[];
+  expenses?: RoadmapExpense[];
+  eventCollaborators?: RoadmapEventCollaborator[];
+  chats?: RoadmapChat[];
+}
+
 const CollaboratorEventRoadmapPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [booking, setBooking] = useState<any>(null);
+  const [booking, setBooking] = useState<RoadmapBooking | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'roadmap' | 'rider' | 'checklist' | 'logistics' | 'team' | 'chat'>('roadmap');
   const [message, setMessage] = useState('');
@@ -57,30 +116,32 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
   useEffect(() => {
     if (!isConnected) return;
 
-    const cleanupMessage = on('new_message', (newMessage: any) => {
-      setBooking((prev: any) => {
+    const cleanupMessage = on('new_message', (newMessage) => {
+      const msg = newMessage as RoadmapChatMessage;
+      setBooking((prev) => {
         if (!prev || !prev.chats?.[0]) return prev;
         const chat = prev.chats[0];
         // Evita duplicados se o remetente for eu (já add localmente ou via refetch)
-        const exists = chat.messages?.some((m: any) => m.id === newMessage.id);
+        const exists = chat.messages?.some((m) => m.id === msg.id);
         if (exists) return prev;
 
         return {
           ...prev,
           chats: [{
             ...chat,
-            messages: [...(chat.messages || []), newMessage]
+            messages: [...(chat.messages || []), msg]
           }]
         };
       });
     });
 
-    const cleanupTask = on('task_updated', (updatedTask: any) => {
-      setBooking((prev: any) => {
+    const cleanupTask = on('task_updated', (updatedTask) => {
+      const task = updatedTask as RoadmapTask;
+      setBooking((prev) => {
         if (!prev || !prev.tasks) return prev;
         return {
           ...prev,
-          tasks: prev.tasks.map((t: any) => t.id === updatedTask.id ? updatedTask : t)
+          tasks: prev.tasks.map((t) => t.id === task.id ? task : t)
         };
       });
     });
@@ -95,7 +156,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
     try {
       if (!id) return;
       const resp = await collaboratorProfileAPI.getEventRoadmap(id);
-      const data = resp.data?.data || resp.data;
+      const data = (resp.data?.data || resp.data) as RoadmapBooking;
       setBooking(data);
       
       // Entrar na sala do chat especificamente se houver chat
@@ -141,12 +202,15 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
     try {
       await collaboratorProfileAPI.toggleTask(taskId, !currentStatus);
       // Update local otimista (será reforçado pelo evento do socket se o backend emitir)
-      setBooking((prev: any) => ({
-        ...prev,
-        tasks: prev.tasks.map((t: any) => 
-          t.id === taskId ? { ...t, isCompleted: !currentStatus } : t
-        )
-      }));
+      setBooking((prev) => {
+        if (!prev || !prev.tasks) return prev;
+        return {
+          ...prev,
+          tasks: prev.tasks.map((t) =>
+            t.id === taskId ? { ...t, isCompleted: !currentStatus } : t
+          )
+        };
+      });
     } catch (error) {
       console.error('Erro ao alternar tarefa:', error);
     }
@@ -175,7 +239,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
 
     setSubmittingExpense(true);
     try {
-      await (collaboratorProfileAPI as any).addExpense(id, {
+      await collaboratorProfileAPI.addExpense(id, {
         amount: parseFloat(expenseAmount),
         description: expenseDesc,
         receiptUrl
@@ -219,7 +283,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
   }
 
   // const eventChat = booking.chats?.find((c: any) => c.type === 'EVENT'); // Variável não utilizada
-  const myCollaboratorData = booking.eventCollaborators?.find((c: any) => c.collaborator.userId === booking.userId);
+  const myCollaboratorData = booking.eventCollaborators?.find((c) => c.collaborator.userId === booking.userId);
 
   return (
     <CollaboratorLayout 
@@ -271,17 +335,17 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
 
         {/* Navegação por Abas */}
         <div className="flex items-center p-1.5 bg-muted/50 backdrop-blur-sm rounded-2xl gap-1 overflow-x-auto max-w-full no-scrollbar border border-border/50 shadow-inner">
-          {[
+          {([
             { id: 'roadmap', label: 'Timeline', icon: Clock },
             { id: 'checklist', label: 'Checklist', icon: CheckCircle2 },
             { id: 'logistics', label: 'Logística', icon: MapPin },
             { id: 'rider', label: 'Rider Técnico', icon: FileText },
             { id: 'team', label: 'Equipe', icon: Users },
             { id: 'chat', label: 'Chat', icon: MessageSquare }
-          ].map((tab) => (
+          ] as const).map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
                 activeTab === tab.id 
                   ? 'bg-white text-primary shadow-sm border border-border/10' 
@@ -290,9 +354,9 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
             >
               <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'animate-bounce text-primary' : ''}`} />
               {tab.label}
-              {tab.id === 'checklist' && booking.tasks?.filter((t:any)=>!t.isCompleted).length > 0 && (
+              {tab.id === 'checklist' && (booking.tasks?.filter((t)=>!t.isCompleted).length ?? 0) > 0 && (
                 <span className="bg-primary text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
-                  {booking.tasks?.filter((t:any)=>!t.isCompleted).length}
+                  {booking.tasks?.filter((t)=>!t.isCompleted).length}
                 </span>
               )}
             </button>
@@ -342,7 +406,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
               >
                 <div className="space-y-3">
                   {booking.tasks && booking.tasks.length > 0 ? (
-                    booking.tasks.map((task: any) => (
+                    booking.tasks.map((task) => (
                       <button
                         key={task.id}
                         onClick={() => handleToggleTask(task.id, task.isCompleted)}
@@ -542,8 +606,8 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
                      </AnimatePresence>
 
                      <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
-                        {booking.expenses?.length > 0 ? (
-                          booking.expenses.map((expense: any) => (
+                        {(booking.expenses?.length ?? 0) > 0 ? (
+                          booking.expenses!.map((expense) => (
                             <div key={expense.id} className="flex items-center justify-between p-3.5 bg-muted/20 border border-border/40 rounded-2xl hover:border-primary/20 transition-all">
                                <div className="flex items-center gap-4">
                                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shadow-inner">
@@ -624,7 +688,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
             {activeTab === 'team' && (
               <SimpleCard title="Equipe Operacional" description="Colaboradores escalados para este evento">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 py-2">
-                  {(booking.eventCollaborators || []).map((member: any, i: number) => (
+                  {(booking.eventCollaborators || []).map((member, i) => (
                     <motion.div 
                       key={i}
                       whileHover={{ scale: 1.02, y: -4 }}
@@ -673,8 +737,8 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/70">
-                  {booking.chats?.[0]?.messages?.length > 0 ? (
-                    booking.chats[0].messages.map((msg: any, i: number) => {
+                  {(booking.chats?.[0]?.messages?.length ?? 0) > 0 ? (
+                    booking.chats![0].messages!.map((msg, i) => {
                       const isMe = msg.senderId === booking.userId;
                       return (
                         <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
