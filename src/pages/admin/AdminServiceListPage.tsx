@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
 import { 
   Plus, 
   Edit2, 
@@ -59,8 +58,8 @@ export const AdminServiceListPage = () => {
       const data = await apiFetch('/services');
       setServices(asArray<Service>(data));
       setError(null);
-        } catch (err: any) {
-      const msg = err?.message || 'Falha ao sincronizar catálogo de soluções.';
+        } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Falha ao sincronizar catálogo de soluções.';
       setError(msg);
       addNotification({
         type: 'error',
@@ -94,11 +93,11 @@ export const AdminServiceListPage = () => {
         message: 'O serviço foi removido do catálogo operativo com sucesso.'
       });
       setIsDeleteModalOpen(false);
-        } catch (err: any) {
+        } catch (err: unknown) {
       addNotification({
         type: 'error',
         title: 'Erro de Purga',
-        message: err?.message || 'Não foi possível desativar este serviço no momento.'
+        message: err instanceof Error ? err.message : 'Não foi possível desativar este serviço no momento.'
       });
     } finally {
       setIsDeleting(false);
@@ -120,11 +119,11 @@ export const AdminServiceListPage = () => {
         title: 'Status Sincronizado',
         message: `Disponibilidade de ${service.name} atualizada.`
       });
-        } catch (err: any) {
+        } catch (err: unknown) {
       addNotification({
         type: 'error',
         title: 'Erro de Sinal',
-        message: err?.message || 'Falha ao comunicar alteração de status operacional.'
+        message: err instanceof Error ? err.message : 'Falha ao comunicar alteração de status operacional.'
       });
     }
   };
@@ -257,7 +256,7 @@ export const AdminServiceListPage = () => {
               <Select
                 className="w-56 h-10 text-[10px] font-bold uppercase tracking-widest bg-card border-border/60"
                 value={statusFilter}
-                                onChange={(e: any) => setStatusFilter(e.target.value)}
+                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
                 options={[
                     { value: 'all', label: 'Todos os Estados' },
                     { value: 'ACTIVE', label: 'Operacional / Ativo' },
@@ -344,7 +343,7 @@ export const AdminServiceListPage = () => {
                       <td className="px-6 py-5">
                         <StatusSelect 
                           currentStatus={item.status as ItemStatus || ItemStatus.ACTIVE}
-                                                    onStatusChange={(newStatus: any) => handleStatusChange(item, newStatus)}
+                                                    onStatusChange={(newStatus) => handleStatusChange(item, newStatus)}
                         />
                       </td>
                       <td className="px-6 py-5">

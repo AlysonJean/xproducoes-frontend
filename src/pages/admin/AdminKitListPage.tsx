@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
 import { 
   Plus, 
   Edit2, 
@@ -59,8 +58,8 @@ export const AdminKitListPage = () => {
       const data = await apiFetch('/kits');
       setKits(asArray<Kit>(data).map(transformKit));
       setError(null);
-        } catch (err: any) {
-      const msg = err?.message || 'Erro ao carregar repositório de combos.';
+        } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao carregar repositório de combos.';
       setError(msg);
       addNotification({
         type: 'error',
@@ -96,11 +95,11 @@ export const AdminKitListPage = () => {
         message: 'O kit foi removido permanentemente da base de locação.'
       });
       setIsDeleteModalOpen(false);
-        } catch (err: any) {
+        } catch (err: unknown) {
       addNotification({
         type: 'error',
         title: 'Erro de Protocolo',
-        message: err?.message || 'Falha ao processar purga do kit.'
+        message: err instanceof Error ? err.message : 'Falha ao processar purga do kit.'
       });
     } finally {
       setIsDeleting(false);
@@ -124,11 +123,11 @@ export const AdminKitListPage = () => {
         title: 'Pulso Sincronizado',
         message: 'Status do combo atualizado no catálogo ativo.'
       });
-        } catch (err: any) {
+        } catch (err: unknown) {
       addNotification({
         type: 'error',
         title: 'Erro de Sinal',
-        message: err?.message || 'O terminal não respondeu à tentativa de ajuste.'
+        message: err instanceof Error ? err.message : 'O terminal não respondeu à tentativa de ajuste.'
       });
     }
   };
@@ -261,7 +260,7 @@ export const AdminKitListPage = () => {
               <Select
                 className="w-56 h-10 text-[10px] font-bold uppercase tracking-widest bg-card border-border/60"
                 value={statusFilter}
-                                onChange={(e: any) => setStatusFilter(e.target.value)}
+                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
                 options={[
                     { value: 'all', label: 'Todos os Status' },
                     { value: 'ACTIVE', label: 'Operacional/Ativo' },
@@ -349,7 +348,7 @@ export const AdminKitListPage = () => {
                       <td className="px-6 py-5">
                         <StatusSelect 
                           currentStatus={kit.status as ItemStatus || ItemStatus.ACTIVE}
-                                                    onStatusChange={(newStatus: any) => handleStatusChange(kit, newStatus)}
+                                                    onStatusChange={(newStatus) => handleStatusChange(kit, newStatus)}
                         />
                       </td>
                       <td className="px-6 py-5">

@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/exhaustive-deps, @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
  
 // Caminho do arquivo: frontend/src/contexts/CartContext.tsx
 
@@ -73,11 +73,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       addNotification({ type: 'warning', title: 'Kit já está no carrinho', message: 'Este kit já foi adicionado.' });
       return;
     }
-        if (type === 'equipment' && cart?.equipments?.some((e: any) => (e.equipmentId || e.id) === (item as Equipment).id)) {
+        if (type === 'equipment' && cart?.equipments?.some((e) => ('equipmentId' in e ? e.equipmentId : e.id) === (item as Equipment).id)) {
       addNotification({ type: 'warning', title: 'Item já está no carrinho', message: 'Este equipamento já foi adicionado.' });
       return;
     }
-        if (type === 'service' && cart?.services?.some((s: any) => s.id === (item as Service).id)) {
+        if (type === 'service' && cart?.services?.some((s) => s.id === (item as Service).id)) {
       addNotification({ type: 'warning', title: 'Serviço já está no carrinho', message: 'Este serviço já foi adicionado.' });
       return;
     }
@@ -117,9 +117,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setCart(updatedCart as Cart);
       ReactGA.event({ category: "ecommerce", action: "add_to_cart", label: equipmentItem.name, value: Number(equipmentItem.pricePerHour || 0) });
       addNotification({ type: 'success', title: 'Item adicionado', message: 'Item adicionado ao carrinho.' });
-        } catch (e: any) {
+        } catch (e: unknown) {
       setCart(previousCart ?? null);
-      const message = e?.message || 'Não foi possível adicionar o item ao carrinho.';
+      const message = e instanceof Error ? e.message : 'Não foi possível adicionar o item ao carrinho.';
       if (message.includes('401') || normalizeString(message).includes('unauthorized')) {
         addNotification({ type: 'error', title: 'Sessão expirada', message: 'Faça login para adicionar itens ao carrinho.' });
         window.location.href = '/login';
@@ -143,9 +143,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       }
       setCart(updatedCart as Cart);
       addNotification({ type: 'success', title: 'Removido', message: 'Item removido do carrinho.' });
-        } catch (e: any) {
+        } catch (e: unknown) {
       setCart(previousCart ?? null);
-      const message = e?.message || 'Não foi possível remover o item do carrinho.';
+      const message = e instanceof Error ? e.message : 'Não foi possível remover o item do carrinho.';
       addNotification({ type: 'error', title: 'Erro ao remover', message });
       throw new Error(message);
     }
@@ -158,9 +158,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       const updatedCart = await apiFetch('/cart/clear', { method: 'POST' });
       setCart(updatedCart as Cart);
       addNotification({ type: 'success', title: 'Carrinho limpo', message: 'O carrinho foi limpo.' });
-        } catch (e: any) {
+        } catch (e: unknown) {
       setCart(previousCart ?? null);
-      const message = e?.message || 'Não foi possível limpar o carrinho.';
+      const message = e instanceof Error ? e.message : 'Não foi possível limpar o carrinho.';
       addNotification({ type: 'error', title: 'Erro ao limpar', message });
       throw new Error(message);
     }
