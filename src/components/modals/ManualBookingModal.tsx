@@ -1,11 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
+/* eslint-disable react-hooks/set-state-in-effect */
 // Caminho: frontend/src/components/admin/ManualBookingModal.tsx
 
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 // Zod já está corretamente importado
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { apiFetch } from '../../services/api';
 import type { Equipment, Kit } from '../../types/types';
 import { Button, Input, Textarea, FormActions, Alert, Select } from '../ui/StandardComponents'; // Added Select
@@ -32,7 +32,7 @@ const manualBookingSchema = z
     notes: z.string().optional(),
   })
   .refine(
-        (data: any) => {
+        (data) => {
       // Garante que ou um kit ou pelo menos um equipamento seja selecionado
       return !!data.kitId || (Array.isArray(data.equipmentIds) && data.equipmentIds.length > 0);
     },
@@ -42,6 +42,18 @@ const manualBookingSchema = z
     }
   );
 type ManualBookingFormData = z.infer<typeof manualBookingSchema>;
+
+interface RawClientRecord {
+  id?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  user?: { id?: string; name?: string; email?: string };
+}
+
+interface RawClientsResponse {
+  data?: RawClientRecord[];
+}
 
 interface ManualBookingModalProps {
   isOpen: boolean;
@@ -107,18 +119,20 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
           const [equipData, kitData, clientsRes] = await Promise.all([
             apiFetch('/equipments'),
             apiFetch('/kits'),
-                        apiFetch<any>('/admin/clients').catch(() => ({ data: [] })),
+                        apiFetch<RawClientsResponse | RawClientRecord[]>('/admin/clients').catch(() => ({ data: [] })),
           ]);
           setEquipments(equipData as Equipment[]);
           setKits(kitData as Kit[]);
-          
-          const list = Array.isArray(clientsRes?.data) ? clientsRes.data : (Array.isArray(clientsRes) ? clientsRes : []);
-                    const mappedClients = list.map((c: any) => ({
-            id: c.id || c.user?.id,
+
+          const list: RawClientRecord[] = Array.isArray(clientsRes)
+            ? clientsRes
+            : (Array.isArray(clientsRes?.data) ? clientsRes.data : []);
+                    const mappedClients = list.map((c) => ({
+            id: c.id || c.user?.id || '',
             name: c.user?.name || c.name || 'Cliente',
             email: c.user?.email || c.email,
             phone: c.phone || '',
-                    })).sort((a: any, b: any) => a.name.localeCompare(b.name));
+                    })).sort((a, b) => a.name.localeCompare(b.name));
           setClients(mappedClients);
         } catch {
           setServerError('Falha ao carregar dados.');
@@ -176,7 +190,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
                 value: c.id, 
                 label: `${c.name} ${c.phone ? `(${c.phone})` : ''}` 
               }))}
-                            onChange={(e: any) => {
+                            onChange={(e: ChangeEvent<HTMLSelectElement>) => {
                 const clientId = e.target.value;
                 const client = clients.find(c => c.id === clientId);
                 if (client) {

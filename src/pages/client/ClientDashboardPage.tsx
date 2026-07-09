@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/exhaustive-deps */
 // Caminho: frontend/src/pages/client/ClientDashboardPage.tsx
 
 import { useEffect, useState } from 'react';
@@ -126,13 +126,13 @@ export const ClientDashboardPage = () => {
         // Processar favoritos primeiro
         let favoritesCount = 0;
         if (favoritesResponse.status === 'fulfilled') {
-                    const favorites = asArray<any>((favoritesResponse.value as any)?.data || favoritesResponse.value);
+                    const favorites = asArray<unknown>(favoritesResponse.value?.data || favoritesResponse.value);
           favoritesCount = favorites.length;
         }
 
         // Processar estatísticas do usuário
         if (statsResponse.status === 'fulfilled') {
-                    const statsData = (statsResponse.value as any)?.data;
+                    const statsData = statsResponse.value?.data as DashboardStats | undefined;
           if (statsData) {
             setStats({
               totalBookings: statsData.totalBookings || 0,
@@ -156,18 +156,18 @@ export const ClientDashboardPage = () => {
         // Processar reservas
         let allBookings: SafeBooking[] = [];
         if (bookingsResponse.status === 'fulfilled') {
-                    allBookings = asArray<SafeBooking>((bookingsResponse.value as any)?.data || bookingsResponse.value);
+                    allBookings = asArray<SafeBooking>(bookingsResponse.value?.data || bookingsResponse.value);
           setRecentBookings(allBookings.slice(0, 3));
         }
 
         // Processar próximas reservas
         if (upcomingResponse.status === 'fulfilled') {
-                    setUpcomingBookings(asArray<SafeBooking>((upcomingResponse.value as any)?.data || upcomingResponse.value));
+                    setUpcomingBookings(asArray<SafeBooking>(upcomingResponse.value?.data || upcomingResponse.value));
         }
 
         // Processar kits recomendados
         if (kitsResponse.status === 'fulfilled') {
-                    setRecommendedKits(asArray<Kit>((kitsResponse.value as any)?.data || kitsResponse.value));
+                    setRecommendedKits(asArray<Kit>(kitsResponse.value?.data || kitsResponse.value));
         }
 
         // Calcular estatísticas localmente como fallback se a API de stats falhar

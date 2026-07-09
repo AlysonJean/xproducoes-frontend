@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
 import { 
   Plus, 
   Edit2, 
@@ -141,7 +140,7 @@ export const EquipmentListPage = () => {
   const categories = useMemo(() => {
     const cats = new Set<string>();
     equipments.forEach(e => {
-                const cat = typeof e.category === 'string' ? e.category : (e.category as any)?.name;
+                const cat = typeof e.category === 'string' ? e.category : e.category?.name;
         if (cat) cats.add(cat);
     });
     return Array.from(cats).sort();
@@ -149,7 +148,7 @@ export const EquipmentListPage = () => {
 
   const filteredEquipments = useMemo(() => {
     return equipments.filter(e => {
-                const cat = typeof e.category === 'string' ? e.category : (e.category as any)?.name || '';
+                const cat = typeof e.category === 'string' ? e.category : e.category?.name || '';
         const matchesSearch = e.name.toLowerCase().includes(searchTerm.toLowerCase()) || cat.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = categoryFilter === 'all' || cat === categoryFilter;
         const matchesStatus = statusFilter === 'all' || e.status === statusFilter;
@@ -283,7 +282,7 @@ export const EquipmentListPage = () => {
               <Select
                 className="w-48 h-10 text-[10px] font-bold uppercase tracking-widest bg-card border-border/60"
                 value={categoryFilter}
-                                onChange={(e: any) => setCategoryFilter(e.target.value)}
+                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setCategoryFilter(e.target.value)}
                 options={[
                     { value: 'all', label: 'Todas as Categorias' },
                     ...categories.map(c => ({ value: c, label: c }))
@@ -292,7 +291,7 @@ export const EquipmentListPage = () => {
               <Select
                 className="w-44 h-10 text-[10px] font-bold uppercase tracking-widest bg-card border-border/60"
                 value={statusFilter}
-                                onChange={(e: any) => setStatusFilter(e.target.value)}
+                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
                 options={[
                     { value: 'all', label: 'Todos os Estados' },
                     { value: 'ACTIVE', label: 'Ativo/Disponível' },
@@ -363,7 +362,7 @@ export const EquipmentListPage = () => {
                       <td className="px-6 py-5">
                         <div className="flex flex-col gap-1.5">
                             <Badge variant="outline" className="w-fit text-[9px] font-black uppercase tracking-widest border-primary/30 bg-primary/5 text-primary h-5 px-2">
-                                                                {typeof item.category === 'string' ? item.category : (item.category as any)?.name || 'Generalista'}
+                                                                {typeof item.category === 'string' ? item.category : item.category?.name || 'Generalista'}
                             </Badge>
                         </div>
                       </td>
@@ -376,7 +375,7 @@ export const EquipmentListPage = () => {
                       <td className="px-6 py-5">
                         <StatusSelect 
                           currentStatus={item.status as ItemStatus || ItemStatus.ACTIVE}
-                                                    onStatusChange={(newStatus: any) => handleStatusChange(item, newStatus)}
+                                                    onStatusChange={(newStatus) => handleStatusChange(item, newStatus)}
                         />
                       </td>
                       <td className="px-6 py-5">

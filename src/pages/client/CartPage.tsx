@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // Caminho do arquivo: frontend/src/pages/client/CartPage.tsx
 
 import { Link, useNavigate } from 'react-router-dom';
@@ -9,12 +8,13 @@ import { formatPrice } from '../../utils/formatPrice';
 import { RecommendationSection } from '../../components/ui/RecommendationSection';
 import { useRecommendations } from '../../hooks/useRecommendations';
 import { asArray } from '../../utils/normalize';
+import type { Equipment, Service } from '../../types/types';
 
 export const CartPage = () => {
   const { cart, removeItem, itemCount, clearCart } = useCart();
-  
+
   // Equipamentos
-    const equipmentItems = asArray<any>(cart?.equipments).map((item: any) => {
+    const equipmentItems = asArray<{ equipmentId: string; equipment: Equipment } | Equipment>(cart?.equipments).map((item) => {
     if ('equipmentId' in item) {
       return {
         id: item.equipmentId,
@@ -34,7 +34,7 @@ export const CartPage = () => {
   });
 
   // Serviços
-    const serviceItems = asArray<any>((cart as any)?.services).map((item: any) => ({
+    const serviceItems = asArray<Service>(cart?.services).map((item) => ({
     id: item.id,
     name: item.name,
     price: item.price || 0,
@@ -69,7 +69,7 @@ export const CartPage = () => {
   const complementaryRecommendations = useRecommendations({
     type: 'frequently-bought',
     itemId: firstItemId || '',
-        itemType: (firstItemType as any) || 'equipment',
+        itemType: firstItemType || 'equipment',
     limit: 4,
     autoFetch: !!firstItemId
   });

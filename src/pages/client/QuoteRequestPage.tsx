@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
+import axios from 'axios';
 import ReactGA from 'react-ga4';
 import { v4 as uuidv4 } from 'uuid';
 import { MapPin, Calendar, Clock, Info, User, Phone, Navigation2, Building2 } from 'lucide-react';
@@ -23,7 +23,35 @@ import { quoteRequestSchema } from '../../validators/bookingSchema';
 import type { Booking } from '../../types/types';
 import { z } from 'zod';
 
-type QuoteFormData = z.infer<typeof quoteRequestSchema>;
+type QuoteFormInput = z.input<typeof quoteRequestSchema>;
+type QuoteFormData = z.output<typeof quoteRequestSchema>;
+
+interface QuoteBookingPayload {
+  eventDate: string;
+  eventEndDate: string;
+  eventDuration: number;
+  location: string;
+  street: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  addressNumber: string;
+  addressComplement?: string;
+  requiresStairs: boolean;
+  isCovered: boolean;
+  hasParking: boolean;
+  notes?: string;
+  status: 'PENDING';
+  setupTime: string;
+  userId: string;
+  clientName?: string;
+  clientContact?: string;
+  clientEmail?: string;
+  kitId?: string;
+  equipmentIds?: string[];
+  serviceIds?: string[];
+}
 
 export const QuoteRequestPage: React.FC = () => {
   const { cart, clearCart } = useCart();
@@ -39,8 +67,8 @@ export const QuoteRequestPage: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<QuoteFormData>({
-        resolver: zodResolver(quoteRequestSchema) as any,
+  } = useForm<QuoteFormInput, unknown, QuoteFormData>({
+        resolver: zodResolver(quoteRequestSchema),
     defaultValues: {
       requiresStairs: 'no',
       isCovered: 'no',
@@ -80,7 +108,7 @@ export const QuoteRequestPage: React.FC = () => {
       const eventStart = new Date(yyyy, mon - 1, dd, hh, mm, 0, 0);
       const eventEnd = new Date(eventStart.getTime() + (data.duration * 3600 * 1000));
 
-            const bookingData: any = {
+            const bookingData: QuoteBookingPayload = {
         eventDate: eventStart.toISOString(),
         eventEndDate: eventEnd.toISOString(),
         eventDuration: data.duration,
@@ -99,8 +127,8 @@ export const QuoteRequestPage: React.FC = () => {
         status: 'PENDING',
         setupTime: eventStart.toISOString(),
         userId: user.id,
-                clientName: (user as any)?.name || data.name || undefined,
-                clientContact: (user as any)?.phone || (user as any)?.email || data.phone || data.email || undefined,
+                clientName: user?.name || data.name || undefined,
+                clientContact: user?.phone || user?.email || data.phone || data.email || undefined,
       };
 
       if (data.email) bookingData.clientEmail = data.email;
@@ -163,9 +191,9 @@ export const QuoteRequestPage: React.FC = () => {
       } else {
         navigate('/reserva-sucesso', { state: statePayload });
       }
-        } catch (err: any) {
+        } catch (err: unknown) {
       console.error('Erro ao criar booking', err);
-      const msg = err?.response?.data?.message || err?.message || 'Erro ao salvar pedido.';
+      const msg = (axios.isAxiosError(err) && err.response?.data?.message) || (err instanceof Error ? err.message : null) || 'Erro ao salvar pedido.';
       setServerError(msg);
       
       ReactGA.event({

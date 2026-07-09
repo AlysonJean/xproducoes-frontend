@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
 import BrandLoader from '../../components/ui/BrandLoader';
@@ -38,6 +37,21 @@ interface EarningsData {
   }>;
 }
 
+interface RawStatsResponse {
+  monthlyEarnings?: Array<{ month: string; earnings: number; events: number }>;
+  totalEarnings?: number;
+  totalEvents?: number;
+}
+
+interface RawPaymentRecord {
+  id: string;
+  description?: string;
+  amount: number;
+  dueDate?: string;
+  paymentDate?: string;
+  status: 'PAID' | 'PENDING' | 'ABERTO' | 'ATRASADO' | 'CANCELADO';
+}
+
 const CollaboratorEarningsPage: React.FC = () => {
   const [earnings, setEarnings] = useState<EarningsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,39 +69,39 @@ const CollaboratorEarningsPage: React.FC = () => {
         ]);
 
         const stats = statsResult.status === 'fulfilled'
-          ? (statsResult.value.data?.data ?? statsResult.value.data)
+          ? (statsResult.value.data?.data ?? statsResult.value.data) as RawStatsResponse
           : null;
         const payments = paymentsResult.status === 'fulfilled'
-          ? (paymentsResult.value.data?.data ?? paymentsResult.value.data)
+          ? (paymentsResult.value.data?.data ?? paymentsResult.value.data) as RawPaymentRecord[]
           : null;
 
         // Processar dados mensais para o gráfico
         // O backend retorna month no formato "YYYY-MM"
-                const monthlyData = stats?.monthlyEarnings?.map((item: any) => ({
+                const monthlyData = stats?.monthlyEarnings?.map((item) => ({
           month: item.month, // ex: "2024-01"
           earnings: Number(item.earnings),
           events: Number(item.events)
         })) || [];
 
         // Calcular ganhos anuais (soma dos últimos 12 meses)
-                const yearlyEarnings = monthlyData.reduce((acc: number, item: any) => acc + item.earnings, 0);
-        
+                const yearlyEarnings = monthlyData.reduce((acc, item) => acc + item.earnings, 0);
+
         // Calcular ganho do mês atual
         const currentMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
-                const currentMonthData = monthlyData.find((d: any) => d.month === currentMonth);
+                const currentMonthData = monthlyData.find((d) => d.month === currentMonth);
 
         // Mapear pagamentos recentes
-                const recentPayments = Array.isArray(payments) ? payments.slice(0, 10).map((p: any) => ({
+                const recentPayments = Array.isArray(payments) ? payments.slice(0, 10).map((p) => ({
           id: p.id,
           eventTitle: p.description || 'Pagamento',
           amount: Number(p.amount),
-          date: p.dueDate || p.paymentDate,
+          date: p.dueDate || p.paymentDate || '',
           status: p.status
         })) : [];
 
         // Calcular pendentes
-        const pendingTotal = Array.isArray(payments) 
-                    ? payments.filter((p: any) => p.status === 'PENDING').reduce((acc: number, p: any) => acc + Number(p.amount), 0)
+        const pendingTotal = Array.isArray(payments)
+                    ? payments.filter((p) => p.status === 'PENDING').reduce((acc, p) => acc + Number(p.amount), 0)
           : 0;
 
         const data: EarningsData = {
@@ -95,7 +109,7 @@ const CollaboratorEarningsPage: React.FC = () => {
           monthlyEarnings: currentMonthData ? currentMonthData.earnings : 0,
           yearlyEarnings: yearlyEarnings,
           pendingPayments: pendingTotal,
-          averagePerEvent: stats?.totalEvents > 0 ? Number(stats.totalEarnings) / Number(stats.totalEvents) : 0,
+          averagePerEvent: stats && stats.totalEvents && stats.totalEvents > 0 ? Number(stats.totalEarnings) / Number(stats.totalEvents) : 0,
           eventsCompleted: Number(stats?.totalEvents || 0),
           earningsGrowth: 0, // Backend não fornece ainda comparativo com mês anterior
           monthlyData: monthlyData, // Dados reais do gráfico
