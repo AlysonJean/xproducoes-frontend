@@ -2,74 +2,26 @@ import express from 'express'
 import { renderPage } from 'vike/server'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { generateSitemap, generateRobotsTxt } from './src/utils/sitemapGenerator'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const isProduction = process.env.NODE_ENV === 'production'
 const root = __dirname
 
-
-
-// Local SEO Configuration (Inlined for Server Reliability)
-const BASE_URL = 'https://www.xproducoeseeventos.com.br';
-const TARGET_CITIES = [
-  { slug: 'belo-horizonte', name: 'Belo Horizonte' },
-  { slug: 'nova-lima', name: 'Nova Lima' },
-  { slug: 'contagem', name: 'Contagem' },
-  { slug: 'betim', name: 'Betim' },
-  { slug: 'lagoa-santa', name: 'Lagoa Santa' }
-];
-
-const TARGET_SERVICES = [
-  { slug: 'aluguel-som' },
-  { slug: 'aluguel-iluminacao' },
-  { slug: 'aluguel-painel-led' },
-  { slug: 'aluguel-palco-estrutura' }
-];
-
-const STATIC_ROUTES = [
-  '/',
-  '/contato',
-  '/sobre',
-  '/equipamentos',
-  '/portfolio',
-  '/faq',
-  '/termos',
-  '/privacidade'
-];
-
 async function startServer() {
   const app = express()
 
   // --------------------------------------------------------
   // SEO Routes (Sitemap & Robots) - Defined BEFORE Middleware
+  // Reaproveita src/utils/sitemapGenerator.ts (mesma fonte usada por
+  // scripts/generateSitemap.ts no build) — antes, este arquivo mantinha sua própria
+  // cópia inline duplicada, com uma lista de robots.txt Disallow desatualizada
+  // (não cobria /cliente nem /colaborador).
   // --------------------------------------------------------
   app.get('/sitemap.xml', async (req, res) => {
     try {
-      // 1. Static Routes
-      const staticUrls = STATIC_ROUTES.map(route => `
-  <url>
-    <loc>${BASE_URL}${route}</loc>
-    <changefreq>weekly</changefreq>
-    <priority>${route === '/' ? '1.0' : '0.8'}</priority>
-  </url>`).join('');
-
-      // 2. Local SEO Landing Pages
-      const localSeoUrls = TARGET_SERVICES.flatMap(service => 
-        TARGET_CITIES.map(city => `
-  <url>
-    <loc>${BASE_URL}/${service.slug}-${city.slug}</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>`)
-      ).join('');
-
-      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${staticUrls}
-${localSeoUrls}
-</urlset>`;
-
+      const sitemap = await generateSitemap();
       res.header('Content-Type', 'application/xml');
       res.status(200).send(sitemap);
     } catch (e) {
@@ -78,15 +30,8 @@ ${localSeoUrls}
     }
   });
 
-  app.get('/robots.txt', (req, res) => {
-    const robots = `User-agent: *
-Allow: /
-Disallow: /admin/
-Disallow: /api/
-Disallow: /cliente/painel/
-Disallow: /colaborador/main/
-
-Sitemap: ${BASE_URL}/sitemap.xml`;
+  app.get('/robots.txt', async (req, res) => {
+    const robots = await generateRobotsTxt();
     res.header('Content-Type', 'text/plain');
     res.status(200).send(robots);
   });
