@@ -1,6 +1,5 @@
-/* eslint-disable react-hooks/incompatible-library */
 import React, { useState, useEffect } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm, useWatch, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { FormModal } from './FormModal';
@@ -67,7 +66,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
   const {
     register,
-    watch,
+    control,
     setValue,
     reset,
     formState: { errors },
@@ -80,17 +79,24 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     },
   });
 
-    const selectedType = watch('type');
+  // useWatch em vez de watch() do useForm(): watch() retorna uma função que não pode ser
+  // memoizada com segurança, o que faz o React Compiler pular a otimização deste componente
+  // (react-hooks/incompatible-library) — useWatch é o hook dedicado do react-hook-form para
+  // observar um campo específico, compatível com memoização.
+  const selectedType = useWatch({ control, name: 'type' });
 
   useEffect(() => {
-    if (initialData) {
-      reset({
-        ...initialData,
-        type: initialData.type || contactType,
-        urgent: initialData.urgent || false,
-      });
-      setAttachments(initialData.attachments || []);
-    }
+    if (!initialData) return;
+    reset({
+      ...initialData,
+      type: initialData.type || contactType,
+      urgent: initialData.urgent || false,
+    });
+    // Deferido via setTimeout (não direto no corpo do efeito) para não disparar setState de
+    // forma síncrona dentro do efeito (react-hooks/set-state-in-effect) — reset() do
+    // react-hook-form não é afetado pela mesma regra, só o setAttachments abaixo precisa disso.
+    const timer = setTimeout(() => setAttachments(initialData.attachments || []), 0);
+    return () => clearTimeout(timer);
   }, [initialData, contactType, reset]);
 
   const handleFormSubmit: SubmitHandler<ContactFormSchema> = (data) => {
