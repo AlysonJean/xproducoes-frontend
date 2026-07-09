@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
 import BrandLoader from '../../components/ui/BrandLoader';
 import { StatsCard, SimpleCard } from '../../components/ui/Cards';
-import { 
+import {
   Clock,
   Target,
   Star,
@@ -14,11 +13,18 @@ import {
   BarChart3,
   Calendar
 } from 'lucide-react';
-import { LineChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, type PieLabelRenderProps } from 'recharts';
 import { collaboratorProfileAPI } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 
 import { ReportData } from '@/types/types';
+
+interface CollaboratorStatsResponse {
+  totalEvents?: number;
+  completionRate?: number;
+  averageRating?: number;
+  monthlyEarnings?: Array<{ month: string; events: number; earnings: number }>;
+}
 
 const CollaboratorReportsPage: React.FC = () => {
   const [reportData, setReportData] = useState<ReportData | null>(null);
@@ -31,7 +37,7 @@ const CollaboratorReportsPage: React.FC = () => {
         setLoading(true);
         // Buscar dados reais da API
         const response = await collaboratorProfileAPI.getStats();
-        const apiStats = response.data?.data ?? response.data;
+        const apiStats = (response.data?.data ?? response.data) as CollaboratorStatsResponse;
 
         // Mapear dados da API para o formato do relatório
         const report: ReportData = {
@@ -42,7 +48,7 @@ const CollaboratorReportsPage: React.FC = () => {
             onTimeDelivery: 100 // Mock: Backend ainda não calcula pontualidade baseado em check-in/out
           },
            // Mapear ganhos mensais do backend
-                  monthly: asArray<any>(apiStats?.monthlyEarnings).map((m: any) => ({
+                  monthly: asArray<{ month: string; events: number; earnings: number }>(apiStats?.monthlyEarnings).map((m) => ({
              month: m.month,
              events: Number(m.events),
              rating: Number(apiStats.averageRating), // Backend ainda não tem rating mensal histórico, usando média geral
@@ -70,23 +76,28 @@ const CollaboratorReportsPage: React.FC = () => {
     fetchReportData();
   }, [selectedPeriod]);
 
-    const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percentage }: any) => {
+    const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percentage }: PieLabelRenderProps & { percentage?: number }) => {
     const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const cxNum = Number(cx) || 0;
+    const cyNum = Number(cy) || 0;
+    const midAngleNum = Number(midAngle) || 0;
+    const innerRadiusNum = Number(innerRadius) || 0;
+    const outerRadiusNum = Number(outerRadius) || 0;
+    const radius = innerRadiusNum + (outerRadiusNum - innerRadiusNum) * 0.5;
+    const x = cxNum + radius * Math.cos(-midAngleNum * RADIAN);
+    const y = cyNum + radius * Math.sin(-midAngleNum * RADIAN);
 
     return (
-      <text 
-        x={x} 
-        y={y} 
-        fill="white" 
-        textAnchor={x > cx ? 'start' : 'end'} 
+      <text
+        x={x}
+        y={y}
+        fill="white"
+        textAnchor={x > cxNum ? 'start' : 'end'}
         dominantBaseline="central"
         fontSize="12"
         fontWeight="bold"
       >
-        {`${percentage.toFixed(1)}%`}
+        {`${(percentage ?? 0).toFixed(1)}%`}
       </text>
     );
   };

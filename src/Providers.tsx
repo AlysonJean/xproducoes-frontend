@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react'
 import { HelmetProvider } from 'react-helmet-async'
 import { GoogleOAuthProvider } from '@react-oauth/google'
@@ -10,11 +9,11 @@ import './index.css'
 // Initialize Sentry
 const sentry = typeof window !== 'undefined' ? initSentry() : null
 if (typeof window !== 'undefined' && sentry) {
-  (window as any).__SENTRY__ = sentry
+  (window as unknown as { __SENTRY__?: typeof sentry }).__SENTRY__ = sentry
   // Load heading reveal only on client side
   import('./styles/headingReveal');
 }
-const SentryErrorBoundary = (sentry && (sentry as any).ErrorBoundary) || (({ children }: any) => children)
+const SentryErrorBoundary = (sentry && sentry.ErrorBoundary) || (({ children }: { children: React.ReactNode }) => children)
 
 // ✅ Web Vitals monitoring wrapper component
 const WebVitalsMonitor: React.FC<{ children: React.ReactNode }> = ({ children }) => {

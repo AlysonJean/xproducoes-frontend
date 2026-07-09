@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Navigate, Link } from 'react-router-dom';
@@ -20,8 +19,26 @@ import {
   MessageSquare
 } from 'lucide-react';
 
+interface CollaboratorActivity {
+  type?: string;
+  title: string;
+  description: string;
+  timestamp: string;
+}
+
+interface DashboardMetrics {
+  totalEarnings?: number;
+  earningsGrowth?: number;
+  totalEvents?: number;
+  eventsGrowth?: number;
+  completionRate?: number;
+  averageRating?: number;
+  upcomingEvents?: DashboardEvent[];
+  recentActivities?: CollaboratorActivity[];
+}
+
 // Componente de Métricas Profissionais com Dados Reais
-const ProfessionalMetrics: React.FC<{ data: any | null }> = ({ data }) => {
+const ProfessionalMetrics: React.FC<{ data: DashboardMetrics | null }> = ({ data }) => {
   if (!data) return null;
 
   return (
@@ -53,7 +70,7 @@ const ProfessionalMetrics: React.FC<{ data: any | null }> = ({ data }) => {
         value={data.completionRate ? `${data.completionRate}%` : '0%'}
         description="Eventos finalizados com sucesso"
         icon={<Target className="h-5 w-5" />}
-        trend={data.completionRate > 90 ? {
+        trend={data.completionRate !== undefined && data.completionRate > 90 ? {
           value: data.completionRate,
           type: 'positive'
         } : undefined}
@@ -64,7 +81,7 @@ const ProfessionalMetrics: React.FC<{ data: any | null }> = ({ data }) => {
         value={data.averageRating ? `${data.averageRating.toFixed(1)}⭐` : 'N/A'}
         description="Feedback dos clientes"
         icon={<Star className="h-5 w-5" />}
-        trend={data.averageRating > 4.5 ? {
+        trend={data.averageRating !== undefined && data.averageRating > 4.5 ? {
           value: data.averageRating,
           type: 'positive'
         } : undefined}
@@ -160,7 +177,7 @@ const UpcomingEvents: React.FC<{ events: DashboardEvent[] }> = ({ events }) => (
 );
 
 // Componente de Atividades Recentes
-const RecentActivities: React.FC<{ activities: any[] }> = ({ activities }) => (
+const RecentActivities: React.FC<{ activities: CollaboratorActivity[] }> = ({ activities }) => (
   <SimpleCard 
     title="Atividades Recentes" 
     headerRight={
@@ -205,16 +222,16 @@ const RecentActivities: React.FC<{ activities: any[] }> = ({ activities }) => (
 // Componente principal melhorado
 const CollaboratorDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [dashboard, setDashboard] = useState<any | null>(null);
+  const [dashboard, setDashboard] = useState<DashboardMetrics | null>(null);
   const [events, setEvents] = useState<DashboardEvent[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
+  const [activities, setActivities] = useState<CollaboratorActivity[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         const resp = await collaboratorsAPI.getMyDashboard();
-        const payload = resp.data?.data ?? resp.data;
+        const payload = (resp.data?.data ?? resp.data) as DashboardMetrics;
         setDashboard(payload);
 
         if (payload.upcomingEvents) {

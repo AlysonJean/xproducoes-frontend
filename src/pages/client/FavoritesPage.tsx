@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect } from 'react';
 import { EquipmentCard } from '../../components/ui/EquipmentCard';
 import { ServiceCard } from '../../components/ui/ServiceCard';
@@ -39,13 +39,13 @@ export const FavoritesPage = () => {
 
         if (equipmentIds.length > 0) {
            promises.push(
-               Promise.allSettled(equipmentIds.map(id => apiFetch(`/equipments/${encodeURIComponent(id)}`)))
+               Promise.allSettled(equipmentIds.map(id => apiFetch<{ equipment?: Equipment } | Equipment>(`/equipments/${encodeURIComponent(id)}`)))
                .then(results => {
                    const valid: Equipment[] = [];
                    results.forEach(res => {
                        if (res.status === 'fulfilled') {
-                                                      const val = res.value as any;
-                           const item = val?.equipment ?? val;
+                           const val = res.value;
+                           const item = 'id' in val ? val : val.equipment;
                            if (item && item.id) valid.push(item);
                        }
                    });
@@ -58,13 +58,13 @@ export const FavoritesPage = () => {
 
         if (kitIds.length > 0) {
             promises.push(
-                Promise.allSettled(kitIds.map(id => apiFetch(`/kits/${encodeURIComponent(id)}`)))
+                Promise.allSettled(kitIds.map(id => apiFetch<{ kit?: Kit } | Kit>(`/kits/${encodeURIComponent(id)}`)))
                 .then(results => {
                     const valid: Kit[] = [];
                     results.forEach(res => {
                         if (res.status === 'fulfilled') {
-                                                        const val = res.value as any;
-                            const item = val?.kit ?? val;
+                            const val = res.value;
+                            const item = 'id' in val ? val : val.kit;
                             if (item && item.id) valid.push(item);
                         }
                     });
@@ -77,14 +77,14 @@ export const FavoritesPage = () => {
 
          if (serviceIds.length > 0) {
             promises.push(
-                Promise.allSettled(serviceIds.map(id => apiFetch(`/services/${encodeURIComponent(id)}`)))
+                Promise.allSettled(serviceIds.map(id => apiFetch<{ service?: Service } | Service>(`/services/${encodeURIComponent(id)}`)))
                 .then(results => {
                     const valid: Service[] = [];
                     results.forEach(res => {
                         if (res.status === 'fulfilled') {
-                                                        const val = res.value as any;
+                            const val = res.value;
                             // Assuming backend returns { service } or direct object
-                            const item = val?.service ?? val;
+                            const item = 'id' in val ? val : val.service;
                             if (item && item.id) valid.push(item);
                         }
                     });

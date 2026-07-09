@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import axios from 'axios';
 import { logger } from '../utils/logger';
 import { getApiBaseUrl } from '../utils/apiConfig';
 import { authService } from '../services/authservice';
@@ -83,11 +84,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
     };
 
-        window.addEventListener('auth:refreshed' as any, handleRefreshed);
+        window.addEventListener('auth:refreshed', handleRefreshed);
     window.addEventListener('auth:logout', handleLogout);
 
     return () => {
-            window.removeEventListener('auth:refreshed' as any, handleRefreshed);
+            window.removeEventListener('auth:refreshed', handleRefreshed);
       window.removeEventListener('auth:logout', handleLogout);
     };
   }, []);
@@ -112,9 +113,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (isMounted && userData) {
             setUser(userData);
           }
-        } catch (profileError: any) {
+        } catch (profileError: unknown) {
           // 401 means no valid cookie - user is not authenticated
-          if (profileError?.response?.status === 401) {
+          if (axios.isAxiosError(profileError) && profileError.response?.status === 401) {
             if (isMounted) {
               setUser(null);
             }

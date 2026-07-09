@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -6,12 +5,20 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '@/services/api';
 import { useModal } from '@/components/modals/ModalContext';
 import { generateSeoFilename } from '@/utils/seoUtils';
-import type { User } from '@/types/types';
+import type { Client } from '@/types/types';
 
 interface ClientFormProps {
-  initialData?: User | null;
+  initialData?: Client | null;
   onSuccess: () => void;
   onCancel: () => void;
+}
+
+interface CreateClientResponse {
+  tempPassword?: string;
+  inviteUrl?: string;
+  client?: { id?: string };
+  clientId?: string;
+  id?: string;
 }
 
 export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, onCancel }) => {
@@ -72,7 +79,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
     if (!validate()) return;
     try {
       setIsSubmitting(true);
-            let responseData: any = null;
+            let responseData: CreateClientResponse | null = null;
 
       const fd = new FormData();
       
@@ -107,9 +114,9 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
       } else {
         // Create Mode
         if (avatarFile) {
-                    responseData = await apiFetch<any>('/admin/clients', { method: 'POST', body: fd });
+                    responseData = await apiFetch<CreateClientResponse>('/admin/clients', { method: 'POST', body: fd });
         } else {
-                    responseData = await apiFetch<any>('/admin/clients', {
+                    responseData = await apiFetch<CreateClientResponse>('/admin/clients', {
             method: 'POST',
             body: JSON.stringify({
               name: name.trim(),
@@ -131,8 +138,8 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
           openInviteModal({ tempPassword, inviteUrl, clientId });
         }
       }
-    } catch (err) {
-            const message = (err as any)?.message || `Falha ao ${isEditing ? 'atualizar' : 'criar'} cliente`;
+    } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : `Falha ao ${isEditing ? 'atualizar' : 'criar'} cliente`;
       addNotification({ type: 'error', title: 'Erro', message });
     } finally {
       setIsSubmitting(false);
