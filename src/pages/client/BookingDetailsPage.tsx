@@ -1,5 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/services/api';
 import type { BookingDetails } from '@/types/types';
@@ -28,18 +29,18 @@ export const BookingDetailsPage = () => {
       setError(null); // Limpar erro anterior
     } catch (err: unknown) {
       // ✅ Mensagens de erro contextuais baseadas no status HTTP
-      if (err && typeof err === 'object' && 'response' in err) {
-                const response = (err as any).response;
-        if (response?.status === 404) {
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status;
+        if (status === 404) {
           setError('Reserva não encontrada. Ela pode ter sido cancelada ou excluída.');
-        } else if (response?.status === 403) {
+        } else if (status === 403) {
           setError('Você não tem permissão para visualizar esta reserva.');
-        } else if (response?.status === 401) {
+        } else if (status === 401) {
           setError('Sessão expirada. Faça login novamente.');
-        } else if (response?.status >= 500) {
+        } else if (status !== undefined && status >= 500) {
           setError('Erro no servidor. Tente novamente em alguns instantes.');
         } else {
-          setError(response?.data?.message || 'Erro ao carregar detalhes da reserva.');
+          setError(err.response?.data?.message || 'Erro ao carregar detalhes da reserva.');
         }
       } else if (err instanceof Error) {
         setError(err.message);
@@ -226,7 +227,7 @@ export const BookingDetailsPage = () => {
                     <div className="space-y-2">
                       {booking.kits && booking.kits.length > 0 ? (
                         booking.kits.map((kitItem, idx) => {
-                                                    const kitName = 'kit' in kitItem ? kitItem.kit?.name : (kitItem as any).name;
+                                                    const kitName = 'kit' in kitItem ? kitItem.kit?.name : kitItem.name;
                           return (
                             <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                               <p className="font-medium text-foreground">{kitName || 'Kit'}</p>
@@ -249,7 +250,7 @@ export const BookingDetailsPage = () => {
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">Equipamentos Individuais</h3>
                     <div className="space-y-2">
-                                            {booking.equipments?.map((eq: any, idx: number) => (
+                                            {booking.equipments?.map((eq, idx) => (
                         <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                           <p className="font-medium text-foreground">{eq.name}</p>
                           <p className="text-sm text-primary font-semibold">{formatPrice(Number(eq.pricePerHour || 0))}/h</p>
@@ -264,7 +265,7 @@ export const BookingDetailsPage = () => {
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">Serviços Adicionais</h3>
                     <div className="space-y-2">
-                                            {booking.services?.map((s: any, idx: number) => (
+                                            {booking.services?.map((s, idx) => (
                         <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                           <p className="font-medium text-foreground">{s.name}</p>
                           <p className="text-sm text-primary font-semibold">{formatPrice(Number(s.price || 0))}</p>

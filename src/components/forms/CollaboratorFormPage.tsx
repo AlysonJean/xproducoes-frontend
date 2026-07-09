@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/forms/CollaboratorFormPage.tsx
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -23,13 +22,24 @@ const collaboratorSchema = z.object({
   email: z.string().email('Email inválido'),
   role: z.string().optional(),
   functionId: z.string().optional(),
-  hourlyRate: z.any().optional(), // Deixamos como any para flexibilidade no Input
-  status: z.string().default('ACTIVE'),
+  hourlyRate: z.union([z.string(), z.number()]).optional(), // Input HTML sempre envia string; number cobre valores vindos de initialData
+  status: z.string(), // default 'ACTIVE' já é aplicado via defaultValues do useForm
 });
 
+type CollaboratorFormValues = z.infer<typeof collaboratorSchema>;
+
+interface CollaboratorInitialData {
+  id?: string;
+  name?: string;
+  email?: string;
+  role?: string;
+  functionId?: string;
+  hourlyRate?: string | number;
+  status?: string;
+}
 
 interface CollaboratorFormProps {
-    initialData?: any;
+    initialData?: CollaboratorInitialData | null;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -49,7 +59,7 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-    } = useForm<any>({
+    } = useForm<CollaboratorFormValues>({
     resolver: zodResolver(collaboratorSchema),
     defaultValues: {
       name: '',
@@ -86,7 +96,7 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
     }
   }, [initialData, reset]);
 
-    const onSubmit = async (data: any) => {
+    const onSubmit = async (data: CollaboratorFormValues) => {
     try {
       // Tratamento manual dos dados para garantir que tipos como hourlyRate vão corretamente para o backend
       const payload = {
@@ -115,7 +125,7 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
   };
 
   return (
-        <Form onSubmit={handleSubmit(onSubmit) as any} className="space-y-6">
+        <Form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <FormSection title="Dados Pessoais" description="Informações básicas do colaborador">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input

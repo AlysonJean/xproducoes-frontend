@@ -1,16 +1,43 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/exhaustive-deps */
 // src/pages/BookingSuccessPage.tsx
 
 import { useEffect, useRef } from 'react';
 import { Link, useParams, useLocation } from 'react-router-dom';
 import { buildQuoteMessage, getWhatsAppPhone, openWhatsApp } from '../../utils/whatsapp';
+import type { BookingDetails } from '../../types/types';
+
+interface BookingSuccessFormData {
+  name?: string;
+  phone?: string;
+  eventDate?: string;
+  duration?: number;
+  street?: string;
+  addressNumber?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  addressComplement?: string;
+  venue?: string;
+  notes?: string;
+  requiresStairs?: string;
+  isCovered?: string;
+  hasParking?: string;
+}
+
+interface BookingSuccessLocationState {
+  booking?: BookingDetails;
+  formData?: BookingSuccessFormData;
+  cartItems?: Array<{ name?: string } | { equipment?: { name?: string } }>;
+}
 
 export const BookingSuccessPage = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
-  const booking = location.state?.booking;
-  const formData = location.state?.formData;
-  const cartItems = location.state?.cartItems;
+  const state = location.state as BookingSuccessLocationState | null;
+  const booking = state?.booking;
+  const formData = state?.formData;
+  const cartItems = state?.cartItems;
   const hasAutoOpened = useRef(false);
 
   const handleOpenWhatsApp = () => {
@@ -18,7 +45,7 @@ export const BookingSuccessPage = () => {
       const items = cartItems || (booking?.kit ? [booking.kit] : booking?.equipments || []);
       const userInfo = {
         name: booking?.clientName || booking?.client?.user?.name || formData?.name || '-',
-                phone: (booking?.client && (booking.client as any).phone) || booking?.clientContact || formData?.phone || '-',
+                phone: booking?.client?.phone || booking?.clientContact || formData?.phone || '-',
       };
       const eventDate = booking?.eventDate ? new Date(booking.eventDate) : (formData?.eventDate ? new Date(formData.eventDate) : new Date());
       const address = {
@@ -40,9 +67,9 @@ export const BookingSuccessPage = () => {
         items,
         notes: booking?.notes || formData?.notes || '',
         logistics: {
-                    requiresStairs: (booking as any)?.requiresStairs ?? (formData?.requiresStairs === 'yes'),
-                    isCovered: (booking as any)?.isCovered ?? (formData?.isCovered === 'yes'),
-                    hasParking: (booking as any)?.hasParking ?? (formData?.hasParking === 'yes'),
+                    requiresStairs: booking?.requiresStairs ?? (formData?.requiresStairs === 'yes'),
+                    isCovered: booking?.isCovered ?? (formData?.isCovered === 'yes'),
+                    hasParking: booking?.hasParking ?? (formData?.hasParking === 'yes'),
         },
       });
       openWhatsApp(getWhatsAppPhone(), mensagem);
