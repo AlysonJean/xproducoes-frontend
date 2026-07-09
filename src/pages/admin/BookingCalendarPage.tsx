@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
-import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
-import { Calendar, dateFnsLocalizer, type Event, type SlotInfo, Views, type View } from 'react-big-calendar';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect, type ChangeEvent, type ComponentType } from 'react';
+import { Calendar, dateFnsLocalizer, type Event, type SlotInfo, Views, type View, type CalendarProps } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { apiFetch } from '@/services/api';
@@ -8,6 +8,7 @@ import { asArray } from '@/utils/normalize';
 import { toNumber } from '@/utils/typeSafeFormatters';
 import { BookingStatus, ECollaboratorRole } from '@/types/enums';
 import type { Equipment, Kit, ICollaborator, CalendarBooking } from '@/types/types';
+import type { StandardVariant } from '@/components/ui/StandardTypes';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { 
@@ -38,7 +39,7 @@ import {
 import { ManualBookingModal } from '@/components/modals/ManualBookingModal';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import '@/styles/booking-calendar.css';
-import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
+import withDragAndDrop, { type EventInteractionArgs } from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -72,7 +73,7 @@ const BookingDetailsModal = ({ event, onClose }: { event: CalendarEvent; onClose
         .join(', ')
     : '';
 
-    const statusMap: Record<string, { variant: any; label: string }> = {
+    const statusMap: Record<string, { variant: StandardVariant; label: string }> = {
     PENDING: { variant: 'warning', label: 'Pendente' },
     CONFIRMED: { variant: 'success', label: 'Confirmada' },
     IN_PROGRESS: { variant: 'primary', label: 'Em Andamento' },
@@ -296,7 +297,7 @@ const safeDate = (input?: string | Date | null): Date | null => {
 };
 
 export const BookingCalendarPage = () => {
-    const DnDCalendar = useMemo(() => withDragAndDrop<CalendarEvent>(Calendar as any), []);
+    const DnDCalendar = useMemo(() => withDragAndDrop<CalendarEvent>(Calendar as unknown as ComponentType<CalendarProps<CalendarEvent, object>>), []);
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -524,7 +525,7 @@ export const BookingCalendarPage = () => {
     });
   };
 
-    const onEventDrop = async ({ event, start, end }: any) => {
+    const onEventDrop = async ({ event, start, end }: EventInteractionArgs<CalendarEvent>) => {
     const s = new Date(start);
     const e = new Date(end);
     const prev = events;
@@ -537,7 +538,7 @@ export const BookingCalendarPage = () => {
     }
   };
 
-    const onEventResize = async ({ event, start, end }: any) => {
+    const onEventResize = async ({ event, start, end }: EventInteractionArgs<CalendarEvent>) => {
     const s = new Date(start);
     const e = new Date(end);
     const prev = events;
@@ -605,7 +606,7 @@ export const BookingCalendarPage = () => {
                     className="w-40 h-9 text-[10px] font-bold uppercase tracking-widest !bg-muted/30"
                     placeholder="Status"
                     value={filters.status}
-                                        onChange={(e: any) => setFilters(f => ({ ...f, status: e.target.value as any }))}
+                                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setFilters(f => ({ ...f, status: e.target.value as FilterStatus }))}
                     options={[
                         { value: 'ALL', label: 'Todos Status' },
                         ...Object.values(BookingStatus).map(s => ({ value: s, label: s.replace('_', ' ') }))
@@ -615,7 +616,7 @@ export const BookingCalendarPage = () => {
                     className="w-44 h-9 text-[10px] font-bold uppercase tracking-widest !bg-muted/30"
                     placeholder="Colaborador"
                     value={filters.collaboratorId}
-                                        onChange={(e: any) => setFilters(f => ({ ...f, collaboratorId: e.target.value }))}
+                                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setFilters(f => ({ ...f, collaboratorId: e.target.value }))}
                     options={[
                         { value: '', label: 'Toda Equipe' },
                         ...collaborators.map(c => ({ value: c.id, label: c.name }))
@@ -627,7 +628,7 @@ export const BookingCalendarPage = () => {
                         className="pl-9 h-9 text-xs font-medium placeholder:text-muted-foreground/50 border-border/60 !bg-muted/30"
                         placeholder="Pesquisar cliente, id ou notas..."
                         value={filters.search}
-                                                onChange={(e: any) => setFilters(f => ({ ...f, search: e.target.value }))}
+                                                onChange={(e: ChangeEvent<HTMLInputElement>) => setFilters(f => ({ ...f, search: e.target.value }))}
                      />
                   </div>
                   <Button variant="outline" size="icon" className="h-9 w-9 border-border/60 text-muted-foreground" onClick={() => setFilters({
@@ -646,7 +647,7 @@ export const BookingCalendarPage = () => {
                    ].map(v => (
                        <button 
                         key={v.id}
-                                                onClick={() => setView(v.id as any)}
+                                                onClick={() => setView(v.id)}
                         className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all ${view === v.id ? 'bg-primary text-primary-foreground shadow-lg' : 'text-muted-foreground hover:bg-muted'}`}
                        >
                            {v.label}
@@ -776,13 +777,13 @@ export const BookingCalendarPage = () => {
                <div className="space-y-4">
                   <div>
                     <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Ajuste de Valor (R$)</label>
-                                        <Input type="number" step="0.01" value={confirmPrice} onChange={(e: any) => setConfirmPrice(e.target.value)} />
+                                        <Input type="number" step="0.01" value={confirmPrice} onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirmPrice(e.target.value)} />
                   </div>
                   <div>
                     <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Atribuir Master Líder</label>
                     <Select 
                         value={confirmCollaboratorId}
-                                                onChange={(e: any) => setConfirmCollaboratorId(e.target.value)}
+                                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setConfirmCollaboratorId(e.target.value)}
                         placeholder="Pesquisar na equipe..."
                         options={[
                             { value: '', label: 'Sem líder fixo' },
@@ -795,7 +796,7 @@ export const BookingCalendarPage = () => {
                         <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Responsabilidade</label>
                         <Select 
                             value={confirmRole}
-                                                        onChange={(e: any) => setConfirmRole(e.target.value as any)}
+                                                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setConfirmRole(e.target.value as ECollaboratorRole)}
                             options={[
                                 { value: 'PHOTOGRAPHER', label: 'Líder Fotógrafo' },
                                 { value: 'ASSISTANT', label: 'Suporte Operacional' },
