@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Trash2, 
@@ -49,8 +48,8 @@ export const CategoryListPage = () => {
       const data = await apiFetch('/categories');
       setCategories(asArray<Category>(data));
       setError(null);
-        } catch (err: any) {
-      const msg = err?.message || 'Não foi possível carregar a lista de categorias.';
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Não foi possível carregar a lista de categorias.';
       setError(msg);
       addNotification({
         type: 'error',
@@ -85,11 +84,11 @@ export const CategoryListPage = () => {
         message: 'Categoria excluída com sucesso.'
       });
       setIsDeleteModalOpen(false);
-        } catch (err: any) {
+    } catch (err: unknown) {
       addNotification({
         type: 'error',
         title: 'Erro',
-        message: err?.message || 'Falha ao excluir categoria.'
+        message: err instanceof Error ? err.message : 'Falha ao excluir categoria.'
       });
     } finally {
       setIsDeleting(false);

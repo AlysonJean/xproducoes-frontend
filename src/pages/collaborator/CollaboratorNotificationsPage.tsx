@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { 
   Bell, 
@@ -27,6 +26,17 @@ interface Notification {
   timestamp: string;
   isRead: boolean;
   priority: 'low' | 'medium' | 'high';
+  actionUrl?: string;
+}
+
+interface RawNotification {
+  id: string;
+  type?: string;
+  title: string;
+  message: string;
+  createdAt: string;
+  read: boolean;
+  important?: boolean;
   actionUrl?: string;
 }
 
@@ -75,11 +85,11 @@ const CollaboratorNotificationsPage: React.FC = () => {
       setLoading(true);
       const response = await collaboratorProfileAPI.getMyNotifications();
       // Ajuste conforme a estrutura real da resposta do backend
-      const loadedNotifications = response.data?.data ?? response.data ?? [];
-      
-            const mapped = Array.isArray(loadedNotifications) ? loadedNotifications.map((n: any) => ({
+      const loadedNotifications = (response.data?.data ?? response.data ?? []) as RawNotification[];
+
+            const mapped = Array.isArray(loadedNotifications) ? loadedNotifications.map((n): Notification => ({
         id: n.id,
-                type: (n.type || 'system').toLowerCase() as any,
+                type: (n.type || 'system').toLowerCase() as Notification['type'],
         title: n.title,
         message: n.message,
         timestamp: n.createdAt,

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { Shield, CheckCircle2 } from 'lucide-react';
 import { Card, Button, Checkbox } from '../../../components/ui/StandardComponents';
@@ -55,12 +54,12 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({
                     <div className="flex items-center gap-6">
                       <Checkbox
                         label="Email"
-                                                checked={(notificationPreferences as any)[`${pkg.id}Email`]}
+                                                checked={notificationPreferences[`${pkg.id}Email` as keyof ProfileNotificationPreferences]}
                         onChange={(e) => updatePref(pkg.id, 'Email', e.target.checked)}
                       />
                       <Checkbox
                         label="Push"
-                                                checked={(notificationPreferences as any)[`${pkg.id}Push`]}
+                                                checked={notificationPreferences[`${pkg.id}Push` as keyof ProfileNotificationPreferences]}
                         onChange={(e) => updatePref(pkg.id, 'Push', e.target.checked)}
                       />
                     </div>

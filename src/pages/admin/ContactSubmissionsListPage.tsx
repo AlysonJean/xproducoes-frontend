@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from 'react';
 import { 
   Mail, 
@@ -223,7 +222,7 @@ export const ContactSubmissionsListPage = () => {
               <Select
                 className="w-44"
                 value={filterStatus}
-                                onChange={(e: any) => setFilterStatus(e.target.value as any)}
+                                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as 'all' | 'PENDING' | 'READ')}
                 options={[
                   { value: 'all', label: 'Todas as mensagens' },
                   { value: 'PENDING', label: 'Apenas novas' },

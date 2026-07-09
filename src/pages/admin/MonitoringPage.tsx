@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useCallback } from 'react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { 
@@ -137,10 +136,10 @@ export const MonitoringPage: React.FC = () => {
 
   const getStatusInfo = (status: string) => {
     switch (status) {
-      case 'healthy': return { variant: 'success', icon: CheckCircle2, label: 'Operacional', color: 'text-emerald-500' };
-      case 'warning': return { variant: 'warning', icon: AlertTriangle, label: 'Degradado', color: 'text-amber-500' };
-      case 'error': return { variant: 'destructive', icon: XCircle, label: 'Falha Crítica', color: 'text-destructive' };
-      default: return { variant: 'outline', icon: Activity, label: 'Desconhecido', color: 'text-muted-foreground' };
+      case 'healthy': return { variant: 'success' as const, icon: CheckCircle2, label: 'Operacional', color: 'text-emerald-500' };
+      case 'warning': return { variant: 'warning' as const, icon: AlertTriangle, label: 'Degradado', color: 'text-amber-500' };
+      case 'error': return { variant: 'destructive' as const, icon: XCircle, label: 'Falha Crítica', color: 'text-destructive' };
+      default: return { variant: 'outline' as const, icon: Activity, label: 'Desconhecido', color: 'text-muted-foreground' };
     }
   };
 
@@ -292,7 +291,7 @@ export const MonitoringPage: React.FC = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3">
-                                                                                                        <Badge variant={getStatusInfo(integration.status).variant as any} className="text-[8px] font-black uppercase px-2 py-0.5 opacity-80">{integration.status}</Badge>
+                                                                                                        <Badge variant={getStatusInfo(integration.status).variant} className="text-[8px] font-black uppercase px-2 py-0.5 opacity-80">{integration.status}</Badge>
                                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors" onClick={() => testIntegration(integration.name)}>
                                                         <RefreshCw className="h-3.5 w-3.5" />
                                                     </Button>
@@ -353,7 +352,7 @@ export const MonitoringPage: React.FC = () => {
                                 {React.createElement(getStatusInfo(integration.status).icon, { className: `h-5 w-5 ${getStatusInfo(integration.status).color}` })}
                                 <h3 className="text-sm font-black text-foreground uppercase tracking-widest truncate max-w-[150px]">{integration.name}</h3>
                             </div>
-                                                        <Badge variant={getStatusInfo(integration.status).variant as any} className="text-[9px] font-black uppercase h-5">{integration.status}</Badge>
+                                                        <Badge variant={getStatusInfo(integration.status).variant} className="text-[9px] font-black uppercase h-5">{integration.status}</Badge>
                         </div>
                         <div className="p-6 space-y-4">
                            <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">

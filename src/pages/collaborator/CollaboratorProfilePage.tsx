@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -21,18 +21,56 @@ import { BrandLoader } from '@/components/ui/BrandLoader';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { GoogleCalendarIntegration } from '../../components/GoogleCalendarIntegration';
 
+interface CollaboratorProfileData {
+  user?: {
+    name?: string;
+    location?: string;
+    bio?: string;
+    email?: string;
+    website?: string;
+    googleCalendarEmail?: string;
+  };
+  collaboratorRole?: string;
+  averageRating?: number;
+  totalEvents?: number;
+  completedEvents?: number;
+  totalEarnings?: number;
+  hourlyRate?: number;
+  phone?: string;
+  specialties?: string[];
+  equipment?: string[];
+  certifications?: string[];
+  languages?: string[];
+  experience?: string;
+  workingRadius?: number;
+}
+
+interface CollaboratorFormData {
+  phone: string;
+  experience: string;
+  hourlyRate: number | string;
+  workingRadius: number | string;
+  languages: string[];
+  specialties: string[];
+  equipment: string[];
+  certifications: string[];
+  bio: string;
+  location: string;
+  website: string;
+}
+
 const CollaboratorProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-    const [profile, setProfile] = useState<any>(null);
+    const [profile, setProfile] = useState<CollaboratorProfileData | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'portfolio' | 'reviews' | 'settings'>('overview');
   const [uploading, setUploading] = useState(false);
 
   // Form states
   const [editMode, setEditMode] = useState(false);
-    const [formData, setFormData] = useState<any>({});
+    const [formData, setFormData] = useState<Partial<CollaboratorFormData>>({});
 
   useEffect(() => {
     loadProfile();
@@ -42,7 +80,7 @@ const CollaboratorProfilePage: React.FC = () => {
     try {
       setLoading(true);
       const response = await collaboratorProfileAPI.getMyProfile();
-      const data = response?.data || null;
+      const data = (response?.data || null) as CollaboratorProfileData | null;
       setProfile(data);
 
       // Initialize form data with safe defaults
