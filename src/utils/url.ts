@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // utilidades de validação e abertura segura de URLs usadas no frontend
 export const isIPv4 = (host: string) => /^\d+\.\d+\.\d+\.\d+$/.test(host);
 export const isPrivateIPv4 = (ip?: string | null) => {
@@ -28,7 +27,7 @@ export const isSafeWebsite = (url?: string | null) => {
     if (isIPv4(host)) return false;
     if (isPrivateIPv4(host)) return false;
     return true;
-    } catch (e) {
+    } catch {
     return false;
   }
 };
@@ -46,10 +45,10 @@ export const openWebsite = (url?: string | null) => {
     const safe = `${u.protocol}//${u.hostname}${path}`;
     try {
       window.open(safe, '_blank', 'noopener,noreferrer');
-        } catch (err) {
+        } catch {
       return;
     }
-    } catch (e) {
+    } catch {
     return;
   }
 };

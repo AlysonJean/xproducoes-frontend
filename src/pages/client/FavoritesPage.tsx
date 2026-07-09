@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect } from 'react';
 import { EquipmentCard } from '../../components/ui/EquipmentCard';
 import { ServiceCard } from '../../components/ui/ServiceCard';
@@ -97,7 +96,7 @@ export const FavoritesPage = () => {
 
         await Promise.all(promises);
 
-            } catch (err) {
+            } catch {
         setError('Não foi possível carregar alguns favoritos.');
       } finally {
         setLoading(false);

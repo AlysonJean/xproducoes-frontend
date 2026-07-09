@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { createAndClickAnchor, sanitizeFilename, isSafeUrl } from '../../utils/dom';
@@ -247,7 +246,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
             existing.click();
           } finally {
             // Revoke objectUrl shortly after to free memory
-            setTimeout(() => { try { window.URL.revokeObjectURL(objectUrl); } catch (_e) { /* ignore */ } }, 2000);
+            setTimeout(() => { try { window.URL.revokeObjectURL(objectUrl); } catch { /* ignore */ } }, 2000);
           }
         } else {
           // Fallback: open in new tab (user can save image). Avoid appending to DOM.
@@ -256,7 +255,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
             // If popup blocked, as last resort use the safe helper which validates href
             createAndClickAnchor({ href: objectUrl, download: safeName, revokeObjectUrl: true, objectUrl });
           } else {
-            setTimeout(() => { try { window.URL.revokeObjectURL(objectUrl); } catch (_e) { /* ignore */ } }, 5000);
+            setTimeout(() => { try { window.URL.revokeObjectURL(objectUrl); } catch { /* ignore */ } }, 5000);
           }
         }
       } else {

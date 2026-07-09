@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState } from 'react';
 import { FormModal } from './FormModal';
 import { FilterModalProps, FilterData } from '../../types/types';
@@ -13,7 +12,9 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   availableCategories = [],
   availableLocations = [],
   priceRange = { min: 0, max: 1000 },
-    filterType = 'general',
+  // Aceito na interface pública (FilterModalProps) mas ainda não usado para variar os campos
+  // exibidos; nenhum chamador atual passa esse prop.
+  filterType: _filterType = 'general',
   title = 'Filtros',
   ...props
 }) => {

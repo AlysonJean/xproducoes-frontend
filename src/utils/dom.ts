@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, no-control-regex */
 // Utilities for safe transient DOM operations (anchors, script injection)
 import { normalizeString } from './string';
 import type { AnchorOptions, ScriptOptions } from '@/types';
@@ -17,7 +16,7 @@ export function isSafeUrl(u: string): boolean {
     const parsed = new URL(trimmed, window.location.href);
     const proto = (parsed.protocol || '').toLowerCase();
     return proto === 'http:' || proto === 'https:' || proto === 'blob:';
-    } catch (e) {
+    } catch {
     return false;
   }
 }
@@ -27,6 +26,9 @@ export function sanitizeFilename(name: string | undefined): string | undefined {
   // keep only basename, remove path separators, control chars and newlines
   const base = name.split(/[\\/]/).pop() || name;
   // remove characters that could break headers or filesystem: newlines, null, etc.
+  // Intencional: remove caracteres de controle (0x00-0x1F, DEL) para evitar quebra de
+  // headers/filesystem — não é um typo, por isso a regra é suprimida só nesta linha.
+  // eslint-disable-next-line no-control-regex
     return base.replace(/[\x00-\x1F\x7F"'<>\\/\\\\]/g, '_').slice(0, 200);
 }
 
@@ -55,7 +57,7 @@ export function createAndClickAnchor(opts: AnchorOptions): void {
     if (opts.revokeObjectUrl && opts.objectUrl) {
       try {
         window.URL.revokeObjectURL(opts.objectUrl);
-            } catch (e) {
+            } catch {
         /* ignore */
       }
     }

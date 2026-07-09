@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -192,7 +191,7 @@ export const BookingDetailPage = () => {
       const res = await collaboratorsAPI.getAll();
             const list: ICollaborator[] = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
             setAvailableCollaborators(list);
-        } catch (e) { /* ignore */ }
+        } catch { /* ignore */ }
   };
 
   const handleExportBooking = () => {
@@ -209,7 +208,7 @@ export const BookingDetailPage = () => {
       await bookingAPI.delete(booking.id);
       addNotification({ type: 'success', title: 'Purga Concluída', message: 'Contrato removido do repositório ativo.' });
       navigate('/admin/reservas');
-        } catch (err: unknown) {
+        } catch {
       addNotification({ type: 'error', title: 'Falha Crítica', message: 'Erro ao processar exclusão do contrato.' });
     } finally {
       setActionLoading(false);
@@ -223,7 +222,7 @@ export const BookingDetailPage = () => {
       await bookingAPI.updateStatus(bookingId, value);
       await fetchBooking();
       addNotification({ type: 'success', title: 'Estado Sincronizado', message: 'Status operativo atualizado.' });
-        } catch (err: unknown) {
+        } catch {
       addNotification({ type: 'error', title: 'Erro de Protocolo', message: 'Falha ao comunicar alteração de status.' });
     } finally {
       setActionLoading(false);
@@ -248,7 +247,7 @@ export const BookingDetailPage = () => {
       await fetchBooking();
       setConfirmModalOpen(false);
       addNotification({ type: 'success', title: 'Contrato Ativado', message: 'Reserva validada e sincronizada.' });
-        } catch (err: unknown) {
+        } catch {
       addNotification({ type: 'error', title: 'Falha na Ativação', message: 'Não foi possível confirmar os parâmetros financeiros.' });
     } finally {
       setActionLoading(false);

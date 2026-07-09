@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect, type ChangeEvent, type ComponentType } from 'react';
 import { Calendar, dateFnsLocalizer, type Event, type SlotInfo, Views, type View, type CalendarProps } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, isValid } from 'date-fns';
@@ -506,7 +505,7 @@ export const BookingCalendarPage = () => {
       setConfirmOpen(false);
       setConfirmBookingId(null);
       addNotification({ type: 'success', title: 'Agenda Confirmada', message: 'Valor e equipe alocados com sucesso.' });
-        } catch (err: unknown) {
+        } catch {
       addNotification({ type: 'error', title: 'Erro de Confirmação', message: 'Falha ao salvar detalhes da agenda.' });
     } finally {
       setActionLoading(null);
