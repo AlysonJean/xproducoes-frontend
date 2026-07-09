@@ -36,7 +36,9 @@ async function getCsrfToken(): Promise<string> {
   try {
     // Use configured api instance to ensure baseURL and withCredentials are set
     const response = await api.get('/csrf-token');
-    csrfToken = response.data?.csrfToken;
+    // Backend responde { success, data: { csrfToken } } — ver
+    // backend/src/middlewares/csrfMiddleware.ts:266-271 (getCsrfToken).
+    csrfToken = response.data?.data?.csrfToken;
     return csrfToken || '';
   } catch (error) {
     logDebug('Failed to fetch CSRF token', { error });
