@@ -6,7 +6,7 @@ import { asArray } from '../utils/normalize';
 import { transformEquipment } from '../utils/transformEquipment';
 import { normalizeString } from '../utils/string';
 import type { Equipment, Category, EquipmentFilters } from '@/types/types';
-import { PageLayout, PageEmpty } from '../components/layouts/PageLayout';
+import { PageLayout, PageEmpty, PageError } from '../components/layouts/PageLayout';
 import { SEO } from '../components/SEO';
 import { SearchAndFilters, FilterSelect, Grid } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
@@ -16,34 +16,35 @@ export const EquipmentListPage: React.FC = () => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  // const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<EquipmentFilters>(() => ({
     availability: undefined,
     category: searchParams.get('categoryId') || undefined
   }));
 
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [equipmentsData, categoriesData] = await Promise.all([
+        apiFetch('/equipments'),
+        apiFetch('/categories')
+      ]);
+
+      setEquipments(asArray<Equipment>(equipmentsData).map(transformEquipment));
+      setCategories(asArray<Category>(categoriesData));
+    } catch (err) {
+      console.error('Erro ao carregar dados:', err);
+      setError('Erro ao carregar equipamentos. Tente novamente.');
+      setEquipments([]);
+      setCategories([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch data
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-  const [equipmentsData, categoriesData] = await Promise.all([
-          apiFetch('/equipments'),
-          apiFetch('/categories')
-        ]);
-        
-        setEquipments(asArray<Equipment>(equipmentsData).map(transformEquipment));
-        setCategories(asArray<Category>(categoriesData));
-      } catch (err) {
-        console.error('Erro ao carregar dados:', err);
-        // setError('Erro ao carregar equipamentos. Tente novamente.');
-        setEquipments([]);
-        setCategories([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
 
@@ -104,7 +105,16 @@ export const EquipmentListPage: React.FC = () => {
     );
   }
 
-  // if (error) { return <PageError ... />; }
+  if (error) {
+    return (
+      <PageLayout
+        title="Erro ao carregar catálogo"
+        description="Não foi possível carregar os equipamentos no momento."
+      >
+        <PageError message={error} onRetry={fetchData} />
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout
