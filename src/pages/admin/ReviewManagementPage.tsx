@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, type ChangeEvent } from 'react';
 import { 
   Star, 
   Trash2, 
@@ -65,8 +64,8 @@ export default function ReviewManagementPage() {
       const data = Array.isArray(res) ? res : [];
       setItems(data);
       setError(null);
-        } catch (e: any) {
-      setError(e?.message ?? 'Falha ao carregar avaliações');
+        } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Falha ao carregar avaliações');
     } finally {
       setLoading(false);
     }
@@ -128,8 +127,8 @@ export default function ReviewManagementPage() {
       await apiFetch(`/reviews/${id}/approve`, { method: 'POST' });
       addNotification({ type: 'success', title: 'Aprovada', message: 'Avaliação aprovada e publicada.' });
       await load();
-        } catch (e: any) {
-      addNotification({ type: 'error', title: 'Erro ao aprovar', message: e?.message || 'Falha na aprovação.' });
+        } catch (e: unknown) {
+      addNotification({ type: 'error', title: 'Erro ao aprovar', message: e instanceof Error ? e.message : 'Falha na aprovação.' });
     } finally {
       setActionId(null);
     }
@@ -141,8 +140,8 @@ export default function ReviewManagementPage() {
       await apiFetch(`/reviews/${id}/reject`, { method: 'POST' });
       addNotification({ type: 'info', title: 'Rejeitada', message: 'Avaliação marcada como rejeitada.' });
       await load();
-        } catch (e: any) {
-      addNotification({ type: 'error', title: 'Erro ao rejeitar', message: e?.message || 'Falha ao rejeitar.' });
+        } catch (e: unknown) {
+      addNotification({ type: 'error', title: 'Erro ao rejeitar', message: e instanceof Error ? e.message : 'Falha ao rejeitar.' });
     } finally {
       setActionId(null);
     }
@@ -162,8 +161,8 @@ export default function ReviewManagementPage() {
       addNotification({ type: 'success', title: 'Excluída', message: 'Avaliação apagada com sucesso.' });
       await load();
       setIsDeleteModalOpen(false);
-        } catch (e: any) {
-      addNotification({ type: 'error', title: 'Erro ao apagar', message: e?.message || 'Falha ao apagar.' });
+        } catch (e: unknown) {
+      addNotification({ type: 'error', title: 'Erro ao apagar', message: e instanceof Error ? e.message : 'Falha ao apagar.' });
     } finally {
       setIsDeleting(false);
       setActionId(null);
@@ -178,8 +177,8 @@ export default function ReviewManagementPage() {
       addNotification({ type: 'success', title: 'Atualizada', message: 'Avaliação atualizada com sucesso.' });
       setEditingReview(null);
       await load();
-        } catch (e: any) {
-      addNotification({ type: 'error', title: 'Erro ao atualizar', message: e?.message || 'Falha ao atualizar.' });
+        } catch (e: unknown) {
+      addNotification({ type: 'error', title: 'Erro ao atualizar', message: e instanceof Error ? e.message : 'Falha ao atualizar.' });
     } finally {
       setActionId(null);
     }
@@ -265,14 +264,14 @@ export default function ReviewManagementPage() {
                 placeholder="Buscar por comentário, autor ou equipamento..."
                 className="pl-10"
                 value={query}
-                                onChange={(e: any) => setQuery(e.target.value)}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
               />
             </div>
             <div className="flex flex-wrap gap-2">
               <Select
                 className="w-32"
                 value={minRating}
-                                onChange={(e: any) => setMinRating(e.target.value)}
+                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setMinRating(e.target.value)}
                 options={[
                   { value: '', label: 'Nota: Todas' },
                   { value: '4', label: '4+ Estrelas' },
@@ -283,7 +282,7 @@ export default function ReviewManagementPage() {
               <Select
                 className="w-32"
                 value={statusFilter}
-                                onChange={(e: any) => setStatusFilter(e.target.value)}
+                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value as 'all' | 'approved' | 'rejected')}
                 options={[
                   { value: 'all', label: 'Status: Todos' },
                   { value: 'approved', label: 'Aprovadas' },
@@ -293,7 +292,7 @@ export default function ReviewManagementPage() {
               <Select
                 className="w-40"
                 value={sortBy}
-                                onChange={(e: any) => setSortBy(e.target.value)}
+                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setSortBy(e.target.value as 'date_desc' | 'date_asc' | 'rating_desc' | 'rating_asc')}
                 options={[
                   { value: 'date_desc', label: 'Mais Recentes' },
                   { value: 'rating_desc', label: 'Maior Nota' },
@@ -460,7 +459,7 @@ export default function ReviewManagementPage() {
                    min={1} 
                    max={5} 
                    value={editingReview.rating} 
-                                      onChange={(e: any) => setEditingReview({ ...editingReview, rating: parseInt(e.target.value || '0', 10) })} 
+                                      onChange={(e: ChangeEvent<HTMLInputElement>) => setEditingReview({ ...editingReview, rating: parseInt(e.target.value || '0', 10) })}
                    className="w-full"
                  />
                  <div className="flex items-center gap-1 text-amber-500">

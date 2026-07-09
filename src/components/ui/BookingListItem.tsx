@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { BookingStatus, SafeBooking } from '../../types/types';
 import { formatPrice } from '../../utils/formatPrice';
 
@@ -60,8 +59,8 @@ export const BookingListItem = ({ booking, onReviewClick, onViewDetails }: Booki
         <ul className="list-disc list-inside text-muted-foreground text-sm space-y-1">
           {Array.isArray(booking.equipments) && booking.equipments.length > 0 ? (
             booking.equipments.map((eq, idx) => (
-              <li key={(eq as any)?.equipmentId || (eq as any)?.id || `${booking.id}-equipment-${idx}`}>
-                {(eq as any)?.equipment?.name || (eq as any)?.name || 'Equipamento'}
+              <li key={eq.equipmentId || `${booking.id}-equipment-${idx}`}>
+                {eq.equipment?.name || 'Equipamento'}
               </li>
             ))
           ) : (
@@ -73,8 +72,8 @@ export const BookingListItem = ({ booking, onReviewClick, onViewDetails }: Booki
             <h4 className="font-semibold mb-2 mt-4 text-foreground">Kits Reservados:</h4>
             <ul className="list-disc list-inside text-muted-foreground text-sm space-y-1">
               {booking.kits.map((kit, idx) => (
-                <li key={(kit as any)?.kitId || (kit as any)?.id || `${booking.id}-kit-${idx}`}>
-                  {(kit as any)?.kit?.name || (kit as any)?.name || 'Kit'}
+                <li key={kit.kitId || `${booking.id}-kit-${idx}`}>
+                  {kit.kit?.name || 'Kit'}
                 </li>
               ))}
             </ul>
