@@ -139,10 +139,11 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
 
       onSuccess();
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao salvar equipamento. Tente novamente.';
       addNotification({
         type: 'error',
-        title: 'Erro',
-        message: 'Erro ao salvar equipamento. Tente novamente.'
+        title: 'Erro ao Salvar',
+        message: errorMessage
       });
       console.error(err);
     } finally {
