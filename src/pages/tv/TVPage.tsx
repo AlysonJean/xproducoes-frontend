@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps, react-hooks/set-state-in-effect */
+/* eslint-disable @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps, react-hooks/set-state-in-effect */
 import React, { useState, useEffect, memo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
@@ -50,6 +50,22 @@ interface WallConfig {
     mosaicFrequency?: number;
 
     // Gamification
+    enableGamification?: boolean;
+}
+
+interface TVConfigResponse {
+    linked: boolean;
+    settingId: string;
+    eventId?: string;
+    eventName: string;
+    hashtag?: string;
+    layoutMode?: 'LANDSCAPE' | 'PORTRAIT';
+    slug?: string;
+    sponsors?: SponsorLogo[];
+    enableQrCode?: boolean;
+    qrCodeText?: string;
+    enableMosaic?: boolean;
+    mosaicFrequency?: number;
     enableGamification?: boolean;
 }
 
@@ -132,7 +148,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                 <p className="text-foreground text-xs font-bold text-center mt-2 uppercase tracking-wide">{qrCodeText}</p>
                             )}
                             {/* Debug: show resolved QR value when debugging */}
-                                                        {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
+                                                        {typeof window !== 'undefined' && window.__TV_DEBUG && (
                                 <p className="text-xs text-muted-foreground mt-2 break-all">{`${getPublicBase()}/participate/${slug}`}</p>
                             )}
                         </div>
@@ -154,8 +170,8 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                             onLoad={() => {
                                                 try {
                                                     if (typeof window !== 'undefined') {
-                                                        (window as any).__sponsorsLoaded = ((window as any).__sponsorsLoaded || 0) + 1;
-                                                        if ((window as any).__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
+                                                        window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
+                                                        if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                                     }
                                                                                                 } catch (err) {/* ignore */ }
                                             }}
@@ -215,7 +231,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                     <p className="text-foreground text-xs font-bold text-center mt-2 uppercase tracking-wide">{qrCodeText}</p>
                                 )}
                                 {/* Debug: show resolved QR value when debugging */}
-                                                                {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
+                                                                {typeof window !== 'undefined' && window.__TV_DEBUG && (
                                     <p className="text-xs text-muted-foreground mt-2 break-all">{`${getPublicBase()}/participate/${slug}`}</p>
                                 )}
                             </div>
@@ -237,8 +253,8 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                                 onLoad={() => {
                                                     try {
                                                         if (typeof window !== 'undefined') {
-                                                            (window as any).__sponsorsLoaded = ((window as any).__sponsorsLoaded || 0) + 1;
-                                                            if ((window as any).__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
+                                                            window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
+                                                            if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                                         }
                                                                                                         } catch (err) {/* ignore */ }
                                                 }}
@@ -301,7 +317,7 @@ const TVPage: React.FC = () => {
 
             if (!url) return;
 
-                        const res = await apiFetch<any>(url);
+                        const res = await apiFetch<TVConfigResponse>(url);
             if (res.linked) {
                 setConfig({
                     id: res.settingId,
@@ -597,7 +613,7 @@ const TVPage: React.FC = () => {
                                 <div className="p-2 rounded-lg bg-transparent">
                                     <QRCode value={`${getPublicBase()}/participate/${config.slug || ''}`} size={120} />
                                 </div>
-                                                                {typeof window !== 'undefined' && (window as any).__TV_DEBUG && (
+                                                                {typeof window !== 'undefined' && window.__TV_DEBUG && (
                                     <p className="text-xs text-gray-600 mt-2 break-all">{`${getPublicBase()}/participate/${config.slug || ''}`}</p>
                                 )}
                             </div>
@@ -613,8 +629,8 @@ const TVPage: React.FC = () => {
                                             <img src={opt || 'https://placehold.co/240x80?text=Sponsor'} alt={s.name || 'Sponsor'} className="w-full h-auto object-contain sponsor-debug-img" height={80} width={240} srcSet={opt ? `${small} 240w, ${opt} 480w` : undefined} loading="eager" onLoad={() => {
                                                 try {
                                                     if (typeof window !== 'undefined') {
-                                                        (window as any).__sponsorsLoaded = ((window as any).__sponsorsLoaded || 0) + 1;
-                                                        if ((window as any).__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
+                                                        window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
+                                                        if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                                     }
                                                                                                 } catch (err) {/* ignore */ }
                                             }} onError={e => {
@@ -699,8 +715,8 @@ const TVPage: React.FC = () => {
                                         try {
                                              
                                             if (typeof window !== 'undefined') {
-                                                (window as any).__sponsorsLoaded = ((window as any).__sponsorsLoaded || 0) + 1;
-                                                if ((window as any).__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
+                                                window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
+                                                if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                             }
                                                                                 } catch (err) { /* ignore */ }
                                     }} onError={e => {
