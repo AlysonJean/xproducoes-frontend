@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps, react-hooks/set-state-in-effect */
 import React, { useState, useEffect, memo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
@@ -74,6 +73,38 @@ interface LeaderboardItem {
     avatarUrl?: string;
     count: number;
     platform: string;
+}
+
+// Dev-only fallback: permite testar logos/QR sem backend definindo VITE_TV_DEV_FALLBACK=true
+// (ou rodando em localhost/127.0.0.1). Calculado uma única vez no carregamento do módulo —
+// usado como inicializador preguiçoso do useState abaixo, para não precisar de um useEffect
+// só para popular estado inicial (evita setState síncrono dentro de um efeito).
+const TV_DEV_FALLBACK_ENABLED = (import.meta.env.DEV && import.meta.env.VITE_TV_DEV_FALLBACK === 'true') || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
+
+const TV_DEV_FALLBACK_CONFIG: WallConfig = {
+    id: 'dev-sample',
+    name: 'Dev Sample Wall',
+    hashtag: 'muraldev',
+    layoutMode: 'LANDSCAPE',
+    enableQrCode: true,
+    qrCodeText: 'Participe - Dev',
+    slug: 'dev-sample',
+    sponsors: [
+        { id: 'sp1', imageUrl: 'https://via.placeholder.com/200x80?text=Sponsor+1', name: 'Sponsor 1' },
+        { id: 'sp2', imageUrl: 'https://via.placeholder.com/200x80?text=Sponsor+2', name: 'Sponsor 2' }
+    ],
+    enableMosaic: true,
+    mosaicFrequency: 6,
+    enableGamification: false,
+};
+
+const TV_DEV_FALLBACK_POSTS: SocialPost[] = [
+    { id: 'p1', mediaUrl: 'https://via.placeholder.com/1200x800?text=Post+1', author: 'dev_user', caption: 'post de teste 1', status: 'APPROVED' },
+    { id: 'p2', mediaUrl: 'https://via.placeholder.com/800x1200?text=Post+2', author: 'dev_user2', caption: 'post vertical', status: 'APPROVED' },
+];
+
+if (TV_DEV_FALLBACK_ENABLED) {
+    console.info('TV Debug - applying dev fallback config for local testing');
 }
 
 // Optimization: Pre-calculate aspect ratio class to avoid CLS
@@ -173,7 +204,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                                         window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
                                                         if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                                     }
-                                                                                                } catch (err) {/* ignore */ }
+                                                                                                } catch {/* ignore */ }
                                             }}
                                             onError={(e) => {
                                                  
@@ -256,7 +287,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                                             window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
                                                             if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                                         }
-                                                                                                        } catch (err) {/* ignore */ }
+                                                                                                        } catch {/* ignore */ }
                                                 }}
                                                 onError={(e) => {
                                                      
@@ -280,8 +311,8 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
 
 const TVPage: React.FC = () => {
     const [searchParams] = useSearchParams();
-    const [config, setConfig] = useState<WallConfig | null>(null);
-    const [posts, setPosts] = useState<SocialPost[]>([]);
+    const [config, setConfig] = useState<WallConfig | null>(() => TV_DEV_FALLBACK_ENABLED ? TV_DEV_FALLBACK_CONFIG : null);
+    const [posts, setPosts] = useState<SocialPost[]>(() => TV_DEV_FALLBACK_ENABLED ? TV_DEV_FALLBACK_POSTS : []);
     const [activeIndex, setActiveIndex] = useState(0);
     const [announcements, setAnnouncements] = useState<SocialAnnouncement[]>([]);
     const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
@@ -338,23 +369,25 @@ const TVPage: React.FC = () => {
         } catch (error) {
             console.error("Failed to load config", error);
         }
-        }, [searchParams, pairingCode, config]); // Added config to avoid re-fetching if already set
+        }, [searchParams, pairingCode]); // fetchConfig não lê `config` — a checagem "só busca se ainda não tem" é feita pelo chamador
 
     useEffect(() => {
-        // Initial fetch only if not set
-        if (!config) {
-            fetchConfig();
-        }
-
-        // Polling loop if not linked
-        const interval = setInterval(() => {
+        const tick = () => {
             if (document.hidden) return; // Pausa polling se a aba não estiver visível
-            if (!config) {
-                fetchConfig();
-            }
-        }, 5000);
+            if (!config) fetchConfig();
+        };
 
-        return () => clearInterval(interval);
+        // Busca inicial + polling unificados no mesmo `tick`. A busca inicial roda via
+        // setTimeout (não direto no corpo do efeito) para não disparar setState de forma
+        // síncrona dentro do efeito (react-hooks/set-state-in-effect) — mesmo padrão já
+        // usado pelo tick do polling, que roda dentro do callback do setInterval.
+        const initial = setTimeout(tick, 0);
+        const interval = setInterval(tick, 5000);
+
+        return () => {
+            clearTimeout(initial);
+            clearInterval(interval);
+        };
     }, [fetchConfig, config]);
 
     // Warn when QR is enabled but slug is missing (always declared to keep Hooks order stable)
@@ -524,40 +557,6 @@ const TVPage: React.FC = () => {
         };
     }, [posts.length, showAnnouncement, slidesSinceAnnouncement, announcements, activeIndex, slidesSinceMosaic, showMosaic, config, leaderboard, showLeaderboard, slidesSinceLeaderboard]);
 
-    // Dev-only fallback: allow testing logos/QR without a backend by setting VITE_TV_DEV_FALLBACK=true
-    useEffect(() => {
-        const enabled = (import.meta.env.DEV && import.meta.env.VITE_TV_DEV_FALLBACK === 'true') || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
-        if (!enabled) return;
-        if (config) return; // only apply when no config is present
-
-        console.info('TV Debug - applying dev fallback config for local testing');
-
-        const sampleConfig: WallConfig = {
-            id: 'dev-sample',
-            name: 'Dev Sample Wall',
-            hashtag: 'muraldev',
-            layoutMode: 'LANDSCAPE',
-            enableQrCode: true,
-            qrCodeText: 'Participe - Dev',
-            slug: 'dev-sample',
-            sponsors: [
-                { id: 'sp1', imageUrl: 'https://via.placeholder.com/200x80?text=Sponsor+1', name: 'Sponsor 1' },
-                { id: 'sp2', imageUrl: 'https://via.placeholder.com/200x80?text=Sponsor+2', name: 'Sponsor 2' }
-            ],
-            enableMosaic: true,
-            mosaicFrequency: 6,
-            enableGamification: false,
-        };
-
-        const samplePosts: SocialPost[] = [
-            { id: 'p1', mediaUrl: 'https://via.placeholder.com/1200x800?text=Post+1', author: 'dev_user', caption: 'post de teste 1', status: 'APPROVED' },
-            { id: 'p2', mediaUrl: 'https://via.placeholder.com/800x1200?text=Post+2', author: 'dev_user2', caption: 'post vertical', status: 'APPROVED' },
-        ];
-
-        setConfig(sampleConfig);
-        setPosts(samplePosts);
-    }, [config]);
-
     // Render Loading / Pairing / Error states
     if (!config && pairingCode) {
         return (
@@ -632,7 +631,7 @@ const TVPage: React.FC = () => {
                                                         window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
                                                         if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                                     }
-                                                                                                } catch (err) {/* ignore */ }
+                                                                                                } catch {/* ignore */ }
                                             }} onError={e => {
                                                  
                                                 console.warn('TVPage - sponsor overlay failed to load, replacing with placeholder:', s.imageUrl);
@@ -718,7 +717,7 @@ const TVPage: React.FC = () => {
                                                 window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
                                                 if (window.__TV_DEBUG) console.debug('Sponsor loaded:', s.imageUrl);
                                             }
-                                                                                } catch (err) { /* ignore */ }
+                                                                                } catch { /* ignore */ }
                                     }} onError={e => {
                                          
                                         console.warn('TVPage - sponsor overlay failed to load:', s.imageUrl);
