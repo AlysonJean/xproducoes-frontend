@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const handleRefreshed = () => {
       logger.info('AuthContext: Token refreshed event received', 'AuthContext');
-      // No need to update local state here as accessToken is in secureStorage
+      // Nada a atualizar aqui: o novo access token já chegou como cookie httpOnly.
     };
 
     const handleLogout = () => {
@@ -152,13 +152,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const rawData = await response.json();
       const userData = rawData.data || rawData;
 
-      // ✅ NO LONGER storing tokens - they're in httpOnly cookies
-      // secureStorage.set('accessToken', token);
-      // secureStorage.set('refreshToken', token);
-      // secureStorage.set('tokenExpiresAt', ...);
-      
+      // Tokens já chegaram como cookies httpOnly (Set-Cookie na resposta).
       setUser(userData);
-      
+
       switch (userData.role) {
         case 'ADMIN': return '/admin/painel';
         case 'COLLABORATOR': return '/collaborator/dashboard';
@@ -191,11 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const { user: userData, redirectTo } = await response.json();
 
-      // ✅ NO LONGER storing tokens - backend sets httpOnly cookies automatically
-      // secureStorage.set('accessToken', token);
-      // secureStorage.set('refreshToken', rToken);
-      // secureStorage.set('tokenExpiresAt', ...);
-      
+      // Tokens já foram gravados como cookies httpOnly pelo backend.
       setUser(userData);
 
       if (redirectTo) return redirectTo;

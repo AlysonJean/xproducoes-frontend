@@ -1,4 +1,3 @@
-import { secureStorage } from '../utils/secureStorage';
 import { getApiBaseUrl } from '../utils/apiConfig';
 import { logDebug } from '../utils/logger';
 
@@ -36,17 +35,17 @@ class AuthService {
 
     this.isRefreshing = true;
     const API_BASE_URL = getApiBaseUrl();
-    const refreshToken = secureStorage.get('refreshToken');
 
     try {
       logDebug('Attempting token refresh...', { url: `${API_BASE_URL}/auth/refresh` });
-      
+
+      // Autenticação via cookie httpOnly (credentials: 'include' já envia
+      // x_refresh_token automaticamente) — não há refresh token em JS para enviar no body.
       const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        // Cookie-first: mantém compatibilidade com instalações legadas que ainda usam body.
-        body: JSON.stringify(refreshToken ? { refreshToken } : {}),
+        body: JSON.stringify({}),
       });
 
       if (!response.ok) {
@@ -66,14 +65,9 @@ class AuthService {
       if (!accessToken) {
         throw new Error('Refresh API did not return access token');
       }
-      
-      // Update secure storage
-      secureStorage.set('accessToken', accessToken);
-      if (data.refreshToken) {
-        secureStorage.set('refreshToken', data.refreshToken);
-      }
-      secureStorage.set('tokenExpiresAt', (Date.now() + 15 * 60 * 1000).toString());
 
+      // Os novos tokens já foram gravados como cookies httpOnly pelo backend
+      // (Set-Cookie na resposta) — nada para persistir aqui no cliente.
       logDebug('Token refreshed successfully');
       
       // Notify subscribers and update state
@@ -101,10 +95,7 @@ class AuthService {
    */
   public logout() {
     logDebug('AuthService: Executing global logout');
-    secureStorage.remove('accessToken');
-    secureStorage.remove('refreshToken');
-    secureStorage.remove('tokenExpiresAt');
-    
+
     // Notify application
     window.dispatchEvent(new Event('auth:logout'));
     

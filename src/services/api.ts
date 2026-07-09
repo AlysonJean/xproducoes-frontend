@@ -1,7 +1,6 @@
 
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { logDebug } from '../utils/logger';
-import { secureStorage } from '../utils/secureStorage';
 import { normalizeString } from '../utils/string';
 import { API_BASE_URL, API_URL } from '../utils/apiConfig';
 
@@ -46,11 +45,8 @@ async function getCsrfToken(): Promise<string> {
 }
 
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
-  // Get fresh token from secure storage
-  const token = secureStorage.get('accessToken');
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  // Autenticação via cookie httpOnly (withCredentials acima já envia o cookie em toda
+  // requisição same-origin) — não há token em JS para colocar num header Authorization.
 
   // ✅ Add CSRF token for mutating requests
   try {
@@ -213,15 +209,6 @@ export const apiFetch = async <T = unknown>(
       ...options.headers,
     },
   };
-
-  // Add current access token from secureStorage if present (legacy fallback)
-  const token = secureStorage.get('accessToken');
-  if (token) {
-    config.headers = {
-      ...config.headers,
-      Authorization: `Bearer ${token}`,
-    };
-  }
 
   // Add Idempotency-Key for mutating requests if not provided
   try {

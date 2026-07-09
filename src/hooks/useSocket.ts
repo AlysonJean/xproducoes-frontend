@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { secureStorage } from '../utils/secureStorage';
 import { SOCKET_URL } from '../utils/apiConfig';
 import { logDebug } from '../utils/logger';
 
@@ -10,11 +9,11 @@ export const useSocket = (room?: string) => {
 
   // Create socket ONCE — not on every room change
   useEffect(() => {
-    const token = secureStorage.get('accessToken');
-
     if (!socketRef.current) {
+      // Autenticação via cookie httpOnly (withCredentials envia o cookie
+      // automaticamente); o backend lê o cookie no handshake — ver
+      // backend/src/config/socket.ts#resolveSocketTokenPayload.
       const socket = io(SOCKET_URL, {
-        auth: { token },
         transports: ['websocket', 'polling'],
         withCredentials: true,
         reconnectionAttempts: 5,
