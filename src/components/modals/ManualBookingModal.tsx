@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 // Caminho: frontend/src/components/admin/ManualBookingModal.tsx
 
 import { useForm, type SubmitHandler } from 'react-hook-form';
@@ -113,40 +112,44 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
   };
 
   useEffect(() => {
-    if (isOpen) {
-      const loadData = async () => {
-        try {
-          const [equipData, kitData, clientsRes] = await Promise.all([
-            apiFetch('/equipments'),
-            apiFetch('/kits'),
-                        apiFetch<RawClientsResponse | RawClientRecord[]>('/admin/clients').catch(() => ({ data: [] })),
-          ]);
-          setEquipments(equipData as Equipment[]);
-          setKits(kitData as Kit[]);
+    if (!isOpen) return;
+    const loadData = async () => {
+      try {
+        const [equipData, kitData, clientsRes] = await Promise.all([
+          apiFetch('/equipments'),
+          apiFetch('/kits'),
+                      apiFetch<RawClientsResponse | RawClientRecord[]>('/admin/clients').catch(() => ({ data: [] })),
+        ]);
+        setEquipments(equipData as Equipment[]);
+        setKits(kitData as Kit[]);
 
-          const list: RawClientRecord[] = Array.isArray(clientsRes)
-            ? clientsRes
-            : (Array.isArray(clientsRes?.data) ? clientsRes.data : []);
-                    const mappedClients = list.map((c) => ({
-            id: c.id || c.user?.id || '',
-            name: c.user?.name || c.name || 'Cliente',
-            email: c.user?.email || c.email,
-            phone: c.phone || '',
-                    })).sort((a, b) => a.name.localeCompare(b.name));
-          setClients(mappedClients);
-        } catch {
-          setServerError('Falha ao carregar dados.');
-        }
-      };
-      loadData();
-    } else {
-      // Limpar seleções quando o modal fechar
-            setSelectedEquipments([]);
-      setSelectedKit('');
-      setValue('equipmentIds', []);
-      setValue('kitId', '');
-    }
-  }, [isOpen, setValue]);
+        const list: RawClientRecord[] = Array.isArray(clientsRes)
+          ? clientsRes
+          : (Array.isArray(clientsRes?.data) ? clientsRes.data : []);
+                  const mappedClients = list.map((c) => ({
+          id: c.id || c.user?.id || '',
+          name: c.user?.name || c.name || 'Cliente',
+          email: c.user?.email || c.email,
+          phone: c.phone || '',
+                  })).sort((a, b) => a.name.localeCompare(b.name));
+        setClients(mappedClients);
+      } catch {
+        setServerError('Falha ao carregar dados.');
+      }
+    };
+    loadData();
+  }, [isOpen]);
+
+  // Reset do estado local do formulário no evento real de fechamento (não reativo a `isOpen`
+  // via efeito — evita setState síncrono dentro de um efeito, react-hooks/set-state-in-effect).
+  // Cobre todos os caminhos de fechamento: X/overlay/esc (via BaseModal) e sucesso no submit.
+  const handleModalClose = () => {
+    setSelectedEquipments([]);
+    setSelectedKit('');
+    setValue('equipmentIds', []);
+    setValue('kitId', '');
+    onClose();
+  };
 
   const onSubmit: SubmitHandler<ManualBookingFormData> = async (data) => {
     setServerError(null);
@@ -165,7 +168,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
         body: JSON.stringify(payload),
       });
       onSuccess();
-      onClose();
+      handleModalClose();
     } catch (err) {
       setServerError(err instanceof Error ? err.message : 'Ocorreu um erro ao criar a reserva.');
     }
@@ -176,7 +179,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
   return (
     <BaseModal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleModalClose}
       title="Adicionar Reserva Manual"
       className="max-w-4xl"
     >
@@ -405,7 +408,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
             <Button
               type="button"
               variant="outline"
-              onClick={onClose}
+              onClick={handleModalClose}
               disabled={isSubmitting}
             >
               Cancelar

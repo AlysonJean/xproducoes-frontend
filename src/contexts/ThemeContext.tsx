@@ -1,5 +1,4 @@
 /* eslint-disable react-refresh/only-export-components */
-/* eslint-disable react-hooks/set-state-in-effect */
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { logger } from '../utils/logger';
 import type { ReactNode } from 'react';
@@ -31,31 +30,16 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  // SSR-safe initialization
-  const [theme, setThemeState] = useState<Theme>('system');
+  // SSR-safe initialization. Lido via inicializador preguiçoso (não um useEffect de "load on
+  // mount") para já renderizar com o tema salvo desde o primeiro render no cliente, sem o
+  // flash de 'system' → tema salvo que o useEffect anterior causava.
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return 'system';
+    const saved = localStorage.getItem('theme') as Theme;
+    if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
+    return 'system';
+  });
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light'); // Default seguro para SSR
-
-  // Load saved theme on mount (client-side only)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('theme') as Theme;
-      if (saved === 'light' || saved === 'dark' || saved === 'system') {
-                setThemeState(saved);
-      }
-    }
-  }, []);
-
-  // Update resolved theme based on system perf (client-side only)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (theme === 'light' || theme === 'dark') {
-                  setResolvedTheme(theme);
-      } else {
-         const mq = window.matchMedia('(prefers-color-scheme: dark)');
-         setResolvedTheme(mq.matches ? 'dark' : 'light');
-      }
-    }
-  }, [theme]); // Run when theme changes or after initial mount
 
   // Aplica classe dark no HTML e data-theme sempre que resolvedTheme mudar
   useEffect(() => {
@@ -78,20 +62,30 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     logger.debug('Theme applied successfully', 'ThemeContext', { htmlClasses: root.className });
   }, [resolvedTheme]);
 
-  // Atualiza resolvedTheme quando theme ou sistema mudam
-  useEffect(() => {
+  // Deriva resolvedTheme a partir de theme durante a renderização (não em efeito) sempre que
+  // `theme` mudar — cobre o caso explícito (light/dark) e o valor inicial do caso 'system'.
+  // Ver https://react.dev/learn/you-might-not-need-an-effect. Mudanças subsequentes da
+  // preferência do SO (só relevantes quando theme === 'system') são tratadas pelo listener no
+  // efeito abaixo, que é a parte que de fato precisa de um efeito (assinar um sistema externo).
+  const [lastSyncedTheme, setLastSyncedTheme] = useState<Theme | null>(null);
+  if (theme !== lastSyncedTheme && typeof window !== 'undefined') {
+    setLastSyncedTheme(theme);
     if (theme === 'light' || theme === 'dark') {
-            setResolvedTheme(theme);
-      return;
+      setResolvedTheme(theme);
     } else {
-      const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      setResolvedTheme(mq.matches ? 'dark' : 'light');
-      const handler = (e: MediaQueryListEvent) => {
-        setResolvedTheme(e.matches ? 'dark' : 'light');
-      };
-      mq.addEventListener('change', handler);
-      return () => mq.removeEventListener('change', handler);
+      setResolvedTheme(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     }
+  }
+
+  // Escuta mudanças de preferência do SO enquanto theme === 'system'
+  useEffect(() => {
+    if (theme !== 'system' || typeof window === 'undefined') return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => {
+      setResolvedTheme(e.matches ? 'dark' : 'light');
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
   }, [theme]);
 
   // Salva no localStorage e sincroniza entre abas

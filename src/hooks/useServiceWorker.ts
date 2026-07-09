@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { logger } from '../utils/logger';
 
@@ -118,9 +117,12 @@ export const useServiceWorker = () => {
 
   // Auto-registrar Service Worker
   useEffect(() => {
-    if (state.isSupported && !state.isRegistered) {
-            register();
-    }
+    if (!state.isSupported || state.isRegistered) return;
+    // Deferido via setTimeout (não direto no corpo do efeito) para não disparar setState de
+    // forma síncrona dentro do efeito (react-hooks/set-state-in-effect) — register() só chama
+    // setState depois de seus próprios awaits, mas a chamada direta ainda é sinalizada.
+    const timer = setTimeout(register, 0);
+    return () => clearTimeout(timer);
   }, [state.isSupported, state.isRegistered, register]);
 
   // Enviar métricas de performance para Service Worker

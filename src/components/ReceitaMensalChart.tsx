@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState } from 'react';
 import { Select } from './ui/StandardComponents';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
@@ -48,15 +47,26 @@ export function ReceitaMensalChart({ year }: ReceitaMensalChartProps) {
 
   // Buscar dados do ano selecionado
   useEffect(() => {
-        setLoading(true);
-    setError(null);
-    apiFetch<MonthlyRevenue[]>(`/dashboard/monthly-revenue?year=${selectedYear}`)
-      .then((res) => setData(res))
-      .catch((err) => {
+    let cancelled = false;
+    (async () => {
+      // Defere para não chamar setState de forma síncrona no corpo do efeito
+      // (react-hooks/set-state-in-effect) — resolve antes do próximo paint.
+      await Promise.resolve();
+      if (cancelled) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await apiFetch<MonthlyRevenue[]>(`/dashboard/monthly-revenue?year=${selectedYear}`);
+        if (!cancelled) setData(res);
+      } catch (err) {
+        if (cancelled) return;
         if (err instanceof Error) setError(err.message);
         else setError('Erro desconhecido ao carregar o gráfico.');
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [selectedYear]);
 
   // Select de anos

@@ -1,8 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
-/* eslint-disable react-hooks/set-state-in-effect */
 // src/contexts/SettingsContext.tsx
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { useAppSettings, type AppSettings } from '../hooks/useAppSettings';
 
 interface SettingsContextType {
@@ -24,13 +23,15 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   } = useAppSettings();
 
   const [localCompanyName, setLocalCompanyName] = useState<string>(companyName);
-
-  // Sincronizar com as configurações carregadas
-  useEffect(() => {
-    if (companyName) {
-            setLocalCompanyName(companyName);
-    }
-  }, [companyName]);
+  // Rastreia o último `companyName` (fonte externa, de useAppSettings) já sincronizado, para
+  // ajustar o estado local durante a renderização em vez de um useEffect (evita setState
+  // síncrono no corpo do efeito — react-hooks/set-state-in-effect — e também evita um
+  // re-render extra: https://react.dev/learn/you-might-not-need-an-effect).
+  const [syncedCompanyName, setSyncedCompanyName] = useState<string>(companyName);
+  if (companyName && companyName !== syncedCompanyName) {
+    setSyncedCompanyName(companyName);
+    setLocalCompanyName(companyName);
+  }
 
   const setCompanyName = async (name: string) => {
     setLocalCompanyName(name);
