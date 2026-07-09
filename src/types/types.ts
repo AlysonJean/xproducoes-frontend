@@ -735,6 +735,7 @@ export interface BookingListItem {
   eventEndDate?: string;
   location?: string;
   notes?: string;
+  clientName?: string; // Reservas manuais sem cliente cadastrado
 }
 
 export interface ContactSubmission {

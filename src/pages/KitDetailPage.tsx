@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, User, Package } from 'lucide-react';
@@ -53,12 +52,12 @@ export const KitDetailPage = () => {
       try {
         setLoading(true);
         setKit(null); // Reset before fetch to clear old data
-        const data = await apiFetch(`/kits/${slug}`);
-        const transformed = transformKit(data as Kit);
+        const data = await apiFetch<Kit & { prevSlug?: string | null; nextSlug?: string | null }>(`/kits/${slug}`);
+        const transformed = transformKit(data);
         setKit({
             ...transformed,
-            prevSlug: (data as any).prevSlug,
-            nextSlug: (data as any).nextSlug
+            prevSlug: data.prevSlug,
+            nextSlug: data.nextSlug
         });
         
         if (data) {
@@ -118,11 +117,11 @@ export const KitDetailPage = () => {
           title: 'Combo Adicionado', 
           message: `${kit.name} foi incluído no seu orçamento com desconto.` 
       });
-        } catch (e: any) {
-      addNotification({ 
-          type: 'error', 
-          title: 'Erro', 
-          message: e.message || 'Não foi possível adicionar o kit.' 
+        } catch (e: unknown) {
+      addNotification({
+          type: 'error',
+          title: 'Erro',
+          message: e instanceof Error ? e.message : 'Não foi possível adicionar o kit.'
       });
     } finally {
       setAdding(false);
@@ -356,7 +355,7 @@ export const KitDetailPage = () => {
                       const entity = item.equipment || item.service;
                       if (!entity) return null;
                       const isService = !!item.serviceId;
-                                            const price = isService ? (entity as any).price : (entity as any).pricePerHour;
+                                            const price = item.equipment?.pricePerHour ?? item.service?.price;
 
                       return (
                         <div key={item.id} className="group bg-muted/10 rounded-2xl p-5 hover:bg-muted/20 transition-all border border-border hover:border-primary/20 shadow-sm hover:shadow-md">
@@ -387,7 +386,7 @@ export const KitDetailPage = () => {
                                   {formatPrice(Number(price))}{isService ? '/serviço' : '/h'}
                                 </span>
                                 <Link 
-                                                                    to={isService ? `/servicos/${(entity as any).slug}` : `/equipamentos/${(entity as any).slug || entity.id}`} 
+                                                                    to={isService ? `/servicos/${entity.slug}` : `/equipamentos/${entity.slug || entity.id}`}
                                   className="text-[10px] font-bold text-muted-foreground hover:text-primary underline-offset-4 hover:underline transition-colors uppercase tracking-widest"
                                 >
                                   Detalhes

@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
@@ -19,7 +18,7 @@ import {
   Alert
 } from '../../components/ui/StandardComponents';
 import { AdminBookingForm as BookingForm } from '@/components/forms/AdminBookingForm';
-import type { BookingListItem } from '../../types/types';
+import type { BookingListItem, BookingStatus } from '../../types/types';
 import { 
   Search, 
   Plus, 
@@ -66,8 +65,8 @@ export const BookingListPage = () => {
       const response = await apiFetch('/admin/bookings');
       setBookings(asArray(response));
       setError(null);
-        } catch (err: any) {
-      setError(err?.message || 'Não foi possível carregar a lista de reservas.');
+        } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Não foi possível carregar a lista de reservas.');
     } finally {
       setLoading(false);
     }
@@ -132,11 +131,11 @@ export const BookingListPage = () => {
         title: 'Atualizado',
         message: `${field === 'status' ? 'Status' : 'Entrega'} atualizado com sucesso.`
       });
-        } catch (err: any) {
+        } catch (err: unknown) {
       addNotification({
         type: 'error',
         title: 'Erro',
-        message: err?.message || 'Erro ao atualizar o status.'
+        message: err instanceof Error ? err.message : 'Erro ao atualizar o status.'
       });
     }
   };
@@ -159,7 +158,7 @@ export const BookingListPage = () => {
   const filteredBookings = useMemo(() => {
     return bookings.filter(booking => {
       const q = normalizeString(searchTerm);
-      const clientName = normalizeString(booking.client?.user?.name || (booking as any).clientName || '');
+      const clientName = normalizeString(booking.client?.user?.name || booking.clientName || '');
       const bookingId = normalizeString(booking.id || '');
       const matchesSearch = clientName.includes(q) || bookingId.includes(q);
       const matchesStatus = filterStatus === 'all' || booking.status === filterStatus;
@@ -322,7 +321,7 @@ export const BookingListPage = () => {
                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Select
                   value={filterStatus}
-                                    onChange={(e: any) => setFilterStatus(e.target.value)}
+                                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value)}
                   className="pl-10 h-10 border-border bg-card rounded-xl text-[10px] font-black uppercase tracking-widest"
                   options={[
                     { value: 'all', label: 'TODOS OS STATUS' },
@@ -409,7 +408,7 @@ export const BookingListPage = () => {
                         <Select
                           className="h-9 min-w-[130px] border-border text-xs"
                           value={booking.status}
-                                                    onChange={(e: any) => handleStatusChange(booking.id, 'status', e.target.value)}
+                                                    onChange={(e: ChangeEvent<HTMLSelectElement>) => handleStatusChange(booking.id, 'status', e.target.value)}
                           options={[
                             { value: 'PENDING', label: 'Pendente' },
                             { value: 'CONFIRMED', label: 'Confirmada' },
@@ -422,7 +421,7 @@ export const BookingListPage = () => {
                         <Select
                           className="h-9 min-w-[150px] border-border text-xs"
                           value={booking.deliveryStatus || 'PENDING'}
-                                                    onChange={(e: any) => handleStatusChange(booking.id, 'deliveryStatus', e.target.value)}
+                                                    onChange={(e: ChangeEvent<HTMLSelectElement>) => handleStatusChange(booking.id, 'deliveryStatus', e.target.value)}
                           options={[
                             { value: 'PENDING', label: 'Pendente' },
                             { value: 'ON_THE_WAY', label: 'A caminho' },
@@ -498,7 +497,12 @@ export const BookingListPage = () => {
       >
         <div className="min-w-0">
           <BookingForm
-                        initialData={editingBooking ? { ...editingBooking, totalPrice: Number(editingBooking.totalPrice) } as any : editingBooking}
+                        initialData={editingBooking ? {
+                          ...editingBooking,
+                          totalPrice: Number(editingBooking.totalPrice),
+                          status: editingBooking.status as BookingStatus,
+                          client: { name: editingBooking.client?.user?.name },
+                        } : editingBooking}
             defaultClientType={initialClientType}
             onSuccess={handleSuccess}
             onCancel={handleCancel}

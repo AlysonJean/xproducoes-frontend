@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { useRevealOnView } from '../hooks/useRevealOnView';
 import { useParams, Link } from 'react-router-dom';
@@ -53,12 +52,12 @@ export const EquipmentDetailPage = () => {
       try {
         setLoading(true);
         setEquipment(null);
-        const data = await apiFetch(`/equipments/${slug}`);
-        const transformed = transformEquipment(data as Equipment);
+        const data = await apiFetch<Equipment & { prevSlug?: string | null; nextSlug?: string | null }>(`/equipments/${slug}`);
+        const transformed = transformEquipment(data);
         setEquipment({
           ...transformed,
-          prevSlug: (data as any).prevSlug,
-          nextSlug: (data as any).nextSlug
+          prevSlug: data.prevSlug,
+          nextSlug: data.nextSlug
         });
 
         if (data) {
@@ -90,11 +89,11 @@ export const EquipmentDetailPage = () => {
         title: 'Adicionado ao Orçamento',
         message: `${equipment.name} foi adicionado ao seu carrinho.`
       });
-        } catch (e: any) {
+        } catch (e: unknown) {
       addNotification({
         type: 'error',
         title: 'Erro',
-        message: e.message || 'Não foi possível adicionar ao orçamento.'
+        message: e instanceof Error ? e.message : 'Não foi possível adicionar ao orçamento.'
       });
     } finally {
       setAdding(false);
@@ -118,8 +117,8 @@ export const EquipmentDetailPage = () => {
     );
   }
 
-    const isAlreadyInCart = cart?.equipments?.some((e: any) => {
-    const id = e.id || e.equipmentId;
+    const isAlreadyInCart = cart?.equipments?.some((e) => {
+    const id = 'id' in e ? e.id : e.equipmentId;
     return id === equipment.id;
   });
 
@@ -139,7 +138,7 @@ export const EquipmentDetailPage = () => {
         title={equipment.name}
         description={equipment.description || `Aluguel de ${equipment.name} em Belo Horizonte. Equipamento profissional para eventos.`}
         image={equipment.imageUrl}
-        jsonLd={productSchema as any}
+        jsonLd={productSchema}
       />
       
       {/* Navigation Arrows (Sidebar) */}
@@ -197,7 +196,7 @@ export const EquipmentDetailPage = () => {
           />
           <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <FavoriteButton equipmentId={equipment.id} equipmentName={equipment.name} size="lg" />
-                        <CompareButton equipment={equipment as any} size="lg" itemType="equipment" />
+                        <CompareButton equipment={equipment} size="lg" itemType="equipment" />
           </div>
         </div>
 
@@ -209,7 +208,7 @@ export const EquipmentDetailPage = () => {
             </h1>
             <div className="hidden lg:flex space-x-2">
                 <FavoriteButton equipmentId={equipment.id} equipmentName={equipment.name} size="lg" />
-                                <CompareButton equipment={equipment as any} size="lg" itemType="equipment" />
+                                <CompareButton equipment={equipment} size="lg" itemType="equipment" />
             </div>
           </div>
 
