@@ -1,33 +1,63 @@
 /**
  * 🧪 TESTES DE ACESSIBILIDADE
- * Usando jest-axe para validar padrões WCAG
+ * Usando jest-axe para validar padrões WCAG — contra os componentes REAIS do app.
+ *
+ * Achado (Fase 3): esta suíte antes renderizava apenas marcação HTML inline construída à
+ * mão (um <button> genérico, uma <table> genérica, um <div role="dialog"> genérico) — nada
+ * disso importava um componente de verdade do projeto. Passar aqui não dava nenhuma garantia
+ * sobre a acessibilidade real do Modal, do Input, do Button etc. (o Modal real, por exemplo,
+ * não tinha role="dialog" nem trap de foco até a correção em ui/Modal.tsx, mas o teste de
+ * "modais" aqui sempre passava porque testava um <div> escrito à mão com os atributos certos
+ * já colocados, não o componente real).
+ *
+ * Removido sem substituto (em vez de fingir com marcação inline):
+ * - "tabelas": não há um componente de Tabela reutilizável no projeto — cada página admin
+ *   escreve seu próprio <table> inline (AdminDashboardPage, ClientListPage, etc.), pesado
+ *   demais para testar aqui sem mockar autenticação/API de cada página individualmente.
+ * - "skip links": não existe nenhum link "pular para o conteúdo" implementado em lugar
+ *   nenhum do app (grep confirma) — mantinha um teste de uma funcionalidade que não existe.
  */
 
-import { render } from '@testing-library/react';
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { describe, it, expect } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Alert } from '../components/ui/Alert';
+import { SafeImage } from '../components/ui/SafeImage';
+import { Breadcrumbs } from '../components/ui/Breadcrumbs';
+import { PageLayout } from '../components/layouts/PageLayout';
+import { Modal } from '../components/ui/Modal';
 
-// Extender expect com matchers de acessibilidade
 expect.extend(toHaveNoViolations);
 
-// Mock do ThemeContext para componentes que dependem dele
+// HelmetProvider é obrigatório aqui: Breadcrumbs/PageLayout usam <StructuredData> (JSON-LD),
+// que é implementado com <Helmet>. Sem HelmetProvider como ancestral, o Dispatcher interno
+// do react-helmet-async quebra com "Cannot read properties of undefined (reading 'add')" —
+// isso foi descoberto rodando esta própria suíte (ver nota no topo do arquivo sobre o achado
+// mais amplo de SSR: o app real só fornece HelmetProvider no cliente, via src/Providers.tsx,
+// nunca no servidor — o que quer dizer que este mesmo crash pode ocorrer de verdade em
+// produção assim que o problema de streaming/Suspense do SSR for corrigido).
 const MockProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <BrowserRouter>
-      {children}
-    </BrowserRouter>
+    <HelmetProvider>
+      <BrowserRouter>{children}</BrowserRouter>
+    </HelmetProvider>
   );
 };
 
-describe('Acessibilidade - Componentes Core', () => {
-  it('deve passar verificações de acessibilidade para botões', async () => {
+describe('Acessibilidade - Componentes Core (componentes reais do projeto)', () => {
+  it('Button (todas as variantes) não tem violações de acessibilidade', async () => {
     const { container } = render(
       <MockProviders>
-        <button type="button">Clique aqui</button>
-        <button type="submit" aria-label="Enviar formulário">
-          Enviar
-        </button>
+        <Button variant="primary">Confirmar</Button>
+        <Button variant="secondary">Cancelar</Button>
+        <Button variant="destructive" aria-label="Excluir item">Excluir</Button>
+        <Button variant="ghost" isLoading>Carregando</Button>
       </MockProviders>
     );
 
@@ -35,17 +65,13 @@ describe('Acessibilidade - Componentes Core', () => {
     expect(results).toHaveNoViolations();
   });
 
-  it('deve passar verificações de acessibilidade para formulários', async () => {
+  it('Input (com label e descrição) não tem violações de acessibilidade', async () => {
     const { container } = render(
       <MockProviders>
         <form>
-          <label htmlFor="email">Email</label>
-          <input id="email" type="email" aria-required="true" />
-          
-          <label htmlFor="password">Senha</label>
-          <input id="password" type="password" aria-required="true" />
-          
-          <button type="submit">Entrar</button>
+          <Input label="Email" type="email" name="email" required />
+          <Input label="Senha" type="password" name="password" showPasswordToggle required />
+          <Button type="submit">Entrar</Button>
         </form>
       </MockProviders>
     );
@@ -54,14 +80,10 @@ describe('Acessibilidade - Componentes Core', () => {
     expect(results).toHaveNoViolations();
   });
 
-  it('deve passar verificações de acessibilidade para links', async () => {
+  it('Breadcrumbs (navegação real, usada em toda página via PageLayout) não tem violações de acessibilidade', async () => {
     const { container } = render(
       <MockProviders>
-        <nav aria-label="Navegação principal">
-          <a href="/">Home</a>
-          <a href="/equipamentos">Equipamentos</a>
-          <a href="/contato">Contato</a>
-        </nav>
+        <Breadcrumbs items={[{ label: 'Equipamentos', path: '/equipamentos' }, { label: 'Câmera Sony' }]} />
       </MockProviders>
     );
 
@@ -69,11 +91,10 @@ describe('Acessibilidade - Componentes Core', () => {
     expect(results).toHaveNoViolations();
   });
 
-  it('deve passar verificações de acessibilidade para imagens', async () => {
+  it('SafeImage (usado para toda imagem de equipamento/kit) não tem violações de acessibilidade', async () => {
     const { container } = render(
       <MockProviders>
-        <img src="/logo.png" alt="Logo X Produções" />
-        <img src="/banner.jpg" alt="Banner promocional de equipamentos" />
+        <SafeImage src="/xproducoes-logo.png" alt="Logo X Produções" width={200} height={100} />
       </MockProviders>
     );
 
@@ -81,20 +102,15 @@ describe('Acessibilidade - Componentes Core', () => {
     expect(results).toHaveNoViolations();
   });
 
-  it('deve passar verificações de acessibilidade para headings', async () => {
+  it('PageLayout (título h1 real + Breadcrumbs + conteúdo) não tem violações de acessibilidade', async () => {
     const { container } = render(
       <MockProviders>
-        <main>
-          <h1>Página Principal</h1>
-          <section aria-labelledby="section-1">
-            <h2 id="section-1">Seção 1</h2>
+        <PageLayout title="Catálogo de Equipamentos" description="Encontre o equipamento ideal para seu evento.">
+          <section aria-labelledby="section-destaques">
+            <h2 id="section-destaques">Destaques</h2>
             <p>Conteúdo da seção</p>
           </section>
-          <section aria-labelledby="section-2">
-            <h2 id="section-2">Seção 2</h2>
-            <p>Mais conteúdo</p>
-          </section>
-        </main>
+        </PageLayout>
       </MockProviders>
     );
 
@@ -102,20 +118,14 @@ describe('Acessibilidade - Componentes Core', () => {
     expect(results).toHaveNoViolations();
   });
 
-  it('deve passar verificações de acessibilidade para modais', async () => {
+  it('Modal real (role="dialog"/aria-modal, ver Modal.test.tsx para trap de foco) não tem violações de acessibilidade', async () => {
     const { container } = render(
       <MockProviders>
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-title"
-          aria-describedby="modal-description"
-        >
-          <h2 id="modal-title">Confirmar ação</h2>
-          <p id="modal-description">Deseja realmente prosseguir?</p>
-          <button type="button">Confirmar</button>
-          <button type="button">Cancelar</button>
-        </div>
+        <Modal isOpen onClose={() => {}} title="Confirmar ação">
+          <p>Deseja realmente prosseguir?</p>
+          <Button>Confirmar</Button>
+          <Button variant="ghost">Cancelar</Button>
+        </Modal>
       </MockProviders>
     );
 
@@ -123,42 +133,11 @@ describe('Acessibilidade - Componentes Core', () => {
     expect(results).toHaveNoViolations();
   });
 
-  it('deve passar verificações de acessibilidade para tabelas', async () => {
+  it('Alert (sucesso e erro) não tem violações de acessibilidade', async () => {
     const { container } = render(
       <MockProviders>
-        <table>
-          <caption>Lista de equipamentos</caption>
-          <thead>
-            <tr>
-              <th scope="col">Nome</th>
-              <th scope="col">Preço</th>
-              <th scope="col">Disponível</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Câmera Sony</td>
-              <td>R$ 150/dia</td>
-              <td>Sim</td>
-            </tr>
-          </tbody>
-        </table>
-      </MockProviders>
-    );
-
-    const results = await axe(container);
-    expect(results).toHaveNoViolations();
-  });
-
-  it('deve passar verificações de acessibilidade para alertas', async () => {
-    const { container } = render(
-      <MockProviders>
-        <div role="alert" aria-live="polite">
-          Operação realizada com sucesso!
-        </div>
-        <div role="alert" aria-live="assertive">
-          Erro: Não foi possível completar a operação.
-        </div>
+        <Alert variant="success" title="Sucesso" description="Operação realizada com sucesso!" />
+        <Alert variant="error" title="Erro" description="Não foi possível completar a operação." onClose={() => {}} />
       </MockProviders>
     );
 
@@ -167,39 +146,23 @@ describe('Acessibilidade - Componentes Core', () => {
   });
 });
 
-describe('Acessibilidade - Padrões de Interação', () => {
-  it('deve ter focus visível em elementos interativos', async () => {
-    const { container } = render(
+describe('Acessibilidade - Navegação por teclado (componentes reais)', () => {
+  it('Tab alcança um Button real e depois um Input real, na ordem esperada', async () => {
+    const user = userEvent.setup();
+    render(
       <MockProviders>
-        <button className="focus:ring-2 focus:ring-primary focus:outline-none">
-          Botão com focus visível
-        </button>
-        <a href="/" className="focus:ring-2 focus:ring-primary focus:outline-none">
-          Link com focus visível
-        </a>
+        <Button>Primeiro</Button>
+        <Input label="Campo" name="campo" />
       </MockProviders>
     );
 
-    const results = await axe(container);
-    expect(results).toHaveNoViolations();
-  });
+    const button = screen.getByRole('button', { name: 'Primeiro' });
+    const input = screen.getByLabelText('Campo');
 
-  it('deve ter skip links para navegação', async () => {
-    const { container } = render(
-      <MockProviders>
-        <a href="#main-content" className="sr-only focus:not-sr-only">
-          Pular para conteúdo principal
-        </a>
-        <header>
-          <nav>Menu de navegação</nav>
-        </header>
-        <main id="main-content">
-          <h1>Conteúdo principal</h1>
-        </main>
-      </MockProviders>
-    );
+    await user.tab();
+    expect(button).toHaveFocus();
 
-    const results = await axe(container);
-    expect(results).toHaveNoViolations();
+    await user.tab();
+    expect(input).toHaveFocus();
   });
 });
