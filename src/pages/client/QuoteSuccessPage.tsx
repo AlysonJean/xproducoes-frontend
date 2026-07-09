@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps */
 // src/pages/QuoteSuccessPage.tsx
 
 import { Link, useParams } from 'react-router-dom';
@@ -7,17 +7,43 @@ import { apiFetch } from '../../services/api';
 import { buildQuoteMessage, getWhatsAppPhone, openWhatsApp } from '../../utils/whatsapp';
 import { useNotifications } from '../../contexts/NotificationContext';
 
+// Formato observado da resposta de GET /bookings/:id — não é o mesmo shape do tipo
+// Booking compartilhado em types/types.ts (esse é o modelo normalizado usado nos
+// formulários de criação de reserva; aqui é o retorno bruto da API para uma reserva já
+// existente, com os campos de endereço/logística achatados).
+interface QuoteBookingDetails {
+  id: string;
+  kit?: unknown;
+  equipments?: unknown[];
+  client?: { user?: { name?: string; phone?: string } };
+  creator?: { name?: string; phone?: string };
+  eventDate?: string;
+  eventDuration?: number;
+  street?: string;
+  addressNumber?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  addressComplement?: string;
+  location?: string;
+  notes?: string;
+  requiresStairs?: boolean;
+  isCovered?: boolean;
+  hasParking?: boolean;
+}
+
 export const QuoteSuccessPage = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
-    const [booking, setBooking] = useState<any | null>(null);
+    const [booking, setBooking] = useState<QuoteBookingDetails | null>(null);
   const { addNotification } = useNotifications();
 
   useEffect(() => {
     const load = async () => {
       if (!bookingId) return;
       try {
-                const resp = await apiFetch<any>(`/bookings/${bookingId}`);
-        const data = resp && resp.data ? resp.data : resp;
+        const resp = await apiFetch<QuoteBookingDetails | { data: QuoteBookingDetails }>(`/bookings/${bookingId}`);
+        const data = resp && 'data' in resp ? resp.data : resp;
         setBooking(data);
             } catch (err) {
         addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível carregar os detalhes do pedido.' });
@@ -77,7 +103,12 @@ export const QuoteSuccessPage = () => {
             }
 
             try {
-              const items = booking.kit ? booking.kit : booking.equipments || [];
+              // buildQuoteMessage sempre chama .map() em items — precisa ser um array
+              // mesmo quando a reserva tem um kit único (achado ao tipar isto: antes,
+              // com `any`, um booking.kit presente quebraria em runtime aqui).
+              const items: Array<{ name?: string } | { equipment?: { name?: string } }> = booking.kit
+                ? [booking.kit as { name?: string }]
+                : ((booking.equipments as Array<{ name?: string } | { equipment?: { name?: string } }>) || []);
               const user = booking.client?.user || booking.creator || { name: '', phone: '' };
               const eventDate = booking.eventDate ? new Date(booking.eventDate) : new Date();
               const durationHours = booking.eventDuration || 0;
@@ -94,7 +125,7 @@ export const QuoteSuccessPage = () => {
               const mensagem = buildQuoteMessage({
                 bookingId: booking.id,
                 user: { name: user.name, phone: user.phone },
-                venue: booking.location,
+                venue: booking.location || '',
                 eventDate,
                 durationHours,
                 address,

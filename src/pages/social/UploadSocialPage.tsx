@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Camera, Send, ChevronLeft, CheckCircle2 } from 'lucide-react';
@@ -7,6 +6,13 @@ import { apiFetch } from '../../services/api';
 interface WallConfig {
     name: string;
     hashtag: string;
+    qrCodeText?: string;
+}
+
+interface TvConfigResponse {
+    linked: boolean;
+    eventName?: string;
+    hashtag?: string;
     qrCodeText?: string;
 }
 
@@ -28,11 +34,11 @@ const UploadSocialPage = () => {
         const fetchConfig = async () => {
             try {
                 if (slug) {
-                                        const res = await apiFetch<any>(`/tv/config?slug=${slug}`);
+                    const res = await apiFetch<TvConfigResponse>(`/tv/config?slug=${slug}`);
                     if (res.linked) {
                         setConfig({
-                            name: res.eventName,
-                            hashtag: res.hashtag,
+                            name: res.eventName || '',
+                            hashtag: res.hashtag || '',
                             qrCodeText: res.qrCodeText
                         });
                     }

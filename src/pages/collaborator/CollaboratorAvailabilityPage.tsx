@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { 
   Calendar, 
@@ -28,7 +27,7 @@ const CollaboratorAvailabilityPage: React.FC = () => {
     date: new Date().toISOString().split('T')[0],
     startTime: '09:00',
     endTime: '17:00',
-    status: 'AVAILABLE' as const,
+    status: 'AVAILABLE' as Availability['status'],
     notes: ''
   });
 
@@ -142,7 +141,7 @@ const CollaboratorAvailabilityPage: React.FC = () => {
                         <select
                             aria-label="Status da disponibilidade"
                             value={newAvailability.status}
-                                                        onChange={(e) => setNewAvailability({...newAvailability, status: e.target.value as any})}
+                                                        onChange={(e) => setNewAvailability({...newAvailability, status: e.target.value as Availability['status']})}
                             className="w-full border rounded-md px-3 py-2"
                         >
                             <option value="AVAILABLE">Disponível</option>

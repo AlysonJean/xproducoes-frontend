@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../../services/api';
 import { Service } from '../../types/types';
@@ -14,8 +13,8 @@ export const ServiceRow = () => {
     const fetchServices = async () => {
       try {
         // Fetch only ACTIVE services
-                const response: any = await apiFetch('/services?status=ACTIVE&limit=6');
-        
+        const response = await apiFetch<Service[] | { data: Service[] }>('/services?status=ACTIVE&limit=6');
+
         let data: Service[] = [];
         if (Array.isArray(response)) {
           data = response;

@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // Caminho: frontend/src/pages/RecommendationsDemo.tsx
 
 import { useState } from 'react';
 import { useNotifications } from '../contexts/NotificationContext';
-import { RecommendationSection, RecommendationItem } from '../components/ui/RecommendationSection';
+import { RecommendationSection, RecommendationItem, RecommendationType } from '../components/ui/RecommendationSection';
 import { Card } from '../components/ui/StandardComponents';
 import { Sparkles } from 'lucide-react';
 
@@ -133,9 +132,9 @@ const mockRecommendations: RecommendationItem[] = [
 
 export const RecommendationsDemo = () => {
     const { addNotification } = useNotifications();
-    const [selectedType, setSelectedType] = useState<string>('personalized');
+    const [selectedType, setSelectedType] = useState<RecommendationType>('personalized');
 
-    const recommendationTypes = [
+    const recommendationTypes: Array<{ value: RecommendationType; label: string; emoji: string }> = [
         { value: 'personalized', label: 'Personalizadas', emoji: '✨' },
         { value: 'similar', label: 'Similares', emoji: '📦' },
         { value: 'frequently-bought', label: 'Frequentemente Juntos', emoji: '👥' },
@@ -208,7 +207,7 @@ export const RecommendationsDemo = () => {
 
                 {/* Recommendation Section */}
                 <RecommendationSection
-                                        type={selectedType as any}
+                                        type={selectedType}
                     items={mockRecommendations}
                     maxItems={4}
                     showNavigation={true}
