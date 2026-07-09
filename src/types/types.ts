@@ -289,6 +289,7 @@ export interface EventAssignment {
   collaboratorId: string;
   role: ECollaboratorRole;
   estimatedHours: number;
+  hourlyRate: number;
 }
 
 export interface SelectedCollaboratorAssignment {

@@ -87,6 +87,7 @@ export const EventManagement: React.FC<EventManagementProps> = ({
       collaboratorId: item.collaborator.id,
       role: item.role,
       estimatedHours: item.estimatedHours,
+      hourlyRate: item.hourlyRate,
     }));
     onSave(newAssignments);
   };

@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
-import { useState, useEffect, useMemo, useCallback } from 'react';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -61,6 +61,7 @@ import type {
   Equipment,
   Kit,
   Service,
+  ICollaborator,
 } from '@/types/types';
 
 type BookingKitEntry = Kit | { id?: string; name?: string; kit?: Kit; items?: unknown[] };
@@ -134,6 +135,7 @@ type BookingDetails = BaseBookingDetails & {
   addressNumber?: string;
   addressComplement?: string;
   eventDuration?: number;
+  estimatedDuration?: string;
   createdAt?: string;
   eventCollaborators?: BookingEventCollaborator[];
 };
@@ -166,7 +168,7 @@ export const BookingDetailPage = () => {
   const [confirmPrice, setConfirmPrice] = useState('');
   const [confirmCollaboratorId, setConfirmCollaboratorId] = useState('');
   const [confirmRole, setConfirmRole] = useState('ASSISTANT');
-    const [availableCollaborators, setAvailableCollaborators] = useState<any[]>([]);
+    const [availableCollaborators, setAvailableCollaborators] = useState<ICollaborator[]>([]);
 
   const fetchBooking = useCallback(async () => {
     if (!id) return;
@@ -188,7 +190,7 @@ export const BookingDetailPage = () => {
   const fetchAvailableCollaborators = async () => {
     try {
       const res = await collaboratorsAPI.getAll();
-            const list = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+            const list: ICollaborator[] = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
             setAvailableCollaborators(list);
         } catch (e) { /* ignore */ }
   };
@@ -232,7 +234,7 @@ export const BookingDetailPage = () => {
     if (!booking?.id) return;
     try {
       setActionLoading(true);
-            const payload: any = {};
+            const payload: { totalPrice?: number; collaborators?: Array<{ collaboratorId: string; role: string }> } = {};
       if (confirmPrice) payload.totalPrice = Number(confirmPrice);
       if (confirmCollaboratorId) {
         payload.collaborators = [
@@ -439,7 +441,7 @@ export const BookingDetailPage = () => {
     }
 
     // ── Montagem da tabela de itens ───────────────────────────────────────────
-    const itemRows: any[] = [];
+    const itemRows: string[][] = [];
     const itemImages: string[] = [];
     let subtotalBruto = 0;
     let totalDescontos = 0;
@@ -472,7 +474,7 @@ export const BookingDetailPage = () => {
 
     // Kits → preço/hora × duração do evento
     for (const k of booking.kits || (booking.kit ? [booking.kit] : [])) {
-      const kit: any = 'kit' in (k as any) ? ((k as any).kit ?? k) : k;
+      const kit = ('kit' in k ? k.kit : undefined) ?? (k as Kit);
       const qtd = duracao;
       const unitVal = Number(kit.hourlyRate || 0) || Number(kit.price || 0);
       const subtotal = unitVal * qtd;
@@ -492,7 +494,7 @@ export const BookingDetailPage = () => {
       subtotalBruto += subtotal;
       totalDescontos += desc;
       itemRows.push(['', s.name || 'Servico', 'Servico', `${qtd}h`, formatPrice(unitVal), formatPrice(desc), formatPrice(subtotal - desc)]);
-      itemImages.push((s as any).imageUrl || '');
+      itemImages.push(s.imageUrl || '');
     }
 
     // Colaboradores → valor/hora × horas contratadas
@@ -637,8 +639,8 @@ export const BookingDetailPage = () => {
       setGeneratingPdf(true);
       await generateBookingPdf();
       addNotification({ type: 'success', title: 'PDF pronto', message: 'Arquivo gerado com sucesso.' });
-    } catch (err: any) {
-      addNotification({ type: 'error', title: 'Falha no PDF', message: err?.message || 'Nao foi possivel gerar o PDF.' });
+    } catch (err: unknown) {
+      addNotification({ type: 'error', title: 'Falha no PDF', message: err instanceof Error ? err.message : 'Nao foi possivel gerar o PDF.' });
     } finally {
       setGeneratingPdf(false);
     }
@@ -657,8 +659,8 @@ export const BookingDetailPage = () => {
       const waUrl = `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(buildWhatsappText(booking))}`;
       window.open(waUrl, '_blank', 'noopener,noreferrer');
       addNotification({ type: 'success', title: 'WhatsApp aberto', message: 'PDF baixado. Anexe-o na conversa do WhatsApp.' });
-    } catch (err: any) {
-      addNotification({ type: 'error', title: 'Falha', message: err?.message || 'Nao foi possivel abrir o WhatsApp.' });
+    } catch (err: unknown) {
+      addNotification({ type: 'error', title: 'Falha', message: err instanceof Error ? err.message : 'Nao foi possivel abrir o WhatsApp.' });
     } finally {
       setSendingWhatsApp(false);
     }
@@ -668,12 +670,14 @@ export const BookingDetailPage = () => {
   const requiredServices = useMemo(() => {
     if (!booking) return [];
     const services = new Set<string>();
-        const process = (items: any[]) => items.forEach(i => {
+        const process = (items: unknown[]) => items.forEach(item => {
+        if (!item || typeof item !== 'object') return;
+        const i = item as { service?: { name?: string }; itemType?: string; name?: string };
         if (i.service?.name) services.add(i.service.name);
         else if (i.itemType === 'SERVICE' && i.name) services.add(i.name);
     });
     if (booking.kit?.items) process(booking.kit.items);
-        if (booking.kits) booking.kits.forEach((k: any) => process(k.items || k.kit?.items || []));
+        if (booking.kits) booking.kits.forEach((k) => process(k.items || ('kit' in k ? k.kit?.items : undefined) || []));
     if (booking.services) process(booking.services);
     return Array.from(services);
   }, [booking]);
@@ -877,7 +881,7 @@ export const BookingDetailPage = () => {
                             </div>
                             <div className="flex items-center gap-4 pt-4">
                                 <Badge variant="outline" className="bg-muted h-7 px-3 text-[10px] font-black uppercase border-border/60">
-                                                                        Duração Estimada: {(booking as any).estimatedDuration || '4h'}
+                                                                        Duração Estimada: {booking.estimatedDuration || '4h'}
                                 </Badge>
                                 {isToday(new Date(booking.eventDate)) && (
                                     <Badge variant="success" className="h-7 px-3 text-[10px] font-black uppercase animate-pulse">
@@ -927,13 +931,13 @@ export const BookingDetailPage = () => {
                             <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest border-b border-border pb-2">Hardware & Combos</h4>
                             <div className="space-y-4">
                                 {((booking.kits && booking.kits.length > 0) || booking.kit) ? (
-                                                                        (booking.kits || [booking.kit]).map((k: any, idx: number) => (
+                                                                        (booking.kits && booking.kits.length > 0 ? booking.kits : (booking.kit ? [booking.kit] : [])).map((k, idx) => (
                                         <div key={idx} className="flex items-center gap-3 p-3 rounded-2xl bg-muted/30 border border-border/40 group hover:border-primary/30 transition-colors">
                                            <div className="h-10 w-10 rounded-xl bg-card border border-border overflow-hidden flex items-center justify-center">
                                               <Package className="text-muted-foreground/40" size={18} />
                                            </div>
                                            <div className="flex-1">
-                                              <p className="text-xs font-black text-foreground uppercase tracking-tight">{k.name || k.kit?.name || 'Módulo Customizado'}</p>
+                                              <p className="text-xs font-black text-foreground uppercase tracking-tight">{('kit' in k ? (k.name || k.kit?.name) : k.name) || 'Módulo Customizado'}</p>
                                               <div className="flex items-center gap-2 mt-0.5">
                                                  <Badge variant="outline" className="text-[8px] h-4 font-black bg-primary/5 border-primary/10 text-primary">KIT-ACTIVE</Badge>
                                                  <span className="text-[9px] font-medium text-muted-foreground opacity-60">ID: {k.id?.substring(0,8) || 'AUTO'}</span>
@@ -1026,7 +1030,7 @@ export const BookingDetailPage = () => {
 
                    {booking.attachments && booking.attachments.length > 0 ? (
                        <Grid columns={{ sm: 2, md: 3, lg: 4 }} gap={4}>
-                                                      {booking.attachments.map((a: any) => (
+                                                      {booking.attachments.map((a) => (
                                <div key={a.id} className="relative group overflow-hidden rounded-2xl border border-border/60 aspect-[4/3] bg-muted/30">
                                    <img src={a.url} alt={a.filename} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 p-4 text-center">
@@ -1180,7 +1184,7 @@ export const BookingDetailPage = () => {
                 <Select
                   className="h-12 bg-muted/30"
                   value={confirmCollaboratorId}
-                                    onChange={(e: any) => setConfirmCollaboratorId(e.target.value)}
+                                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setConfirmCollaboratorId(e.target.value)}
                   options={[
                     { value: '', label: 'Não Atribuir No Momento' },
                     ...availableCollaborators.map(c => ({ value: c.id, label: c.name }))
@@ -1193,7 +1197,7 @@ export const BookingDetailPage = () => {
                   <Select
                     className="h-12 bg-muted/30"
                     value={confirmRole}
-                                        onChange={(e: any) => setConfirmRole(e.target.value)}
+                                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setConfirmRole(e.target.value)}
                     options={[
                         { value: 'PHOTOGRAPHER', label: 'Fotógrafo Líder' },
                         { value: 'ASSISTANT', label: 'Assistente Operacional' },
@@ -1227,7 +1231,7 @@ export const BookingDetailPage = () => {
              if (!booking?.id) return;
              try {
                 setActionLoading(true);
-                                const payload = assignments.map((a: any) => ({
+                                const payload = assignments.map((a) => ({
                    collaboratorId: a.collaboratorId,
                    role: a.role || 'PHOTOGRAPHER',
                    totalHours: a.estimatedHours || 0,
@@ -1235,7 +1239,7 @@ export const BookingDetailPage = () => {
                    totalPayment: Number(a.hourlyRate || 0) * (a.estimatedHours || 0)
                 }));
                 let totalPrice = Number(booking.totalPrice ?? 0);
-                                if (!totalPrice) totalPrice = payload.reduce((sum: number, c: any) => sum + Number(c.totalPayment || 0), 0);
+                                if (!totalPrice) totalPrice = payload.reduce((sum, c) => sum + Number(c.totalPayment || 0), 0);
                 await bookingAPI.confirmWithDetails(booking.id, { totalPrice, collaborators: payload });
                 await fetchBooking();
                 setEventModalOpen(false);
