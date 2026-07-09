@@ -1,5 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
- 
 // Caminho do arquivo: frontend/src/contexts/CartContext.tsx
 
 import React, { useState, useEffect, createContext, useCallback, type ReactNode, useContext, useRef, useMemo } from 'react';
@@ -65,9 +63,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchCart]);
 
   const notifCtx = useContext(NotificationContext);
-  const addNotification = notifCtx?.addNotification ?? (() => {});
+  const notifCtxAddNotification = notifCtx?.addNotification;
+  const addNotification = useCallback<NonNullable<typeof notifCtx>['addNotification']>(
+    (...args) => notifCtxAddNotification?.(...args),
+    [notifCtxAddNotification]
+  );
 
-    const addItem = async (item: Equipment | Kit | Service, type: 'equipment' | 'kit' | 'service') => {
+    const addItem = useCallback(async (item: Equipment | Kit | Service, type: 'equipment' | 'kit' | 'service') => {
     // Deduplicação
     if (type === 'kit' && cart?.kit && cart.kit.id === (item as Kit).id) {
       addNotification({ type: 'warning', title: 'Kit já está no carrinho', message: 'Este kit já foi adicionado.' });
@@ -128,9 +130,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       addNotification({ type: 'error', title: 'Erro ao adicionar', message });
       throw new Error(message);
     }
-  };
+  }, [cart, addNotification]);
 
-    const removeItem = async (itemId: string, type: 'equipment' | 'service' | 'kit' = 'equipment') => {
+    const removeItem = useCallback(async (itemId: string, type: 'equipment' | 'service' | 'kit' = 'equipment') => {
     const previousCart = cart;
     try {
       let updatedCart;
@@ -149,9 +151,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       addNotification({ type: 'error', title: 'Erro ao remover', message });
       throw new Error(message);
     }
-  };
+  }, [cart, addNotification]);
 
-    const clearCart = async () => {
+    const clearCart = useCallback(async () => {
     const previousCart = cart;
     try {
       setCart(null);
@@ -164,7 +166,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       addNotification({ type: 'error', title: 'Erro ao limpar', message });
       throw new Error(message);
     }
-  };
+  }, [cart, addNotification]);
 
   const itemCount = useMemo(() =>
     (

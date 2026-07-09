@@ -1,5 +1,4 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/services/api';
@@ -19,7 +18,7 @@ export const BookingDetailsPage = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  const fetchBookingDetails = async () => {
+  const fetchBookingDetails = useCallback(async () => {
     if (!id) return;
 
     try {
@@ -50,11 +49,11 @@ export const BookingDetailsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchBookingDetails();
-    }, [id]);
+    }, [fetchBookingDetails]);
 
   const handleDeleteProof = (proofId: string) => {
     setProofToDelete(proofId);

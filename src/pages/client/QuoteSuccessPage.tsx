@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps */
 // src/pages/QuoteSuccessPage.tsx
 
 import { Link, useParams } from 'react-router-dom';
@@ -45,14 +44,14 @@ export const QuoteSuccessPage = () => {
         const resp = await apiFetch<QuoteBookingDetails | { data: QuoteBookingDetails }>(`/bookings/${bookingId}`);
         const data = resp && 'data' in resp ? resp.data : resp;
         setBooking(data);
-            } catch (err) {
+            } catch {
         addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível carregar os detalhes do pedido.' });
       } finally {
   // noop
       }
     };
     load();
-    }, [bookingId]);
+    }, [bookingId, addNotification]);
 
   return (
     <div className="text-center bg-card p-8 rounded-lg max-w-2xl mx-auto">
@@ -140,7 +139,7 @@ export const QuoteSuccessPage = () => {
               });
 
               openWhatsApp(getWhatsAppPhone(), mensagem);
-                        } catch (err) {
+                        } catch {
               addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível montar a mensagem para o WhatsApp.' });
             }
           }}

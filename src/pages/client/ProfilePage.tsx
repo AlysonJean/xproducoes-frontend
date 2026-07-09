@@ -1,7 +1,6 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 // Caminho: frontend/src/pages/client/ProfilePage.tsx
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
@@ -84,16 +83,12 @@ export const ProfilePage = () => {
     autoInvoice: false
   });
 
-  useEffect(() => {
-    loadProfile();
-      }, []);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
       const data = await apiFetch<ClientProfile>('/users/profile');
       setProfile(data);
-      
+
       // Inicializar formulário
       setFormData({
         name: data.name || '',
@@ -108,21 +103,26 @@ export const ProfilePage = () => {
       });
 
       // Se o backend retornar preferências, inicializar aqui
-      if (data.preferences) {
-        setNotificationPreferences(data.preferences.notifications || notificationPreferences);
-        setGeneralPreferences(data.preferences.general || generalPreferences);
+      const preferences = data.preferences;
+      if (preferences) {
+        setNotificationPreferences(prev => preferences.notifications || prev);
+        setGeneralPreferences(prev => preferences.general || prev);
       }
     } catch (error) {
       console.error('Erro ao carregar perfil:', error);
-      addNotification({ 
+      addNotification({
         title: 'Perfil',
-        message: 'Não foi possível carregar as informações do perfil.', 
-        type: 'error' 
+        message: 'Não foi possível carregar as informações do perfil.',
+        type: 'error'
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [addNotification]);
+
+  useEffect(() => {
+    loadProfile();
+      }, [loadProfile]);
 
   const handleSavePreferences = async () => {
     try {

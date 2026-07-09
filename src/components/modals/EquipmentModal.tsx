@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps */
 // packages/web/src/shared/modals/EquipmentModal.tsx
 
 import React, { useState, useEffect } from 'react';
@@ -12,6 +11,17 @@ import {
   Alert
 } from '../ui/StandardComponents';
 import { apiFetch } from '../../services/api';
+
+const defaultCategories = [
+  'Fotografia',
+  'Filmagem',
+  'Áudio',
+  'Iluminação',
+  'Acessórios',
+  'Estabilização',
+  'Transmissão',
+  'Outros',
+];
 
 export const EquipmentModal: React.FC<EquipmentModalProps> = ({
   isOpen,
@@ -51,17 +61,6 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
     setPreviewUrls(urls);
   };
 
-  const defaultCategories = [
-    'Fotografia',
-    'Filmagem',
-    'Áudio',
-    'Iluminação',
-    'Acessórios',
-    'Estabilização',
-    'Transmissão',
-    'Outros',
-  ];
-
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
@@ -76,7 +75,7 @@ export const EquipmentModal: React.FC<EquipmentModalProps> = ({
           // fallback to default list transformed to Category shape
           setCategories(defaultCategories.map((name, idx) => ({ id: String(idx), name })));
         }
-            } catch (e) {
+            } catch {
         if (!mounted) return;
         setCategories(defaultCategories.map((name, idx) => ({ id: String(idx), name })));
       }

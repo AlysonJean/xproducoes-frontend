@@ -1,5 +1,4 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User,
@@ -72,11 +71,7 @@ const CollaboratorProfilePage: React.FC = () => {
   const [editMode, setEditMode] = useState(false);
     const [formData, setFormData] = useState<Partial<CollaboratorFormData>>({});
 
-  useEffect(() => {
-    loadProfile();
-      }, []);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
       const response = await collaboratorProfileAPI.getMyProfile();
@@ -108,7 +103,11 @@ const CollaboratorProfilePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [addNotification]);
+
+  useEffect(() => {
+    loadProfile();
+      }, [loadProfile]);
 
   const handleSaveProfile = async () => {
     try {

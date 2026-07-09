@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 // Caminho: frontend/src/pages/client/ClientDashboardPage.tsx
 
 import { useEffect, useState } from 'react';
@@ -161,8 +160,10 @@ export const ClientDashboardPage = () => {
         }
 
         // Processar próximas reservas
+        let upcomingBookingsList: SafeBooking[] = [];
         if (upcomingResponse.status === 'fulfilled') {
-                    setUpcomingBookings(asArray<SafeBooking>(upcomingResponse.value?.data || upcomingResponse.value));
+                    upcomingBookingsList = asArray<SafeBooking>(upcomingResponse.value?.data || upcomingResponse.value);
+          setUpcomingBookings(upcomingBookingsList);
         }
 
         // Processar kits recomendados
@@ -191,7 +192,7 @@ export const ClientDashboardPage = () => {
             totalSpent,
             averageBookingValue: averageValue,
             lastBookingDate: sortedBookings[0]?.eventDate,
-            nextBookingDate: upcomingBookings[0]?.eventDate,
+            nextBookingDate: upcomingBookingsList[0]?.eventDate,
             favoriteEquipments: favoritesCount
           });
         }

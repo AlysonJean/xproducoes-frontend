@@ -1,5 +1,4 @@
 /* eslint-disable react-refresh/only-export-components */
-/* eslint-disable react-hooks/exhaustive-deps */
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { logger } from '../utils/logger';
@@ -137,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { isMounted = false; };
   }, []);
 
-  const handleOAuthToken = async (token: string): Promise<string> => {
+  const handleOAuthToken = useCallback(async (token: string): Promise<string> => {
     setIsLoading(true);
     try {
       const API_BASE_URL = getApiBaseUrl();
@@ -168,9 +167,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const loginWithCredentials = async (data: { email: string; password: string }): Promise<string> => {
+  const loginWithCredentials = useCallback(async (data: { email: string; password: string }): Promise<string> => {
     setIsLoading(true);
     try {
       const baseUrl = getApiBaseUrl();
@@ -201,7 +200,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   const value: AuthContextType = useMemo(() => ({
     isAuthenticated: !!user,

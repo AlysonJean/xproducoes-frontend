@@ -1,7 +1,6 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 // src/pages/BookingSuccessPage.tsx
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { Link, useParams, useLocation } from 'react-router-dom';
 import { buildQuoteMessage, getWhatsAppPhone, openWhatsApp } from '../../utils/whatsapp';
 import type { BookingDetails } from '../../types/types';
@@ -40,7 +39,7 @@ export const BookingSuccessPage = () => {
   const cartItems = state?.cartItems;
   const hasAutoOpened = useRef(false);
 
-  const handleOpenWhatsApp = () => {
+  const handleOpenWhatsApp = useCallback(() => {
     try {
       const items = cartItems || (booking?.kit ? [booking.kit] : booking?.equipments || []);
       const userInfo = {
@@ -76,7 +75,7 @@ export const BookingSuccessPage = () => {
     } catch (e) {
       console.warn('Falha ao abrir WhatsApp', e);
     }
-  };
+  }, [booking, formData, cartItems, id]);
 
   useEffect(() => {
     // Abre automaticamente apenas uma vez quando a página carrega
@@ -84,7 +83,7 @@ export const BookingSuccessPage = () => {
       handleOpenWhatsApp();
       hasAutoOpened.current = true;
     }
-    }, []);
+    }, [handleOpenWhatsApp]);
 
   return (
     <div className="text-center bg-card p-8 rounded-lg max-w-2xl mx-auto border border-border">
