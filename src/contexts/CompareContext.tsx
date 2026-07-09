@@ -1,3 +1,5 @@
+// Provider + hook(s) co-localizados de propósito (padrão oficial de Context do React) —
+// só afeta a granularidade do Fast Refresh em dev, sem efeito em produção/correção.
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState } from 'react';
 import type { Equipment } from '../types/types';

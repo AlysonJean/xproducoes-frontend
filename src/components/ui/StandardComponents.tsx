@@ -1,9 +1,13 @@
-/* eslint-disable react-refresh/only-export-components */
 /**
  * 🎨 Standard Components Bridge
  * Este arquivo atua como uma ponte (barrel file) para os componentes UI individualizados.
  * Isso permite manter a compatibilidade com importações existentes enquanto melhora o tree-shaking e a manutenção.
+ *
+ * react-refresh/only-export-components é suprimido porque um barrel file de `export *`/
+ * re-exports não pode ser verificado estaticamente como "só componentes" — só afeta a
+ * granularidade do Fast Refresh em dev, sem efeito em produção/correção.
  */
+/* eslint-disable react-refresh/only-export-components */
 
 // Tipos
 export * from './StandardTypes';
