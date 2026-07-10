@@ -43,3 +43,5 @@ playwright-report/
 # Gerado automaticamente por scripts/generateSitemap.ts (prebuild) — nunca fica
 # desatualizado em produção, então não precisa ser versionado.
 public/sitemap.xml
+
+.vercel
