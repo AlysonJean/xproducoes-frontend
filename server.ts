@@ -48,17 +48,26 @@ async function startServer() {
 
   app.get(/(.*)/, async (req, res, next) => {
     const pageContextInit = {
-      urlOriginal: req.originalUrl
+      urlOriginal: req.originalUrl,
+      // Necessário para react-streaming decidir se faz streaming (browsers) ou renderização
+      // bloqueante completa (bots/crawlers, para garantir HTML completo no primeiro request) —
+      // ver renderer/+onRenderHtml.tsx. Convenção atual do Vike (a antiga `headers` é
+      // deprecated): https://vike.dev/headers
+      headersOriginal: req.headers
     }
     const pageContext = await renderPage(pageContextInit)
     const { httpResponse } = pageContext
     if (!httpResponse) {
       return next()
     } else {
-      const { body, statusCode, earlyHints } = httpResponse
+      const { statusCode, earlyHints } = httpResponse
       if (res.writeEarlyHints) res.writeEarlyHints({ link: earlyHints.map((e) => e.earlyHintLink) })
       helpers(httpResponse, res)
-      res.status(statusCode).send(body)
+      res.status(statusCode)
+      // Streaming de verdade via Node.js Writable Stream (renderToStream, ver
+      // +onRenderHtml.tsx) — cai para .send(body) só se o hook não tiver retornado stream
+      // algum (ex.: fallbackHtml estático quando pageContext.Page está ausente).
+      httpResponse.pipe(res)
     }
   })
 
