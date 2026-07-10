@@ -44,6 +44,8 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({ initialData, onSucce
     if (file) {
       const seoFilename = generateSeoFilename('categories', name);
       formData.append('fileName', seoFilename);
+      // Achado: sem isso, o backend cai no default 'portfolio' do Cloudinary.
+      formData.append('folder', 'categories');
       formData.append('image', file);
     }
 

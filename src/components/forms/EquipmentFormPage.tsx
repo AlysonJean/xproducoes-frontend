@@ -110,6 +110,9 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
       const categoryName = categories.find(c => c.id === data.categoryId)?.name;
       const seoFilename = generateSeoFilename('equipments', data.name, categoryName);
       formData.append('fileName', seoFilename);
+      // Achado: sem isso, o backend (uploadService.uploadFile) cai no default 'portfolio' —
+      // imagens de equipamento ficavam armazenadas na pasta errada do Cloudinary.
+      formData.append('folder', 'equipments');
 
       formData.append('name', data.name);
       formData.append('description', data.description);

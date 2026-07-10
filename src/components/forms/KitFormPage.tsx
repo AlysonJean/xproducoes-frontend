@@ -211,6 +211,8 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
     // SEO Filename
     const seoFilename = generateSeoFilename('kits', data.name);
     formData.append('fileName', seoFilename);
+    // Achado: sem isso, o backend cai no default 'portfolio' do Cloudinary.
+    formData.append('folder', 'kits');
 
     formData.append('name', data.name);
     formData.append('description', data.description);

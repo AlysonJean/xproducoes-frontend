@@ -86,6 +86,8 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
       // SEO Filename
       const seoFilename = generateSeoFilename('clients', name);
       fd.append('fileName', seoFilename);
+      // Achado: sem isso, o backend cai no default 'portfolio' do Cloudinary.
+      fd.append('folder', 'clients');
 
       fd.append('name', name.trim());
       fd.append('email', email.trim());
