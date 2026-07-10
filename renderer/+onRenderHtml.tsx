@@ -1,6 +1,6 @@
 import React from 'react'
-import { renderToStream } from 'react-streaming/server'
-import { escapeInject } from 'vike/server'
+import ReactDOMServer from 'react-dom/server'
+import { escapeInject, dangerouslySkipEscape } from 'vike/server'
 import type { OnRenderHtmlAsync } from 'vike/types'
 import { PageShell } from './PageShell'
 import { StaticRouter } from 'react-router'
@@ -10,7 +10,6 @@ import type { PageContextServer } from 'vike/types'
 type PageContext = PageContextServer & {
   Page: React.ElementType
   pageProps: Record<string, unknown>
-  headers: Record<string, string> | null
   exports: {
     documentProps?: {
       title?: string
@@ -46,25 +45,12 @@ export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageCon
     return fallbackHtml
   }
 
-  // react-streaming (a mesma lib que vike-react usa internamente para onRenderHtml) em vez de
-  // ReactDOMServer.renderToString: renderToString não suporta React.lazy()/Suspense de forma
-  // confiável — qualquer import() dinâmico ainda não resolvido no momento do render lançava
-  // exceção durante o SSR, causando "Uncaught Error: Minified React error #419" ao hidratar no
-  // cliente ("The server could not finish this Suspense boundary"). O objeto retornado por
-  // renderToStream() já é reconhecido nativamente pelo detector de stream do Vike quando
-  // embutido no template de escapeInject abaixo (sem precisar de dangerouslySkipEscape) — ver
-  // node_modules/vike/dist/server/runtime/renderPageServer/html/stream/react-streaming.js.
-  // userAgent habilita a detecção de bot da lib: crawlers recebem HTML completo e bloqueante
-  // (bom para SEO), navegadores reais recebem streaming de verdade.
-  const pageHtmlStream = await renderToStream(
+  const pageHtml = ReactDOMServer.renderToString(
     <PageShell pageContext={pageContext}>
       <StaticRouter location={pageContext.urlOriginal}>
         <Page {...pageProps} />
       </StaticRouter>
-    </PageShell>,
-    {
-      userAgent: pageContext.headers?.['user-agent'] || undefined
-    }
+    </PageShell>
   )
 
   const { documentProps } = pageContext.data || pageContext.exports
@@ -116,7 +102,7 @@ export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageCon
         <meta name="twitter:image" content="${image}" />
       </head>
       <body>
-        <div id="root">${pageHtmlStream}</div>
+        <div id="root">${dangerouslySkipEscape(pageHtml)}</div>
       </body>
     </html>`
 
