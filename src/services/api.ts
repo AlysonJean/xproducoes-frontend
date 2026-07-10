@@ -36,9 +36,12 @@ async function getCsrfToken(): Promise<string> {
   try {
     // Use configured api instance to ensure baseURL and withCredentials are set
     const response = await api.get('/csrf-token');
-    // Backend responde { success, data: { csrfToken } } — ver
-    // backend/src/middlewares/csrfMiddleware.ts:266-271 (getCsrfToken).
-    csrfToken = response.data?.data?.csrfToken;
+    // Backend responde { success, data: { csrfToken } } (ver
+    // backend/src/middlewares/csrfMiddleware.ts:266-271), MAS o interceptor de resposta
+    // deste mesmo `api` (abaixo, "AUTO UNWRAP") já desembrulha o envelope { success, data }
+    // para QUALQUER request feito via `api` — inclusive este. Por isso response.data aqui
+    // já é só { csrfToken }, não { data: { csrfToken } }.
+    csrfToken = response.data?.csrfToken;
     return csrfToken || '';
   } catch (error) {
     logDebug('Failed to fetch CSRF token', { error });
