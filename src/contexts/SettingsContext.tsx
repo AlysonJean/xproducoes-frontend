@@ -3,7 +3,7 @@
 /* eslint-disable react-refresh/only-export-components */
 // src/contexts/SettingsContext.tsx
 
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useAppSettings, type AppSettings } from '../hooks/useAppSettings';
 
 interface SettingsContextType {
@@ -25,15 +25,20 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   } = useAppSettings();
 
   const [localCompanyName, setLocalCompanyName] = useState<string>(companyName);
-  // Rastreia o último `companyName` (fonte externa, de useAppSettings) já sincronizado, para
-  // ajustar o estado local durante a renderização em vez de um useEffect (evita setState
-  // síncrono no corpo do efeito — react-hooks/set-state-in-effect — e também evita um
-  // re-render extra: https://react.dev/learn/you-might-not-need-an-effect).
-  const [syncedCompanyName, setSyncedCompanyName] = useState<string>(companyName);
-  if (companyName && companyName !== syncedCompanyName) {
-    setSyncedCompanyName(companyName);
-    setLocalCompanyName(companyName);
-  }
+  // Sincroniza com companyName (fonte externa, de useAppSettings) sempre que ela mudar.
+  //
+  // Achado (produção): isto já ajustou o estado durante a renderização (fora de useEffect)
+  // para evitar um re-render extra — mas SettingsProvider fica no topo da árvore
+  // (AllContextsProvider), envolvendo rotas com lazy()/Suspense. Um setState síncrono no
+  // corpo do render de um Provider tão alto pode interromper a hidratação de Suspense
+  // boundaries descendentes ("Uncaught Error: Minified React error #419" — confirmado como
+  // causa raiz do mesmo problema em ThemeContext.tsx). useEffect roda depois do
+  // commit/hidratação, por isso é a escolha certa aqui.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (companyName) setLocalCompanyName(companyName);
+  }, [companyName]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const setCompanyName = async (name: string) => {
     setLocalCompanyName(name);

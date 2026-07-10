@@ -64,31 +64,36 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     logger.debug('Theme applied successfully', 'ThemeContext', { htmlClasses: root.className });
   }, [resolvedTheme]);
 
-  // Deriva resolvedTheme a partir de theme durante a renderização (não em efeito) sempre que
-  // `theme` mudar — cobre o caso explícito (light/dark) e o valor inicial do caso 'system'.
-  // Ver https://react.dev/learn/you-might-not-need-an-effect. Mudanças subsequentes da
-  // preferência do SO (só relevantes quando theme === 'system') são tratadas pelo listener no
-  // efeito abaixo, que é a parte que de fato precisa de um efeito (assinar um sistema externo).
-  const [lastSyncedTheme, setLastSyncedTheme] = useState<Theme | null>(null);
-  if (theme !== lastSyncedTheme && typeof window !== 'undefined') {
-    setLastSyncedTheme(theme);
+  // Deriva resolvedTheme a partir de theme e assina mudanças de preferência do SO enquanto
+  // theme === 'system'.
+  //
+  // Achado (produção): isto já foi um ajuste de estado durante a renderização (fora de
+  // useEffect, seguindo https://react.dev/learn/you-might-not-need-an-effect) para evitar um
+  // re-render extra. Só que ThemeProvider fica bem no topo da árvore, envolvendo rotas com
+  // lazy()/Suspense — um setState síncrono no corpo do render, mesmo sem afetar o JSX do
+  // próprio Provider, ainda interrompe o passo de reconciliação do React, e durante a
+  // hidratação isso pode atropelar Suspense boundaries descendentes que ainda não terminaram
+  // de hidratar. Confirmado como causa raiz de "Uncaught Error: Minified React error #419"
+  // ("The server could not finish this Suspense boundary... during server rendering") visto em
+  // produção. useEffect roda depois do commit/hidratação, por isso é a escolha certa aqui —
+  // mesmo custando um re-render a mais no primeiro carregamento quando o tema salvo != o
+  // default 'light' do SSR.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
     if (theme === 'light' || theme === 'dark') {
       setResolvedTheme(theme);
-    } else {
-      setResolvedTheme(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      return;
     }
-  }
-
-  // Escuta mudanças de preferência do SO enquanto theme === 'system'
-  useEffect(() => {
-    if (theme !== 'system' || typeof window === 'undefined') return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    setResolvedTheme(mq.matches ? 'dark' : 'light');
     const handler = (e: MediaQueryListEvent) => {
       setResolvedTheme(e.matches ? 'dark' : 'light');
     };
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, [theme]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Salva no localStorage e sincroniza entre abas
   useEffect(() => {
