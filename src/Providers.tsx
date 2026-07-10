@@ -1,5 +1,4 @@
 import React from 'react'
-import { HelmetProvider } from 'react-helmet-async'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { Analytics } from '@vercel/analytics/react'
 import { initSentry } from './utils/sentry'
@@ -34,11 +33,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WebVitalsMonitor>
       <GoogleWrapper>
-        <HelmetProvider>
-          <SentryErrorBoundary>
-            {children}
-          </SentryErrorBoundary>
-        </HelmetProvider>
+        <SentryErrorBoundary>
+          {children}
+        </SentryErrorBoundary>
       </GoogleWrapper>
       <Analytics />
     </WebVitalsMonitor>
