@@ -60,9 +60,18 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Sem 'html' aqui: esta é uma app SSR (Vike) — não existe um index.html estático
+        // para pré-cachear, o HTML é gerado pelo servidor a cada requisição.
+        globPatterns: ['**/*.{js,css,ico,png,svg}'],
         // Excluir arquivos de análise de bundle do cache PWA
         globIgnores: ['stats.html'],
+        // Achado: por padrão o vite-plugin-pwa registra uma NavigationRoute apontando
+        // para "index.html" como app-shell (padrão de SPA) via
+        // createHandlerBoundToURL("index.html") — mas essa URL nunca existe no precache
+        // desta app SSR, causando "Uncaught (in promise) non-precached-url" a cada
+        // navegação. navigateFallback: null desativa esse fallback (cada navegação vai
+        // direto para o servidor SSR, que é o comportamento correto aqui).
+        navigateFallback: null,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
