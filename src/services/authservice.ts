@@ -59,8 +59,10 @@ class AuthService {
         throw new Error(`Refresh API returned ${response.status}`);
       }
 
+      // Backend responde { success, data: { accessToken, ... } } — ver
+      // backend/src/controllers/authController.ts#refresh (linha ~593).
       const data = await response.json();
-      const accessToken = data.accessToken;
+      const accessToken = data?.data?.accessToken;
 
       if (!accessToken) {
         throw new Error('Refresh API did not return access token');
