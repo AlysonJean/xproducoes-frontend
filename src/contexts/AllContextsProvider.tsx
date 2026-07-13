@@ -7,21 +7,24 @@ import { SettingsProvider } from './SettingsContext';
 import { FavoritesProvider } from './FavoritesContext';
 import { CollaboratorProvider } from './CollaboratorContext';
 import { AuthProvider } from './AuthContext';
+import { CookieConsentProvider } from './CookieConsentContext';
 
 export const AllContextsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <AuthProvider>
-    <MemoizedThemeProvider>
-      <CompareProvider>
-        <SettingsProvider>
-          <FavoritesProvider>
-            <CollaboratorProvider>
-              <NotificationProvider>
-                <MemoizedCartProvider>{children}</MemoizedCartProvider>
-              </NotificationProvider>
-            </CollaboratorProvider>
-          </FavoritesProvider>
-        </SettingsProvider>
-      </CompareProvider>
-    </MemoizedThemeProvider>
-  </AuthProvider>
+  <CookieConsentProvider>
+    <AuthProvider>
+      <MemoizedThemeProvider>
+        <CompareProvider>
+          <SettingsProvider>
+            <FavoritesProvider>
+              <CollaboratorProvider>
+                <NotificationProvider>
+                  <MemoizedCartProvider>{children}</MemoizedCartProvider>
+                </NotificationProvider>
+              </CollaboratorProvider>
+            </FavoritesProvider>
+          </SettingsProvider>
+        </CompareProvider>
+      </MemoizedThemeProvider>
+    </AuthProvider>
+  </CookieConsentProvider>
 );

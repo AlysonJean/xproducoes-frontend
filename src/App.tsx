@@ -12,6 +12,7 @@ import { AllContextsProvider } from './contexts/AllContextsProvider';
 import { ModalProvider } from './components/modals/ModalContext';
 import { ModalManager } from './components/modals/ModalManager';
 import FloatingWhatsApp from './components/FloatingWhatsApp';
+import CookieConsentBanner from './components/CookieConsentBanner';
 import RoutePrefetch from './components/RoutePrefetch';
 import BrandLoader from './components/ui/BrandLoader';
 
@@ -365,6 +366,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <main className={`flex-grow ${isAdminPage ? 'pt-16' : 'pt-20'}`}>{children}</main>
       <FloatingWhatsApp />
       <Footer />
+      <CookieConsentBanner />
     </div>
   );
 };
