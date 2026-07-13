@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FacebookAuthButtonProps } from '@/types/ui';
 import { useNotifications } from '@/contexts/NotificationContext';
 import axios from 'axios';
+import { logger } from '../../utils/logger';
 
 // Declaração do SDK do Facebook
 declare global {
@@ -28,7 +29,7 @@ const FacebookAuthButton: React.FC<FacebookAuthButtonProps> = ({ onSuccess }) =>
   useEffect(() => {
     // Se não tem App ID configurado, não carregar o SDK
     if (!FACEBOOK_APP_ID) {
-      console.warn('VITE_FACEBOOK_APP_ID não configurado');
+      logger.warn('VITE_FACEBOOK_APP_ID não configurado', 'FacebookAuthButton');
       return;
     }
 
@@ -113,7 +114,7 @@ const FacebookAuthButton: React.FC<FacebookAuthButtonProps> = ({ onSuccess }) =>
               }
             }, 500);
           } catch (error) {
-            console.error('Erro no login Facebook:', error);
+            logger.error('Erro no login Facebook:', 'FacebookAuthButton', error);
             addNotification({
               type: 'error',
               title: 'Erro de Autenticação',

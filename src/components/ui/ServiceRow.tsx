@@ -4,6 +4,7 @@ import { Service } from '../../types/types';
 import { ServiceCard } from './ServiceCard';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
+import { logger } from '../../utils/logger';
 
 export const ServiceRow = () => {
   const [services, setServices] = useState<Service[]>([]);
@@ -24,7 +25,7 @@ export const ServiceRow = () => {
 
         setServices(data);
       } catch (error) {
-        console.warn('Error fetching services:', error);
+        logger.warn('Error fetching services:', 'ServiceRow', error);
       } finally {
         setLoading(false);
       }

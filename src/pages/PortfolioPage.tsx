@@ -8,6 +8,7 @@ import { normalizeString } from '../utils/string';
 import { SearchAndFilters, Grid } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
 import { SEO } from '../components/SEO';
+import { logger } from '../utils/logger';
 
 export const PortfolioPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -33,7 +34,7 @@ export const PortfolioPage: React.FC = () => {
           if (item) setSelectedItem(item);
         }
       } catch (err) {
-        console.error('Erro ao carregar portfolio:', err);
+        logger.error('Erro ao carregar portfolio:', 'PortfolioPage', err);
         // Não trava a tela, apenas loga o erro e deixa a lista vazia
         setPortfolio([]);
       } finally {

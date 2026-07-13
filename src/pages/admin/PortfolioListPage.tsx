@@ -46,6 +46,7 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { logger } from '../../utils/logger';
 
 // Componente Sortable Item
 interface SortableItemProps {
@@ -213,7 +214,7 @@ export const PortfolioListPage = () => {
             method: 'PUT',
             body: JSON.stringify({ items: orderPayload })
         }).catch(err => {
-            console.error("Falha ao salvar ordem:", err);
+            logger.error("Falha ao salvar ordem:", 'PortfolioListPage', err);
         });
 
         return updatedItems;

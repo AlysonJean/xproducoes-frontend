@@ -12,6 +12,7 @@ import {
   Grid
 } from '../../components/ui/StandardComponents';
 import { BrandLoader } from '../../components/ui/BrandLoader';
+import { logger } from '../../utils/logger';
 import { 
   Plus, 
   Trash2, 
@@ -52,7 +53,7 @@ export const AdminSponsorPage = () => {
             const data = await apiFetch<SponsorLogo[]>('/admin/sponsors');
             setSponsors(data || []);
         } catch (err) {
-            console.error(err);
+            logger.error('Erro', 'AdminSponsorPage', err);
             addNotification({ type: 'error', title: 'Falha Técnica', message: 'Erro ao sincronizar portfólio de patrocinadores.' });
         } finally {
             setLoading(false);
@@ -93,7 +94,7 @@ export const AdminSponsorPage = () => {
             setPreviewUrl(null);
             fetchSponsors();
         } catch (err) {
-            console.error(err);
+            logger.error('Erro', 'AdminSponsorPage', err);
             addNotification({ type: 'error', title: 'Erro de Upload', message: 'Não foi possível processar a imagem.' });
         } finally {
             setUploading(false);

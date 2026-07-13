@@ -17,6 +17,7 @@ import {
 } from '../ui/StandardComponents';
 import { ItemStatus, type Category, type Equipment } from '../../types/types';
 import { generateSeoFilename } from '../../utils/seoUtils';
+import { logger } from '../../utils/logger';
 
 // Schema simplificado para o formulário de equipamento
 const equipmentFormSchema = z.object({
@@ -92,7 +93,7 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
           });
         }
       } catch (err) {
-        console.error('Failed to load form data', err);
+        logger.error('Failed to load form data', 'EquipmentFormPage', err);
       } finally {
         setLoading(false);
       }
@@ -148,7 +149,7 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
         title: 'Erro ao Salvar',
         message: errorMessage
       });
-      console.error(err);
+      logger.error('Erro', 'EquipmentFormPage', err);
     } finally {
       setSubmitLoading(false);
     }

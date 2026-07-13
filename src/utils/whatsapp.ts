@@ -5,6 +5,7 @@
 import ReactGA from 'react-ga4';
 import { createAndClickAnchor } from './dom';
 import type { QuoteMessageParams } from '@/types/forms';
+import { logger } from './logger';
 
 export const normalizePhone = (phone: string): string => phone.replace(/\D/g, '');
 
@@ -42,7 +43,7 @@ export const openWhatsApp = (phone: string, message: string): void => {
       label: 'whatsapp_contact',
     });
   } catch (error) {
-    console.warn('GA4 Event Error:', error);
+    logger.warn('GA4 Event Error:', 'whatsapp', error);
   }
 
   const cleaned = normalizePhone(phone);
@@ -54,7 +55,7 @@ export const openWhatsApp = (phone: string, message: string): void => {
       try {
         createAndClickAnchor({ href: url, target: '_blank', rel: 'noopener noreferrer' });
             } catch {
-        console.warn('Não foi possível abrir o WhatsApp automaticamente.');
+        logger.warn('Não foi possível abrir o WhatsApp automaticamente.', 'whatsapp');
       }
   }
 };

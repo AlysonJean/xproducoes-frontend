@@ -2,13 +2,14 @@
 // src/utils/sentry.ts
 import * as Sentry from '@sentry/react';
 import { SentryErrorFallback } from '@/components/SentryErrorFallback';
+import { logger } from './logger';
 
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
 const SENTRY_ENVIRONMENT = import.meta.env.VITE_SENTRY_ENVIRONMENT || 'development';
 
 export const initSentry = () => {
   if (!SENTRY_DSN) {
-    console.warn('⚠️ Sentry DSN não configurado. Monitoramento de erros desativado.');
+    logger.warn('⚠️ Sentry DSN não configurado. Monitoramento de erros desativado.', 'sentry');
     // Sentry is optional. Return a safe no-op API so callers don't need to null-check.
         const noop = () => undefined;
     return {

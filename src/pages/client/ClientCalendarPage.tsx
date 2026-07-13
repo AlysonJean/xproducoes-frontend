@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { logger } from '../../utils/logger';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import '@/styles/booking-calendar.css';
 
@@ -132,7 +133,7 @@ const BookingDetailsModal = ({
         message: 'Reserva sincronizada com o Google Calendar!',
       });
     } catch (error) {
-      console.error(error);
+      logger.error('Erro', 'ClientCalendarPage', error);
       addNotification({
         type: 'error',
         title: 'Erro',

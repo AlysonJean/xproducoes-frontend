@@ -4,6 +4,7 @@ import type { GoogleAuthButtonProps } from '@/types/ui';
 import { useNotifications } from '@/contexts/NotificationContext';
 import axios from 'axios';
 import { API_BASE_URL } from '@/utils/apiConfig';
+import { logger } from '../../utils/logger';
 
 const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -48,7 +49,7 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
         }, 500);
       } catch (error) {
         if (axios.isAxiosError(error)) {
-          console.error('Erro no login Google:', error.response?.data);
+          logger.error('Erro no login Google:', 'GoogleAuthButton', error.response?.data);
         }
         addNotification({
           type: 'error',
@@ -73,7 +74,7 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
   // Não renderizar o botão se o Google não está configurado
   if (!isConfigured) {
     if (import.meta.env.DEV) {
-      console.warn('Google OAuth não configurado: VITE_GOOGLE_CLIENT_ID não definido');
+      logger.warn('Google OAuth não configurado: VITE_GOOGLE_CLIENT_ID não definido', 'GoogleAuthButton');
     }
     return null;
   }

@@ -3,6 +3,7 @@ import { newsletterService, NewsletterSubscriber } from '../../services/newslett
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { formatDate } from '../../utils/typeSafeFormatters';
 import { BrandLoader } from '@/components/ui/BrandLoader';
+import { logger } from '../../utils/logger';
 import { 
   Mail, 
   TrendingUp, 
@@ -36,7 +37,7 @@ export const NewsletterSubscribersPage = () => {
       setSubscribers(data || []);
       setError(null);
     } catch (err: unknown) {
-      console.error('Erro ao carregar inscritos:', err);
+      logger.error('Erro ao carregar inscritos:', 'NewsletterSubscribersPage', err);
       setError('Falha ao sincronizar base de leads.');
     } finally {
       setLoading(false);
@@ -60,7 +61,7 @@ export const NewsletterSubscribersPage = () => {
       XLSX.utils.book_append_sheet(wb, ws, "Newsletter");
       XLSX.writeFile(wb, "newsletter_subscribers.xlsx");
     } catch (err) {
-      console.error('Erro na exportação:', err);
+      logger.error('Erro na exportação:', 'NewsletterSubscribersPage', err);
     }
   };
 

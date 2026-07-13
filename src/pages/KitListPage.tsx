@@ -9,6 +9,7 @@ import { SearchAndFilters, FilterSelect, Grid } from '../components/ui/StandardC
 import { BrandLoader } from '../components/ui/BrandLoader';
 import { SEO } from '../components/SEO';
 import { transformKit } from '../utils/transformKit';
+import { logger } from '../utils/logger';
 
 export const KitListPage = () => {
   const [kits, setKits] = useState<Kit[]>([]);
@@ -26,7 +27,7 @@ export const KitListPage = () => {
         const rawKits = asArray<Kit>(kitsData);
         setKits(rawKits.map(transformKit));
       } catch (err) {
-        console.error('Erro ao carregar dados:', err);
+        logger.error('Erro ao carregar dados:', 'KitListPage', err);
         setKits([]);
       } finally {
         setLoading(false);

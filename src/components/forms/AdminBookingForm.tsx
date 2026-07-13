@@ -17,6 +17,7 @@ import {
   Alert,
 } from '../ui/StandardComponents';
 import { BrandLoader } from '../ui/BrandLoader';
+import { logger } from '../../utils/logger';
 
 const idSchema = z.union([
   z.string().uuid(),
@@ -143,7 +144,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
         try {
            clientsRes = await apiFetch<ClientResponse | ClientData[]>('/admin/clients');
         } catch (e) {
-           console.warn("Could not load clients", e);
+           logger.warn("Could not load clients", 'AdminBookingForm', e);
         }
         
         let list: ClientData[] = [];
@@ -243,7 +244,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
           
           paymentProofUrl = (uploadResponse as { imageUrl?: string })?.imageUrl;
         } catch (uploadError) {
-          console.error('Erro no upload do comprovante:', uploadError);
+          logger.error('Erro no upload do comprovante:', 'AdminBookingForm', uploadError);
           addNotification({ 
             type: 'error', 
             title: 'Erro no upload', 

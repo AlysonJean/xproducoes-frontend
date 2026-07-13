@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ItemStatus } from '../../types/types';
 import { clsx } from 'clsx';
 import { Loader2, ChevronDown } from 'lucide-react';
+import { logger } from '../../utils/logger';
 
 interface StatusSelectProps {
   currentStatus: ItemStatus;
@@ -35,7 +36,7 @@ export const StatusSelect: React.FC<StatusSelectProps> = ({
       await onStatusChange(status);
       setIsOpen(false);
     } catch (error) {
-      console.error('Failed to change status', error);
+      logger.error('Failed to change status', 'StatusSelect', error);
     } finally {
       setLoading(false);
     }

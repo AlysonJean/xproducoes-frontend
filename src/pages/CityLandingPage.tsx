@@ -14,6 +14,7 @@ import { TestimonialCarousel } from '../components/TestimonialCarousel';
 import { apiFetch } from '../services/api';
 import { useState, useEffect } from 'react';
 import { BrandLoader } from '../components/ui/BrandLoader';
+import { logger } from '../utils/logger';
 
 
 
@@ -28,7 +29,7 @@ export const CityLandingPage = () => {
   useEffect(() => {
     const statsPromise = apiFetch<{ total: number; averageRating: number }>('/reviews/stats')
             .then((data) => setReviewStats(data))
-      .catch(err => console.error('Failed to fetch stats', err));
+      .catch(err => logger.error('Failed to fetch stats', 'CityLandingPage', err));
 
     const minTimer = new Promise(resolve => setTimeout(resolve, 800));
 

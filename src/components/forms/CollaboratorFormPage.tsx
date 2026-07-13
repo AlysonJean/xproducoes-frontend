@@ -7,6 +7,7 @@ import { asArray } from '@/utils/normalize';
 import { apiFetch, collaboratorFunctionsAPI } from '@/services/api';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { CollaboratorFunction } from '@/types/types';
+import { logger } from '../../utils/logger';
 import {
   Form,
   FormSection,
@@ -77,7 +78,7 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
         const resp = await collaboratorFunctionsAPI.getAll();
         setFunctions(asArray(resp.data));
       } catch (err) {
-        console.error('Falha ao carregar funções:', err);
+        logger.error('Falha ao carregar funções:', 'CollaboratorFormPage', err);
       }
     };
     loadFunctions();
@@ -119,7 +120,7 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
       }
       onSuccess();
     } catch (err) {
-      console.error(err);
+      logger.error('Erro', 'CollaboratorFormPage', err);
       addNotification({ type: 'error', title: 'Erro', message: 'Falha ao salvar colaborador' });
     }
   };

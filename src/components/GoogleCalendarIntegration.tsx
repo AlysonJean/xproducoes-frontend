@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Calendar } from 'lucide-react';
 import { Button } from './ui/StandardComponents';
 import { apiFetch } from '../services/api';
+import { logger } from '../utils/logger';
 
 interface GoogleCalendarIntegrationProps {
   googleCalendarEmail?: string | null;
@@ -23,7 +24,7 @@ export const GoogleCalendarIntegration: React.FC<GoogleCalendarIntegrationProps>
         window.location.href = data.url;
       }
     } catch (error) {
-      console.error('Erro ao conectar Google:', error);
+      logger.error('Erro ao conectar Google:', 'GoogleCalendarIntegration', error);
     } finally {
       setGoogleLoading(false);
     }
@@ -39,7 +40,7 @@ export const GoogleCalendarIntegration: React.FC<GoogleCalendarIntegrationProps>
           window.location.reload(); 
       }
     } catch (error) {
-      console.error('Erro ao desconectar Google:', error);
+      logger.error('Erro ao desconectar Google:', 'GoogleCalendarIntegration', error);
     } finally {
       setGoogleLoading(false);
     }

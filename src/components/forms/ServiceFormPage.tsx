@@ -14,6 +14,7 @@ import {
 import { ItemStatus, type Service } from '../../types/types';
 import { Upload, X } from 'lucide-react';
 import { generateSeoFilename } from '../../utils/seoUtils';
+import { logger } from '../../utils/logger';
 
 interface ServiceFormProps {
   initialData?: Service | null;
@@ -131,7 +132,7 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
         title: 'Erro',
         message: 'Erro ao salvar serviço. Tente novamente.'
       });
-      console.error(err);
+      logger.error('Erro', 'ServiceFormPage', err);
     } finally {
       setSubmitLoading(false);
     }

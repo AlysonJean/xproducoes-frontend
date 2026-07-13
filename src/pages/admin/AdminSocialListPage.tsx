@@ -26,6 +26,7 @@ import {
   Grid
 } from '../../components/ui/StandardComponents';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { logger } from '../../utils/logger';
 
 interface SocialWall {
     id: string;
@@ -53,7 +54,7 @@ const AdminSocialListPage: React.FC = () => {
             const response = await socialService.listWalls();
             setWalls((response.data as unknown as SocialWall[]) || []);
         } catch (error) {
-            console.error('Failed to fetch walls', error);
+            logger.error('Failed to fetch walls', 'AdminSocialListPage', error);
             addNotification({ type: 'error', title: 'Erro', message: 'Falha ao sincronizar murais sociais.' });
         } finally {
             setLoading(false);

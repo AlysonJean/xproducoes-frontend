@@ -1,3 +1,4 @@
+import { logger } from './logger';
 /**
  * Utilitários para manipulação de URLs de imagens
  */
@@ -29,10 +30,10 @@ export function normalizeImageUrl(url: string | undefined | null): string {
       // Pega a última parte do path (nome do arquivo)
       const filename = pathname.split('/').pop() || 'default-equipment.png';
       
-      console.warn(`[imageUtils] Cloudinary demo URL detected, using local fallback: ${filename}`);
+      logger.warn(`[imageUtils] Cloudinary demo URL detected, using local fallback: ${filename}`, 'imageUtils');
       return `/uploads/${filename}`;
     } catch (error) {
-      console.error('[imageUtils] Failed to parse Cloudinary URL:', url, error);
+      logger.error(`[imageUtils] Failed to parse Cloudinary URL: ${url}`, 'imageUtils', error);
       return '/uploads/default-equipment.png';
     }
   }

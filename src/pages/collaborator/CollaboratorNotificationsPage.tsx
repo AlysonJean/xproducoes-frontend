@@ -17,6 +17,7 @@ import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLa
 import { SimpleCard } from '../../components/ui/Cards';
 import { collaboratorProfileAPI } from '../../services/api';
 import { BrandLoader } from '@/components/ui/BrandLoader';
+import { logger } from '../../utils/logger';
 
 interface Notification {
   id: string;
@@ -128,7 +129,7 @@ const CollaboratorNotificationsPage: React.FC = () => {
         }
       });
     } catch (error) {
-      console.error('Erro ao carregar notificações:', error);
+      logger.error('Erro ao carregar notificações:', 'CollaboratorNotificationsPage', error);
     } finally {
       setLoading(false);
     }

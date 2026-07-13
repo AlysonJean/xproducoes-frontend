@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import * as Sentry from '@sentry/react';
+import { logger } from '../utils/logger';
 
 /**
  * Web Vitals Monitoring Hook (2026 standard - Production Ready)
@@ -62,7 +63,7 @@ function reportToSentry(metric: WebVitalMetric) {
       },
     });
   } catch (error) {
-    console.error('Error reporting Web Vital to Sentry:', error);
+    logger.error('Error reporting Web Vital to Sentry:', 'useWebVitals', error);
   }
 }
 
@@ -184,7 +185,7 @@ export function useWebVitals() {
         console.debug('INP monitoring not available');
       }
     } catch (error) {
-      console.error('Error setting up Web Vitals monitoring:', error);
+      logger.error('Error setting up Web Vitals monitoring:', 'useWebVitals', error);
     }
 
     return () => {

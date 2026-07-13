@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiFetch } from '../services/api';
+import { logger } from '../utils/logger';
 
 export interface AppSettings {
   id: string;
@@ -67,7 +68,7 @@ export const useAppSettings = () => {
       
       return data;
         } catch (err: unknown) {
-      console.warn(`Backend unavailable (${err instanceof Error ? err.message : String(err)}), saving to localStorage only`);
+      logger.warn(`Backend unavailable (${err instanceof Error ? err.message : String(err)}), saving to localStorage only`, 'useAppSettings');
       
       if (updates.companyName !== undefined) {
         localStorage.setItem('companyName', updates.companyName || 'X Produções e Eventos');

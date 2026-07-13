@@ -19,6 +19,7 @@ import { collaboratorProfileAPI } from '../../services/api';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { GoogleCalendarIntegration } from '../../components/GoogleCalendarIntegration';
+import { logger } from '../../utils/logger';
 
 interface CollaboratorProfileData {
   user?: {
@@ -93,7 +94,7 @@ const CollaboratorProfilePage: React.FC = () => {
         website: data?.user?.website || ''
       });
     } catch (error) {
-      console.error('Erro ao carregar perfil:', error);
+      logger.error('Erro ao carregar perfil:', 'CollaboratorProfilePage', error);
       // manter UX leve: mostra alerta mínimo
       addNotification({
         type: 'error',
@@ -121,7 +122,7 @@ const CollaboratorProfilePage: React.FC = () => {
         message: 'Perfil atualizado com sucesso!'
       });
     } catch (error) {
-      console.error('Erro ao salvar perfil:', error);
+      logger.error('Erro ao salvar perfil:', 'CollaboratorProfilePage', error);
       addNotification({
         type: 'error',
         title: 'Erro',
@@ -143,7 +144,7 @@ const CollaboratorProfilePage: React.FC = () => {
         await collaboratorProfileAPI.uploadAvatar(formData);
         await loadProfile(); // Recarrega o perfil para mostrar a nova foto
       } catch (error) {
-        console.error('Erro no upload:', error);
+        logger.error('Erro no upload:', 'CollaboratorProfilePage', error);
         addNotification({
           type: 'error',
           title: 'Erro',

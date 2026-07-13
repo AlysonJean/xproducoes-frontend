@@ -1,6 +1,7 @@
 import React from 'react';
 import { BaseModal } from './BaseModal';
 import { Button } from '../ui/StandardComponents';
+import { logger } from '../../utils/logger';
 
 export const InviteModal: React.FC<{
   isOpen: boolean;
@@ -14,7 +15,7 @@ export const InviteModal: React.FC<{
       await navigator.clipboard.writeText(text);
     } catch (e) {
        
-      console.error('failed copy', e);
+      logger.error('failed copy', 'InviteModal', e);
     }
   };
 

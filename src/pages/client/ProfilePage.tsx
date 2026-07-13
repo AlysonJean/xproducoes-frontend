@@ -27,6 +27,7 @@ import { SecurityTab } from './profile/SecurityTab';
 import { NotificationsTab } from './profile/NotificationsTab';
 import { PreferencesTab } from './profile/PreferencesTab';
 import { ProfileSidebar } from './profile/ProfileSidebar';
+import { logger } from '../../utils/logger';
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
@@ -109,7 +110,7 @@ export const ProfilePage = () => {
         setGeneralPreferences(prev => preferences.general || prev);
       }
     } catch (error) {
-      console.error('Erro ao carregar perfil:', error);
+      logger.error('Erro ao carregar perfil:', 'ProfilePage', error);
       addNotification({
         title: 'Perfil',
         message: 'Não foi possível carregar as informações do perfil.',
@@ -141,7 +142,7 @@ export const ProfilePage = () => {
         type: 'success'
       });
     } catch (error) {
-      console.error('Erro ao salvar preferências:', error);
+      logger.error('Erro ao salvar preferências:', 'ProfilePage', error);
       addNotification({
         title: 'Erro',
         message: 'Erro ao salvar preferências.',
@@ -186,7 +187,7 @@ export const ProfilePage = () => {
         type: 'success'
       });
     } catch (error) {
-      console.error('Erro ao fazer upload do avatar:', error);
+      logger.error('Erro ao fazer upload do avatar:', 'ProfilePage', error);
       addNotification({
         title: 'Erro',
         message: 'Erro ao atualizar foto de perfil.',
@@ -213,7 +214,7 @@ export const ProfilePage = () => {
         type: 'success'
       });
     } catch (error) {
-      console.error('Erro ao salvar perfil:', error);
+      logger.error('Erro ao salvar perfil:', 'ProfilePage', error);
       addNotification({
         title: 'Erro',
         message: 'Ocorreu um erro ao salvar as alterações.',
@@ -265,7 +266,7 @@ export const ProfilePage = () => {
         type: 'success'
       });
     } catch (error) {
-      console.error('Erro ao alterar senha:', error);
+      logger.error('Erro ao alterar senha:', 'ProfilePage', error);
       addNotification({
         title: 'Erro',
         message: 'Erro ao alterar senha. Verifique sua senha atual.',

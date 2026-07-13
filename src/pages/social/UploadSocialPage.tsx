@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Camera, Send, ChevronLeft, CheckCircle2 } from 'lucide-react';
 import { apiFetch } from '../../services/api';
+import { logger } from '../../utils/logger';
 
 interface WallConfig {
     name: string;
@@ -44,7 +45,7 @@ const UploadSocialPage = () => {
                     }
                 }
             } catch (err) {
-                console.error("Erro ao carregar configuração", err);
+                logger.error("Erro ao carregar configuração", 'UploadSocialPage', err);
             } finally {
                 setLoading(false);
             }
@@ -81,7 +82,7 @@ const UploadSocialPage = () => {
                 navigate(`/participate/${slug}`);
             }, 5000);
         } catch (err) {
-            console.error("Upload failed", err);
+            logger.error("Upload failed", 'UploadSocialPage', err);
             alert("Falha ao enviar foto. Tente novamente.");
         } finally {
             setUploading(false);

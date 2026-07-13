@@ -2,6 +2,7 @@
 import React from 'react';
 import * as Sentry from '@sentry/react';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { logger } from '../utils/logger';
 
 /**
  * Componente de teste do Sentry
@@ -54,9 +55,9 @@ export const SentryTestButton: React.FC<SentryTestButtonProps> = ({
       JSON.parse('{ invalid json }');
     } catch (error) {
       Sentry.captureException(error);
-      console.error('Erro capturado e enviado para Sentry:', error);
+      logger.error('Erro capturado e enviado para Sentry:', 'SentryTestButton', error);
       Sentry.captureException(error);
-      console.error('Erro capturado e enviado para Sentry:', error);
+      logger.error('Erro capturado e enviado para Sentry:', 'SentryTestButton', error);
       addNotification({
         type: 'success',
         title: 'Sentry Test',

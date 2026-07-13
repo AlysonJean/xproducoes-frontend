@@ -19,6 +19,7 @@ import { BrandLoader } from '@/components/ui/BrandLoader';
 import { ProfileSettings, SecuritySettings, PrivacySettings, PaymentSettings } from '@/types/types';
 
 import { useNotifications } from '@/contexts/NotificationContext';
+import { logger } from '../../utils/logger';
 
 const CollaboratorSettingsPage: React.FC = () => {
   const { addNotification } = useNotifications();
@@ -78,7 +79,7 @@ const CollaboratorSettingsPage: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('Erro ao carregar configurações:', error);
+      logger.error('Erro ao carregar configurações:', 'CollaboratorSettingsPage', error);
       addNotification({
         type: 'error',
         title: 'Erro',
@@ -124,7 +125,7 @@ const CollaboratorSettingsPage: React.FC = () => {
         message: 'Alterações salvas com sucesso!'
       });
     } catch (error) {
-      console.error('Erro ao salvar:', error);
+      logger.error('Erro ao salvar:', 'CollaboratorSettingsPage', error);
       addNotification({
         type: 'error',
         title: 'Erro',
@@ -145,7 +146,7 @@ const CollaboratorSettingsPage: React.FC = () => {
               await collaboratorProfileAPI.uploadAvatar(formData);
               loadSettings(); // Recarrega para mostrar nova foto
           } catch (error) {
-              console.error('Erro upload:', error);
+              logger.error('Erro upload:', 'CollaboratorSettingsPage', error);
               addNotification({
                 type: 'error',
                 title: 'Erro',

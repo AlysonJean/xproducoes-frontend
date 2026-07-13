@@ -4,6 +4,7 @@ import { CheckCircle2, Calendar } from 'lucide-react';
 import { Card, Button, Checkbox, Select } from '../../../components/ui/StandardComponents';
 import { ProfileGeneralPreferences } from '../../../types/types';
 import { apiFetch } from '../../../services/api';
+import { logger } from '../../../utils/logger';
 
 interface PreferencesTabProps {
   generalPreferences: ProfileGeneralPreferences;
@@ -30,7 +31,7 @@ export const PreferencesTab: React.FC<PreferencesTabProps> = ({
         window.location.href = data.url;
       }
     } catch (error) {
-      console.error('Erro ao conectar Google:', error);
+      logger.error('Erro ao conectar Google:', 'PreferencesTab', error);
     } finally {
       setGoogleLoading(false);
     }
@@ -42,7 +43,7 @@ export const PreferencesTab: React.FC<PreferencesTabProps> = ({
       await apiFetch('/google/disconnect', { method: 'POST' });
       window.location.reload(); // Recarregar para atualizar estado
     } catch (error) {
-      console.error('Erro ao desconectar Google:', error);
+      logger.error('Erro ao desconectar Google:', 'PreferencesTab', error);
     } finally {
       setGoogleLoading(false);
     }

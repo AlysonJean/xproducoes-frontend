@@ -18,6 +18,7 @@ import { collaboratorProfileAPI } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 
 import { ReportData } from '@/types/types';
+import { logger } from '../../utils/logger';
 
 interface CollaboratorStatsResponse {
   totalEvents?: number;
@@ -67,7 +68,7 @@ const CollaboratorReportsPage: React.FC = () => {
         
         setReportData(report);
       } catch (error) {
-        console.error('Erro ao buscar dados de relatórios:', error);
+        logger.error('Erro ao buscar dados de relatórios:', 'CollaboratorReportsPage', error);
       } finally {
         setLoading(false);
       }

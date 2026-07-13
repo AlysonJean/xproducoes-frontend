@@ -5,6 +5,7 @@ import BrandLoader from '@/components/ui/BrandLoader';
 import { PageLayout } from '../../components/layouts/PageLayout';
 import type { DashboardStats } from '../../types/domains/dashboard';
 import { formatPrice } from '@/utils/formatPrice';
+import { logger } from '../../utils/logger';
 
 // Componente de Estatísticas
 const StatsCards: React.FC<{ stats: DashboardStats | null }> = ({ stats }) => {
@@ -75,7 +76,7 @@ export const FreelancerDashboardPage: React.FC = () => {
           completionRate: 98,
         });
       } catch (error) {
-        console.error('Erro ao carregar dados do dashboard:', error);
+        logger.error('Erro ao carregar dados do dashboard:', 'FreelancerDashboardPage', error);
       } finally {
         setLoading(false);
       }

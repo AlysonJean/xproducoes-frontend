@@ -16,6 +16,7 @@ import { socialService, SocialAnnouncement } from '../../services/socialService'
 import { AnnouncementSlide } from '../../components/social/AnnouncementSlide';
 import { MosaicSlide } from '../../components/social/MosaicSlide';
 import { LeaderboardSlide } from '../../components/social/LeaderboardSlide';
+import { logger } from '../../utils/logger';
 
 // Types
 interface SocialPost {
@@ -208,7 +209,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                             }}
                                             onError={(e) => {
                                                  
-                                                console.warn('SlideComponent - Sponsor image failed to load, replacing with placeholder:', s.imageUrl);
+                                                logger.warn('SlideComponent - Sponsor image failed to load, replacing with placeholder:', 'TVPage', s.imageUrl);
                                                 e.currentTarget.src = 'https://placehold.co/240x80?text=Sponsor';
                                             }}
                                         />
@@ -291,7 +292,7 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
                                                 }}
                                                 onError={(e) => {
                                                      
-                                                    console.warn('SlideComponent - Sponsor image failed to load, replacing with placeholder:', s.imageUrl);
+                                                    logger.warn('SlideComponent - Sponsor image failed to load, replacing with placeholder:', 'TVPage', s.imageUrl);
                                                     e.currentTarget.src = 'https://placehold.co/300x96?text=Sponsor';
                                                 }}
                                             />
@@ -367,7 +368,7 @@ const TVPage: React.FC = () => {
                 });
             }
         } catch (error) {
-            console.error("Failed to load config", error);
+            logger.error("Failed to load config", 'TVPage', error);
         }
         }, [searchParams, pairingCode]); // fetchConfig não lê `config` — a checagem "só busca se ainda não tem" é feita pelo chamador
 
@@ -394,7 +395,7 @@ const TVPage: React.FC = () => {
     useEffect(() => {
         if (config?.enableQrCode && !config?.slug) {
              
-            console.warn('TV Debug - QR is enabled but config.slug is missing. QR will not be rendered.');
+            logger.warn('TV Debug - QR is enabled but config.slug is missing. QR will not be rendered.', 'TVPage');
         }
     }, [config?.enableQrCode, config?.slug]);
 
@@ -406,7 +407,7 @@ const TVPage: React.FC = () => {
                 const response = await socialService.getAnnouncements(config.settingId!);
                 setAnnouncements(response.data.filter((a: SocialAnnouncement) => a.isActive));
             } catch (err) {
-                console.error(err);
+                logger.error('Erro', 'TVPage', err);
             }
         };
         fetchAnnouncments();
@@ -429,7 +430,7 @@ const TVPage: React.FC = () => {
                     setLeaderboard(res);
                 }
             } catch (err) {
-                console.error("Failed to fetch leaderboard", err);
+                logger.error("Failed to fetch leaderboard", 'TVPage', err);
             }
         };
 
@@ -458,7 +459,7 @@ const TVPage: React.FC = () => {
         });
 
         socket.on('connect_error', (error) => {
-            console.error('Socket connection error:', error);
+            logger.error('Socket connection error:', 'TVPage', error);
         });
 
         socket.on('post:new', (post: SocialPost) => {
@@ -634,7 +635,7 @@ const TVPage: React.FC = () => {
                                                                                                 } catch {/* ignore */ }
                                             }} onError={e => {
                                                  
-                                                console.warn('TVPage - sponsor overlay failed to load, replacing with placeholder:', s.imageUrl);
+                                                logger.warn('TVPage - sponsor overlay failed to load, replacing with placeholder:', 'TVPage', s.imageUrl);
                                                 e.currentTarget.src = 'https://placehold.co/240x80?text=Sponsor';
                                             }} />
                                         </div>
@@ -720,7 +721,7 @@ const TVPage: React.FC = () => {
                                                                                 } catch { /* ignore */ }
                                     }} onError={e => {
                                          
-                                        console.warn('TVPage - sponsor overlay failed to load:', s.imageUrl);
+                                        logger.warn('TVPage - sponsor overlay failed to load:', 'TVPage', s.imageUrl);
                                         e.currentTarget.style.display = 'none';
                                     }} />
                                 </div>

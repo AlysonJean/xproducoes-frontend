@@ -6,6 +6,7 @@ import { TestimonialCard } from '../components/ui/TestimonialCard';
 import { SEO } from '../components/SEO';
 import { BrandLoader } from '../components/ui/BrandLoader';
 import type { Review } from '../types/types';
+import { logger } from '../utils/logger';
 
 export const ReviewDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -22,7 +23,7 @@ export const ReviewDetailPage: React.FC = () => {
         const response = await apiFetch(`/reviews/${slug}`); 
         setReview(response as Review);
       } catch (err) {
-        console.error('Erro ao carregar avaliação:', err);
+        logger.error('Erro ao carregar avaliação:', 'ReviewDetailPage', err);
         setError('Avaliação não encontrada.');
       } finally {
         setLoading(false);

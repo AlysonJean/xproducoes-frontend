@@ -26,6 +26,7 @@ import {
   Input 
 } from '../../components/ui/StandardComponents';
 import { BannerForm } from '../../components/forms/BannerForm';
+import { logger } from '../../utils/logger';
 
 export const BannerManagementPage = () => {
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -44,7 +45,7 @@ export const BannerManagementPage = () => {
       const data = await bannerService.getAllBanners();
       setBanners(data || []);
     } catch (error: unknown) {
-      console.error(error);
+      logger.error('Erro', 'BannerManagementPage', error);
       if (error instanceof Error && error.message.includes('429')) return;
       addNotification({ 
         type: 'error', 
@@ -91,7 +92,7 @@ export const BannerManagementPage = () => {
       loadBanners(false);
       setIsDeleteModalOpen(false);
     } catch (error) {
-      console.error(error);
+      logger.error('Erro', 'BannerManagementPage', error);
       addNotification({ type: 'error', title: 'Erro de Exclusão', message: 'Não foi possível remover o ativo.' });
     } finally {
       setIsDeleting(false);

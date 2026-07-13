@@ -10,6 +10,7 @@ import { PageLayout, PageEmpty, PageError } from '../components/layouts/PageLayo
 import { SEO } from '../components/SEO';
 import { SearchAndFilters, FilterSelect, Grid } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
+import { logger } from '../utils/logger';
 
 export const EquipmentListPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -34,7 +35,7 @@ export const EquipmentListPage: React.FC = () => {
       setEquipments(asArray<Equipment>(equipmentsData).map(transformEquipment));
       setCategories(asArray<Category>(categoriesData));
     } catch (err) {
-      console.error('Erro ao carregar dados:', err);
+      logger.error('Erro ao carregar dados:', 'EquipmentListPage', err);
       setError('Erro ao carregar equipamentos. Tente novamente.');
       setEquipments([]);
       setCategories([]);

@@ -34,6 +34,7 @@ import {
 import type { AdminDashboardStats, Activity as DashboardActivity, AdminNotification } from '../../types/domains/dashboard';
 import type { BookingListItem } from '../../types/types';
 import { BrandLoader } from '../../components/ui/BrandLoader';
+import { logger } from '../../utils/logger';
 
 // Componentes internos de apoio para manter o Dashboard conciso
 const StatItem = ({ 
@@ -231,7 +232,7 @@ export const AdminDashboardPage = () => {
       }
 
     } catch (error) {
-      console.error('Erro ao carregar dashboard:', error);
+      logger.error('Erro ao carregar dashboard:', 'AdminDashboardPage', error);
     } finally {
       setLoading(false);
     }

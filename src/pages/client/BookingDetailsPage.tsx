@@ -5,6 +5,7 @@ import { apiFetch } from '@/services/api';
 import type { BookingDetails } from '@/types/types';
 import { formatPrice } from '@/utils/formatPrice';
 import BrandLoader from '@/components/ui/BrandLoader';
+import { logger } from '../../utils/logger';
 
 export const BookingDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -75,7 +76,7 @@ export const BookingDetailsPage = () => {
       setProofToDelete(null);
 
     } catch (error) {
-      console.error('Erro ao excluir comprovante:', error);
+      logger.error('Erro ao excluir comprovante:', 'BookingDetailsPage', error);
       // Aqui você pode adicionar uma notificação de erro
       setShowDeleteProofModal(false);
       setProofToDelete(null);
@@ -124,7 +125,7 @@ export const BookingDetailsPage = () => {
         fileInput.value = '';
       }
     } catch (error) {
-      console.error('Erro ao enviar comprovante:', error);
+      logger.error('Erro ao enviar comprovante:', 'BookingDetailsPage', error);
     } finally {
       setUploading(false);
     }

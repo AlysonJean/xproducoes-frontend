@@ -7,6 +7,7 @@ import type { DashboardEvent } from '../../types/domains/dashboard';
 import { collaboratorsAPI } from '../../services/api';
 import { StatsCard, SimpleCard } from '../../components/ui/Cards';
 import { formatPrice } from '@/utils/formatPrice';
+import { logger } from '../../utils/logger';
 import {
   Calendar,
   DollarSign,
@@ -241,7 +242,7 @@ const CollaboratorDashboard: React.FC = () => {
           setActivities(payload.recentActivities);
         }
       } catch (error) {
-        console.error('Erro ao carregar dados do dashboard:', error);
+        logger.error('Erro ao carregar dados do dashboard:', 'CollaboratorDashboard', error);
       } finally {
         setLoading(false);
       }

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import api from '../../services/api';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { logger } from '../../utils/logger';
 
 const schema = z
   .object({
@@ -47,7 +48,7 @@ export const CompleteRegistrationPage: React.FC = () => {
       // redireciona para login após sucesso
       navigate('/login?registered=1');
     } catch (err: unknown) {
-      console.error(err);
+      logger.error('Erro', 'CompleteRegistrationPage', err);
       const message = axios.isAxiosError(err)
         ? err.response?.data?.message || 'Erro ao completar registro'
         : 'Erro ao completar registro';

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { collaboratorsAPI, collaboratorProfileAPI } from '../../services/api';
+import { logger } from '../../utils/logger';
 
 interface EarningsData {
   totalEarnings: number;
@@ -118,7 +119,7 @@ const CollaboratorEarningsPage: React.FC = () => {
 
         setEarnings(data);
       } catch (error) {
-        console.error('Erro ao buscar dados de ganhos:', error);
+        logger.error('Erro ao buscar dados de ganhos:', 'CollaboratorEarningsPage', error);
       } finally {
         setLoading(false);
       }

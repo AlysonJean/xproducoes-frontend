@@ -18,6 +18,7 @@ import {
   Alert 
 } from '../components/ui/StandardComponents';
 import { LogIn, User as UserIcon, Users } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -116,7 +117,7 @@ export const LoginPage = () => {
         navigate('/painel');
       }
     } catch (error) {
-      console.error('Erro ao buscar dados do usuário:', error);
+      logger.error('Erro ao buscar dados do usuário:', 'LoginPage', error);
       navigate('/painel');
     }
   };

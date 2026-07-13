@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { logger } from '../../utils/logger';
 
 // Page opened by backend redirect with fragment #token=...
 // ✅ REFACTORED: No longer storing token in localStorage
@@ -25,7 +26,7 @@ export default function OAuthComplete() {
         window.location.href = '/dashboard';
       }
     } catch (e) {
-      console.error('[OAuthComplete] Error:', e);
+      logger.error('[OAuthComplete] Error:', 'OAuthComplete', e);
       window.close();
     }
   }, []);

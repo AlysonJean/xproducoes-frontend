@@ -15,6 +15,7 @@ import {
 import { generateSeoFilename } from '../../utils/seoUtils';
 import { Banner } from '../../types/types';
 import { BrandLoader } from '../ui/BrandLoader';
+import { logger } from '../../utils/logger';
 
 
 // Schema
@@ -113,7 +114,7 @@ export const BannerForm: React.FC<BannerFormProps> = ({ initialData, onSuccess, 
         throw new Error('URL não retornada');
       }
     } catch (error) {
-      console.error(error);
+      logger.error('Erro', 'BannerForm', error);
       addNotification({ type: 'error', title: 'Erro', message: 'Falha no upload da imagem' });
     } finally {
       setUploading(false);
@@ -144,7 +145,7 @@ export const BannerForm: React.FC<BannerFormProps> = ({ initialData, onSuccess, 
       }
       onSuccess();
     } catch (error) {
-      console.error(error);
+      logger.error('Erro', 'BannerForm', error);
       addNotification({ type: 'error', title: 'Erro', message: 'Falha ao salvar banner.' });
     } finally {
       setLoading(false);

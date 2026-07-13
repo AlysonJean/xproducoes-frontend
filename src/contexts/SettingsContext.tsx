@@ -5,6 +5,7 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useAppSettings, type AppSettings } from '../hooks/useAppSettings';
+import { logger } from '../utils/logger';
 
 interface SettingsContextType {
   companyName: string;
@@ -45,7 +46,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     try {
       await saveAppSettings({ companyName: name });
     } catch (err) {
-      console.error('Erro ao salvar nome da empresa:', err);
+      logger.error('Erro ao salvar nome da empresa:', 'SettingsContext', err);
       // Reverter em caso de erro
       setLocalCompanyName(companyName);
     }

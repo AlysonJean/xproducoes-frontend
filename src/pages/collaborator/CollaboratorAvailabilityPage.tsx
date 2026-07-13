@@ -8,6 +8,7 @@ import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLa
 import { SimpleCard } from '../../components/ui/Cards';
 import { collaboratorProfileAPI } from '../../services/api';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { logger } from '../../utils/logger';
 
 interface Availability {
   id: string;
@@ -40,7 +41,7 @@ const CollaboratorAvailabilityPage: React.FC = () => {
         setAvailabilities(data);
       }
     } catch (error) {
-      console.error('Erro ao carregar disponibilidades:', error);
+      logger.error('Erro ao carregar disponibilidades:', 'CollaboratorAvailabilityPage', error);
       addNotification({
         type: 'error',
         title: 'Erro',
@@ -82,7 +83,7 @@ const CollaboratorAvailabilityPage: React.FC = () => {
       setShowAddForm(false);
       loadAvailabilities();
     } catch (error) {
-      console.error('Erro ao adicionar:', error);
+      logger.error('Erro ao adicionar:', 'CollaboratorAvailabilityPage', error);
       addNotification({
         type: 'error',
         title: 'Erro',

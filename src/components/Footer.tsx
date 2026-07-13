@@ -9,6 +9,7 @@ import ThemedLogo from './ui/ThemedLogo';
 import { getWhatsAppPhone, openWhatsApp } from '../utils/whatsapp';
 import { useModal } from './modals/ModalContext';
 import { newsletterService } from '../services/newsletterService';
+import { logger } from '../utils/logger';
 
 export const Footer = () => {
   const { companyName } = useSettings();
@@ -41,7 +42,7 @@ export const Footer = () => {
       setTimeout(() => setIsSubscribed(false), 3000);
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } }; message?: string };
-      console.error('Newsletter error:', err);
+      logger.error('Newsletter error:', 'Footer', err);
       openModal('alert', {
         title: 'Atenção',
         message: err.response?.data?.error || err.message || 'Erro ao realizar inscrição. Tente novamente.',

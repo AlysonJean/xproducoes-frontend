@@ -19,6 +19,7 @@ import { BannerCarousel } from '../components/ui/BannerCarousel';
 import { CategoryEquipmentRow } from '../components/ui/CategoryEquipmentRow';
 import { SEO } from '../components/SEO';
 import { asArray } from '../utils/normalize';
+import { logger } from '../utils/logger';
 
 const FloatingGlow = () => (
   <div className="absolute inset-0 -z-20 overflow-hidden pointer-events-none">
@@ -82,7 +83,7 @@ export const HomePage = () => {
     // Timeout de segurança para garantir que o loader desapareça
     const loadingTimeout = setTimeout(() => {
       setLoading(false);
-      console.warn('Forçando fim do loading da Home após timeout');
+      logger.warn('Forçando fim do loading da Home após timeout', 'HomePage');
     }, 10000);
 
     // Não limpa o erro anterior imediatamente para evitar flash, mas permite nova tentativa
@@ -93,7 +94,7 @@ export const HomePage = () => {
       try {
         return await promise;
       } catch (error) {
-        console.warn('Falha não-crítica ao carregar seção da home:', error);
+        logger.warn('Falha não-crítica ao carregar seção da home:', 'HomePage', error);
         return fallback;
       }
     };
@@ -113,7 +114,7 @@ export const HomePage = () => {
       
       setPortfolio(asArray<PortfolioItem>(portfolioData));
     } catch (err) {
-      console.error('Erro detalhado no fetchPageData:', err);
+      logger.error('Erro detalhado no fetchPageData:', 'HomePage', err);
       // Não bloqueia mais a renderização com tela de erro fatal
       // setError('Erro ao carregar dados da API. Tente novamente mais tarde.');
     } finally {

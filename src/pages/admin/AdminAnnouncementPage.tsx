@@ -26,6 +26,7 @@ import {
   Grid
 } from '../../components/ui/StandardComponents';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { logger } from '../../utils/logger';
 
 const AdminAnnouncementPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -56,7 +57,7 @@ const AdminAnnouncementPage: React.FC = () => {
       const response = await socialService.getAnnouncements(id);
       setAnnouncements(Array.isArray(response) ? response : response.data || []);
     } catch (error) {
-      console.error('Failed to fetch announcements', error);
+      logger.error('Failed to fetch announcements', 'AdminAnnouncementPage', error);
       addNotification({ type: 'error', title: 'Erro', message: 'Falha ao carregar anúncios.' });
     } finally {
       setLoading(false);

@@ -29,6 +29,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useSocket } from '../../hooks/useSocket';
+import { logger } from '../../utils/logger';
 
 interface RoadmapTask {
   id: string;
@@ -164,7 +165,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
         emit('join_chat', data.chats[0].id);
       }
     } catch (error) {
-      console.error('Erro ao carregar roadmap:', error);
+      logger.error('Erro ao carregar roadmap:', 'CollaboratorEventRoadmapPage', error);
     } finally {
       setLoading(false);
     }
@@ -192,7 +193,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
       setMessage('');
       // Não precisamos mais de fetchRoadmap() aqui, o socket tratará o update
     } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
+      logger.error('Erro ao enviar mensagem:', 'CollaboratorEventRoadmapPage', error);
     } finally {
       setSending(false);
     }
@@ -212,7 +213,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
         };
       });
     } catch (error) {
-      console.error('Erro ao alternar tarefa:', error);
+      logger.error('Erro ao alternar tarefa:', 'CollaboratorEventRoadmapPage', error);
     }
   };
 
@@ -227,7 +228,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
       const resp = await uploadAPI.uploadFile(formData);
       setReceiptUrl(resp.data?.url || resp.data);
     } catch (error) {
-      console.error('Erro no upload do recibo:', error);
+      logger.error('Erro no upload do recibo:', 'CollaboratorEventRoadmapPage', error);
     } finally {
       setUploadingReceipt(false);
     }
@@ -250,7 +251,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
       setShowExpenseForm(false);
       await fetchRoadmap();
     } catch (error) {
-      console.error('Erro ao enviar despesa:', error);
+      logger.error('Erro ao enviar despesa:', 'CollaboratorEventRoadmapPage', error);
     } finally {
       setSubmittingExpense(false);
     }

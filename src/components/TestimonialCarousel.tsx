@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '../services/api';
 import { StarIcon } from '@heroicons/react/24/solid';
 import { UserCircleIcon } from '@heroicons/react/24/outline';
+import { logger } from '../utils/logger';
 
 interface PublicReview {
   id: string;
@@ -28,7 +29,7 @@ export const TestimonialCarousel = () => {
           : [];
         setReviews(reviewsWithComments.slice(0, 10)); // Limit to top 10
       } catch (error) {
-        console.error('Failed to fetch testimonials', error);
+        logger.error('Failed to fetch testimonials', 'TestimonialCarousel', error);
       } finally {
         setLoading(false);
       }

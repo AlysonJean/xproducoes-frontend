@@ -26,6 +26,7 @@ import {
 } from '../../components/ui/StandardComponents';
 import { CollaboratorFunctionForm } from '@/components/forms/CollaboratorFunctionForm';
 import { CollaboratorFunction } from '@/types/types';
+import { logger } from '../../utils/logger';
 
 export const AdminCollaboratorFunctionsPage: React.FC = () => {
   const { addNotification } = useNotifications();
@@ -45,7 +46,7 @@ export const AdminCollaboratorFunctionsPage: React.FC = () => {
       const raw = resp.data;
       setFunctions(Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : []);
     } catch (err: unknown) {
-      console.error(err);
+      logger.error('Erro', 'AdminCollaboratorFunctionsPage', err);
       addNotification({
         type: 'error',
         title: 'Falha de Sincronização',
@@ -88,7 +89,7 @@ export const AdminCollaboratorFunctionsPage: React.FC = () => {
       fetchFunctions();
       setIsDeleteModalOpen(false);
     } catch (err: unknown) {
-      console.error(err);
+      logger.error('Erro', 'AdminCollaboratorFunctionsPage', err);
       addNotification({
         type: 'error',
         title: 'Conflito de Dependência',

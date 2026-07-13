@@ -42,6 +42,7 @@ import withDragAndDrop, { type EventInteractionArgs } from 'react-big-calendar/l
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { logger } from '../../utils/logger';
 
 const locales = { 'pt-BR': ptBR };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
@@ -394,7 +395,7 @@ export const BookingCalendarPage = () => {
         const list = await apiFetch<ICollaborator[]>('/collaborators');
         setCollaborators(asArray<ICollaborator>(list));
       } catch (err) {
-        console.error('Falha ao carregar colaboradores', err);
+        logger.error('Falha ao carregar colaboradores', 'BookingCalendarPage', err);
       }
     })();
   }, []);

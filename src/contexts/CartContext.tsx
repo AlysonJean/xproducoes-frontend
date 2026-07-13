@@ -8,6 +8,7 @@ import type { Booking } from '../types/types';
 import type { Equipment, Kit, Service } from '../types/types';
 import { useAuth } from './AuthContext';
 import { NotificationContext } from './NotificationContext';
+import { logger } from '../utils/logger';
 
 type Cart = Booking & { services?: Service[] };
 
@@ -50,7 +51,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setCart(cartData as Cart);
       lastFetchedAt.current = Date.now();
     } catch (error) {
-      console.error('Erro ao buscar carrinho:', error);
+      logger.error('Erro ao buscar carrinho:', 'CartContext', error);
       setCart(null);
     } finally {
       setIsLoading(false);

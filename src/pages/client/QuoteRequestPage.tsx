@@ -22,6 +22,7 @@ import {
 import { quoteRequestSchema } from '../../validators/bookingSchema';
 import type { Booking } from '../../types/types';
 import { z } from 'zod';
+import { logger } from '../../utils/logger';
 
 type QuoteFormInput = z.input<typeof quoteRequestSchema>;
 type QuoteFormData = z.output<typeof quoteRequestSchema>;
@@ -192,7 +193,7 @@ export const QuoteRequestPage: React.FC = () => {
         navigate('/reserva-sucesso', { state: statePayload });
       }
         } catch (err: unknown) {
-      console.error('Erro ao criar booking', err);
+      logger.error('Erro ao criar booking', 'QuoteRequestPage', err);
       const msg = (axios.isAxiosError(err) && err.response?.data?.message) || (err instanceof Error ? err.message : null) || 'Erro ao salvar pedido.';
       setServerError(msg);
       

@@ -27,6 +27,7 @@ import {
 import { apiFetch } from '../../services/api';
 import { BrandLoader } from '../../components/ui/BrandLoader';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { logger } from '../../utils/logger';
 
 interface SponsorLogo {
     id: string;
@@ -76,7 +77,7 @@ const AdminSocialPage: React.FC = () => {
                         setSelectedSponsorIds((configRes.data.sponsors as {id: string}[] | undefined)?.map(s => s.id) || []);
         }
     } catch (error) {
-        console.error('Failed to fetch posts', error);
+        logger.error('Failed to fetch posts', 'AdminSocialPage', error);
         addNotification({ type: 'error', title: 'Falha Técnica', message: 'Erro ao tentar conectar com a API social.' });
     } finally {
         setLoading(false);
@@ -92,7 +93,7 @@ const AdminSocialPage: React.FC = () => {
          const data = await apiFetch<SponsorLogo[]>('/admin/sponsors');
          setAllSponsors(data || []);
      } catch (err) {
-         console.error(err);
+         logger.error('Erro', 'AdminSocialPage', err);
      }
   };
   
@@ -168,7 +169,7 @@ const AdminSocialPage: React.FC = () => {
         message: `Mídia encaminhada para o feed de ${status.toLowerCase()}.` 
       });
     } catch (error) {
-       console.error(error);
+       logger.error('Erro', 'AdminSocialPage', error);
        setPosts(originalPosts);
        addNotification({ type: 'error', title: 'Erro Operacional', message: 'Não foi possível salvar o status da moderação.' });
     } finally {

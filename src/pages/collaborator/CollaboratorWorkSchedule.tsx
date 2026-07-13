@@ -6,6 +6,7 @@ import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLa
 import { formatPrice } from '@/utils/formatPrice';
 
 import { CalendarDay, WorkStats } from '@/types/types';
+import { logger } from '../../utils/logger';
 
 // Componente de Gráfico de Ganhos Mensais usando Recharts
 const MonthlyEarningsChart: React.FC<{ monthlyData: Array<{ month: string; earnings: number; events: number }> }> = ({ monthlyData }) => {
@@ -165,7 +166,7 @@ const CollaboratorWorkSchedule: React.FC = () => {
         }
 
       } catch (error) {
-        console.error('Erro ao buscar dados da agenda:', error);
+        logger.error('Erro ao buscar dados da agenda:', 'CollaboratorWorkSchedule', error);
       } finally {
         // setLoading(false);
       }

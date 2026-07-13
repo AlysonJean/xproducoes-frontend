@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Instagram, Upload, Check } from 'lucide-react';
 import { apiFetch } from '../../services/api';
+import { logger } from '../../utils/logger';
 
 interface WallConfig {
     name: string;
@@ -34,7 +35,7 @@ const ParticipatePage = () => {
                     }
                 }
             } catch (err) {
-                console.error("Erro ao carregar configuração", err);
+                logger.error("Erro ao carregar configuração", 'ParticipatePage', err);
             } finally {
                 setLoading(false);
             }

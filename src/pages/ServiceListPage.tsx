@@ -10,6 +10,7 @@ import { BrandLoader } from '../components/ui/BrandLoader';
 
 import { SEO } from '../components/SEO';
 import { transformService } from '../utils/transformService';
+import { logger } from '../utils/logger';
 
 interface ServiceFilters {
   searchQuery?: string;
@@ -32,7 +33,7 @@ export const ServiceListPage: React.FC = () => {
         const rawServices = asArray<Service>(servicesData);
         setServices(rawServices.map(transformService));
       } catch (err) {
-        console.error('Erro ao carregar serviços:', err);
+        logger.error('Erro ao carregar serviços:', 'ServiceListPage', err);
         setServices([]);
       } finally {
         setLoading(false);

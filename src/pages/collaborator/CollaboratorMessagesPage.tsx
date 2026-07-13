@@ -15,6 +15,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { collaboratorMessagesAPI } from '../../services/api';
 import { BrandLoader } from '@/components/ui/BrandLoader';
+import { logger } from '../../utils/logger';
 
 interface Chat {
   id: string;
@@ -87,7 +88,7 @@ const CollaboratorMessagesPage: React.FC = () => {
       const response = await collaboratorMessagesAPI.getMyChats();
       setChats(response.data);
     } catch (error) {
-      console.error('Erro ao carregar chats:', error);
+      logger.error('Erro ao carregar chats:', 'CollaboratorMessagesPage', error);
     } finally {
       setLoading(false);
     }
@@ -98,7 +99,7 @@ const CollaboratorMessagesPage: React.FC = () => {
       const response = await collaboratorMessagesAPI.getChatMessages(chatId);
       setMessages(response.data.messages);
     } catch (error) {
-      console.error('Erro ao carregar mensagens:', error);
+      logger.error('Erro ao carregar mensagens:', 'CollaboratorMessagesPage', error);
     }
   };
 
@@ -111,7 +112,7 @@ const CollaboratorMessagesPage: React.FC = () => {
       setNewMessage('');
       await loadMessages(selectedChat.id);
     } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
+      logger.error('Erro ao enviar mensagem:', 'CollaboratorMessagesPage', error);
     } finally {
       setSending(false);
     }
@@ -124,7 +125,7 @@ const CollaboratorMessagesPage: React.FC = () => {
       setChats(prev => [newChat, ...prev]);
       setSelectedChat(newChat);
     } catch (error) {
-      console.error('Erro ao criar chat de suporte:', error);
+      logger.error('Erro ao criar chat de suporte:', 'CollaboratorMessagesPage', error);
     }
   };
 

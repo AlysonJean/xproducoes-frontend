@@ -1,6 +1,7 @@
 // Utilities for safe transient DOM operations (anchors, script injection)
 import { normalizeString } from './string';
 import type { AnchorOptions, ScriptOptions } from '@/types';
+import { logger } from './logger';
 
 export function isSafeUrl(u: string): boolean {
   if (!u) return false;
@@ -37,7 +38,7 @@ export function createAndClickAnchor(opts: AnchorOptions): void {
   if (!isSafeUrl(opts.href)) {
     // do not attempt to append unsafe hrefs
      
-    console.warn('createAndClickAnchor blocked insecure href:', opts.href);
+    logger.warn('createAndClickAnchor blocked insecure href:', 'dom', opts.href);
     return;
   }
 
@@ -69,7 +70,7 @@ export function appendScriptIfNotExists(opts: ScriptOptions): HTMLScriptElement 
     // Basic validation of script src to avoid script injection from unsafe schemes
   if (!isSafeUrl(opts.src) || normalizeString(opts.src.trim()).startsWith('blob:')) {
       // scripts should be loaded over http(s); blob: is not a valid external script source here
-      console.warn('appendScriptIfNotExists blocked insecure script src:', opts.src);
+      logger.warn('appendScriptIfNotExists blocked insecure script src:', 'dom', opts.src);
       return null;
     }
 
@@ -85,7 +86,7 @@ export function appendScriptIfNotExists(opts: ScriptOptions): HTMLScriptElement 
   } catch (err) {
     // do not throw in UI code path
      
-    console.warn('appendScriptIfNotExists failed:', err instanceof Error ? err.message : err);
+    logger.warn('appendScriptIfNotExists failed:', 'dom', err instanceof Error ? err.message : err);
     return null;
   }
 }

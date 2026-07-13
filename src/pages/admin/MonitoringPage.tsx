@@ -36,6 +36,7 @@ import {
   Monitor
 } from 'lucide-react';
 import { BrandLoader } from '@/components/ui/BrandLoader';
+import { logger } from '../../utils/logger';
 
 const monitoringService = MonitoringService.getInstance();
 
@@ -76,7 +77,7 @@ export const MonitoringPage: React.FC = () => {
       setSystemHealth(data.systemHealth);
       setLastUpdate(new Date());
     } catch {
-      console.error('Erro ao carregar dashboard:');
+      logger.error('Erro ao carregar dashboard:', 'MonitoringPage');
       addNotification({
         type: 'error',
         title: 'Radar Offline',

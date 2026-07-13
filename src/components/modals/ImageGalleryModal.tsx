@@ -5,6 +5,7 @@ import { normalizeString } from '../../utils/string';
 import { BaseModal } from './BaseModal';
 import { ImageGalleryModalProps } from '../../types/types';
 import { Button } from '../ui/StandardComponents';
+import { logger } from '../../utils/logger';
 
 /**
  * SECURITY IMPROVEMENTS IMPLEMENTED (Snyk Code Rules Compliance):
@@ -224,12 +225,12 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
       // Explicit safety checks before triggering a download
       const isBlobUrl = typeof objectUrl === 'string' && objectUrl.startsWith('blob:');
       if (!isBlobUrl) {
-        console.warn('Download blocked: generated object URL is not a blob URL', objectUrl);
+        logger.warn('Download blocked: generated object URL is not a blob URL', 'ImageGalleryModal', objectUrl);
         return;
       }
 
       if (!contentType.startsWith('image/')) {
-        console.warn('Download blocked: server content-type is not an image', contentType);
+        logger.warn('Download blocked: server content-type is not an image', 'ImageGalleryModal', contentType);
         return;
       }
 
@@ -259,11 +260,11 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
           }
         }
       } else {
-        console.warn('Download blocked: unsafe object URL', objectUrl);
+        logger.warn('Download blocked: unsafe object URL', 'ImageGalleryModal', objectUrl);
       }
     } catch (err) {
       // Log minimally and keep UX silent for users - don't expose internal errors
-      console.warn('Erro no download de imagem:', err instanceof Error ? err.message : 'Erro desconhecido');
+      logger.warn('Erro no download de imagem:', 'ImageGalleryModal', err instanceof Error ? err.message : 'Erro desconhecido');
       addNotification({ type: 'error', title: 'Erro', message: 'Erro ao fazer download da imagem. Tente novamente.' });
     } finally {
       setIsLoading(false);
@@ -292,7 +293,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
         });
       } catch (err) {
         // Silenciar erro - usuário cancelou ou erro do navegador
-        console.warn('Erro no compartilhamento:', err instanceof Error ? err.message : 'Erro desconhecido');
+        logger.warn('Erro no compartilhamento:', 'ImageGalleryModal', err instanceof Error ? err.message : 'Erro desconhecido');
       }
     } else {
       // Fallback: copy to clipboard with validation
@@ -305,7 +306,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
           addNotification({ type: 'error', title: 'Erro', message: 'Erro: URL da imagem inválida.' });
         }
       } catch (err) {
-        console.warn('Erro ao copiar para área de transferência:', err instanceof Error ? err.message : 'Erro desconhecido');
+        logger.warn('Erro ao copiar para área de transferência:', 'ImageGalleryModal', err instanceof Error ? err.message : 'Erro desconhecido');
         addNotification({ type: 'error', title: 'Erro', message: 'Erro ao copiar link. Tente novamente.' });
       }
     }

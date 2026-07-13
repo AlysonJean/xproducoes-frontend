@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { formatPrice } from '@/utils/formatPrice';
 import { SEO } from '@/components/SEO';
+import { logger } from '../utils/logger';
 
 interface ProposalItem {
   description: string;
@@ -53,7 +54,7 @@ export default function ProposalViewPage() {
         const result = 'data' in data ? data.data : data;
         setProposal(result);
       } catch (error) {
-        console.error('Erro ao buscar proposta:', error);
+        logger.error('Erro ao buscar proposta:', 'ProposalViewPage', error);
       } finally {
         setLoading(false);
       }

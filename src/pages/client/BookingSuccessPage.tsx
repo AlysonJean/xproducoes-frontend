@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Link, useParams, useLocation } from 'react-router-dom';
 import { buildQuoteMessage, getWhatsAppPhone, openWhatsApp } from '../../utils/whatsapp';
 import type { BookingDetails } from '../../types/types';
+import { logger } from '../../utils/logger';
 
 interface BookingSuccessFormData {
   name?: string;
@@ -73,7 +74,7 @@ export const BookingSuccessPage = () => {
       });
       openWhatsApp(getWhatsAppPhone(), mensagem);
     } catch (e) {
-      console.warn('Falha ao abrir WhatsApp', e);
+      logger.warn('Falha ao abrir WhatsApp', 'BookingSuccessPage', e);
     }
   }, [booking, formData, cartItems, id]);
 

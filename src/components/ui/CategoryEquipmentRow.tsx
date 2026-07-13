@@ -5,6 +5,7 @@ import { EquipmentCard } from './EquipmentCard';
 import { transformEquipment } from '../../utils/transformEquipment';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
+import { logger } from '../../utils/logger';
 
 interface CategoryEquipmentRowProps {
   category: Category;
@@ -32,7 +33,7 @@ export const CategoryEquipmentRow = ({ category }: CategoryEquipmentRowProps) =>
         const transformed = data.map(transformEquipment);
         setEquipments(transformed);
       } catch (error) {
-        console.warn(`Error fetching equipment for category ${category.name}:`, error);
+        logger.warn(`Error fetching equipment for category ${category.name}:`, 'CategoryEquipmentRow', error);
       } finally {
         setLoading(false);
       }
