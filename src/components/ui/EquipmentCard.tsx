@@ -10,6 +10,10 @@ import CompareButton from '../../components/ui/CompareButton';
 import { memo, useCallback, useState } from 'react';
 
 // Constantes para disponibilidade
+// Achado (Lighthouse/axe-core contra produção real): badge MAINTENANCE (bg-orange-500) e
+// COMING_SOON (bg-blue-500) com texto branco tinham contraste 2.8:1/2.86:1 (WCAG exige
+// 4.5:1). orange-700/blue-700 são locais a este componente, não tokens de tema
+// compartilhados — ACTIVE/UNAVAILABLE já usam os tokens success/destructive corretamente.
 const STATUS_CONFIG = {
   ACTIVE: {
     label: 'Disponível',
@@ -19,13 +23,13 @@ const STATUS_CONFIG = {
   },
   MAINTENANCE: {
     label: 'Em Manutenção',
-    badge: 'bg-orange-500 text-white',
+    badge: 'bg-orange-700 text-white',
     overlay: 'EM MANUTENÇÃO',
     btnClass: 'bg-muted text-muted-foreground cursor-not-allowed'
   },
   COMING_SOON: {
     label: 'Em Breve',
-    badge: 'bg-blue-500 text-white',
+    badge: 'bg-blue-700 text-white',
     overlay: 'EM BREVE',
     btnClass: 'bg-muted text-muted-foreground cursor-not-allowed'
   },

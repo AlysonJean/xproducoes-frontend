@@ -250,7 +250,10 @@ export const HomePage = () => {
         {/* Equipamentos por Categoria */}
         <section className="relative">
           <div className="text-center mb-16">
-             <div className="inline-flex items-center px-4 py-2 bg-blue-500/10 border border-blue-500/20 backdrop-blur-md rounded-full text-blue-400 font-semibold text-xs uppercase tracking-widest mb-4">
+             {/* Achado (Lighthouse/axe-core contra produção real): text-blue-400 sobre este
+                 fundo bem claro tinha contraste 2.34:1 (WCAG exige 4.5:1) — blue-700 corrige,
+                 mesmo padrão do badge "Consultoria Express" mais abaixo nesta página. */}
+             <div className="inline-flex items-center px-4 py-2 bg-blue-500/10 border border-blue-500/20 backdrop-blur-md rounded-full text-blue-700 font-semibold text-xs uppercase tracking-widest mb-4">
                 💎 Unlimited Possibilities
               </div>
             <h2 ref={equipmentsTitleRef} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Arquitetura Sonora & Visual</h2>
@@ -363,11 +366,16 @@ export const HomePage = () => {
               <div className="w-[1000px] h-[600px] bg-sky-600/20 blur-[180px] rounded-full" />
           </div>
           <div className="text-center mb-12">
-            <div className="inline-flex items-center px-4 py-2 bg-sky-500/10 border border-sky-500/20 backdrop-blur-md rounded-full text-sky-400 font-semibold text-xs uppercase tracking-widest mb-4">
+            {/* Achado (Lighthouse/axe-core contra produção real): text-sky-400 sobre este
+                fundo bem claro tinha contraste ~2:1 (WCAG exige 4.5:1) — sky-700 corrige,
+                mesma classe local ao componente. */}
+            <div className="inline-flex items-center px-4 py-2 bg-sky-500/10 border border-sky-500/20 backdrop-blur-md rounded-full text-sky-700 font-semibold text-xs uppercase tracking-widest mb-4">
               ✨ Consultoria Express
             </div>
             <h2 ref={aiTitleRef} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Mapeamento de Necessidades</h2>
-            <p className="text-slate-400 max-w-2xl mx-auto text-lg">
+            {/* Achado (Lighthouse/axe-core contra produção real): text-slate-400 tinha
+                contraste 2.63:1 sobre fundo branco (WCAG exige 4.5:1) — slate-600 corrige. */}
+            <p className="text-slate-600 max-w-2xl mx-auto text-lg">
               Responda a 3 perguntas rápidas e receba uma proposta pré-qualificada diretamente no WhatsApp.
             </p>
           </div>

@@ -43,7 +43,10 @@ const KitImage = memo(({ imageUrl, name }: { imageUrl?: string; name: string }) 
       />
       
       <div className="absolute top-2 left-2">
-        <span className="px-2 py-1 rounded-full text-xs font-bold bg-orange-500 text-white shadow-sm">
+        {/* Achado (Lighthouse/axe-core contra produção real): bg-orange-500 com texto branco
+            tinha contraste 2.8:1 (WCAG exige 4.5:1 para texto de 12px). orange-700 é local a
+            este badge, não um token de tema compartilhado. */}
+        <span className="px-2 py-1 rounded-full text-xs font-bold bg-orange-700 text-white shadow-sm">
            Combo Econômico
         </span>
       </div>

@@ -264,8 +264,12 @@ export const Footer = () => {
               <p className="text-sm text-muted-foreground">
                 © {new Date().getFullYear()} X Produçoes e Eventos. CNPJ: 55.343.824/0001-56
               </p>
-              <p className="text-xs text-muted-foreground/70 mt-1">
-                Desenvolvido com ❤️ por Alyson Jean (31) 97580-8477 
+              {/* Achado (Lighthouse/axe-core contra produção real): a opacidade /70 aqui
+                  reduzia o contraste de text-muted-foreground de 4.70:1 (que já passa WCAG,
+                  usado sem opacidade na linha acima) para 2.71:1. Removida — mesmo token,
+                  sem diluir. */}
+              <p className="text-xs text-muted-foreground mt-1">
+                Desenvolvido com ❤️ por Alyson Jean (31) 97580-8477
               </p>
             </div>
 
