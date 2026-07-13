@@ -113,6 +113,13 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
   className = '',
   ...rest
 }) => {
+  // Achado (Lighthouse/axe-core contra produção real): este Link tinha um aria-label fixo
+  // ("Ver detalhes do equipamento X") que substituía todo o nome acessível — mas o card
+  // visualmente também mostra o badge de status (StatusOverlay: "Disponível"/"Em Breve"/
+  // "Manutenção"), que ficava de fora do aria-label. Resultado: WCAG 2.5.3 (Label in Name)
+  // violado — quem usa controle por voz não conseguia dizer "clique em Disponível" porque
+  // esse texto não fazia parte do nome acessível do link. Removido o aria-label para o nome
+  // acessível ser computado a partir do conteúdo visível real do card (inclui tudo).
   return (
     <Link
       {...rest}
@@ -121,7 +128,6 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
       onClick={() => {
         if (equipment.id && onCardClick) onCardClick(equipment.id);
       }}
-      aria-label={`Ver detalhes do equipamento ${equipment.name}`}
     >
       {/* Área de imagem + overlays dentro de um wrapper relativo para posicionamento correto */}
       <div className="relative">

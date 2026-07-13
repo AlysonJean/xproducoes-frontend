@@ -86,12 +86,15 @@ export const KitCard: React.FC<KitCardProps> = ({
     });
   };
 
+  // Achado (Lighthouse/axe-core contra produção real): mesmo problema do EquipmentCard —
+  // aria-label fixo não incluía o texto visível "Ver Detalhes do Kit" nem outros elementos do
+  // card, violando WCAG 2.5.3 (Label in Name). Removido para o nome acessível vir do conteúdo
+  // real do card.
   return (
     <Link
       {...rest}
       to={`/kits/${kit.slug || kit.id}`}
       className={`relative block card-glass card-glass-hover rounded-2xl overflow-hidden ${className}`}
-      aria-label={`Ver detalhes do kit ${kit.name}`}
     >
       <div className="relative">
         <KitImage

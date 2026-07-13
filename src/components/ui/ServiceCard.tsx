@@ -106,12 +106,14 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
   const validCurrentStatus = (currentStatus in STATUS_CONFIG) ? currentStatus as keyof typeof STATUS_CONFIG : 'ACTIVE';
   const config = STATUS_CONFIG[validCurrentStatus];
 
+  // Achado (Lighthouse/axe-core contra produção real): mesmo problema do EquipmentCard —
+  // aria-label fixo não incluía o badge de status visível ("Ativo"/"Em Breve"), violando
+  // WCAG 2.5.3 (Label in Name). Removido para o nome acessível vir do conteúdo real do card.
   return (
     <Link
       {...rest}
       to={`/servicos/${service.slug || service.id}`}
       className={`relative block bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02] ${className}`}
-      aria-label={`Ver detalhes do serviço ${service.name}`}
     >
       <div className="relative">
         <ServiceImage
