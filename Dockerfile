@@ -1,3 +1,12 @@
+# ⚠️ Achado (auditoria): este Dockerfile NÃO reflete a arquitetura de produção real.
+# A produção roda no Vercel como SSR serverless (renderer/+onRenderHtml.tsx via
+# renderToStream(), servido por api/ssr.js — ver vercel.json). Este Dockerfile builda
+# um bundle estático (vike build) e serve via Nginx puro, sem nenhum servidor Node —
+# ou seja, sem SSR, sem meta tags dinâmicas, potencialmente com rotas quebradas.
+# Não é referenciado por nenhum README ou workflow de CI deste repo (verificado);
+# mantido apenas para o stack local de docker-compose.yml (Postgres/Redis + backend).
+# Para reproduzir o comportamento real de SSR localmente, use `npm run dev`
+# (server.ts) no lugar deste container.
 # Stage 1: Build
 FROM node:20-alpine as builder
 
