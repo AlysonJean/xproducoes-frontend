@@ -33,8 +33,8 @@ jobs:
       - name: Typecheck
         run: npm run type-check
 
-      - name: Testes
-        run: npm test
+      - name: Testes (com cobertura e piso anti-regressão)
+        run: npm run test:coverage
 
       - name: Build (inclui geração do sitemap via prebuild)
         run: npm run build
