@@ -32,6 +32,8 @@ import { SafeImage } from '../components/ui/SafeImage';
 import { Breadcrumbs } from '../components/ui/Breadcrumbs';
 import { PageLayout } from '../components/layouts/PageLayout';
 import { Modal } from '../components/ui/Modal';
+import CookieConsentBanner from '../components/CookieConsentBanner';
+import { CookieConsentProvider } from '../contexts/CookieConsentContext';
 
 expect.extend(toHaveNoViolations);
 
@@ -138,6 +140,22 @@ describe('Acessibilidade - Componentes Core (componentes reais do projeto)', () 
       <MockProviders>
         <Alert variant="success" title="Sucesso" description="Operação realizada com sucesso!" />
         <Alert variant="error" title="Erro" description="Não foi possível completar a operação." onClose={() => {}} />
+      </MockProviders>
+    );
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+});
+
+describe('Acessibilidade - CookieConsentBanner (adicionado nesta sessão)', () => {
+  it('não tem violações de acessibilidade', async () => {
+    window.localStorage.clear();
+    const { container } = render(
+      <MockProviders>
+        <CookieConsentProvider>
+          <CookieConsentBanner />
+        </CookieConsentProvider>
       </MockProviders>
     );
 
