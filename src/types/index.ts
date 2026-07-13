@@ -18,7 +18,6 @@ export type {
   SearchFiltersProps,
   PortfolioCardProps,
   KitCardProps,
-  ConfirmDialogProps,
   ClientResponse,
   HttpRequestConfig,
   HttpResponse,
