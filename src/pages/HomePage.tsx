@@ -156,14 +156,15 @@ export const HomePage = () => {
   fetchPublicReviews();
   }, [fetchPageData, fetchPublicReviews]);
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <BrandLoader size={140} label="Carregando experiência..." />
-      </div>
-    );
-  }
   // if (error) return <PageError message={error} onRetry={() => window.location.reload()} />;
+  // Achado (Lighthouse contra produção real, CLS score 0.3149 no footer): esta página
+  // gateava TODO o JSX (incluindo hero/banner 100% estáticos) atrás de um único
+  // `if (loading) return <spinner>`. Quando o Promise.all do fetchPageData resolvia, a
+  // home inteira (banner, hero, kits, categorias, serviços, portfólio, depoimentos, quiz —
+  // ~5000px) aparecia de uma vez, empurrando o footer de y≈644 para y≈5700 num único frame.
+  // Fix: hero/banner renderizam sempre (não dependem de fetch); cada seção dependente de
+  // dados reserva seu próprio espaço com um BrandLoader interno (mesmo padrão já usado em
+  // "Equipamentos por Categoria" abaixo) em vez de sumir/aparecer inteira.
 
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
@@ -220,7 +221,7 @@ export const HomePage = () => {
 
       <div className="container mx-auto px-4 md:px-6 lg:px-8 space-y-24 sm:space-y-32">
         {/* Kits em Destaque */}
-        {kits && kits.length > 0 && (
+        {(loading || kits.length > 0) && (
           <section className="relative">
             <div className="text-center mb-16">
               <div className="inline-flex items-center px-5 py-2 card-glass rounded-full text-primary font-bold text-xs uppercase tracking-widest mb-6">
@@ -229,21 +230,27 @@ export const HomePage = () => {
               <h2 ref={kitsTitleRef} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Kits em Destaque</h2>
               <div className="w-24 h-1 bg-primary mx-auto rounded-full mb-6" />
             </div>
-            
-            <div className="relative group/scroll">
-               <div className="flex overflow-x-auto pb-6 gap-6 snap-x snap-mandatory scrollbar-none hover:scrollbar-thin scrollbar-thumb-primary/10 scrollbar-track-transparent transition-all w-full">
-                  {kits.map((kit) => (
-                    <div 
-                      key={kit.id} 
-                      className="min-w-[280px] w-[280px] md:min-w-[320px] md:w-[320px] snap-start flex-shrink-0 transition-transform duration-300 hover:scale-[1.01]"
-                    >
-                      <KitCard kit={kit} />
-                    </div>
-                  ))}
-                  <div className="min-w-[1px] w-[1px] flex-shrink-0" />
-               </div>
-               <div className="absolute right-0 top-0 bottom-6 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none opacity-0 group-hover/scroll:opacity-100 transition-opacity" />
-            </div>
+
+            {loading ? (
+              <div className="flex justify-center py-24">
+                <BrandLoader size={80} label="Carregando kits..." />
+              </div>
+            ) : (
+              <div className="relative group/scroll">
+                 <div className="flex overflow-x-auto pb-6 gap-6 snap-x snap-mandatory scrollbar-none hover:scrollbar-thin scrollbar-thumb-primary/10 scrollbar-track-transparent transition-all w-full">
+                    {kits.map((kit) => (
+                      <div
+                        key={kit.id}
+                        className="min-w-[280px] w-[280px] md:min-w-[320px] md:w-[320px] snap-start flex-shrink-0 transition-transform duration-300 hover:scale-[1.01]"
+                      >
+                        <KitCard kit={kit} />
+                      </div>
+                    ))}
+                    <div className="min-w-[1px] w-[1px] flex-shrink-0" />
+                 </div>
+                 <div className="absolute right-0 top-0 bottom-6 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none opacity-0 group-hover/scroll:opacity-100 transition-opacity" />
+              </div>
+            )}
           </section>
         )}
 
@@ -279,7 +286,7 @@ export const HomePage = () => {
         </section>
 
         {/* Portfólio */}
-        {portfolio && portfolio.length > 0 && (
+        {(loading || portfolio.length > 0) && (
           <section className="relative">
             <div className="text-center mb-16">
               <div className="inline-flex items-center px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md rounded-full text-emerald-400 font-semibold text-xs uppercase tracking-widest mb-4">
@@ -288,6 +295,11 @@ export const HomePage = () => {
               <h2 ref={portfolioTitleRef} className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Galeria de Experiências</h2>
               <div className="w-24 h-1 bg-emerald-500 mx-auto rounded-full mb-6" />
             </div>
+            {loading ? (
+              <div className="flex justify-center py-24">
+                <BrandLoader size={80} label="Carregando portfólio..." />
+              </div>
+            ) : (
             <div className="relative group/portfolio-scroll">
                <div className="flex overflow-x-auto pb-6 gap-6 snap-x snap-mandatory scrollbar-none hover:scrollbar-thin scrollbar-thumb-emerald-500/10 scrollbar-track-transparent transition-all w-full">
                   {portfolio.map((item) => (
@@ -330,11 +342,12 @@ export const HomePage = () => {
                </div>
                <div className="absolute right-0 top-0 bottom-6 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none opacity-0 group-hover/portfolio-scroll:opacity-100 transition-opacity" />
             </div>
+            )}
           </section>
         )}
 
         {/* Depoimentos */}
-        {(!reviewsLoading && reviews && reviews.length > 0) && (
+        {(reviewsLoading || reviews.length > 0) && (
           <section className="relative">
             <div className="text-center mb-16">
               <div className="inline-flex items-center px-4 py-2 bg-amber-500/10 border border-amber-500/20 backdrop-blur-md rounded-full text-amber-400 font-semibold text-xs uppercase tracking-widest mb-4">
@@ -343,6 +356,11 @@ export const HomePage = () => {
               <h2 className="text-3xl sm:text-4xl font-bold mb-4">Vozes da Nossa Comunidade</h2>
               <div className="w-24 h-1 bg-amber-500 mx-auto rounded-full mb-6" />
             </div>
+            {reviewsLoading ? (
+              <div className="flex justify-center py-24">
+                <BrandLoader size={80} label="Carregando depoimentos..." />
+              </div>
+            ) : (
             <Grid columns={{ sm: 1, md: 2, lg: 3 }} gap={8}>
               {reviews.map((review) => (
                                 <TestimonialCard
@@ -357,6 +375,7 @@ export const HomePage = () => {
                                 />
               ))}
             </Grid>
+            )}
           </section>
         )}
 
