@@ -62,9 +62,14 @@
       requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
     };
     if (typeof w.requestIdleCallback === 'function') {
-      w.requestIdleCallback(fn, { timeout: 2000 });
+      // requestIdleCallback chama fn(deadline) de verdade (IdleDeadline), diferente da
+      // assinatura simplificada declarada acima — passar `fn` direto faria `process`
+      // receber o IdleDeadline no lugar do parâmetro `root`, quebrando
+      // `root.querySelectorAll` (achado rodando smoke test local: TypeError real,
+      // silenciosamente engolido, fazendo a varredura inicial nunca rodar de verdade).
+      w.requestIdleCallback(() => fn(), { timeout: 2000 });
     } else {
-      setTimeout(fn, 300);
+      setTimeout(() => fn(), 300);
     }
   };
 
