@@ -48,11 +48,34 @@
     });
   };
 
-  // Initial run
+  // Achado (hydration mismatch em produção real, exposto ao corrigir o CLS da home):
+  // esta varredura inicial mutava classList de <h1>/<h2> diretamente no DOM assim que o
+  // módulo carregava — se isso corresse ANTES do commit de hidratação do React, o React
+  // via os atributos "errados" no DOM já hidratado e os revertia silenciosamente
+  // ("won't be patched up"), fazendo o heading perder a classe elegant/reveal na carga
+  // inicial. Um atraso fixo de N frames não é confiável (a hidratação de uma árvore maior
+  // pode levar mais que isso, especialmente em dev); requestIdleCallback espera o main
+  // thread realmente ficar ocioso, o que só acontece depois que o trabalho síncrono/agendado
+  // do React (incluindo hidratação) já cedeu o controle.
+  const scheduleAfterHydration = (fn: () => void) => {
+    const w = window as typeof window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+    };
+    if (typeof w.requestIdleCallback === 'function') {
+      w.requestIdleCallback(fn, { timeout: 2000 });
+    } else {
+      setTimeout(fn, 300);
+    }
+  };
+
+  const runInitial = () => {
+    scheduleAfterHydration(process);
+  };
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => process());
+    document.addEventListener('DOMContentLoaded', runInitial);
   } else {
-    process();
+    runInitial();
   }
 
   // Watch for dynamically added headings
