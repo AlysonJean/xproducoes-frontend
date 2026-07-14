@@ -13,9 +13,12 @@ export const getWhatsAppPhone = (opts?: { countryCode?: string }): string => {
   // .env (frontend):
   // VITE_WHATSAPP_PHONE -> número destino (pode conter +, espaços, etc.)
   // VITE_WHATSAPP_DDI   -> DDI para prefixar quando o número parecer local (ex.: 55 BR, 351 PT)
-    const envObj = (import.meta as unknown as { env?: Record<string, string> })?.env ?? {};
-  const raw = (envObj.VITE_WHATSAPP_PHONE as string | undefined) || '';
-  const ddi = (opts?.countryCode || (envObj.VITE_WHATSAPP_DDI as string) || '55').replace(/\D/g, '');
+  // Achado (dev SSR): acessar import.meta.env via uma variável intermediária quebra o
+  // Module Runner do Vite em dev ("Dynamic access of import.meta.env is not supported"),
+  // forçando fallback para client-only rendering. Acesso estático (import.meta.env.CHAVE)
+  // é exigido para funcionar tanto em dev SSR quanto em build de produção.
+  const raw = import.meta.env.VITE_WHATSAPP_PHONE || '';
+  const ddi = (opts?.countryCode || import.meta.env.VITE_WHATSAPP_DDI || '55').replace(/\D/g, '');
   const digits = normalizePhone(raw);
 
   // Se não veio nada, usa fallback conhecido (BR)
