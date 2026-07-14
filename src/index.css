@@ -1,5 +1,8 @@
-/* Import Google Fonts */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap");
+/* Achado (Lighthouse contra produção real): fontes Google Fonts agora carregadas via <link>
+   em renderer/+onRenderHtml.tsx (descoberto cedo no parsing do HTML, junto dos preconnect já
+   existentes) — @import em CSS é descoberto tarde e duplicava o fetch de Inter (que também já
+   era carregado por um <link> separado), contribuindo para o maior culpado de CLS medido no
+   site inteiro. Ver comentário completo em +onRenderHtml.tsx. */
 
 @import "tailwindcss";
 @config "../tailwind.config.js";

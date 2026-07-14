@@ -117,7 +117,16 @@ export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageCon
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />
 
         <!-- Fonts -->
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+        <!-- Achado (Lighthouse contra produção real): a fonte web era carregada em dois
+             lugares — este <link> (só Inter) e um @import em src/index.css (Inter + Outfit).
+             @import é descoberto tarde (só depois do parser CSS baixar/processar a folha de
+             estilo principal) e o double-fetch de Inter por dois mecanismos diferentes
+             contribuía para o maior culpado de CLS medido no site inteiro (0.35 de um total de
+             ~0.35 — praticamente 100% do layout shift, causado por "Web font loaded" reflowando
+             o layout). Consolidado num único <link> com as duas famílias, descoberto cedo no
+             parsing do HTML (junto com os preconnect já existentes para o mesmo domínio) — o
+             @import correspondente foi removido de index.css. -->
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="description" content="${desc}" />
