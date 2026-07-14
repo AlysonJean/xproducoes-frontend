@@ -1,6 +1,6 @@
 // src/components/SentryTestButton.tsx
 import React from 'react';
-import * as Sentry from '@sentry/react';
+import { captureMessage, captureException, addBreadcrumb } from '@sentry/react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { logger } from '../utils/logger';
 
@@ -39,7 +39,7 @@ export const SentryTestButton: React.FC<SentryTestButtonProps> = ({
     console.log('🐛 Testando Sentry - Erro será capturado...');
     
     // Capturar mensagem de teste primeiro
-    Sentry.captureMessage('Teste de integração Sentry - Botão de teste clicado', 'info');
+    captureMessage('Teste de integração Sentry - Botão de teste clicado', 'info');
     
     // Aguardar 500ms e então lançar erro
     setTimeout(() => {
@@ -54,9 +54,9 @@ export const SentryTestButton: React.FC<SentryTestButtonProps> = ({
       // Simular erro de parsing JSON
       JSON.parse('{ invalid json }');
     } catch (error) {
-      Sentry.captureException(error);
+      captureException(error);
       logger.error('Erro capturado e enviado para Sentry:', 'SentryTestButton', error);
-      Sentry.captureException(error);
+      captureException(error);
       logger.error('Erro capturado e enviado para Sentry:', 'SentryTestButton', error);
       addNotification({
         type: 'success',
@@ -69,8 +69,8 @@ export const SentryTestButton: React.FC<SentryTestButtonProps> = ({
   const handleTestMessage = () => {
     console.log('🐛 Testando Sentry - Mensagem será enviada...');
     
-    Sentry.captureMessage('📝 Mensagem de teste do Sentry', 'info');
-    Sentry.addBreadcrumb({
+    captureMessage('📝 Mensagem de teste do Sentry', 'info');
+    addBreadcrumb({
       category: 'test',
       message: 'Usuário clicou no botão de teste',
       level: 'info',

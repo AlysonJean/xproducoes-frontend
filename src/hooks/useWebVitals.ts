@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import * as Sentry from '@sentry/react';
+import { captureMessage, addBreadcrumb } from '@sentry/react';
 import { logger } from '../utils/logger';
 
 /**
@@ -49,10 +49,10 @@ function getRating(metric: string, value: number): 'good' | 'needs-improvement' 
 function reportToSentry(metric: WebVitalMetric) {
   try {
     // Send to Sentry
-    Sentry.captureMessage(`Web Vital: ${metric.name} = ${metric.value}ms`, 'info');
-    
+    captureMessage(`Web Vital: ${metric.name} = ${metric.value}ms`, 'info');
+
     // Add breadcrumb for context
-    Sentry.addBreadcrumb({
+    addBreadcrumb({
       category: 'web-vital',
       message: `${metric.name}: ${metric.value}ms (${metric.rating})`,
       level: metric.rating === 'good' ? 'info' : metric.rating === 'needs-improvement' ? 'warning' : 'error',

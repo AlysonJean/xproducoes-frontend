@@ -105,6 +105,11 @@ export default defineConfig({
       applyToEnvironment: (environment: { name: string }) => environment.name === 'client',
     }
   ],
+  define: {
+    // Flag oficial do SDK do Sentry para eliminar em build os caminhos de código de
+    // debug/logging interno (não usados em produção) — https://docs.sentry.io/platforms/javascript/guides/react/best-practices/tree-shaking/
+    __SENTRY_DEBUG__: false,
+  },
   server: {
     port: 3000,
     open: true,

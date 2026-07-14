@@ -1,6 +1,18 @@
 
 // src/utils/sentry.ts
-import * as Sentry from '@sentry/react';
+// Achado: `import * as Sentry` impede o tree-shaking de sub-módulos não usados do SDK
+// (Replay, Profiling) — o bundler não pode eliminar nada de um namespace object
+// importado por completo. Imports nomeados, um por símbolo realmente usado abaixo.
+import {
+  init,
+  setUser,
+  setTag,
+  setContext,
+  ErrorBoundary,
+  captureException,
+  captureMessage,
+  addBreadcrumb,
+} from '@sentry/react';
 import { SentryErrorFallback } from '@/components/SentryErrorFallback';
 import { logger } from './logger';
 
@@ -24,7 +36,7 @@ export const initSentry = () => {
     };
   }
 
-  Sentry.init({
+  init({
     dsn: SENTRY_DSN,
     environment: SENTRY_ENVIRONMENT,
     
@@ -104,31 +116,26 @@ export const initSentry = () => {
   // Set user context if available
     const setUserContext = (user: { id?: string; email?: string; name?: string; role?: string } | null) => {
     if (user) {
-      Sentry.setUser({
+      setUser({
         id: user.id,
         email: user.email,
         username: user.name,
         role: user.role,
       });
-      Sentry.setTag('user_role', user.role);
+      setTag('user_role', user.role);
     } else {
-      Sentry.setUser(null);
+      setUser(null);
     }
   };
-
-  // Error boundary for React components
-  const ErrorBoundary = Sentry.ErrorBoundary;
 
   return {
     setUserContext,
     ErrorBoundary,
     ErrorFallback: SentryErrorFallback,
-    captureException: Sentry.captureException,
-    captureMessage: Sentry.captureMessage,
-    addBreadcrumb: Sentry.addBreadcrumb,
-    setTag: Sentry.setTag,
-    setContext: Sentry.setContext,
+    captureException,
+    captureMessage,
+    addBreadcrumb,
+    setTag,
+    setContext,
   };
 };
-
-export default Sentry;
