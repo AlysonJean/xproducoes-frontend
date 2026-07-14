@@ -88,12 +88,22 @@ export default defineConfig({
       }
     }),
     // Bundle analyzer - gera relatório em dist/stats.html
-    visualizer({
-      filename: 'dist/stats.html',
-      open: false,
-      gzipSize: true,
-      brotliSize: true,
-    })
+    // Achado: Vike roda o build via Environment API do Vite (client + ssr na mesma
+    // invocação), e as duas passagens escreviam no mesmo dist/stats.html — a passagem
+    // ssr sempre sobrescrevia a do client, deixando o relatório sem utilidade para
+    // analisar o que o navegador baixa (o objetivo real desta ferramenta). `isSsrBuild`
+    // do defineConfig não distingue as duas (ambas passagens vêm da mesma invocação de
+    // `vite build`); o mecanismo certo é `applyToEnvironment`, que a Environment API
+    // consulta por plugin/por ambiente.
+    {
+      ...visualizer({
+        filename: 'dist/stats.html',
+        open: false,
+        gzipSize: true,
+        brotliSize: true,
+      }),
+      applyToEnvironment: (environment: { name: string }) => environment.name === 'client',
+    }
   ],
   server: {
     port: 3000,
