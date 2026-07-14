@@ -1,5 +1,4 @@
 import React from 'react'
-import { GoogleOAuthProvider } from '@react-oauth/google'
 import { Analytics } from '@vercel/analytics/react'
 import { initSentry } from './utils/sentry'
 import { useWebVitals } from './hooks/useWebVitals'
@@ -20,23 +19,17 @@ const WebVitalsMonitor: React.FC<{ children: React.ReactNode }> = ({ children })
   return <>{children}</>
 }
 
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
-
-const GoogleWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  if (googleClientId && googleClientId !== 'your-google-client-id') {
-    return <GoogleOAuthProvider clientId={googleClientId}>{children}</GoogleOAuthProvider>
-  }
-  return <>{children}</>
-}
-
+// Achado (Lighthouse contra produção real): GoogleOAuthProvider vivia aqui, envolvendo o app
+// inteiro — injetava o script do Google Identity Services (~96 KB, 83% nunca usado na home,
+// que não tem nenhum botão de login) em toda página, não só nas que precisam. Movido para
+// dentro de GoogleAuthButton.tsx (único consumidor real de useGoogleLogin no app), que agora
+// monta seu próprio provider só quando o botão realmente é renderizado.
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WebVitalsMonitor>
-      <GoogleWrapper>
-        <SentryErrorBoundary>
-          {children}
-        </SentryErrorBoundary>
-      </GoogleWrapper>
+      <SentryErrorBoundary>
+        {children}
+      </SentryErrorBoundary>
       <Analytics />
     </WebVitalsMonitor>
   )

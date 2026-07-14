@@ -1,18 +1,24 @@
 import React, { useState } from 'react';
-import { useGoogleLogin } from '@react-oauth/google';
+import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import type { GoogleAuthButtonProps } from '@/types/ui';
 import { useNotifications } from '@/contexts/NotificationContext';
 import axios from 'axios';
 import { API_BASE_URL } from '@/utils/apiConfig';
 import { logger } from '../../utils/logger';
 
-const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const isConfigured = !!googleClientId && googleClientId !== 'your-google-client-id';
+
+// Achado (Lighthouse contra produção real): GoogleOAuthProvider (aqui embaixo) injeta o
+// script do Google Identity Services (accounts.google.com/gsi/client, ~96 KB) assim que
+// monta — e antes vivia em Providers.tsx envolvendo o app inteiro, carregando esse script em
+// toda página (83% do arquivo nunca usado no relatório do Lighthouse, medido na home, que não
+// tem nenhum botão de login). GoogleAuthButton é o único consumidor de useGoogleLogin no app
+// (confirmado via grep) e só é renderizado em LoginPage/RegisterPage — então o provider foi
+// movido para cá, montando só quando o botão realmente aparece na árvore.
+const GoogleAuthButtonInner: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const { addNotification } = useNotifications();
-  
-  // Verificar se o Google Client ID está configurado
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  const isConfigured = !!googleClientId && googleClientId !== 'your-google-client-id';
 
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -71,14 +77,6 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
     }
   });
 
-  // Não renderizar o botão se o Google não está configurado
-  if (!isConfigured) {
-    if (import.meta.env.DEV) {
-      logger.warn('Google OAuth não configurado: VITE_GOOGLE_CLIENT_ID não definido', 'GoogleAuthButton');
-    }
-    return null;
-  }
-
   return (
     <button
       type="button"
@@ -114,6 +112,22 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
       )}
       Entrar com Google
     </button>
+  );
+};
+
+// Não monta o provider (nem baixa o script do Google) se o Google não está configurado.
+const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = (props) => {
+  if (!isConfigured) {
+    if (import.meta.env.DEV) {
+      logger.warn('Google OAuth não configurado: VITE_GOOGLE_CLIENT_ID não definido', 'GoogleAuthButton');
+    }
+    return null;
+  }
+
+  return (
+    <GoogleOAuthProvider clientId={googleClientId}>
+      <GoogleAuthButtonInner {...props} />
+    </GoogleOAuthProvider>
   );
 };
 
