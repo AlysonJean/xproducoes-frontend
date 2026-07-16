@@ -196,6 +196,9 @@ const PortfolioListPage = lazy(() =>
 const BannerManagementPage = lazy(() =>
   import('./pages/admin/BannerManagementPage').then((m) => ({ default: m.BannerManagementPage }))
 );
+const CouponManagementPage = lazy(() =>
+  import('./pages/admin/CouponManagementPage').then((m) => ({ default: m.CouponManagementPage }))
+);
 
 const ContactSubmissionsListPage = lazy(() =>
   import('./pages/admin/ContactSubmissionsListPage').then((m) => ({
@@ -866,6 +869,15 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute adminOnly>
             <BannerManagementPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/cupons"
+        element={
+          <ProtectedRoute adminOnly>
+            <CouponManagementPage />
           </ProtectedRoute>
         }
       />

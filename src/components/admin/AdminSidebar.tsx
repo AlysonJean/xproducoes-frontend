@@ -177,6 +177,12 @@ const menuGroups: MenuGroup[] = [
         description: 'Pacotes de equipamentos',
       },
       {
+        name: 'Cupons',
+        href: '/admin/cupons',
+        icon: TagIcon,
+        description: 'Cupons de desconto',
+      },
+      {
         name: 'Mural Social',
         href: '/admin/social',
         icon: TvIcon,

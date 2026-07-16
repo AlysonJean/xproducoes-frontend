@@ -1,21 +1,21 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
 import ReactGA from 'react-ga4';
 import { v4 as uuidv4 } from 'uuid';
-import { MapPin, Calendar, Clock, Info, User, Phone, Navigation2, Building2 } from 'lucide-react';
+import { MapPin, Calendar, Clock, Info, User, Phone, Navigation2, Building2, Tag, X } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { api } from '../../services/api';
-import { 
-  Button, 
-  Input, 
-  Textarea, 
-  Card, 
-  Form, 
+import {
+  Button,
+  Input,
+  Textarea,
+  Card,
+  Form,
   Alert,
   Grid
 } from '../../components/ui/StandardComponents';
@@ -23,6 +23,7 @@ import { quoteRequestSchema } from '../../validators/bookingSchema';
 import type { Booking } from '../../types/types';
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
+import { formatPrice } from '../../utils/formatPrice';
 
 type QuoteFormInput = z.input<typeof quoteRequestSchema>;
 type QuoteFormData = z.output<typeof quoteRequestSchema>;
@@ -51,21 +52,36 @@ interface QuoteBookingPayload {
   kitId?: string;
   equipmentIds?: string[];
   serviceIds?: string[];
+  couponCode?: string;
+}
+
+interface AppliedCoupon {
+  code: string;
+  discountAmount: number;
+}
+
+function getEquipmentUnitPrice(item: { pricePerHour?: number | string; equipment?: { pricePerHour?: number | string } }): number {
+  return Number(('pricePerHour' in item ? item.pricePerHour : item.equipment?.pricePerHour) || 0);
 }
 
 export const QuoteRequestPage: React.FC = () => {
   const { cart, clearCart } = useCart();
-  const equipments = cart?.equipments ?? [];
-  const services = cart?.services ?? [];
+  const equipments = useMemo(() => cart?.equipments ?? [], [cart]);
+  const services = useMemo(() => cart?.services ?? [], [cart]);
   const kit = cart?.kit;
   const navigate = useNavigate();
   const { user, setAuthenticatedUser } = useAuth();
   const { addNotification } = useNotifications();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<QuoteFormInput, unknown, QuoteFormData>({
         resolver: zodResolver(quoteRequestSchema),
@@ -76,6 +92,53 @@ export const QuoteRequestPage: React.FC = () => {
       startTime: '19:00',
     },
   });
+
+  // Estimativa de subtotal no front (mesma fórmula do backend: kit/equipamentos por hora,
+  // serviços fixos) — só para pré-visualizar o desconto do cupom antes do envio. O valor
+  // final e autoritativo continua sendo calculado e validado no servidor.
+  const durationValue = Number(watch('duration')) || 0;
+  const subtotal = useMemo(() => {
+    const kitsPrice = kit?.price ? Number(kit.price) * durationValue : 0;
+    const equipmentsPrice = equipments.reduce((sum, it) => sum + getEquipmentUnitPrice(it), 0) * durationValue;
+    const servicesPrice = services.reduce((sum, it) => sum + Number((it as { price?: number | string }).price || 0), 0);
+    return kitsPrice + equipmentsPrice + servicesPrice;
+  }, [kit, equipments, services, durationValue]);
+
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim();
+    if (!code) return;
+
+    setCouponLoading(true);
+    setCouponError(null);
+    try {
+      const resp = await api.post('/coupons/validate', { code, subtotal });
+      // api.ts desembrulha automaticamente o envelope { success, data } — resp.data já é o
+      // payload interno; resp.data?.data cobre o caso defensivo de vir sem o envelope.
+      const result = resp?.data?.data ?? resp?.data;
+      if (result?.valid) {
+        setAppliedCoupon({ code: code.toUpperCase(), discountAmount: Number(result.discountAmount) || 0 });
+        addNotification({
+          type: 'success',
+          title: 'Cupom aplicado!',
+          message: `Desconto de ${formatPrice(result.discountAmount)} aplicado ao seu orçamento.`,
+        });
+      } else {
+        setAppliedCoupon(null);
+        setCouponError(result?.reason || 'Cupom inválido.');
+      }
+    } catch (err: unknown) {
+      const msg = (axios.isAxiosError(err) && err.response?.data?.message) || 'Não foi possível validar o cupom agora.';
+      setCouponError(msg);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput('');
+    setCouponError(null);
+  };
 
   const onSubmit: SubmitHandler<QuoteFormData> = async (data) => {
     setServerError(null);
@@ -132,6 +195,7 @@ export const QuoteRequestPage: React.FC = () => {
 
       if (data.email) bookingData.clientEmail = data.email;
       if (kit?.id) bookingData.kitId = kit.id;
+      if (appliedCoupon) bookingData.couponCode = appliedCoupon.code;
       
       const equipmentIds = equipments.map((it) => {
         if ('id' in it) return it.id;
@@ -156,13 +220,18 @@ export const QuoteRequestPage: React.FC = () => {
         headers: { 'Idempotency-Key': idempotencyKey }
       });
 
-      const createdBooking: Booking | null = resp?.data?.data ?? resp?.data ?? null;
+      // api.ts desembrulha { success, data } automaticamente, então resp.data já é o `data`
+      // do backend. Para /bookings ele é a própria reserva; para /bookings/guest ele é
+      // { booking, user, token, refreshToken } (ver bookingController.createGuest) — daí o
+      // fallback: usa `.booking` quando existe, senão trata resp.data como a reserva em si.
+      const responseData = resp?.data?.data ?? resp?.data;
+      const createdBooking: Booking | null = responseData?.booking ?? responseData ?? null;
 
       // Checkout de convidado: o backend já criou a conta e autenticou (cookies httpOnly
       // na resposta) — só falta refletir isso no estado local para "Minhas Reservas" etc.
       // funcionarem imediatamente, sem exigir um login manual separado.
-      if (!user?.id && resp?.data?.user) {
-        setAuthenticatedUser(resp.data.user);
+      if (!user?.id && responseData?.user) {
+        setAuthenticatedUser(responseData.user);
       }
 
       ReactGA.event({
@@ -445,6 +514,80 @@ export const QuoteRequestPage: React.FC = () => {
               rows={4}
               placeholder="Deseja acrescentar algum detalhe específico sobre o local, acessos ou necessidades técnicas?"
             />
+          </div>
+
+          {/* Seção 6: Cupom de Desconto */}
+          <div className="bg-muted/10 p-6 md:p-8 rounded-[2rem] border border-border/50">
+            <h2 className="text-xl font-bold flex items-center gap-3 text-foreground mb-6">
+              <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+                <Tag className="h-5 w-5" />
+              </div>
+              Cupom de Desconto
+            </h2>
+
+            {appliedCoupon ? (
+              <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                <div>
+                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                    Cupom {appliedCoupon.code} aplicado
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Desconto de {formatPrice(appliedCoupon.discountAmount)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                  aria-label="Remover cupom"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Input
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value)}
+                  placeholder="Ex: BEMVINDO10"
+                  className="bg-card uppercase flex-1"
+                  error={couponError || undefined}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleApplyCoupon}
+                  isLoading={couponLoading}
+                  disabled={!couponInput.trim()}
+                >
+                  Aplicar
+                </Button>
+              </div>
+            )}
+
+            {subtotal > 0 && (
+              <div className="mt-6 pt-6 border-t border-border/50 space-y-2 text-sm">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal estimado</span>
+                  <span className="tabular-nums">{formatPrice(subtotal)}</span>
+                </div>
+                {appliedCoupon && (
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <span>Desconto ({appliedCoupon.code})</span>
+                    <span className="tabular-nums">- {formatPrice(appliedCoupon.discountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-foreground font-bold text-base pt-2">
+                  <span>Total estimado</span>
+                  <span className="tabular-nums">
+                    {formatPrice(Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0)))}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground italic pt-1">
+                  Valor estimado — o valor final será confirmado pela nossa equipe.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="pt-6">
