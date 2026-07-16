@@ -156,6 +156,11 @@ const CollaboratorNotificationsPage = lazy(() =>
 const CollaboratorSettingsPage = lazy(() =>
   import('./pages/collaborator/CollaboratorSettingsPage').then((m) => ({ default: m.default }))
 );
+// Achado (auditoria de produto): página completa e funcional (chat real via API/Socket.IO)
+// mas nunca importada/roteada — o link "Mensagens" do dashboard do colaborador caía em 404.
+const CollaboratorMessagesPage = lazy(() =>
+  import('./pages/collaborator/CollaboratorMessagesPage').then((m) => ({ default: m.default }))
+);
 
 // Admin Pages - Lazy Loading (Heavy components)
 const AdminDashboardPage = lazy(() =>
@@ -553,6 +558,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute role="COLLABORATOR">
             <CollaboratorSettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/colaborador/mensagens"
+        element={
+          <ProtectedRoute role="COLLABORATOR">
+            <CollaboratorMessagesPage />
           </ProtectedRoute>
         }
       />
