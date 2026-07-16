@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   User, 
   Lock, 
@@ -38,6 +38,7 @@ const CollaboratorSettingsPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
 
 
@@ -61,7 +62,13 @@ const CollaboratorSettingsPage: React.FC = () => {
 
         // Configurações armazenadas em profileSettings (JSON) ou defaults
         const userSettings = data.user?.profileSettings || {};
-        
+
+        setSecuritySettings((prev) => ({
+          ...prev,
+          twoFactorEnabled: userSettings.security?.twoFactorEnabled ?? false,
+          loginNotifications: userSettings.security?.loginNotifications ?? true
+        }));
+
         setPrivacySettings({
             profileVisibility: userSettings.privacy?.profileVisibility || 'public',
             showEmail: userSettings.privacy?.showEmail ?? false,
@@ -109,10 +116,17 @@ const CollaboratorSettingsPage: React.FC = () => {
          if (securitySettings.newPassword) {
              await authAPI.changePassword(securitySettings.currentPassword, securitySettings.newPassword);
          }
+         // 2FA de fato (TOTP/códigos de backup) não existe nesta plataforma ainda — isto só
+         // guarda a preferência do usuário em User.profileSettings, sem fingir aplicar uma
+         // camada de segurança real. Ver getMySettings/updateMySettings no backend.
+         await collaboratorProfileAPI.updateSettings({
+             security: {
+                 twoFactorEnabled: securitySettings.twoFactorEnabled,
+                 loginNotifications: securitySettings.loginNotifications
+             }
+         });
       } else {
          // Salvar privacy/payment em User.profileSettings
-         // Assumindo endpoint genérico ou updateProfile manipulando user settings
-         // Mock temporário para esta parte específica se o backend não suportar JSON update direto ainda
          await collaboratorProfileAPI.updateSettings({
              privacy: privacySettings,
              payment: paymentSettings
@@ -153,6 +167,17 @@ const CollaboratorSettingsPage: React.FC = () => {
                 message: 'Erro ao atualizar foto'
               });
           }
+      }
+  };
+
+  const handleRemovePhoto = async () => {
+      try {
+          await authAPI.updateProfile({ avatarUrl: null });
+          setProfileSettings((prev) => (prev ? { ...prev, profileImage: '' } : prev));
+          addNotification({ type: 'success', title: 'Sucesso', message: 'Foto removida.' });
+      } catch (error) {
+          logger.error('Erro ao remover foto:', 'CollaboratorSettingsPage', error);
+          addNotification({ type: 'error', title: 'Erro', message: 'Erro ao remover foto' });
       }
   };
 
@@ -236,13 +261,14 @@ const CollaboratorSettingsPage: React.FC = () => {
                       className="w-20 h-20 rounded-full object-cover"
                     />
                     <button
+                      onClick={() => avatarInputRef.current?.click()}
                       className="absolute bottom-0 right-0 p-1 bg-primary text-primary-foreground rounded-full hover:bg-primary/90"
                       aria-label="Alterar foto do perfil"
                     >
                       <Camera className="h-3 w-3" />
                     </button>
                   </div>
-                  
+
                   <div className="flex-1">
                     <h3 className="font-medium mb-1">Foto do Perfil</h3>
                     <p className="text-sm text-muted-foreground mb-3">
@@ -253,6 +279,7 @@ const CollaboratorSettingsPage: React.FC = () => {
                         <Upload className="h-4 w-4" />
                         <span>Alterar Foto</span>
                         <input
+                          ref={avatarInputRef}
                           type="file"
                           accept="image/*"
                           onChange={handleImageUpload}
@@ -260,6 +287,7 @@ const CollaboratorSettingsPage: React.FC = () => {
                         />
                       </label>
                       <button
+                        onClick={handleRemovePhoto}
                         className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-md"
                         aria-label="Remover foto do perfil"
                       >

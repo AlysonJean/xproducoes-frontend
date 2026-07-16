@@ -53,10 +53,25 @@ interface RawPaymentRecord {
   status: 'PAID' | 'PENDING' | 'ABERTO' | 'ATRASADO' | 'CANCELADO';
 }
 
+// Substitui o botão "Exportar" que não tinha handler algum (achado de auditoria).
+function downloadMonthlyEarningsCsv(rows: Array<{ month: string; events: number; earnings: number }>) {
+  const header = 'Mês,Eventos,Ganhos (R$)';
+  const lines = rows.map((r) => `${r.month},${r.events},${r.earnings.toFixed(2)}`);
+  const csv = [header, ...lines].join('\n');
+  const blob = new Blob([String.fromCharCode(0xfeff) + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `ganhos-mensais-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 const CollaboratorEarningsPage: React.FC = () => {
   const [earnings, setEarnings] = useState<EarningsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'month' | 'year'>('month');
+  const [showAllPayments, setShowAllPayments] = useState(false);
 
   useEffect(() => {
     const fetchEarnings = async () => {
@@ -231,7 +246,11 @@ const CollaboratorEarningsPage: React.FC = () => {
                 <option value="month">Últimos 6 meses</option>
                 <option value="year">Último ano</option>
               </select>
-              <button className="flex items-center space-x-2 px-3 py-1 text-sm text-primary hover:text-primary/80 transition-colors">
+              <button
+                onClick={() => downloadMonthlyEarningsCsv(earnings?.monthlyData || [])}
+                disabled={!earnings?.monthlyData?.length}
+                className="flex items-center space-x-2 px-3 py-1 text-sm text-primary hover:text-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <Download className="w-4 h-4" />
                 <span>Exportar</span>
               </button>
@@ -257,16 +276,21 @@ const CollaboratorEarningsPage: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Pagamentos Recentes */}
-          <SimpleCard 
+          <SimpleCard
             title="Pagamentos Recentes"
             headerRight={
-              <button className="text-sm text-primary hover:text-primary/80 font-medium transition-colors">
-                Ver todos
-              </button>
+              (earnings?.recentPayments?.length || 0) > 5 && (
+                <button
+                  onClick={() => setShowAllPayments((prev) => !prev)}
+                  className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+                >
+                  {showAllPayments ? 'Ver menos' : 'Ver todos'}
+                </button>
+              )
             }
           >
             <div className="space-y-4">
-              {earnings?.recentPayments?.map((payment) => (
+              {(showAllPayments ? earnings?.recentPayments : earnings?.recentPayments?.slice(0, 5))?.map((payment) => (
                 <div key={payment.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border/30">
                   <div className="flex items-center space-x-4">
                     <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">

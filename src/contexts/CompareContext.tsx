@@ -1,8 +1,9 @@
 // Provider + hook(s) co-localizados de propósito (padrão oficial de Context do React) —
 // só afeta a granularidade do Fast Refresh em dev, sem efeito em produção/correção.
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import type { Equipment } from '../types/types';
+import { logger } from '../utils/logger';
 
 interface CompareContextType {
   items: Equipment[];
@@ -24,9 +25,29 @@ export const useCompare = () => {
 };
 
 const MAX_COMPARE_ITEMS = 4;
+// Achado (auditoria de produto): a lista de comparação vivia só em memória — um refresh
+// perdia tudo. Persistida em localStorage, mesmo padrão do carrinho de convidado.
+const COMPARE_STORAGE_KEY = 'xproducoes-compare';
+
+function readStoredCompare(): Equipment[] {
+  try {
+    const raw = localStorage.getItem(COMPARE_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Equipment[]) : [];
+  } catch {
+    return [];
+  }
+}
 
 export const CompareProvider = ({ children }: { children: React.ReactNode }) => {
-  const [items, setItems] = useState<Equipment[]>([]);
+  const [items, setItems] = useState<Equipment[]>(() => readStoredCompare());
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(items));
+    } catch (e) {
+      logger.warn('Não foi possível salvar a comparação no localStorage', 'CompareContext', e);
+    }
+  }, [items]);
 
   const addItem = (equipment: Equipment) => {
     setItems((prev) => {

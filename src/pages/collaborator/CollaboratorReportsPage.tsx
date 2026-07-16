@@ -6,14 +6,11 @@ import {
   Clock,
   Target,
   Star,
-  FileText,
   TrendingUp,
   Download,
-  Eye,
-  BarChart3,
   Calendar
 } from 'lucide-react';
-import { LineChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, type PieLabelRenderProps } from 'recharts';
+import { LineChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { collaboratorProfileAPI } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 
@@ -25,6 +22,28 @@ interface CollaboratorStatsResponse {
   completionRate?: number;
   averageRating?: number;
   monthlyEarnings?: Array<{ month: string; events: number; earnings: number }>;
+  monthlyRatings?: Array<{ month: string; averageRating: number }>;
+  mostProductiveHour?: number | null;
+  averageEventDuration?: number;
+  workingDaysPerMonth?: number;
+}
+
+// Baixa os dados mensais já carregados como CSV — substitui os 3 cards de "exportar" que
+// não tinham nenhum handler (achado de auditoria: eram apenas divs decorativas com ícone
+// de download). Um único export real em vez de três botões fingindo gerar arquivos distintos.
+function downloadMonthlyReportCsv(rows: Array<{ month: string; events: number; rating: number; earnings: number }>) {
+  const header = 'Mês,Eventos,Avaliação Média,Ganhos (R$)';
+  const lines = rows.map((r) => `${r.month},${r.events},${r.rating.toFixed(2)},${r.earnings.toFixed(2)}`);
+  const csv = [header, ...lines].join('\n');
+  // BOM (via code point, não literal — evita caractere invisível no código-fonte) para o
+  // Excel reconhecer UTF-8 e não corromper os acentos.
+  const blob = new Blob([String.fromCharCode(0xfeff) + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `relatorio-performance-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 const CollaboratorReportsPage: React.FC = () => {
@@ -40,29 +59,30 @@ const CollaboratorReportsPage: React.FC = () => {
         const response = await collaboratorProfileAPI.getStats();
         const apiStats = (response.data?.data ?? response.data) as CollaboratorStatsResponse;
 
+        // Mapa mês -> avaliação média real (histórico mensal, ver collaboratorRepository.getMonthlyRatings)
+        const ratingsByMonth = new Map<string, number>(
+          asArray<{ month: string; averageRating: number }>(apiStats?.monthlyRatings).map((r) => [r.month, Number(r.averageRating)])
+        );
+
         // Mapear dados da API para o formato do relatório
         const report: ReportData = {
           performance: {
             eventsCompleted: Number(apiStats.totalEvents || 0),
             completionRate: Number(apiStats.completionRate || 0),
             averageRating: Number(apiStats.averageRating || 0),
-            onTimeDelivery: 100 // Mock: Backend ainda não calcula pontualidade baseado em check-in/out
           },
-           // Mapear ganhos mensais do backend
+           // Mapear ganhos mensais do backend — avaliação mensal real quando existir para o mês,
+           // senão cai na média geral (ex.: mês sem nenhuma avaliação registrada ainda).
                   monthly: asArray<{ month: string; events: number; earnings: number }>(apiStats?.monthlyEarnings).map((m) => ({
              month: m.month,
              events: Number(m.events),
-             rating: Number(apiStats.averageRating), // Backend ainda não tem rating mensal histórico, usando média geral
+             rating: ratingsByMonth.get(m.month) ?? Number(apiStats.averageRating || 0),
              earnings: Number(m.earnings)
            })).slice(0, 6),
-          // Mock: Backend ainda não retorna distribuição por tipos
-          eventTypes: [
-            { type: 'Geral', count: Number(apiStats.totalEvents || 0), percentage: 100, color: '#3b82f6' }
-          ],
           timeAnalysis: {
-            mostProductiveHour: 'N/A',
-            averageEventDuration: 'N/A', // Backend stats não tem duração média ainda
-            workingDaysPerMonth: 0
+            mostProductiveHour: apiStats.mostProductiveHour != null ? `${apiStats.mostProductiveHour}h` : 'N/A',
+            averageEventDuration: apiStats.averageEventDuration ? `${apiStats.averageEventDuration.toFixed(1)}h` : 'N/A',
+            workingDaysPerMonth: Math.round((apiStats.workingDaysPerMonth || 0) * 10) / 10
           }
         };
         
@@ -76,32 +96,6 @@ const CollaboratorReportsPage: React.FC = () => {
 
     fetchReportData();
   }, [selectedPeriod]);
-
-    const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percentage }: PieLabelRenderProps & { percentage?: number }) => {
-    const RADIAN = Math.PI / 180;
-    const cxNum = Number(cx) || 0;
-    const cyNum = Number(cy) || 0;
-    const midAngleNum = Number(midAngle) || 0;
-    const innerRadiusNum = Number(innerRadius) || 0;
-    const outerRadiusNum = Number(outerRadius) || 0;
-    const radius = innerRadiusNum + (outerRadiusNum - innerRadiusNum) * 0.5;
-    const x = cxNum + radius * Math.cos(-midAngleNum * RADIAN);
-    const y = cyNum + radius * Math.sin(-midAngleNum * RADIAN);
-
-    return (
-      <text
-        x={x}
-        y={y}
-        fill="white"
-        textAnchor={x > cxNum ? 'start' : 'end'}
-        dominantBaseline="central"
-        fontSize="12"
-        fontWeight="bold"
-      >
-        {`${(percentage ?? 0).toFixed(1)}%`}
-      </text>
-    );
-  };
 
   if (loading) {
     return (
@@ -127,14 +121,14 @@ const CollaboratorReportsPage: React.FC = () => {
     >
       <div className="space-y-8">
         {/* Métricas de Performance */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <StatsCard
             title="Eventos Concluídos"
             value={reportData?.performance?.eventsCompleted || 0}
             description="Total de eventos finalizados"
             icon={<Calendar className="h-5 w-5" />}
           />
-          
+
           <StatsCard
             title="Taxa de Conclusão"
             value={`${reportData?.performance?.completionRate || 0}%`}
@@ -148,99 +142,45 @@ const CollaboratorReportsPage: React.FC = () => {
             description="Nota média dos clientes"
             icon={<Star className="h-5 w-5" />}
           />
-
-          <StatsCard
-            title="Pontualidade"
-            value={`${reportData?.performance?.onTimeDelivery || 0}%`}
-            description="Eventos entregues no prazo"
-            icon={<Clock className="h-5 w-5" />}
-          />
         </div>
 
-        {/* Gráficos de Análise */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Performance Mensal */}
-          <SimpleCard 
-            title="Performance Mensal"
-            headerRight={
-              <div className="flex items-center space-x-4">
-                <select 
-                  value={selectedPeriod}
-                  onChange={(e) => setSelectedPeriod(e.target.value as '3months' | '6months' | '1year')}
-                  className="px-3 py-1 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  aria-label="Selecionar período do relatório"
-                >
-                  <option value="3months">Últimos 3 meses</option>
-                  <option value="6months">Últimos 6 meses</option>
-                  <option value="1year">Último ano</option>
-                </select>
-              </div>
-            }
-          >
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={reportData?.monthly || []}>
-                  <XAxis dataKey="month" />
-                  <YAxis yAxisId="left" />
-                  <YAxis yAxisId="right" orientation="right" />
-                  <Tooltip 
-                    formatter={(value, name) => {
-                      if (name === 'events') return [value, 'Eventos'];
-                      if (name === 'rating') return [`${value}★`, 'Avaliação'];
-                      return [value, name];
-                    }}
-                  />
-                  <Bar yAxisId="left" dataKey="events" fill="#3b82f6" name="events" />
-                  <Line yAxisId="right" type="monotone" dataKey="rating" stroke="#10b981" strokeWidth={3} name="rating" />
-                </LineChart>
-              </ResponsiveContainer>
+        {/* Performance Mensal */}
+        <SimpleCard
+          title="Performance Mensal"
+          headerRight={
+            <div className="flex items-center space-x-4">
+              <select
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value as '3months' | '6months' | '1year')}
+                className="px-3 py-1 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                aria-label="Selecionar período do relatório"
+              >
+                <option value="3months">Últimos 3 meses</option>
+                <option value="6months">Últimos 6 meses</option>
+                <option value="1year">Último ano</option>
+              </select>
             </div>
-          </SimpleCard>
-
-          {/* Tipos de Eventos */}
-          <SimpleCard title="Distribuição por Tipo de Evento">
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={reportData?.eventTypes || []}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={renderCustomLabel}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="count"
-                  >
-                    {reportData?.eventTypes?.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`${value} eventos`, 'Quantidade']} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            
-            {/* Legenda */}
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {reportData?.eventTypes?.map((type, index) => (
-                <div key={index} className="flex items-center space-x-2">
-                  <div 
-                    className={`w-3 h-3 rounded-full ${
-                      type.color === '#3b82f6' ? 'bg-blue-500' :
-                      type.color === '#10b981' ? 'bg-emerald-500' :
-                      type.color === '#f59e0b' ? 'bg-amber-500' :
-                      type.color === '#ef4444' ? 'bg-red-500' :
-                      'bg-indigo-500'
-                    }`}
-                  ></div>
-                  <span className="text-sm text-foreground">{type.type}</span>
-                  <span className="text-sm text-muted-foreground">({type.count})</span>
-                </div>
-              ))}
-            </div>
-          </SimpleCard>
-        </div>
+          }
+        >
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={reportData?.monthly || []}>
+                <XAxis dataKey="month" />
+                <YAxis yAxisId="left" />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip
+                  formatter={(value, name) => {
+                    if (name === 'events') return [value, 'Eventos'];
+                    if (name === 'rating') return [`${value}★`, 'Avaliação'];
+                    return [value, name];
+                  }}
+                />
+                <Bar yAxisId="left" dataKey="events" fill="#3b82f6" name="events" />
+                <Line yAxisId="right" type="monotone" dataKey="rating" stroke="#10b981" strokeWidth={3} name="rating" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </SimpleCard>
 
         {/* Análises Detalhadas */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -294,53 +234,20 @@ const CollaboratorReportsPage: React.FC = () => {
             </div>
           </SimpleCard>
 
-          {/* Ações de Relatório */}
-          <SimpleCard title="Exportar Relatórios">
+          {/* Exportar dados */}
+          <SimpleCard title="Exportar Dados">
             <div className="space-y-4">
-              <div className="p-4 border border-border rounded-lg hover:border-primary/50 transition-colors cursor-pointer">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <FileText className="w-5 h-5 text-primary" />
-                    <div>
-                      <p className="font-medium text-foreground">Relatório Completo</p>
-                      <p className="text-sm text-muted-foreground">PDF com todas as métricas</p>
-                    </div>
-                  </div>
-                  <Download className="w-5 h-5 text-muted-foreground" />
-                </div>
-              </div>
-
-              <div className="p-4 border border-border rounded-lg hover:border-primary/50 transition-colors cursor-pointer">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <BarChart3 className="w-5 h-5 text-primary" />
-                    <div>
-                      <p className="font-medium text-foreground">Dados de Performance</p>
-                      <p className="text-sm text-muted-foreground">Planilha Excel com dados brutos</p>
-                    </div>
-                  </div>
-                  <Download className="w-5 h-5 text-muted-foreground" />
-                </div>
-              </div>
-
-              <div className="p-4 border border-border rounded-lg hover:border-primary/50 transition-colors cursor-pointer">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Eye className="w-5 h-5 text-primary" />
-                    <div>
-                      <p className="font-medium text-foreground">Resumo Executivo</p>
-                      <p className="text-sm text-muted-foreground">Visão geral para apresentações</p>
-                    </div>
-                  </div>
-                  <Download className="w-5 h-5 text-muted-foreground" />
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-border">
-                <button className="w-full bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
-                  Gerar Relatório Personalizado
-                </button>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Baixe os dados mensais de eventos, avaliação e ganhos exibidos acima em uma planilha CSV.
+              </p>
+              <button
+                onClick={() => downloadMonthlyReportCsv(reportData?.monthly || [])}
+                disabled={!reportData?.monthly?.length}
+                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download className="w-4 h-4" />
+                Exportar Dados de Performance (CSV)
+              </button>
             </div>
           </SimpleCard>
         </div>

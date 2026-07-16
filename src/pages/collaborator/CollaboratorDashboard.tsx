@@ -182,9 +182,9 @@ const RecentActivities: React.FC<{ activities: CollaboratorActivity[] }> = ({ ac
   <SimpleCard 
     title="Atividades Recentes" 
     headerRight={
-      <button className="text-sm text-primary hover:text-primary/80 font-medium transition-colors">
+      <Link to="/colaborador/notificacoes" className="text-sm text-primary hover:text-primary/80 font-medium transition-colors">
         Ver todas
-      </button>
+      </Link>
     }
   >
     {activities.length === 0 ? (

@@ -1306,19 +1306,12 @@ export interface ReportData {
     eventsCompleted: number;
     completionRate: number;
     averageRating: number;
-    onTimeDelivery: number;
   };
   monthly?: Array<{
     month: string;
     events: number;
     rating: number;
     earnings: number;
-  }>;
-  eventTypes?: Array<{
-    type: string;
-    count: number;
-    percentage: number;
-    color: string;
   }>;
   timeAnalysis?: {
     mostProductiveHour: string;

@@ -29,6 +29,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useSocket } from '../../hooks/useSocket';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { logger } from '../../utils/logger';
 
 interface RoadmapTask {
@@ -93,11 +94,13 @@ interface RoadmapBooking {
 
 const CollaboratorEventRoadmapPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const { addNotification } = useNotifications();
   const [booking, setBooking] = useState<RoadmapBooking | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'roadmap' | 'rider' | 'checklist' | 'logistics' | 'team' | 'chat'>('roadmap');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [alerting, setAlerting] = useState(false);
 
   // Expense Form State (Restored)
   const [showExpenseForm, setShowExpenseForm] = useState(false);
@@ -196,6 +199,29 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
       logger.error('Erro ao enviar mensagem:', 'CollaboratorEventRoadmapPage', error);
     } finally {
       setSending(false);
+    }
+  };
+
+  // Achado (auditoria de produto): botão "Alertar Produção" não tinha nenhum onClick.
+  // Reaproveita o chat do evento (mesmo chatId do formulário acima) — os admins agora são
+  // sempre participantes desse chat (ver chatService.getOrCreateEventChat), então uma
+  // mensagem urgente aqui realmente chega até a equipe, sem precisar de um endpoint novo.
+  const handleAlertProduction = async () => {
+    if (!booking?.chats?.[0]?.id) return;
+
+    setAlerting(true);
+    try {
+      const chatId = booking.chats[0].id;
+      await collaboratorMessagesAPI.sendMessage(
+        chatId,
+        `🚨 Alerta urgente: preciso de suporte da produção agora para o evento "${booking.eventTitle || id}".`
+      );
+      addNotification({ type: 'success', title: 'Produção alertada', message: 'Sua mensagem urgente foi enviada para a equipe.' });
+    } catch (error) {
+      logger.error('Erro ao alertar produção:', 'CollaboratorEventRoadmapPage', error);
+      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível alertar a produção agora.' });
+    } finally {
+      setAlerting(false);
     }
   };
 
@@ -811,7 +837,13 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
            <div className="flex-1" />
            <div className="flex items-center gap-3 p-2.5 bg-muted/40 rounded-3xl border border-border/30">
               <span className="text-[10px] font-black uppercase text-muted-foreground/60 px-4">Centro de Apoio</span>
-              <button className="px-6 py-2.5 bg-accent text-accent-light text-xs font-black rounded-2xl shadow-lg border border-accent-light/10 hover:shadow-accent/20 transition-all active:scale-95">Alertar Produção</button>
+              <button
+                onClick={handleAlertProduction}
+                disabled={alerting || !booking?.chats?.[0]?.id}
+                className="px-6 py-2.5 bg-accent text-accent-light text-xs font-black rounded-2xl shadow-lg border border-accent-light/10 hover:shadow-accent/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {alerting ? 'Enviando...' : 'Alertar Produção'}
+              </button>
            </div>
         </div>
       </div>

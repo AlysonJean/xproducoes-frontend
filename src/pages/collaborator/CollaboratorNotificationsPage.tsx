@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Bell, 
-  Mail, 
-  MessageSquare, 
-  Calendar, 
-  Settings, 
+import { useNavigate } from 'react-router-dom';
+import {
+  Bell,
+  Mail,
+  MessageSquare,
+  Calendar,
+  Settings,
   Check,
   Eye,
   Trash2,
@@ -69,6 +70,7 @@ interface NotificationSettings {
 }
 
 const CollaboratorNotificationsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -334,8 +336,10 @@ const CollaboratorNotificationsPage: React.FC = () => {
                     {filteredNotifications.length} notificação(ões)
                   </span>
                   <button
+                    onClick={() => { setFilter('all'); setTypeFilter('all'); setSearchTerm(''); }}
                     className="p-2 text-muted-foreground hover:bg-muted rounded-md"
-                    aria-label="Configurações de filtro"
+                    aria-label="Limpar filtros"
+                    title="Limpar filtros"
                   >
                     <Filter className="h-4 w-4" />
                   </button>
@@ -428,7 +432,10 @@ const CollaboratorNotificationsPage: React.FC = () => {
                       
                       {notification.actionUrl && (
                         <div className="mt-3">
-                          <button className="text-sm text-primary hover:underline">
+                          <button
+                            onClick={() => navigate(notification.actionUrl!)}
+                            className="text-sm text-primary hover:underline"
+                          >
                             Ver detalhes →
                           </button>
                         </div>
