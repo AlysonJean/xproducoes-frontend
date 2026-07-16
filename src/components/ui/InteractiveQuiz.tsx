@@ -1,14 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { GlassCard } from './StandardComponents';
-import { 
-  ChevronRight, 
-  ArrowLeft, 
-  Send, 
-  Heart, 
-  Star, 
-  Building2, 
-  GraduationCap, 
-  PartyPopper, 
+import {
+  ChevronRight,
+  ArrowLeft,
+  Send,
+  Heart,
+  Star,
+  Building2,
+  GraduationCap,
+  PartyPopper,
   MoreHorizontal,
   User,
   Users,
@@ -19,6 +19,9 @@ import {
   Sparkles
 } from 'lucide-react';
 import { getWhatsAppPhone } from '../../utils/whatsapp';
+import { recommendationAPI } from '../../services/api';
+import { formatPrice } from '../../utils/formatPrice';
+import { logger } from '../../utils/logger';
 
 type Step = 'event_type' | 'audience_size' | 'environment' | 'result';
 
@@ -27,6 +30,23 @@ interface QuizState {
   audienceSize: string;
   environment: string;
 }
+
+interface BudgetEquipmentSuggestion {
+  id: string;
+  name: string;
+  pricePerHour: number;
+}
+
+// Achado (auditoria de produto): o quiz qualifica o lead mas nunca estimava nenhum valor —
+// o backend já tinha o endpoint certo (getRecommendationsByBudget) sem nenhuma UI pública
+// consumindo. Faixas aproximadas por porte de público (heurística de "ballpark estimate",
+// não cotação fechada — por isso sempre rotulado como estimativa na tela).
+const BUDGET_RANGE_BY_AUDIENCE: Record<string, [number, number]> = {
+  'Até 100 pessoas': [80, 250],
+  '100 - 300 pessoas': [200, 500],
+  '300 - 600 pessoas': [400, 900],
+  'Mais de 600 pessoas': [800, 2000],
+};
 
 export const InteractiveQuiz = () => {
   const [currentStep, setCurrentStep] = useState<Step>('event_type');
@@ -58,14 +78,44 @@ export const InteractiveQuiz = () => {
     { id: 'Misto', label: 'Semi-aberto / Misto', sublabel: 'Áreas internas e externas', icon: Combine },
   ];
 
+  const [suggestions, setSuggestions] = useState<BudgetEquipmentSuggestion[]>([]);
+  const [loadingEstimate, setLoadingEstimate] = useState(false);
+
+  // Derivável diretamente da resposta já escolhida — não precisa de estado/efeito próprio.
+  const budgetRange = useMemo<[number, number] | null>(() => {
+    if (currentStep !== 'result' || !answers.audienceSize) return null;
+    return BUDGET_RANGE_BY_AUDIENCE[answers.audienceSize] ?? null;
+  }, [currentStep, answers.audienceSize]);
+
   const handleSelect = (category: keyof QuizState, value: string) => {
     setAnswers(prev => ({ ...prev, [category]: value }));
-    
+
     // Automatically advance with smooth transition
     if (category === 'eventType') setTimeout(() => setCurrentStep('audience_size'), 400);
     if (category === 'audienceSize') setTimeout(() => setCurrentStep('environment'), 400);
     if (category === 'environment') setTimeout(() => setCurrentStep('result'), 400);
   };
+
+  // Função nomeada em vez de lógica inline no efeito — evita setState síncrono dentro do
+  // corpo do efeito (react-hooks/set-state-in-effect), mesmo padrão já usado em
+  // HomePage.tsx (fetchPageData).
+  const fetchBudgetSuggestions = useCallback(async (range: [number, number]) => {
+    setLoadingEstimate(true);
+    try {
+      const resp = await recommendationAPI.getByBudget(range[0], range[1], 3);
+      const data = resp?.data?.data ?? resp?.data ?? [];
+      setSuggestions(Array.isArray(data) ? data : []);
+    } catch (e) {
+      logger.warn('Falha ao buscar estimativa de equipamentos por orçamento', 'InteractiveQuiz', e);
+    } finally {
+      setLoadingEstimate(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!budgetRange) return;
+    fetchBudgetSuggestions(budgetRange);
+  }, [budgetRange, fetchBudgetSuggestions]);
 
   const handleBack = () => {
     if (currentStep === 'audience_size') setCurrentStep('event_type');
@@ -74,7 +124,10 @@ export const InteractiveQuiz = () => {
   };
 
   const generateWhatsAppMessage = () => {
-    const message = `Olá! Fiz o teste no site e gostaria de um orçamento pré-qualificado.\n\n*Meu evento:*\n📍 Formato: ${answers.eventType}\n👥 Público: ${answers.audienceSize}\n🏛️ Local: ${answers.environment}\n\nPodem me ajudar com a infraestrutura ideal?`;
+    const rangeLine = budgetRange
+      ? `\n💰 Faixa estimada: ${formatPrice(budgetRange[0])} – ${formatPrice(budgetRange[1])}/hora`
+      : '';
+    const message = `Olá! Fiz o teste no site e gostaria de um orçamento pré-qualificado.\n\n*Meu evento:*\n📍 Formato: ${answers.eventType}\n👥 Público: ${answers.audienceSize}\n🏛️ Local: ${answers.environment}${rangeLine}\n\nPodem me ajudar com a infraestrutura ideal?`;
     return `https://wa.me/${getWhatsAppPhone()}?text=${encodeURIComponent(message)}`;
   };
 
@@ -240,9 +293,38 @@ export const InteractiveQuiz = () => {
             </div>
             
             <h3 className="text-2xl font-black text-foreground uppercase tracking-tighter mb-4 text-center">Temos a configuração exata para você.</h3>
-            
-            <a 
-              href={generateWhatsAppMessage()} 
+
+            {budgetRange && (
+              <div className="mb-8 w-full max-w-lg">
+                <p className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-3">
+                  Faixa estimada de investimento por hora
+                </p>
+                <p className="text-center text-3xl font-black text-foreground mb-4">
+                  {formatPrice(budgetRange[0])} – {formatPrice(budgetRange[1])}
+                </p>
+                {loadingEstimate ? (
+                  <p className="text-center text-xs text-muted-foreground">Buscando equipamentos compatíveis...</p>
+                ) : suggestions.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                      Equipamentos nessa faixa
+                    </p>
+                    {suggestions.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between px-4 py-2 bg-muted/40 rounded-xl border border-border/50 text-sm">
+                        <span className="text-foreground font-medium">{item.name}</span>
+                        <span className="text-primary font-black">{formatPrice(item.pricePerHour)}/h</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                <p className="text-center text-[10px] text-muted-foreground mt-3 italic">
+                  Estimativa de referência — o valor final considera duração, quantidade e serviços adicionais.
+                </p>
+              </div>
+            )}
+
+            <a
+              href={generateWhatsAppMessage()}
               target="_blank" 
               rel="noopener noreferrer"
               className="group relative px-12 py-6 bg-primary text-primary-foreground text-xl font-black rounded-full hover:bg-primary/90 hover:scale-105 transition-all duration-500 shadow-xl shadow-primary/20 flex items-center gap-4 overflow-hidden"
