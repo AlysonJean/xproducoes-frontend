@@ -3,6 +3,7 @@ import { useRevealOnView } from '../hooks/useRevealOnView';
 import { useParams, Link } from 'react-router-dom';
 import ReactGA from 'react-ga4';
 import { ChevronLeft, ChevronRight, Package, Shield, Zap } from 'lucide-react';
+import { TrustBenefits } from '../components/ui/TrustBenefits';
 import { apiFetch } from '../services/api';
 import { useCart } from '@/hooks/useCart';
 import BrandLoader from '../components/ui/BrandLoader';
@@ -280,31 +281,13 @@ export const EquipmentDetailPage = () => {
       </div>
 
       {/* Benefits Section (Premium styling) */}
-      <div className="mt-16 bg-muted/10 -mx-6 md:-mx-8 p-12 rounded-b-lg border-t border-border grid grid-cols-1 md:grid-cols-3 gap-10">
-          <div className="flex flex-col items-center text-center space-y-4">
-            <div className="w-16 h-16 bg-success/10 rounded-3xl flex items-center justify-center border border-success/20 shadow-xl shadow-success/5 rotate-3">
-              <Shield className="w-8 h-8 text-success" />
-            </div>
-            <h3 className="text-xl font-black text-foreground">Equipamento Revisado</h3>
-            <p className="text-muted-foreground text-sm max-w-[200px]">Testados rigorosamente antes de cada entrega para garantir zero falhas.</p>
-          </div>
-
-          <div className="flex flex-col items-center text-center space-y-4">
-            <div className="w-16 h-16 bg-blue-500/10 rounded-3xl flex items-center justify-center border border-blue-500/20 shadow-xl shadow-blue-500/5 -rotate-3">
-              <Package className="w-8 h-8 text-blue-500" />
-            </div>
-            <h3 className="text-xl font-black text-foreground">Suporte Especializado</h3>
-            <p className="text-muted-foreground text-sm max-w-[200px]">Nossa equipe técnica disponível para auxiliar na configuração se necessário.</p>
-          </div>
-
-          <div className="flex flex-col items-center text-center space-y-4">
-            <div className="w-16 h-16 bg-primary/10 rounded-3xl flex items-center justify-center border border-primary/20 shadow-xl shadow-primary/5 rotate-1">
-              <Zap className="w-8 h-8 text-primary" />
-            </div>
-            <h3 className="text-xl font-black text-foreground">Entrega Ágil</h3>
-            <p className="text-muted-foreground text-sm max-w-[200px]">Logística otimizada para garantir que o material chegue sempre no horário.</p>
-          </div>
-      </div>
+      <TrustBenefits
+        items={[
+          { icon: Shield, iconColor: 'success', title: 'Equipamento Revisado', description: 'Testados rigorosamente antes de cada entrega para garantir zero falhas.' },
+          { icon: Package, iconColor: 'blue-500', title: 'Suporte Especializado', description: 'Nossa equipe técnica disponível para auxiliar na configuração se necessário.' },
+          { icon: Zap, iconColor: 'primary', title: 'Entrega Ágil', description: 'Logística otimizada para garantir que o material chegue sempre no horário.' },
+        ]}
+      />
 
       {/* Recommendations */}
       {similarRecommendations.recommendations.length > 0 && (

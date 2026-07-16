@@ -713,6 +713,14 @@ export interface BookingDetails {
     payments?: unknown[];
   }>;
   eventTitle?: string;
+  couponId?: string;
+  discountAmount?: number | string;
+  coupon?: {
+    id?: string;
+    code?: string;
+    discountType?: 'PERCENTAGE' | 'FIXED';
+    discountValue?: number | string;
+  };
 }
 
 export interface BookingListItem {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ChevronRight, ChevronLeft, User, Package } from 'lucide-react';
+import { ChevronRight, ChevronLeft, User, Package, Shield, Zap } from 'lucide-react';
+import { TrustBenefits } from '../components/ui/TrustBenefits';
 import ReactGA from 'react-ga4';
 import { apiFetch } from '../services/api';
 import { useCart } from '@/hooks/useCart';
@@ -296,6 +297,15 @@ export const KitDetailPage = () => {
           </button>
         </div>
       </div>
+
+      {/* Benefits Section (Premium styling) — Equipment/Service já tinham, Kit não */}
+      <TrustBenefits
+        items={[
+          { icon: Package, iconColor: 'success', title: 'Kit Completo e Testado', description: 'Todos os itens do combo revisados e configurados juntos antes da entrega.' },
+          { icon: Shield, iconColor: 'blue-500', title: 'Compatibilidade Garantida', description: 'Equipamentos do kit já testados em conjunto — sem surpresas na hora da montagem.' },
+          { icon: Zap, iconColor: 'primary', title: 'Entrega Ágil', description: 'Logística otimizada para garantir que o material chegue sempre no horário.' },
+        ]}
+      />
 
       {/* Included Equipments Grid - Grouped by Category */}
       <div className="border-t border-border pt-12">

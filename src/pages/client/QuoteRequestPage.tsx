@@ -24,6 +24,7 @@ import type { Booking } from '../../types/types';
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
+import { TrustStrip } from '../../components/ui/TrustStrip';
 
 type QuoteFormInput = z.input<typeof quoteRequestSchema>;
 type QuoteFormData = z.output<typeof quoteRequestSchema>;
@@ -603,6 +604,7 @@ export const QuoteRequestPage: React.FC = () => {
             <p className="text-center text-xs text-muted-foreground mt-4 italic">
               * Ao clicar em confirmar, seu pedido será enviado para nossa equipe e entraremos em contato em breve.
             </p>
+            <TrustStrip className="mt-6 pt-6 border-t border-border/50" />
           </div>
         </Form>
       </Card>

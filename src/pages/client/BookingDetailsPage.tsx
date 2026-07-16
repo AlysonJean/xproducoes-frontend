@@ -7,12 +7,15 @@ import { formatPrice } from '@/utils/formatPrice';
 import BrandLoader from '@/components/ui/BrandLoader';
 import { logger } from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { BookingChatPanel } from '../../components/client/BookingChatPanel';
+import { generateBookingProposalPdf } from '../../utils/generateBookingProposalPdf';
 
 export const BookingDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { addNotification } = useNotifications();
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +24,7 @@ export const BookingDetailsPage = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [downloadingProposal, setDownloadingProposal] = useState(false);
 
   const fetchBookingDetails = useCallback(async () => {
     if (!id) return;
@@ -143,6 +147,22 @@ export const BookingDetailsPage = () => {
     }
   };
 
+  // Achado (auditoria de produto): o gerador de proposta em PDF (jsPDF + logo/branding) só
+  // existia no lado admin, para propostas montadas manualmente numa ligação. O cliente não
+  // tinha nenhuma forma de baixar um PDF formal do próprio orçamento já existente.
+  const handleDownloadProposal = async () => {
+    if (!booking) return;
+    try {
+      setDownloadingProposal(true);
+      await generateBookingProposalPdf(booking);
+    } catch (error) {
+      logger.error('Erro ao gerar PDF da proposta:', 'BookingDetailsPage', error);
+      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível gerar o PDF agora.' });
+    } finally {
+      setDownloadingProposal(false);
+    }
+  };
+
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
@@ -179,12 +199,21 @@ export const BookingDetailsPage = () => {
               Reserva #{booking.id}
             </p>
           </div>
-          <button
-            onClick={() => navigate('/minhas-reservas')}
-            className="bg-primary-foreground/10 hover:bg-primary-foreground/20 text-primary-foreground px-4 py-2 rounded-lg transition-colors"
-          >
-            ← Voltar
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleDownloadProposal}
+              disabled={downloadingProposal}
+              className="bg-primary-foreground/10 hover:bg-primary-foreground/20 text-primary-foreground px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {downloadingProposal ? 'Gerando PDF...' : '📄 Baixar Proposta em PDF'}
+            </button>
+            <button
+              onClick={() => navigate('/minhas-reservas')}
+              className="bg-primary-foreground/10 hover:bg-primary-foreground/20 text-primary-foreground px-4 py-2 rounded-lg transition-colors"
+            >
+              ← Voltar
+            </button>
+          </div>
         </div>
       </div>
 

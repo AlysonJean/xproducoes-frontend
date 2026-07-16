@@ -17,6 +17,7 @@ import { Grid } from '../components/ui/StandardComponents';
 import { TestimonialCard } from '../components/ui/TestimonialCard';
 import { BannerCarousel } from '../components/ui/BannerCarousel';
 import { CategoryEquipmentRow } from '../components/ui/CategoryEquipmentRow';
+import { TrustStrip } from '../components/ui/TrustStrip';
 import { SEO } from '../components/SEO';
 import { asArray } from '../utils/normalize';
 import { logger } from '../utils/logger';
@@ -170,7 +171,7 @@ export const HomePage = () => {
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
       <FloatingGlow />
       <SEO 
-        title="Aluguel de Som, Luz e LED em BH | X Produções" 
+        title="Aluguel de Som, Luz e LED em BH"
         description="Locação de som, iluminação e painel de LED de alta performance em Belo Horizonte. Equipamentos profissionais para casamentos, festas e eventos corporativos."
       />
       
@@ -215,6 +216,7 @@ export const HomePage = () => {
                 Solicitar Orçamento
               </a>
             </div>
+            <TrustStrip className="mt-10" />
           </div>
         </div>
       </div>
