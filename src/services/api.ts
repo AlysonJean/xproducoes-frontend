@@ -637,6 +637,12 @@ export const collaboratorMessagesAPI = {
   // Enviar mensagem
   sendMessage: (chatId: string, content: string, messageType?: string) =>
     api.post(`/collaborator/messages/chats/${chatId}/messages`, { content, messageType: messageType || 'TEXT' }),
+
+  // Busca (ou cria) o chat do evento de uma reserva — usado pelo cliente para conversar
+  // sobre o próprio orçamento/reserva. Mesmo router/controller, aberto a clientes donos
+  // da reserva além de ADMIN/COLLABORATOR (ver backend/src/routes/collaboratorMessagesRoutes.ts).
+  getOrCreateBookingChat: (bookingId: string) =>
+    api.post(`/collaborator/messages/chats/booking/${bookingId}`),
 };
 
 // ✅ API DE UPLOAD (Cloudinary)

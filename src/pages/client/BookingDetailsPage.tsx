@@ -6,10 +6,13 @@ import type { BookingDetails } from '@/types/types';
 import { formatPrice } from '@/utils/formatPrice';
 import BrandLoader from '@/components/ui/BrandLoader';
 import { logger } from '../../utils/logger';
+import { useAuth } from '../../contexts/AuthContext';
+import { BookingChatPanel } from '../../components/client/BookingChatPanel';
 
 export const BookingDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -440,6 +443,9 @@ export const BookingDetailsPage = () => {
               </div>
             </div>
           </div>
+
+          {/* Chat sobre a reserva */}
+          {id && <BookingChatPanel bookingId={id} currentUserId={user?.id} />}
         </div>
       </div>
 
