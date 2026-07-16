@@ -8,7 +8,7 @@ import { normalizeString } from '../utils/string';
 import type { Equipment, Category, EquipmentFilters } from '@/types/types';
 import { PageLayout, PageEmpty, PageError } from '../components/layouts/PageLayout';
 import { SEO } from '../components/SEO';
-import { SearchAndFilters, FilterSelect, Grid } from '../components/ui/StandardComponents';
+import { SearchAndFilters, FilterSelect, FilterPriceRange, Grid } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
 import { logger } from '../utils/logger';
 
@@ -22,6 +22,8 @@ export const EquipmentListPage: React.FC = () => {
     availability: undefined,
     category: searchParams.get('categoryId') || undefined
   }));
+  const [priceMinInput, setPriceMinInput] = useState('');
+  const [priceMaxInput, setPriceMaxInput] = useState('');
 
   const fetchData = async () => {
     try {
@@ -89,8 +91,20 @@ export const EquipmentListPage: React.FC = () => {
     setFilters(prev => ({ ...prev, ...newFilters }));
   };
 
+  const handlePriceChange = (min: string, max: string) => {
+    setPriceMinInput(min);
+    setPriceMaxInput(max);
+    if (!min && !max) {
+      handleFilterChange({ priceRange: undefined });
+      return;
+    }
+    handleFilterChange({ priceRange: [Number(min) || 0, max ? Number(max) : Number.MAX_SAFE_INTEGER] });
+  };
+
   const clearFilters = () => {
     setFilters({ availability: undefined });
+    setPriceMinInput('');
+    setPriceMaxInput('');
   };
 
   if (loading) {
@@ -132,7 +146,7 @@ export const EquipmentListPage: React.FC = () => {
         searchPlaceholder="Buscar equipamentos por nome, descrição ou tags..."
         resultsCount={filteredEquipments.length}
         itemLabel="equipamento"
-        showClearFilters={!!filters.searchQuery || !!filters.category}
+        showClearFilters={!!filters.searchQuery || !!filters.category || !!priceMinInput || !!priceMaxInput}
         onClearFilters={clearFilters}
         className="mb-12"
         filters={
@@ -152,14 +166,21 @@ export const EquipmentListPage: React.FC = () => {
             <FilterSelect
               label="Disponibilidade"
               value={filters.availability === undefined ? 'all' : filters.availability.toString()}
-              onChange={(value) => handleFilterChange({ 
-                availability: value === 'all' ? undefined : value === 'true' 
+              onChange={(value) => handleFilterChange({
+                availability: value === 'all' ? undefined : value === 'true'
               })}
               options={[
                 { value: 'all', label: 'Todos' },
                 { value: 'true', label: 'Disponível' },
                 { value: 'false', label: 'Indisponível' }
               ]}
+            />
+            <FilterPriceRange
+              label="Preço por hora (R$)"
+              min={priceMinInput}
+              max={priceMaxInput}
+              onMinChange={(value) => handlePriceChange(value, priceMaxInput)}
+              onMaxChange={(value) => handlePriceChange(priceMinInput, value)}
             />
           </>
         }

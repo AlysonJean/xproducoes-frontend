@@ -5,7 +5,7 @@ import { asArray } from '../utils/normalize';
 import { normalizeString } from '../utils/string';
 import type { Service } from '@/types/types';
 import { PageLayout, PageEmpty } from '../components/layouts/PageLayout';
-import { SearchAndFilters, Grid } from '../components/ui/StandardComponents';
+import { SearchAndFilters, FilterPriceRange, Grid } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
 
 import { SEO } from '../components/SEO';
@@ -24,6 +24,8 @@ export const ServiceListPage: React.FC = () => {
   const [filters, setFilters] = useState<ServiceFilters>({
     status: 'ACTIVE'
   });
+  const [priceMinInput, setPriceMinInput] = useState('');
+  const [priceMaxInput, setPriceMaxInput] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -77,8 +79,20 @@ export const ServiceListPage: React.FC = () => {
     setFilters(prev => ({ ...prev, ...newFilters }));
   };
 
+  const handlePriceChange = (min: string, max: string) => {
+    setPriceMinInput(min);
+    setPriceMaxInput(max);
+    if (!min && !max) {
+      handleFilterChange({ priceRange: undefined });
+      return;
+    }
+    handleFilterChange({ priceRange: [Number(min) || 0, max ? Number(max) : Number.MAX_SAFE_INTEGER] });
+  };
+
   const clearFilters = () => {
     setFilters({ status: 'ACTIVE' });
+    setPriceMinInput('');
+    setPriceMaxInput('');
   };
 
   if (loading) {
@@ -109,10 +123,18 @@ export const ServiceListPage: React.FC = () => {
         searchPlaceholder="Buscar serviços..."
         resultsCount={filteredServices.length}
         itemLabel="serviço"
-        showClearFilters={!!filters.searchQuery}
+        showClearFilters={!!filters.searchQuery || !!priceMinInput || !!priceMaxInput}
         onClearFilters={clearFilters}
         className="mb-12"
-        filters={null}
+        filters={
+          <FilterPriceRange
+            label="Preço (R$)"
+            min={priceMinInput}
+            max={priceMaxInput}
+            onMinChange={(value) => handlePriceChange(value, priceMaxInput)}
+            onMaxChange={(value) => handlePriceChange(priceMinInput, value)}
+          />
+        }
       />
 
       {filteredServices.length > 0 ? (

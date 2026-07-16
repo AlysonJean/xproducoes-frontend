@@ -5,7 +5,7 @@ import { normalizeString } from '../utils/string';
 import type { Kit, KitFilters } from '@/types/types';
 import { KitCard } from '../components/ui/KitCard';
 import { PageLayout, PageEmpty } from '../components/layouts/PageLayout';
-import { SearchAndFilters, FilterSelect, Grid } from '../components/ui/StandardComponents';
+import { SearchAndFilters, FilterSelect, FilterPriceRange, Grid } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
 import { SEO } from '../components/SEO';
 import { transformKit } from '../utils/transformKit';
@@ -18,6 +18,8 @@ export const KitListPage = () => {
       sortBy: 'name',
       sortOrder: 'asc'
   });
+  const [priceMinInput, setPriceMinInput] = useState('');
+  const [priceMaxInput, setPriceMaxInput] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -91,11 +93,23 @@ export const KitListPage = () => {
     setFilters(prev => ({ ...prev, ...newFilters }));
   }, []);
 
+  const handlePriceChange = useCallback((min: string, max: string) => {
+    setPriceMinInput(min);
+    setPriceMaxInput(max);
+    if (!min && !max) {
+      handleFilterChange({ priceRange: undefined });
+      return;
+    }
+    handleFilterChange({ priceRange: [Number(min) || 0, max ? Number(max) : Number.MAX_SAFE_INTEGER] });
+  }, [handleFilterChange]);
+
   const clearFilters = useCallback(() => {
     setFilters({
       sortBy: 'name',
       sortOrder: 'asc'
     });
+    setPriceMinInput('');
+    setPriceMaxInput('');
   }, []);
 
   if (loading) {
@@ -126,7 +140,7 @@ export const KitListPage = () => {
         searchPlaceholder="O que você precisa?"
         resultsCount={filteredAndSortedKits.length}
         itemLabel="kit"
-        showClearFilters={!!filters.searchQuery}
+        showClearFilters={!!filters.searchQuery || !!priceMinInput || !!priceMaxInput}
         onClearFilters={clearFilters}
         className="mb-12"
         filters={
@@ -139,6 +153,13 @@ export const KitListPage = () => {
                 { value: 'name', label: 'Nome' },
                 { value: 'price', label: 'Melhor Preço' }
               ]}
+            />
+            <FilterPriceRange
+              label="Preço (R$)"
+              min={priceMinInput}
+              max={priceMaxInput}
+              onMinChange={(value) => handlePriceChange(value, priceMaxInput)}
+              onMaxChange={(value) => handlePriceChange(priceMinInput, value)}
             />
           </>
         }

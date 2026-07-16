@@ -105,7 +105,7 @@ export const FilterSelect: React.FC<FilterSelectProps> = ({
 }) => (
   <div className={`flex flex-col gap-2 ${className}`}>
     <label className="text-sm font-medium text-muted-foreground">{label}</label>
-    <select 
+    <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className="px-4 py-3 bg-card border-2 border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 cursor-pointer hover:border-primary/50"
@@ -117,5 +117,53 @@ export const FilterSelect: React.FC<FilterSelectProps> = ({
         </option>
       ))}
     </select>
+  </div>
+);
+
+interface FilterPriceRangeProps {
+  label: string;
+  min: string;
+  max: string;
+  onMinChange: (value: string) => void;
+  onMaxChange: (value: string) => void;
+  className?: string;
+}
+
+// Achado (auditoria de produto): EquipmentListPage/KitListPage/ServiceListPage já
+// calculavam filters.priceRange no useMemo de filtragem, mas nenhuma das três tinha um
+// input na tela para alimentar esse estado — o filtro de preço existia só no código.
+export const FilterPriceRange: React.FC<FilterPriceRangeProps> = ({
+  label,
+  min,
+  max,
+  onMinChange,
+  onMaxChange,
+  className = ''
+}) => (
+  <div className={`flex flex-col gap-2 ${className}`}>
+    <label className="text-sm font-medium text-muted-foreground">{label}</label>
+    <div className="flex items-center gap-2">
+      <input
+        type="number"
+        min={0}
+        inputMode="numeric"
+        placeholder="Mín."
+        value={min}
+        onChange={(e) => onMinChange(e.target.value)}
+        aria-label={`${label} — valor mínimo`}
+        className="w-24 px-3 py-3 bg-card border-2 border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 hover:border-primary/50"
+      />
+      <span className="text-muted-foreground">—</span>
+      <input
+        type="number"
+        min={0}
+        inputMode="numeric"
+        placeholder="Máx."
+        value={max}
+        onChange={(e) => onMaxChange(e.target.value)}
+        aria-label={`${label} — valor máximo`}
+        className="w-24 px-3 py-3 bg-card border-2 border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 hover:border-primary/50"
+      />
+    </div>
   </div>
 );

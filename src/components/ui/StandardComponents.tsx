@@ -34,4 +34,4 @@ export { Alert } from './Alert';
 export { Form, FormSection, FormActions } from './Form';
 
 // Busca e Filtros
-export { SearchAndFilters, FilterSelect } from './SearchAndFilters';
+export { SearchAndFilters, FilterSelect, FilterPriceRange } from './SearchAndFilters';
