@@ -45,7 +45,6 @@ interface QuoteBookingPayload {
   notes?: string;
   status: 'PENDING';
   setupTime: string;
-  userId: string;
   clientName?: string;
   clientContact?: string;
   clientEmail?: string;
@@ -60,7 +59,7 @@ export const QuoteRequestPage: React.FC = () => {
   const services = cart?.services ?? [];
   const kit = cart?.kit;
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, setAuthenticatedUser } = useAuth();
   const { addNotification } = useNotifications();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -83,21 +82,21 @@ export const QuoteRequestPage: React.FC = () => {
 
     if (!equipments.length && !kit?.id && !services.length) {
       setServerError('Adicione algum item ao carrinho antes de prosseguir.');
-      addNotification({ 
-        type: 'warning', 
-        title: 'Carrinho vazio', 
-        message: 'Adicione algum item ao carrinho antes de prosseguir.' 
+      addNotification({
+        type: 'warning',
+        title: 'Carrinho vazio',
+        message: 'Adicione algum item ao carrinho antes de prosseguir.'
       });
       return;
     }
 
-    if (!user?.id) {
-      const msg = 'Você precisa estar logado para enviar o pedido. Faça login e tente novamente.';
+    if (!user?.id && !data.email) {
+      const msg = 'Informe seu e-mail para que possamos criar seu acompanhamento de pedido.';
       setServerError(msg);
-      addNotification({ 
-        type: 'warning', 
-        title: 'Login necessário', 
-        message: msg 
+      addNotification({
+        type: 'warning',
+        title: 'E-mail necessário',
+        message: msg
       });
       return;
     }
@@ -127,9 +126,8 @@ export const QuoteRequestPage: React.FC = () => {
         notes: data.notes || undefined,
         status: 'PENDING',
         setupTime: eventStart.toISOString(),
-        userId: user.id,
-                clientName: user?.name || data.name || undefined,
-                clientContact: user?.phone || user?.email || data.phone || data.email || undefined,
+        clientName: user?.name || data.name || undefined,
+        clientContact: user?.phone || data.phone || user?.email || data.email || undefined,
       };
 
       if (data.email) bookingData.clientEmail = data.email;
@@ -153,11 +151,19 @@ export const QuoteRequestPage: React.FC = () => {
         message: 'Enviando seu pedido de orçamento...' 
       });
 
-      const resp = await api.post('/bookings', bookingData, { 
-        headers: { 'Idempotency-Key': idempotencyKey } 
+      const endpoint = user?.id ? '/bookings' : '/bookings/guest';
+      const resp = await api.post(endpoint, bookingData, {
+        headers: { 'Idempotency-Key': idempotencyKey }
       });
-      
+
       const createdBooking: Booking | null = resp?.data?.data ?? resp?.data ?? null;
+
+      // Checkout de convidado: o backend já criou a conta e autenticou (cookies httpOnly
+      // na resposta) — só falta refletir isso no estado local para "Minhas Reservas" etc.
+      // funcionarem imediatamente, sem exigir um login manual separado.
+      if (!user?.id && resp?.data?.user) {
+        setAuthenticatedUser(resp.data.user);
+      }
 
       ReactGA.event({
         category: "ecommerce",
@@ -394,7 +400,10 @@ export const QuoteRequestPage: React.FC = () => {
                 </div>
                 Sua Identidade
               </h2>
-              
+              <p className="text-sm text-muted-foreground -mt-4 mb-6">
+                Não é preciso criar conta antes — usamos esses dados para acompanhar seu pedido e você pode acessá-lo depois com este e-mail.
+              </p>
+
               <Grid columns={{ sm: 1, md: 2 }} gap={6}>
                 <Input
                   label="Seu Nome *"
@@ -402,9 +411,17 @@ export const QuoteRequestPage: React.FC = () => {
                   {...register('name')}
                   error={errors.name?.message}
                 />
-                
+
                 <Input
-                  label="Telefone ou Email de Contato *"
+                  label="Seu E-mail *"
+                  type="email"
+                  leftIcon={<User className="h-4 w-4" />}
+                  {...register('email')}
+                  error={errors.email?.message}
+                />
+
+                <Input
+                  label="Telefone (WhatsApp, opcional)"
                   leftIcon={<Phone className="h-4 w-4" />}
                   {...register('phone')}
                   error={errors.phone?.message}

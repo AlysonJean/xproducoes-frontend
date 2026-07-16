@@ -38,6 +38,12 @@ export interface AuthContextType {
   handleOAuthToken?: (token: string) => Promise<string>;
   refreshToken: () => Promise<boolean>;
   isTokenExpired: () => boolean;
+  /**
+   * Atualiza o usuário autenticado sem chamar /auth/login — para fluxos onde o backend
+   * já autenticou (setou os cookies httpOnly) como efeito colateral de outra ação, ex.:
+   * checkout de convidado em /bookings/guest, que cria a conta e loga de uma vez.
+   */
+  setAuthenticatedUser: (user: AuthUser) => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -204,6 +210,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const setAuthenticatedUser = useCallback((userData: AuthUser) => {
+    setUser(userData);
+  }, []);
+
   const value: AuthContextType = useMemo(() => ({
     isAuthenticated: !!user,
     isLoading,
@@ -213,7 +223,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     handleOAuthToken,
     refreshToken,
     isTokenExpired,
-  }), [user, isLoading, logout, loginWithCredentials, handleOAuthToken, refreshToken, isTokenExpired]);
+    setAuthenticatedUser,
+  }), [user, isLoading, logout, loginWithCredentials, handleOAuthToken, refreshToken, isTokenExpired, setAuthenticatedUser]);
 
   return (
     <AuthContext.Provider value={value}>

@@ -34,6 +34,7 @@ function makeAuthContext(overrides: Partial<AuthContextType>): AuthContextType {
     logout: vi.fn(),
     refreshToken: vi.fn(),
     isTokenExpired: vi.fn(),
+    setAuthenticatedUser: vi.fn(),
     ...overrides,
   };
 }
