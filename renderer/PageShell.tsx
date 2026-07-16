@@ -1,11 +1,24 @@
 import React from 'react'
-import { HelmetProvider } from 'react-helmet-async'
+import { HelmetProvider, type HelmetServerState } from 'react-helmet-async'
 import { PageContextProvider } from './usePageContext'
 import type { PageContext } from 'vike/types'
 import { Providers } from '../src/Providers'
 import { ErrorBoundary } from '../src/components/ui/ErrorBoundary'
 
-export function PageShell({ pageContext, children }: { pageContext: PageContext; children: React.ReactNode }) {
+export function PageShell({
+  pageContext,
+  children,
+  helmetContext,
+}: {
+  pageContext: PageContext
+  children: React.ReactNode
+  // Achado: <HelmetProvider> nunca recebia um `context` — react-helmet-async só expõe as tags
+  // coletadas durante o SSR (title/meta/link/script) através desse objeto, preenchido DEPOIS
+  // que a árvore termina de renderizar. Sem ele, onRenderHtml.tsx não tinha como ler as tags
+  // de <SEO>/<Helmet> de volta — toda página sempre recebia o <title>/<meta> genérico do
+  // fallback estático, mesmo as ~17 páginas que já usavam <SEO> com conteúdo específico.
+  helmetContext?: { helmet?: HelmetServerState }
+}) {
   const isServer = typeof window === 'undefined'
 
   // Achado: react-helmet-async (usado por <SEO>/<Helmet> em ~17 páginas, incluindo Home,
@@ -25,7 +38,7 @@ export function PageShell({ pageContext, children }: { pageContext: PageContext;
   return (
     <React.StrictMode>
       <PageContextProvider pageContext={pageContext}>
-        <HelmetProvider>
+        <HelmetProvider context={helmetContext}>
           {isServer ? (
             <ErrorBoundary>{children}</ErrorBoundary>
           ) : (

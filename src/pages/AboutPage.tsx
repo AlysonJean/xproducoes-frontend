@@ -1,34 +1,19 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { PageLayout } from '../components/layouts/PageLayout';
-import { BrandLoader } from '../components/ui/BrandLoader';
 import { SEO } from '../components/SEO';
 
+// Achado: existia um `setTimeout` de 600ms fingindo um "carregamento inicial" sem nenhuma
+// busca de dado real por trás — só atrasava conteúdo 100% estático por atraso mesmo, e (pior)
+// escondia o <SEO> real do HTML gerado no servidor (useEffect/setTimeout nunca rodam durante
+// o SSR, então o servidor sempre renderizava o branch de loading com título genérico).
 export const AboutPage: React.FC = () => {
-  const [loading, setLoading] = useState(true);
-
-  // Simular carregamento inicial
-  useState(() => {
-    const timer = setTimeout(() => setLoading(false), 600);
-    return () => clearTimeout(timer);
-  });
-
-  if (loading) {
-    return (
-      <PageLayout title="Carregando..." description="Descobrindo nossa história.">
-        <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <BrandLoader size={120} label="Carregando história..." />
-        </div>
-      </PageLayout>
-    );
-  }
-
   return (
     <PageLayout
       title="Sobre Nós"
       description="Quem somos, nossa história e valores que guiam o nosso trabalho."
     >
       <SEO 
-        title="Sobre a X Produções" 
+        title="Sobre Nós"
         description="Conheça a história da X Produções e Eventos. Referência em qualidade técnica no aluguel de equipamentos audiovisuais em Belo Horizonte."
       />
       <div className="max-w-4xl mx-auto">

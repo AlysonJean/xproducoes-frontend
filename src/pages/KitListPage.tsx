@@ -114,10 +114,17 @@ export const KitListPage = () => {
 
   if (loading) {
     return (
-      <PageLayout 
-        title="Carregando kits..." 
+      <PageLayout
+        title="Carregando kits..."
         description="Preparando as melhores ofertas para você."
       >
+        {/* Achado: useEffect nunca roda durante o SSR, então o servidor SEMPRE renderiza este
+            branch de loading — sem o <SEO> real aqui, crawlers/robôs de preview recebiam
+            título/descrição genéricos de "carregando" em vez do conteúdo real da página. */}
+        <SEO
+          title="Kits de Som e Iluminação"
+          description="Economize com nossos kits completos de som, luz e audiovisual em BH."
+        />
         <div className="flex flex-col items-center justify-center min-h-[400px]">
           <BrandLoader size={120} label="Preparando ofertas..." />
         </div>

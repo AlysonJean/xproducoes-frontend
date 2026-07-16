@@ -3,40 +3,19 @@ import { PageLayout } from '../components/layouts/PageLayout';
 import { GUIDES } from '../data/guides';
 import { SEO } from '../components/SEO';
 import { ClockIcon } from 'lucide-react';
-import { useState } from 'react';
 
-import { BrandLoader } from '../components/ui/BrandLoader';
-
-
+// Achado: existia um `setTimeout` de 600ms fingindo um "carregamento inicial" — GUIDES é um
+// import estático (../data/guides), sem busca de dado real nenhuma por trás. Além do atraso
+// artificial, escondia o <SEO> real do HTML gerado no servidor (useEffect/setTimeout nunca
+// rodam durante o SSR, então o servidor sempre renderizava o branch de loading).
 export const GuideListPage = () => {
-  const [loading, setLoading] = useState(true);
-
-  // Simular carregamento inicial
-  useState(() => {
-    const timer = setTimeout(() => setLoading(false), 600);
-    return () => clearTimeout(timer);
-  });
-
-  if (loading) {
-    return (
-      <PageLayout 
-        title="Carregando guias..." 
-        description="Preparando os melhores artigos para você."
-      >
-        <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <BrandLoader size={120} label="Carregando guias..." />
-        </div>
-      </PageLayout>
-    );
-  }
-
   return (
     <PageLayout 
       title="Guias & Dicas para Eventos"
       description="Artigos de especialistas sobre som, iluminação e organização de eventos."
     >
       <SEO 
-        title="Guias de Eventos e Dicas Técnicas | X-Produções"
+        title="Guias de Eventos e Dicas Técnicas"
         description="Aprenda como organizar eventos inesquecíveis com nossos guias sobre som, iluminação e estrutura."
       />
 

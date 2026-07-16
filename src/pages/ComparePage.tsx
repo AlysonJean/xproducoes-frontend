@@ -76,7 +76,7 @@ export const ComparePage = () => {
     return (
       <div className="text-center py-20">
         <SEO 
-          title="Comparar Itens | X-Produções" 
+          title="Comparar Itens"
           description="Compare equipamentos, kits e serviços lado a lado para escolher a melhor opção para seu evento."
         />
         <div className="max-w-md mx-auto">

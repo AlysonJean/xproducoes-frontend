@@ -97,10 +97,17 @@ export const ServiceListPage: React.FC = () => {
 
   if (loading) {
     return (
-      <PageLayout 
-        title="Carregando serviços..." 
+      <PageLayout
+        title="Carregando serviços..."
         description="Preparando as melhores opções de DJ, Som e Luz para você."
       >
+        {/* Achado: useEffect nunca roda durante o SSR, então o servidor SEMPRE renderiza este
+            branch de loading — sem o <SEO> real aqui, crawlers/robôs de preview recebiam
+            título/descrição genéricos de "carregando" em vez do conteúdo real da página. */}
+        <SEO
+          title="Serviços para Eventos"
+          description="DJs, Técnicos de Som, Iluminadores e Produtores para seu evento em Belo Horizonte."
+        />
         <div className="flex flex-col items-center justify-center min-h-[400px]">
           <BrandLoader size={120} label="Carregando serviços..." />
         </div>

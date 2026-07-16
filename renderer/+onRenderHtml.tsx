@@ -3,6 +3,7 @@ import { Writable } from 'node:stream'
 import { renderToStream } from 'react-streaming/server'
 import { escapeInject, dangerouslySkipEscape } from 'vike/server'
 import type { OnRenderHtmlAsync } from 'vike/types'
+import type { HelmetServerState } from 'react-helmet-async'
 import { PageShell } from './PageShell'
 import { StaticRouter } from 'react-router'
 
@@ -77,8 +78,12 @@ export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageCon
   // de volta para uma string com pipeToString — perdemos o ganho de performance do streaming de
   // rede, mas resolvemos a causa raiz do #419 sem tocar em nenhuma camada de transporte
   // (server.ts e api/ssr.js continuam exatamente como sempre funcionaram).
+  // Preenchido por <HelmetProvider context={helmetContext}> DEPOIS que a árvore termina de
+  // renderizar (por isso só é lido após o `await pipeToString` abaixo, nunca antes).
+  const helmetContext: { helmet?: HelmetServerState } = {}
+
   const streamResult = await renderToStream(
-    <PageShell pageContext={pageContext}>
+    <PageShell pageContext={pageContext} helmetContext={helmetContext}>
       <StaticRouter location={pageContext.urlOriginal}>
         <Page {...pageProps} />
       </StaticRouter>
@@ -89,6 +94,7 @@ export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageCon
     throw new Error('react-streaming: esperava um Node.js pipe stream (disable: true), mas recebi um Web ReadableStream.')
   }
   const pageHtml = await pipeToString(streamResult.pipe)
+  const { helmet } = helmetContext
 
   const { documentProps } = pageContext.data || pageContext.exports
   const title = (documentProps && documentProps.title) || 'X-Produções - Aluguel de Equipamentos'
@@ -97,6 +103,38 @@ export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageCon
   const url = pageContext.urlOriginal
     ? `https://www.xproducoeseeventos.com.br${pageContext.urlOriginal}`
     : 'https://www.xproducoeseeventos.com.br'
+
+  // Quando a página renderiza <SEO>/<Helmet> (ver src/components/SEO.tsx, usado em ~17
+  // páginas), helmet.title já vem com a tag <title> completa e específica da página — usamos
+  // o conjunto inteiro do Helmet (title+meta+link+script, que já inclui OG/Twitter/JSON-LD) no
+  // lugar do bloco genérico abaixo, para não duplicar/conflitar tags no <head>. Páginas sem
+  // <SEO> continuam recebendo o título/descrição genéricos de sempre.
+  const helmetTitleHtml = helmet?.title.toString() ?? ''
+  const usedPageSeo = helmetTitleHtml.includes('<title')
+
+  const seoHeadTags = usedPageSeo
+    ? dangerouslySkipEscape(
+        [helmetTitleHtml, helmet!.meta.toString(), helmet!.link.toString(), helmet!.script.toString()].join('\n')
+      )
+    : escapeInject`
+        <meta name="description" content="${desc}" />
+        <title>${title}</title>
+
+        <!-- Dynamic Open Graph -->
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="${url}" />
+        <meta property="og:title" content="${title}" />
+        <meta property="og:description" content="${desc}" />
+        <meta property="og:image" content="${image}" />
+        <meta property="og:site_name" content="X Produções" />
+
+        <!-- Twitter Card -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="${url}" />
+        <meta name="twitter:title" content="${title}" />
+        <meta name="twitter:description" content="${desc}" />
+        <meta name="twitter:image" content="${image}" />
+      `
 
   const documentHtml = escapeInject`<!DOCTYPE html>
     <html lang="pt-BR">
@@ -129,23 +167,7 @@ export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageCon
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta name="description" content="${desc}" />
-        <title>${title}</title>
-
-        <!-- Dynamic Open Graph -->
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="${url}" />
-        <meta property="og:title" content="${title}" />
-        <meta property="og:description" content="${desc}" />
-        <meta property="og:image" content="${image}" />
-        <meta property="og:site_name" content="X Produções" />
-
-        <!-- Twitter Card -->
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="${url}" />
-        <meta name="twitter:title" content="${title}" />
-        <meta name="twitter:description" content="${desc}" />
-        <meta name="twitter:image" content="${image}" />
+        ${seoHeadTags}
       </head>
       <body>
         <div id="root">${dangerouslySkipEscape(pageHtml)}</div>

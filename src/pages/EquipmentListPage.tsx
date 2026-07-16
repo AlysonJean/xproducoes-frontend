@@ -109,10 +109,17 @@ export const EquipmentListPage: React.FC = () => {
 
   if (loading) {
     return (
-      <PageLayout 
-        title="Carregando catálogo..." 
+      <PageLayout
+        title="Carregando catálogo..."
         description="Preparando os melhores equipamentos para você."
       >
+        {/* Achado: useEffect nunca roda durante o SSR, então o servidor SEMPRE renderiza este
+            branch de loading — sem o <SEO> real aqui, toda visita de crawler/robô de preview
+            (WhatsApp, Facebook etc.) via SSR via título/descrição genéricos de "carregando". */}
+        <SEO
+          title="Catálogo de Equipamentos de Som e Luz"
+          description="Aluguel de caixas de som, microfones, moving heads, painéis de LED e estruturas em Belo Horizonte. Equipamentos revisados e de marcas profissionais."
+        />
         <div className="flex flex-col items-center justify-center min-h-[400px]">
           <BrandLoader size={140} label="Carregando catálogo..." />
         </div>
