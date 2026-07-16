@@ -3,7 +3,7 @@ import { useParams, Navigate, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { PageLayout } from '../components/layouts/PageLayout';
 import { SEO } from '../components/SEO';
-import { TARGET_CITIES, TARGET_SERVICES } from '../utils/localSeoConfig';
+import { TARGET_CITIES, parseServiceCitySlug } from '../utils/localSeoConfig';
 import { Button } from '../components/ui/StandardComponents';
 import { RecommendationSection } from '../components/ui/RecommendationSection';
 import { useRecommendations } from '../hooks/useRecommendations';
@@ -19,12 +19,13 @@ import { logger } from '../utils/logger';
 
 
 export const CityLandingPage = () => {
-  const { serviceSlug, citySlug } = useParams<{ serviceSlug: string; citySlug: string }>();
+  const { seoSlug } = useParams<{ seoSlug: string }>();
   const [reviewStats, setReviewStats] = useState<{ total: number; averageRating: number } | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  const city = TARGET_CITIES.find(c => c.slug === citySlug);
-  const service = TARGET_SERVICES.find(s => s.slug === serviceSlug);
+
+  const combo = seoSlug ? parseServiceCitySlug(seoSlug) : null;
+  const city = combo?.city;
+  const service = combo?.service;
 
   useEffect(() => {
     const statsPromise = apiFetch<{ total: number; averageRating: number }>('/reviews/stats')
@@ -49,8 +50,16 @@ export const CityLandingPage = () => {
   }
 
   if (loading) {
+    // Achado: título/descrição da página já são conhecidos de forma síncrona (city/service
+    // vêm de config estática) — não faz sentido esconder o <SEO> real atrás do fetch de
+    // reviewStats/temporizador mínimo. Sem isso, useEffect nunca roda durante o SSR, então o
+    // servidor SEMPRE renderizava este branch com título genérico de "carregando" — as ~20
+    // páginas de SEO local nunca tinham o título/descrição corretos no HTML gerado no servidor.
+    const loadingTitle = `${service.name} em ${city.name}, ${city.uf} | X-Produções`;
+    const loadingDescription = `${service.name} profissional para eventos em ${city.name}. ${service.description}`;
     return (
       <PageLayout title="Carregando..." description={`Sincronizando serviços locais em ${city.name}.`}>
+        <SEO title={loadingTitle} description={loadingDescription} />
         <div className="flex flex-col items-center justify-center min-h-[400px]">
           <BrandLoader size={120} label={`Chegando em ${city.name}...`} />
         </div>
@@ -282,10 +291,10 @@ export const CityLandingPage = () => {
       <section className="bg-muted/30 rounded-2xl p-8 border border-border/50">
         <h3 className="text-lg font-semibold mb-4">Atendemos também em:</h3>
         <div className="flex flex-wrap gap-3">
-          {TARGET_CITIES.filter(c => c.slug !== citySlug).map(c => (
-             <Link 
+          {TARGET_CITIES.filter(c => c.slug !== city.slug).map(c => (
+             <Link
                key={c.slug}
-               to={`/${serviceSlug}-${c.slug}`}
+               to={`/${service.slug}-${c.slug}`}
                className="px-4 py-2 bg-background border border-border rounded-full text-sm text-foreground/80 hover:text-primary hover:border-primary transition-colors"
              >
                {service.name.replace('Aluguel de ', '')} em {c.name}

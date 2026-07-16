@@ -413,8 +413,11 @@ const AppRoutes: React.FC = () => {
       <Route path="/guias" element={<GuideListPage />} />
       <Route path="/guias/:slug" element={<GuideDetailPage />} />
       
-      {/* Local SEO Landing Pages */}
-      <Route path="/:serviceSlug-:citySlug" element={<CityLandingPage />} />
+      {/* Local SEO Landing Pages — achado: React Router não suporta dois parâmetros dinâmicos
+          separados por um caractere literal dentro do mesmo segmento (":a-:b" nunca casava
+          com nada, confirmado via matchPath); usa um único segmento e desambigua em
+          parseServiceCitySlug (localSeoConfig.ts). */}
+      <Route path="/:seoSlug" element={<CityLandingPage />} />
 
       {/* Institutional Pages */}
       <Route path="/sobre" element={<AboutPage />} />

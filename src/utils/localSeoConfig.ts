@@ -109,3 +109,22 @@ export function getCityBySlug(slug: string) {
 export function getServiceBySlug(slug: string) {
   return TARGET_SERVICES.find(s => s.slug === slug);
 }
+
+// Achado: a rota original (/:serviceSlug-:citySlug) nunca funcionou — React Router não
+// suporta dois parâmetros dinâmicos separados por um caractere literal dentro do mesmo
+// segmento de URL (confirmado: matchPath retorna null até para o caso mais simples, "/x-y"
+// contra "/:a-:b"). As ~20 páginas de SEO local (serviço x cidade) eram inacessíveis por
+// qualquer URL desde que foram criadas. Corrigido usando um único segmento dinâmico
+// (/:seoSlug) e desambiguando aqui: como nenhum slug de serviço é prefixo de outro, a busca
+// é determinística.
+export function parseServiceCitySlug(combinedSlug: string): { service: ServiceContent; city: (typeof TARGET_CITIES)[number] } | null {
+  for (const service of TARGET_SERVICES) {
+    const prefix = `${service.slug}-`;
+    if (combinedSlug.startsWith(prefix)) {
+      const citySlug = combinedSlug.slice(prefix.length);
+      const city = TARGET_CITIES.find(c => c.slug === citySlug);
+      if (city) return { service, city };
+    }
+  }
+  return null;
+}
