@@ -13,6 +13,7 @@ import { ModalProvider } from './components/modals/ModalContext';
 import { ModalManager } from './components/modals/ModalManager';
 import FloatingWhatsApp from './components/FloatingWhatsApp';
 import CookieConsentBanner from './components/CookieConsentBanner';
+import PWAInstallBanner from './components/PWAInstallBanner';
 import RoutePrefetch from './components/RoutePrefetch';
 import BrandLoader from './components/ui/BrandLoader';
 
@@ -944,7 +945,7 @@ const AppWithMonitoring: React.FC = () => {
       )}
 
       {/* PWA Install prompt */}
-      
+      <PWAInstallBanner />
 
       {/* ⚡ ROUTE PREFETCH - ETAPA 3 Performance */}
       <RoutePrefetch />

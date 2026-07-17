@@ -56,6 +56,8 @@ export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageCon
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <link rel="manifest" href="/manifest.webmanifest" />
+          <meta name="theme-color" content="#194459" />
           <title>X-Produções</title>
         </head>
         <body>
@@ -141,7 +143,20 @@ export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageCon
       <head>
         <meta charset="UTF-8" />
         <link rel="icon" href="/favicon.svg" />
-        
+
+        <!-- PWA: vite-plugin-pwa injeta estas tags automaticamente via transformIndexHtml,
+             um hook que só roda em builds SPA com index.html estático. Como esta app é SSR
+             (Vike gera o HTML por requisição, aqui mesmo), esse hook nunca dispara — sem estas
+             tags manuais, o navegador não descobre o manifest e o app nunca fica instalável,
+             mesmo com manifest/ícones/service worker corretamente configurados no build. -->
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="theme-color" content="#194459" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="X-Produções" />
+        <meta name="mobile-web-app-capable" content="yes" />
+
         <!-- Resource Hints -->
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

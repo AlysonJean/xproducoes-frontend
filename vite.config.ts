@@ -34,7 +34,7 @@ export default defineConfig({
     }),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'xproducoes-logo.svg'],
+      includeAssets: ['favicon.svg', 'xproducoes-logo.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'X-Produções',
         short_name: 'X-Produções',
@@ -45,17 +45,34 @@ export default defineConfig({
         display: 'standalone',
         lang: 'pt-BR',
         icons: [
+          // "any": ícone original (fundo transparente), usado como está, sem máscara de forma.
           {
             src: 'favicon-192.png',
             sizes: '192x192',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
           },
           {
             src: 'favicon-512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          // "maskable": fundo sólido + logo com folga na zona de segurança (~55% do
+          // canvas), para sobreviver a máscaras circulares/squircle de launchers Android.
+          // Nunca reaproveitar o ícone "any" aqui: com fundo transparente, o SO
+          // preenche a área cortada com uma cor default (geralmente preta), quebrando o visual.
+          {
+            src: 'maskable-icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
+            src: 'maskable-icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       },
