@@ -190,7 +190,14 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
             <span className="text-xs font-normal mr-1">a partir de</span>
             {formatPrice(equipment.pricePerHour || 0)} / hora
           </span>
+          {/* Achado (auditoria mobile-first): tinha aria-label="Adicionar ao carrinho", mas
+              este é um <div> decorativo dentro do <Link> do card inteiro — clicar aqui não
+              adiciona nada ao carrinho, só navega para os detalhes (onde o carrinho de
+              verdade fica). O aria-label prometia uma ação inexistente para quem usa leitor
+              de tela. O status em si já é anunciado pelo badge visível no topo do card (ver
+              comentário acima sobre o nome acessível do Link), então aria-hidden aqui. */}
           <div
+            aria-hidden="true"
             className={`font-bold py-2 px-4 rounded transition-colors ${
               (equipment.status === 'MAINTENANCE' || equipment.status === 'COMING_SOON')
                 ? STATUS_CONFIG[equipment.status as 'MAINTENANCE' | 'COMING_SOON'].btnClass
@@ -198,9 +205,6 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
                   ? STATUS_CONFIG.ACTIVE.btnClass
                   : STATUS_CONFIG.UNAVAILABLE.btnClass
             }`}
-            aria-label={
-              equipment.isAvailable ? 'Adicionar ao carrinho' : `Equipamento ${equipment.status}`
-            }
           >
             {equipment.isAvailable ? '+' : '−'}
           </div>

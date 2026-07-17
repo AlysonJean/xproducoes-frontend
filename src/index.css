@@ -99,6 +99,14 @@
     @apply inline-grid place-items-center w-8 h-8 rounded-full text-foreground/70 hover:text-primary transition-all duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2;
   }
 
+  /* Achado (auditoria mobile-first): classe referenciada em 3 lugares (menu hamburger do
+     Header, ícones sociais do Footer) mas nunca definida em lugar nenhum — o alvo de toque
+     real era só o ícone (20-32px), abaixo do mínimo recomendado (44px, WCAG 2.5.5/Apple HIG).
+     min-w/min-h + place-items-center garantem a área de toque sem crescer o ícone visível. */
+  .touch-target {
+    @apply inline-grid place-items-center min-w-[44px] min-h-[44px];
+  }
+
   .icon-badge {
     @apply absolute -top-0.5 -right-0.5 grid place-items-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold text-primary-foreground bg-primary rounded-full ring-1 ring-background shadow-sm;
   }

@@ -31,15 +31,23 @@ export const useCookieConsent = () => {
 };
 
 export const CookieConsentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // SSR-safe: mesmo padrão de inicializador preguiçoso do ThemeContext, para não fazer
-  // setState síncrono no corpo do render (causa raiz documentada do React #419 em produção,
-  // ver ThemeContext.tsx) nem divergir do HTML gerado no servidor (que não tem localStorage).
-  const [consent, setConsent] = useState<CookieConsent>(() => {
-    if (typeof window === 'undefined') return 'unset';
+  // Achado (auditoria mobile-first): ao contrário do ThemeContext (onde só `resolvedTheme`
+  // — sempre 'light' no primeiro render — chega a afetar o DOM visível, e o `theme` lido de
+  // localStorage só é aplicado depois via useEffect), aqui o valor de `consent` decide
+  // diretamente se o banner é renderizado ou não. Um inicializador preguiçoso lendo
+  // localStorage fazia o primeiro render do cliente divergir do HTML do servidor (que sempre
+  // assume 'unset', sem acesso a localStorage) sempre que o visitante já tinha respondido
+  // antes — React descartava e regenerava a árvore inteira em toda navegação para qualquer
+  // visitante recorrente. Corrigido: primeiro render sempre 'unset' (idêntico ao servidor),
+  // sincronizado com o valor real só depois, via useEffect (roda após a hidratação).
+  const [consent, setConsent] = useState<CookieConsent>('unset');
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (saved === 'accepted' || saved === 'declined') return saved;
-    return 'unset';
-  });
+    if (saved === 'accepted' || saved === 'declined') setConsent(saved);
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (consent === 'unset') return;
