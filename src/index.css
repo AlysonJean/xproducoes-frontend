@@ -90,13 +90,18 @@
     stroke: var(--foreground);
   }
 
-  /* Icon buttons (sem fundo, foco acessível, hover sutil) */
+  /* Icon buttons (sem fundo, foco acessível, hover sutil).
+     Achado (auditoria mobile-first): w-10/w-8 (40px/32px) ficavam abaixo do mínimo
+     recomendado de área de toque (44px, WCAG 2.5.5/Apple HIG) — usados nos ícones do
+     Header e, via CompareButton/FavoriteButton, em todo card de produto (dezenas por
+     página). Ambos usam w-11 h-11 (44px) agora; como não há fundo/bg em repouso, o ícone
+     visível não muda de tamanho — só cresce a área clicável/tocável ao redor dele. */
   .icon-btn {
-    @apply inline-grid place-items-center w-10 h-10 rounded-full text-foreground/70 hover:text-primary transition-all duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2;
+    @apply inline-grid place-items-center w-11 h-11 rounded-full text-foreground/70 hover:text-primary transition-all duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2;
   }
 
   .icon-btn-sm {
-    @apply inline-grid place-items-center w-8 h-8 rounded-full text-foreground/70 hover:text-primary transition-all duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2;
+    @apply inline-grid place-items-center w-11 h-11 rounded-full text-foreground/70 hover:text-primary transition-all duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2;
   }
 
   /* Achado (auditoria mobile-first): classe referenciada em 3 lugares (menu hamburger do
