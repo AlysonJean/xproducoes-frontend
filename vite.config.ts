@@ -164,26 +164,57 @@ export default defineConfig({
               id.includes('scheduler')
             ) return 'vendor-react';
 
-            // UI Library components
+            // UI Library components + clsx (utilitário de className usado por praticamente
+            // todo componente de UI do app — acompanha os libs de ícone/UI de propósito).
             if (
               id.includes('@heroicons/react') ||
               id.includes('@headlessui/react') ||
-              id.includes('lucide-react')
+              id.includes('lucide-react') ||
+              id.includes('/clsx/')
             ) return 'vendor-ui';
 
-            // Data & state management
+            // Data & state management (date-fns é utilitário genérico de data, usado em
+            // páginas fora de admin/colaborador — não deve compartilhar chunk com recharts).
             if (
               id.includes('axios') ||
               id.includes('zustand') ||
-              id.includes('@tanstack/react-query')
+              id.includes('@tanstack/react-query') ||
+              id.includes('date-fns')
             ) return 'vendor-data';
 
+            // Achado (auditoria de performance): jsPDF/html2canvas (~300KB) e recharts
+            // (~112KB) caíam no "return null" abaixo (sem regra própria) e o Rollup os
+            // agrupava com o que quer que mais fosse amplamente usado por outras páginas
+            // (ex.: react-ga4, carregado sempre via useGoogleAnalytics) — como o chunk
+            // resultante virava elegível em MUITAS páginas, o Vike (que só confia no grafo
+            // de imports estáticos do manifest, não em quem realmente usa React.lazy())
+            // pré-carregava esse peso todo até na home pública. Isolados em chunks
+            // próprios para não arrastar nada alheio a eles.
+            if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('canvg')) {
+              return 'vendor-pdf';
+            }
+
             // Charting & visualization
+            if (id.includes('recharts') || id.includes('chart.js')) return 'vendor-charts';
+
+            // Real-time (chat/notificações) — mantido isolado por peso e para não
+            // compartilhar chunk com PDF/gráficos.
             if (
-              id.includes('recharts') ||
-              id.includes('chart.js') ||
-              id.includes('date-fns')
-            ) return 'vendor-charts';
+              id.includes('socket.io-client') ||
+              id.includes('engine.io-client') ||
+              id.includes('engine.io-parser') ||
+              id.includes('socket.io-parser') ||
+              id.includes('@socket.io/component-emitter')
+            ) return 'vendor-realtime';
+
+            // Validação/formulários — usado amplamente (público + admin), mas peso bem
+            // menor que PDF/gráficos; isolado principalmente para não compartilhar chunk
+            // com eles.
+            if (
+              id.includes('zod') ||
+              id.includes('react-hook-form') ||
+              id.includes('@hookform/resolvers')
+            ) return 'vendor-forms';
 
             // Animation library
             if (id.includes('framer-motion')) return 'vendor-animation';

@@ -1,6 +1,6 @@
 import OAuthComplete from './pages/auth/OAuthComplete';
 import React, { Suspense, lazy, useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 
 // Service Worker and PWA hooks
 import { useServiceWorker, useOfflineDetector } from './hooks/useServiceWorker';
@@ -15,11 +15,16 @@ import FloatingWhatsApp from './components/FloatingWhatsApp';
 import CookieConsentBanner from './components/CookieConsentBanner';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import RoutePrefetch from './components/RoutePrefetch';
-import BrandLoader from './components/ui/BrandLoader';
+import { PageLoadingSpinner } from './components/ui/PageLoadingSpinner';
 
 // Auth & Route Protection
-import { useAuth } from './contexts/AuthContext';
-import { getDashboardRoute } from './utils/authUtils';
+// Achado (auditoria de performance): ver comentário em routes/AdminRoutes.tsx — estes 3
+// grupos de rotas isolam o peso de admin/colaborador/cliente-autenticado (recharts, jsPDF,
+// html2canvas) da árvore de toda página, inclusive a home pública.
+import { ProtectedRoute, AuthRedirect, DashboardRedirect } from './routes/RouteGuards';
+const AdminRoutes = lazy(() => import('./routes/AdminRoutes'));
+const CollaboratorRoutes = lazy(() => import('./routes/CollaboratorRoutes'));
+const ClientRoutes = lazy(() => import('./routes/ClientRoutes'));
 
 // Performance Monitoring
 import { usePerformanceMonitoring } from './hooks/usePerformanceMonitoring';
@@ -108,27 +113,13 @@ const CityLandingPage = lazy(() => import('./pages/CityLandingPage').then((m) =>
 const GuideListPage = lazy(() => import('./pages/GuideListPage').then((m) => ({ default: m.GuideListPage })));
 const GuideDetailPage = lazy(() => import('./pages/GuideDetailPage').then((m) => ({ default: m.GuideDetailPage })));
 
-// Protected User Pages - Lazy Loading
-const ClientDashboardPage = lazy(() =>
-  import('./pages/client/ClientDashboardPage').then((m) => ({ default: m.ClientDashboardPage }))
-);
-const ClientCalendarPage = lazy(() =>
-  import('./pages/client/ClientCalendarPage').then((m) => ({ default: m.ClientCalendarPage }))
-);
-const CollaboratorDashboardPage = lazy(() =>
-  import('./pages/collaborator/CollaboratorDashboard').then((m) => ({ default: m.default }))
-);
-const CollaboratorWorkSchedule = lazy(() =>
-  import('./pages/collaborator/CollaboratorWorkSchedule').then((m) => ({ default: m.default }))
-);
+// Protected User Pages - Lazy Loading (as que não migraram para routes/*Routes.tsx: sem
+// dependências pesadas, sem prefixo de URL limpo o suficiente para valer o isolamento).
 const FreelancerDashboardPage = lazy(() =>
   import('./pages/freelancer/FreelancerDashboardPage').then((m) => ({ default: m.FreelancerDashboardPage }))
 );
 const MyBookingsPage = lazy(() =>
   import('./pages/client/MyBookingsPage').then((m) => ({ default: m.MyBookingsPage }))
-);
-const BookingDetailsPage = lazy(() =>
-  import('./pages/client/BookingDetailsPage').then((m) => ({ default: m.BookingDetailsPage }))
 );
 const FavoritesPage = lazy(() =>
   import('./pages/client/FavoritesPage').then((m) => ({ default: m.FavoritesPage }))
@@ -136,192 +127,21 @@ const FavoritesPage = lazy(() =>
 const ProfilePage = lazy(() =>
   import('./pages/client/ProfilePage').then((m) => ({ default: m.ProfilePage }))
 );
-const CollaboratorProfilePage = lazy(() =>
-  import('./pages/collaborator/CollaboratorProfilePage').then((m) => ({ default: m.default }))
-);
-const CollaboratorEarningsPage = lazy(() =>
-  import('./pages/collaborator/CollaboratorEarningsPage').then((m) => ({ default: m.default }))
-);
-const CollaboratorEventRoadmapPage = lazy(() =>
-  import('./pages/collaborator/CollaboratorEventRoadmapPage').then((m) => ({ default: m.default }))
-);
-const CollaboratorReportsPage = lazy(() =>
-  import('./pages/collaborator/CollaboratorReportsPage').then((m) => ({ default: m.default }))
-);
-const CollaboratorAvailabilityPage = lazy(() =>
-  import('./pages/collaborator/CollaboratorAvailabilityPage').then((m) => ({ default: m.default }))
-);
-const CollaboratorNotificationsPage = lazy(() =>
-  import('./pages/collaborator/CollaboratorNotificationsPage').then((m) => ({ default: m.default }))
-);
-const CollaboratorSettingsPage = lazy(() =>
-  import('./pages/collaborator/CollaboratorSettingsPage').then((m) => ({ default: m.default }))
-);
-// Achado (auditoria de produto): página completa e funcional (chat real via API/Socket.IO)
-// mas nunca importada/roteada — o link "Mensagens" do dashboard do colaborador caía em 404.
-const CollaboratorMessagesPage = lazy(() =>
-  import('./pages/collaborator/CollaboratorMessagesPage').then((m) => ({ default: m.default }))
-);
-
-// Admin Pages - Lazy Loading (Heavy components)
-const AdminDashboardPage = lazy(() =>
-  import('./pages/admin/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage }))
-);
-const AdminWhatsappPage = lazy(() =>
-  import('./pages/admin/WhatsappPage').then((m) => ({ default: m.default }))
-);
-const ReviewManagementPage = lazy(() =>
-  import('./pages/admin/ReviewManagementPage').then((m) => ({ default: m.default }))
-);
-const BookingListPage = lazy(() =>
-  import('./pages/admin/BookingListPage').then((m) => ({ default: m.BookingListPage }))
-);
-const BookingCalendarPage = lazy(() =>
-  import('./pages/admin/BookingCalendarPage').then((m) => ({ default: m.BookingCalendarPage }))
-);
-
-// More Admin Pages - Lazy Loading (Heavy admin components)
-const EquipmentListPage = lazy(() =>
-  import('./pages/admin/EquipmentListPage').then((m) => ({ default: m.EquipmentListPage }))
-);
-const CategoryListPage = lazy(() =>
-  import('./pages/admin/CategoryListPage').then((m) => ({ default: m.CategoryListPage }))
-);
-const FaqListPage = lazy(() =>
-  import('./pages/admin/FaqListPage').then((m) => ({ default: m.FaqListPage }))
-);
-const PortfolioListPage = lazy(() =>
-  import('./pages/admin/PortfolioListPage').then((m) => ({ default: m.PortfolioListPage }))
-);
-// lazy load banner page
-const BannerManagementPage = lazy(() =>
-  import('./pages/admin/BannerManagementPage').then((m) => ({ default: m.BannerManagementPage }))
-);
-const CouponManagementPage = lazy(() =>
-  import('./pages/admin/CouponManagementPage').then((m) => ({ default: m.CouponManagementPage }))
-);
-
-const ContactSubmissionsListPage = lazy(() =>
-  import('./pages/admin/ContactSubmissionsListPage').then((m) => ({
-    default: m.ContactSubmissionsListPage,
-  }))
-);
-const AdminCollaboratorsPage = lazy(() =>
-  import('./pages/admin/AdminCollaboratorsPage').then((m) => ({
-    default: m.AdminCollaboratorsPage,
-  }))
-);
-const AdminCollaboratorFunctionsPage = lazy(() =>
-  import('./pages/admin/AdminCollaboratorFunctionsPage').then((m) => ({
-    default: m.AdminCollaboratorFunctionsPage,
-  }))
-);
-
-const MonitoringPage = lazy(() => import('./pages/admin/MonitoringPage'));
-const NewsletterSubscribersPage = lazy(() =>
-  import('./pages/admin/NewsletterSubscribersPage').then((m) => ({ default: m.NewsletterSubscribersPage }))
-);
-
-const AdminSocialListPage = lazy(() => import('./pages/admin/AdminSocialListPage'));
-const AdminSocialPage = lazy(() => 
-  import('./pages/admin/AdminSocialPage').then((m) => ({ default: m.default }))
-);
-const AdminSponsorPage = lazy(() => import('./pages/admin/AdminSponsorPage'));
-
-const AdminServiceListPage = lazy(() => import('./pages/admin/AdminServiceListPage').then((m) => ({ default: m.AdminServiceListPage })));
-const AdminKitListPage = lazy(() => import('./pages/admin/AdminKitListPage').then((m) => ({ default: m.AdminKitListPage })));
-const ClientListPage = lazy(() => import('./pages/admin/ClientListPage'));
-const ClientEditPage = lazy(() => import('./pages/admin/ClientEditPage').then((m) => ({ default: m.ClientEditPage })));
-const AdminQuickProposalPage = lazy(() => import('./pages/admin/AdminQuickProposalPage').then(m => ({ default: m.default })));
 
 // TV Page
 const TVPage = lazy(() => import('./pages/tv/TVPage'));
 const ProposalViewPage = lazy(() => import('./pages/ProposalViewPage'));
-const AdminBookingDetailPage = lazy(() => import('./pages/admin/BookingDetailPage').then((m) => ({ default: m.BookingDetailPage })));
-const AdminAnnouncementPage = lazy(() => import('./pages/admin/AdminAnnouncementPage'));
 
 // Social Interaction Pages
 const ParticipatePage = lazy(() => import('./pages/social/ParticipatePage'));
 const UploadSocialPage = lazy(() => import('./pages/social/UploadSocialPage'));
 
-
-// ===== LOADING COMPONENT FOR SUSPENSE =====
-const PageLoadingSpinner = () => (
-  <div className="flex flex-col items-center justify-center w-full min-h-[calc(100vh-200px)] py-20">
-    <BrandLoader size="lg" />
-  </div>
-);
-
-// Route Protection Component
-const ProtectedRoute: React.FC<{ 
-  children: React.ReactNode; 
-  adminOnly?: boolean;
-  role?: string; // Aceitar role específico
-}> = ({
-  children,
-  adminOnly = false,
-  role,
-}) => {
-  const { isAuthenticated, user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return <BrandLoader fullScreen size="xl" />;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (adminOnly && user?.role !== 'ADMIN') {
-    return <Navigate to="/painel" replace />;
-  }
-
-  // Redirecionamento específico por role
-  if (role && user?.role !== role) {
-    switch (user?.role) {
-      case 'ADMIN':
-        return <Navigate to="/admin/painel" replace />;
-      case 'COLLABORATOR':
-        return <Navigate to="/colaborador/painel" replace />;
-      case 'FREELANCER':
-        return <Navigate to="/freelancer/painel" replace />;
-      case 'CLIENT':
-        return <Navigate to="/cliente/painel" replace />;
-      default:
-        return <Navigate to="/painel" replace />;
-    }
-  }
-
-  return <>{children}</>;
-};
-
-// Auth Redirect Component (redirects authenticated users away from login/register)
-const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading, user } = useAuth();
-  const location = useLocation();
-
-  if (isLoading) {
-    return <BrandLoader fullScreen size="xl" />;
-  }
-
-  // Só redireciona se estiver na página de login ou registro
-  if (isAuthenticated && user && (location.pathname === '/login' || location.pathname === '/register')) {
-    const dashboardRoute = getDashboardRoute(user.role);
-    return <Navigate to={dashboardRoute} replace />;
-  }
-
-  return <>{children}</>;
-};
-
-// Canonical dashboard entrypoint by role to avoid redirect chains.
-const DashboardRedirect: React.FC = () => {
-  const { user } = useAuth();
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <Navigate to={getDashboardRoute(user.role)} replace />;
+// Alias legado em inglês para /colaborador/evento/:id/roadmap — mantido como redirect leve
+// (sem importar CollaboratorEventRoadmapPage aqui, que agora só existe dentro de
+// routes/CollaboratorRoutes.tsx) para não recriar o mesmo link direto que estamos eliminando.
+const CollaboratorEventRoadmapRedirect: React.FC = () => {
+  const { id } = useParams();
+  return <Navigate to={`/colaborador/evento/${id}/roadmap`} replace />;
 };
 
 // Component para notificação offline
@@ -480,102 +300,11 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/cliente/painel"
-        element={
-          <ProtectedRoute role="CLIENT">
-            <ClientDashboardPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/cliente/agenda"
-        element={
-          <ProtectedRoute role="CLIENT">
-            <ClientCalendarPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/colaborador/painel"
-        element={
-          <ProtectedRoute role="COLLABORATOR">
-            <CollaboratorDashboardPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/colaborador/agenda"
-        element={
-          <ProtectedRoute role="COLLABORATOR">
-            <CollaboratorWorkSchedule />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/colaborador/perfil"
-        element={
-          <ProtectedRoute role="COLLABORATOR">
-            <CollaboratorProfilePage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/colaborador/evento/:id/roadmap"
-        element={
-          <ProtectedRoute role="COLLABORATOR">
-            <CollaboratorEventRoadmapPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/colaborador/ganhos"
-        element={
-          <ProtectedRoute role="COLLABORATOR">
-            <CollaboratorEarningsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/colaborador/relatorios"
-        element={
-          <ProtectedRoute role="COLLABORATOR">
-            <CollaboratorReportsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/colaborador/disponibilidade"
-        element={
-          <ProtectedRoute role="COLLABORATOR">
-            <CollaboratorAvailabilityPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/colaborador/notificacoes"
-        element={
-          <ProtectedRoute role="COLLABORATOR">
-            <CollaboratorNotificationsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/colaborador/configuracoes"
-        element={
-          <ProtectedRoute role="COLLABORATOR">
-            <CollaboratorSettingsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/colaborador/mensagens"
-        element={
-          <ProtectedRoute role="COLLABORATOR">
-            <CollaboratorMessagesPage />
-          </ProtectedRoute>
-        }
-      />
+      {/* Achado (auditoria de performance): admin/colaborador/cliente-autenticado isolados
+          em routes/*Routes.tsx, cada um seu próprio lazy() — ver comentário em
+          routes/AdminRoutes.tsx. A guarda de role/auth acontece dentro de cada sub-rota. */}
+      <Route path="/cliente/*" element={<ClientRoutes />} />
+      <Route path="/colaborador/*" element={<CollaboratorRoutes />} />
       {/* Legacy aliases for collaborator routes (EN -> PT-BR) */}
       <Route path="/collaborator" element={<Navigate to="/colaborador/painel" replace />} />
       <Route path="/collaborator/dashboard" element={<Navigate to="/colaborador/painel" replace />} />
@@ -591,14 +320,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/dashboard" element={<Navigate to="/painel" replace />} />
       <Route path="/client/dashboard" element={<Navigate to="/cliente/painel" replace />} />
       <Route path="/admin/dashboard" element={<Navigate to="/admin/painel" replace />} />
-      <Route
-        path="/collaborator/event/:id/roadmap"
-        element={
-          <ProtectedRoute role="COLLABORATOR">
-            <CollaboratorEventRoadmapPage />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/collaborator/event/:id/roadmap" element={<CollaboratorEventRoadmapRedirect />} />
       <Route
         path="/freelancer/painel"
         element={
@@ -612,14 +334,6 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <MyBookingsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/cliente/reservas/:id"
-        element={
-          <ProtectedRoute>
-            <BookingDetailsPage />
           </ProtectedRoute>
         }
       />
@@ -641,277 +355,7 @@ const AppRoutes: React.FC = () => {
       />
 
       {/* Admin Routes */}
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute adminOnly>
-            <Navigate to="/admin/painel" replace />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/painel"
-        element={
-          <ProtectedRoute adminOnly>
-            <AdminDashboardPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/whatsapp"
-        element={
-          <ProtectedRoute adminOnly>
-            <AdminWhatsappPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/kits"
-        element={
-          <ProtectedRoute adminOnly>
-            <AdminKitListPage />
-          </ProtectedRoute>
-        }
-      />
-      {/* <Route
-        path="/admin/kits/novo"
-        element={
-          <ProtectedRoute adminOnly>
-            <KitFormPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/kits/:id/editar"
-        element={
-          <ProtectedRoute adminOnly>
-            <KitFormPage />
-          </ProtectedRoute>
-        }
-      /> */}
-      <Route
-        path="/admin/reservas"
-        element={
-          <ProtectedRoute adminOnly>
-            <BookingListPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/reservas/:id"
-        element={
-          <ProtectedRoute adminOnly>
-            <AdminBookingDetailPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/orcamentos/novo"
-        element={
-          <ProtectedRoute adminOnly>
-            <AdminQuickProposalPage />
-          </ProtectedRoute>
-        }
-      />
-      {/* Alias para calendário dentro de bookings */}
-      <Route
-        path="/admin/reservas/calendario"
-        element={
-          <ProtectedRoute adminOnly>
-            <BookingCalendarPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/equipamentos"
-        element={
-          <ProtectedRoute adminOnly>
-            <EquipmentListPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/categorias"
-        element={
-          <ProtectedRoute adminOnly>
-            <CategoryListPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/faq"
-        element={
-          <ProtectedRoute adminOnly>
-            <FaqListPage />
-          </ProtectedRoute>
-        }
-      />
-      {/* Alias plural para FAQs */}
-      <Route
-        path="/admin/faqs"
-        element={
-          <ProtectedRoute adminOnly>
-            <FaqListPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/portfolio"
-        element={
-          <ProtectedRoute adminOnly>
-            <PortfolioListPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/contatos"
-        element={
-          <ProtectedRoute adminOnly>
-            <ContactSubmissionsListPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/newsletter"
-        element={
-          <ProtectedRoute adminOnly>
-            <NewsletterSubscribersPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/colaboradores"
-        element={
-          <ProtectedRoute adminOnly>
-            <AdminCollaboratorsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/colaboradores/funcoes"
-        element={
-          <ProtectedRoute adminOnly>
-            <AdminCollaboratorFunctionsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/clientes"
-        element={
-          <ProtectedRoute adminOnly>
-            <ClientListPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/clients"
-        element={
-          <ProtectedRoute adminOnly>
-            <Navigate to="/admin/clientes" replace />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/clientes/:id"
-        element={
-          <ProtectedRoute adminOnly>
-            <ClientEditPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/clients/:id"
-        element={
-          <ProtectedRoute adminOnly>
-            <ClientEditPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/servicos"
-        element={
-          <ProtectedRoute adminOnly>
-            <AdminServiceListPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/social"
-        element={
-          <ProtectedRoute adminOnly>
-            <AdminSocialListPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/social/:id"
-        element={
-          <ProtectedRoute adminOnly>
-            <AdminSocialPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/social/sponsors"
-        element={
-          <ProtectedRoute adminOnly>
-            <AdminSponsorPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/events/:id/social/announcements"
-        element={
-          <ProtectedRoute adminOnly>
-            <AdminAnnouncementPage />
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/admin/banners"
-        element={
-          <ProtectedRoute adminOnly>
-            <BannerManagementPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/admin/cupons"
-        element={
-          <ProtectedRoute adminOnly>
-            <CouponManagementPage />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Alias antigo para /admin/settings: redireciona para /painel */}
-      <Route
-        path="/admin/configuracoes"
-        element={
-          <ProtectedRoute adminOnly>
-            <Navigate to="/painel" replace />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/monitoramento"
-        element={
-          <ProtectedRoute adminOnly>
-            <MonitoringPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/avaliacoes"
-        element={
-          <ProtectedRoute adminOnly>
-            <ReviewManagementPage />
-          </ProtectedRoute>
-        }
-      />
-
+      <Route path="/admin/*" element={<AdminRoutes />} />
       {/* 404 Route */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
