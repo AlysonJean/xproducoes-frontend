@@ -156,12 +156,22 @@ export default defineConfig({
 
           // ✅ VENDOR CHUNKS (long-term cache - change infrequently)
           if (id.includes('node_modules')) {
-            // React core - always separate for framework updates
+            // React core - always separate for framework updates.
+            // Achado (produção real, Safari/WebKit): react-hook-form importa createContext
+            // do React no próprio topo do módulo — separá-lo do chunk do React (como uma
+            // tentativa anterior desta mesma sessão fez, agrupando-o com zod em
+            // 'vendor-forms') cria uma referência circular entre chunks cuja ordem de
+            // execução o V8/Chrome tolera mas o JavaScriptCore do Safari não: "Cannot
+            // access 'e' before initialization" ao tentar ler createContext antes do chunk
+            // do React terminar de rodar seu código de topo. react-hook-form/@hookform-
+            // resolvers precisam ficar no MESMO chunk que o React.
             if (
               id.includes('react/') ||
               id.includes('react-dom/') ||
               id.includes('react-router-dom') ||
-              id.includes('scheduler')
+              id.includes('scheduler') ||
+              id.includes('react-hook-form') ||
+              id.includes('@hookform/resolvers')
             ) return 'vendor-react';
 
             // UI Library components + clsx (utilitário de className usado por praticamente
@@ -207,14 +217,10 @@ export default defineConfig({
               id.includes('@socket.io/component-emitter')
             ) return 'vendor-realtime';
 
-            // Validação/formulários — usado amplamente (público + admin), mas peso bem
-            // menor que PDF/gráficos; isolado principalmente para não compartilhar chunk
-            // com eles.
-            if (
-              id.includes('zod') ||
-              id.includes('react-hook-form') ||
-              id.includes('@hookform/resolvers')
-            ) return 'vendor-forms';
+            // Validação — usado amplamente (público + admin), mas peso bem menor que
+            // PDF/gráficos; isolado principalmente para não compartilhar chunk com eles.
+            // Sem dependência de React (zero deps), seguro isolar sozinho.
+            if (id.includes('zod')) return 'vendor-forms';
 
             // Animation library
             if (id.includes('framer-motion')) return 'vendor-animation';
