@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -6,11 +6,22 @@ import { apiFetch } from '@/services/api';
 import { useModal } from '@/components/modals/ModalContext';
 import { generateSeoFilename } from '@/utils/seoUtils';
 import type { Client } from '@/types/types';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
 
 interface ClientFormProps {
   initialData?: Client | null;
   onSuccess: () => void;
   onCancel: () => void;
+  /** Notifica o formulário pai sobre alterações não salvas, para a trava de fechamento
+   * acidental (ver useUnsavedChangesGuard, usado em admin/ClientsPage). */
+  onDirtyChange?: (dirty: boolean) => void;
+}
+
+interface DraftableClientData {
+  name: string;
+  email: string;
+  phone: string;
 }
 
 interface CreateClientResponse {
@@ -21,7 +32,7 @@ interface CreateClientResponse {
   id?: string;
 }
 
-export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, onCancel }) => {
+export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, onCancel, onDirtyChange }) => {
   const { addNotification } = useNotifications();
   const { openModal } = useModal();
 
@@ -33,6 +44,12 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isDirty, setIsDirty] = useState(false);
+
+  const draftKey = `xp-draft-client-${initialData?.id || 'new'}`;
+  const { save: saveDraft, load: loadDraft, clear: clearDraft } = useFormDraft<DraftableClientData>(draftKey);
+  const [draftPrompt, setDraftPrompt] = useState<{ values: DraftableClientData; savedAt: number } | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (initialData) {
@@ -44,7 +61,37 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
       setEmail('');
       setPhone('');
     }
+
+    const draft = loadDraft();
+    if (draft) setDraftPrompt(draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData]);
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => saveDraft({ name, email, phone }), 500);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [name, email, phone, isDirty, saveDraft]);
+
+  const handleRestoreDraft = () => {
+    if (!draftPrompt) return;
+    setName(draftPrompt.values.name);
+    setEmail(draftPrompt.values.email);
+    setPhone(draftPrompt.values.phone);
+    setDraftPrompt(null);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setDraftPrompt(null);
+  };
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -112,6 +159,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
            });
         }
         addNotification({ type: 'success', title: 'Sucesso', message: 'Cliente atualizado!' });
+        clearDraft();
         onSuccess();
       } else {
         // Create Mode
@@ -134,6 +182,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
         const clientId = responseData?.client?.id || responseData?.clientId || responseData?.id;
 
         addNotification({ type: 'success', title: 'Sucesso', message: 'Cliente criado!' });
+        clearDraft();
         onSuccess();
 
         if (tempPassword || inviteUrl) {
@@ -150,12 +199,19 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
 
   return (
       <form onSubmit={onSubmit} className="space-y-6">
+        {draftPrompt && (
+          <DraftRestoreBanner
+            savedAt={draftPrompt.savedAt}
+            onRestore={handleRestoreDraft}
+            onDiscard={handleDiscardDraft}
+          />
+        )}
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Nome</label>
             <Input
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => { setName(e.target.value); setIsDirty(true); }}
               placeholder="Nome completo"
               aria-invalid={!!errors.name}
             />
@@ -167,7 +223,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
             <Input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setIsDirty(true); }}
               placeholder="email@exemplo.com"
               aria-invalid={!!errors.email}
             />
@@ -178,14 +234,14 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
             <label className="block text-sm font-medium text-foreground mb-2">Telefone (opcional)</label>
             <Input
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => { setPhone(e.target.value); setIsDirty(true); }}
               placeholder="(00) 00000-0000"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Avatar (opcional)</label>
-            <input aria-label="Avatar do cliente" type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files ? e.target.files[0] : null)} className="block w-full text-sm text-slate-500
+            <input aria-label="Avatar do cliente" type="file" accept="image/*" onChange={(e) => { setAvatarFile(e.target.files ? e.target.files[0] : null); setIsDirty(true); }} className="block w-full text-sm text-slate-500
               file:mr-4 file:py-2 file:px-4
               file:rounded-full file:border-0
               file:text-sm file:font-semibold

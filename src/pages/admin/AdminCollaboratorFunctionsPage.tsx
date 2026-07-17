@@ -25,6 +25,7 @@ import {
   Grid
 } from '../../components/ui/StandardComponents';
 import { CollaboratorFunctionForm } from '@/components/forms/CollaboratorFunctionForm';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { CollaboratorFunction } from '@/types/types';
 import { logger } from '../../utils/logger';
 
@@ -38,6 +39,8 @@ export const AdminCollaboratorFunctionsPage: React.FC = () => {
   const [idToDelete, setIdToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
 
   const fetchFunctions = useCallback(async () => {
     try {
@@ -294,19 +297,31 @@ export const AdminCollaboratorFunctionsPage: React.FC = () => {
       {/* Form Modal */}
       <Modal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        onClose={() => guardClose(() => setIsFormModalOpen(false))}
         title={editingFunction ? 'Modificar Parâmetros de Cargo' : 'Registrar Nova Expertise'}
         size="md"
       >
         <CollaboratorFunctionForm
           initialData={editingFunction || undefined}
+          onDirtyChange={setIsFormDirty}
           onSuccess={() => {
             setIsFormModalOpen(false);
             fetchFunctions();
           }}
-          onCancel={() => setIsFormModalOpen(false)}
+          onCancel={() => guardClose(() => setIsFormModalOpen(false))}
         />
       </Modal>
+
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        onClose={cancelDiscard}
+        onConfirm={confirmDiscard}
+        title="Descartar alterações?"
+        message="Você preencheu dados que ainda não foram salvos. Deseja descartar essas alterações?"
+        variant="warning"
+        confirmText="Descartar"
+        cancelText="Continuar Editando"
+      />
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal

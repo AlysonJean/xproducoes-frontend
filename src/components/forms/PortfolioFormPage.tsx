@@ -1,23 +1,38 @@
 // src/components/forms/PortfolioFormPage.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../services/api';
 import { generateSeoFilename } from '../../utils/seoUtils';
 import type { PortfolioItem } from '../../types/types';
-import { 
-  Form, 
-  FormSection, 
-  FormActions, 
-  Input, 
-  Textarea, 
-  Button, 
-  Alert 
+import {
+  Form,
+  FormSection,
+  FormActions,
+  Input,
+  Textarea,
+  Button,
+  Alert
 } from '../ui/StandardComponents';
 import { X, Star, Video, Image as ImageIcon, Plus } from 'lucide-react';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
 
 interface PortfolioFormProps {
   initialData?: PortfolioItem | null;
   onSuccess: () => void;
   onCancel: () => void;
+  /** Notifica o formulário pai sobre alterações não salvas, para a trava de fechamento
+   * acidental (ver useUnsavedChangesGuard, usado em PortfolioListPage). */
+  onDirtyChange?: (dirty: boolean) => void;
+}
+
+// Arquivos de mídia (File/blob) não são serializáveis — só os campos de texto entram no
+// rascunho. Perder a galeria de mídia selecionada não é evitável aqui (limitação do
+// navegador), mas o texto (título, descrição, data) é a parte mais penosa de redigitar.
+interface DraftablePortfolioData {
+  title: string;
+  description: string;
+  eventDate: string;
+  isPinned: boolean;
 }
 
 interface MediaFile {
@@ -29,18 +44,53 @@ interface MediaFile {
   isExisting: boolean;
 }
 
-export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuccess, onCancel }) => {
+export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuccess, onCancel, onDirtyChange }) => {
   const isEditing = Boolean(initialData);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [isPinned, setIsPinned] = useState(false);
-  
+  const [isDirty, setIsDirty] = useState(false);
+
   // Media State
   const [mediaItems, setMediaItems] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const draftKey = `xp-draft-portfolio-${initialData?.id || 'new'}`;
+  const { save: saveDraft, load: loadDraft, clear: clearDraft } = useFormDraft<DraftablePortfolioData>(draftKey);
+  const [draftPrompt, setDraftPrompt] = useState<{ values: DraftablePortfolioData; savedAt: number } | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveDraft({ title, description, eventDate, isPinned });
+    }, 500);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [title, description, eventDate, isPinned, isDirty, saveDraft]);
+
+  const handleRestoreDraft = () => {
+    if (!draftPrompt) return;
+    setTitle(draftPrompt.values.title);
+    setDescription(draftPrompt.values.description);
+    setEventDate(draftPrompt.values.eventDate);
+    setIsPinned(draftPrompt.values.isPinned);
+    setDraftPrompt(null);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setDraftPrompt(null);
+  };
 
   useEffect(() => {
     if (initialData) {
@@ -91,9 +141,14 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
       setIsPinned(false);
       setMediaItems([]);
     }
+
+    const draft = loadDraft();
+    if (draft) setDraftPrompt(draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsDirty(true);
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files);
       const newMediaItems: MediaFile[] = newFiles.map(file => ({
@@ -116,6 +171,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
   };
 
   const removeMedia = (index: number) => {
+    setIsDirty(true);
     setMediaItems(prev => {
       const item = prev[index];
       if (!item.isExisting && item.url) {
@@ -133,6 +189,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
   };
 
   const setAsCover = (index: number) => {
+    setIsDirty(true);
     setMediaItems(prev => prev.map((item, i) => ({
       ...item,
       isCover: i === index
@@ -198,6 +255,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
         await apiFetch('/portfolio', { method: 'POST', body: formData });
       }
 
+      clearDraft();
       onSuccess();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao salvar item do portfólio.');
@@ -218,11 +276,18 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
       )}
 
       <Form onSubmit={handleSubmit} className="space-y-6">
+        {draftPrompt && (
+          <DraftRestoreBanner
+            savedAt={draftPrompt.savedAt}
+            onRestore={handleRestoreDraft}
+            onDiscard={handleDiscardDraft}
+          />
+        )}
         <FormSection title="Informações do Projeto" description="Detalhes principais">
           <Input
             label="Título"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => { setTitle(e.target.value); setIsDirty(true); }}
             placeholder="Ex: Casamento Maria e João"
             required
           />
@@ -230,7 +295,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
           <Textarea
             label="Descrição"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => { setDescription(e.target.value); setIsDirty(true); }}
             placeholder="Descreva os detalhes do evento..."
             rows={4}
             required
@@ -239,7 +304,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
             label="Data do Evento"
             type="date"
             value={eventDate}
-            onChange={(e) => setEventDate(e.target.value)}
+            onChange={(e) => { setEventDate(e.target.value); setIsDirty(true); }}
             required
           />
           <div className="flex items-center gap-2 px-1">
@@ -247,7 +312,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
               type="checkbox"
               id="isPinned"
               checked={isPinned}
-              onChange={(e) => setIsPinned(e.target.checked)}
+              onChange={(e) => { setIsPinned(e.target.checked); setIsDirty(true); }}
               className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
             />
             <label htmlFor="isPinned" className="text-sm font-medium cursor-pointer">

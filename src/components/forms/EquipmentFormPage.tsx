@@ -1,23 +1,25 @@
 // src/components/forms/EquipmentFormPage.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { apiFetch } from '../../services/api';
 import { BrandLoader } from '../ui/BrandLoader';
-import { 
-  Form, 
-  FormSection, 
-  FormActions, 
-  Input, 
-  Select, 
-  Textarea, 
+import {
+  Form,
+  FormSection,
+  FormActions,
+  Input,
+  Select,
+  Textarea,
   Button
 } from '../ui/StandardComponents';
 import { ItemStatus, type Category, type Equipment } from '../../types/types';
 import { generateSeoFilename } from '../../utils/seoUtils';
 import { logger } from '../../utils/logger';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
 
 // Schema simplificado para o formulário de equipamento
 const equipmentFormSchema = z.object({
@@ -36,20 +38,32 @@ interface EquipmentFormProps {
   initialData?: Equipment | null;
   onSuccess: () => void;
   onCancel: () => void;
+  /** Notifica o formulário pai sobre alterações não salvas, para a trava de fechamento
+   * acidental (ver useUnsavedChangesGuard, usado em EquipmentListPage). */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuccess, onCancel }) => {
+// Campos de arquivo (FileList) não são serializáveis — não entram no rascunho salvo.
+type DraftableEquipmentData = Omit<EquipmentFormData, 'images'>;
+
+export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuccess, onCancel, onDirtyChange }) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const isEditing = Boolean(initialData);
   const { addNotification } = useNotifications();
 
+  const draftKey = `xp-draft-equipment-${initialData?.id || 'new'}`;
+  const { save: saveDraft, load: loadDraft, clear: clearDraft } = useFormDraft<DraftableEquipmentData>(draftKey);
+  const [draftPrompt, setDraftPrompt] = useState<{ values: DraftableEquipmentData; savedAt: number } | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isDirty },
     reset,
+    watch,
   } = useForm<EquipmentFormData>({
     resolver: zodResolver(equipmentFormSchema),
     mode: 'onChange',
@@ -62,6 +76,34 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
       status: ItemStatus.ACTIVE,
     },
   });
+
+  // Avisa o pai sempre que o estado de "alterado" mudar, para a trava de fechamento.
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  // Auto-salva um rascunho (debounced) enquanto o usuário digita — protege contra fechar o
+  // modal sem querer, fechar a aba ou um crash do navegador.
+  const watchedValues = watch();
+  useEffect(() => {
+    if (!isDirty) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      const draftable: DraftableEquipmentData = {
+        name: watchedValues.name,
+        description: watchedValues.description,
+        pricePerHour: watchedValues.pricePerHour,
+        categoryId: watchedValues.categoryId,
+        quantity: watchedValues.quantity,
+        status: watchedValues.status,
+      };
+      saveDraft(draftable);
+    }, 500);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(watchedValues), isDirty]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -92,6 +134,9 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
                 : initialData.status as ItemStatus) || ItemStatus.ACTIVE,
           });
         }
+
+        const draft = loadDraft();
+        if (draft) setDraftPrompt(draft);
       } catch (err) {
         logger.error('Failed to load form data', 'EquipmentFormPage', err);
       } finally {
@@ -100,7 +145,18 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
     };
 
     fetchCategories();
-  }, [initialData, reset]);
+  }, [initialData, reset, loadDraft]);
+
+  const handleRestoreDraft = () => {
+    if (!draftPrompt) return;
+    reset(draftPrompt.values);
+    setDraftPrompt(null);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setDraftPrompt(null);
+  };
 
   const onSubmit: SubmitHandler<EquipmentFormData> = async (data) => {
     try {
@@ -141,6 +197,7 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
         await apiFetch('/equipment', { method: 'POST', body: formData });
       }
 
+      clearDraft();
       onSuccess();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao salvar equipamento. Tente novamente.';
@@ -165,7 +222,14 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
 
   return (
     <Form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <FormSection 
+      {draftPrompt && (
+        <DraftRestoreBanner
+          savedAt={draftPrompt.savedAt}
+          onRestore={handleRestoreDraft}
+          onDiscard={handleDiscardDraft}
+        />
+      )}
+      <FormSection
         title="Dados do Equipamento"
         description=""
       >

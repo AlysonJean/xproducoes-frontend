@@ -36,6 +36,7 @@ import {
 import ServiceForm from '../../components/forms/ServiceFormPage';
 import { StatusSelect } from '../../components/admin/StatusSelect';
 import { ItemStatus } from '../../types/types';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 
 export const AdminServiceListPage = () => {
   const { addNotification } = useNotifications();
@@ -51,6 +52,8 @@ export const AdminServiceListPage = () => {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
 
   const fetchServices = useCallback(async () => {
     try {
@@ -392,12 +395,13 @@ export const AdminServiceListPage = () => {
       {/* Specialty Interface Modals */}
       <Modal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        onClose={() => guardClose(() => setIsFormModalOpen(false))}
         title={editingService ? 'Ajuste de Escopo Técnico' : 'Protocolo de Inclusão de Nova Solução'}
         size="lg"
       >
         <ServiceForm
             initialData={editingService}
+            onDirtyChange={setIsFormDirty}
             onSuccess={() => {
               setIsFormModalOpen(false);
               fetchServices();
@@ -407,9 +411,20 @@ export const AdminServiceListPage = () => {
                 message: 'O novo serviço foi integrado ao portfólio operativo.'
               });
             }}
-            onCancel={() => setIsFormModalOpen(false)}
+            onCancel={() => guardClose(() => setIsFormModalOpen(false))}
         />
       </Modal>
+
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        onClose={cancelDiscard}
+        onConfirm={confirmDiscard}
+        title="Descartar alterações?"
+        message="Você preencheu dados que ainda não foram salvos. Deseja descartar essas alterações?"
+        variant="warning"
+        confirmText="Descartar"
+        cancelText="Continuar Editando"
+      />
 
       <ConfirmModal
         isOpen={isDeleteModalOpen}

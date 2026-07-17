@@ -27,6 +27,7 @@ import {
 } from '../../components/ui/StandardComponents';
 import { BannerForm } from '../../components/forms/BannerForm';
 import { logger } from '../../utils/logger';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 
 export const BannerManagementPage = () => {
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -37,6 +38,8 @@ export const BannerManagementPage = () => {
   const [idToDelete, setIdToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
   const { addNotification } = useNotifications();
 
   const loadBanners = useCallback(async (showLoader = true) => {
@@ -276,16 +279,28 @@ export const BannerManagementPage = () => {
         {/* Form Modal */}
         <Modal
             isOpen={isFormModalOpen}
-            onClose={() => setIsFormModalOpen(false)}
+            onClose={() => guardClose(() => setIsFormModalOpen(false))}
             title={editingBanner ? 'Refinar Campanha Visual' : 'Novo Asset de Marketing'}
             size="lg"
         >
-            <BannerForm 
+            <BannerForm
                 initialData={editingBanner}
+                onDirtyChange={setIsFormDirty}
                 onSuccess={handleSuccess}
-                onCancel={() => setIsFormModalOpen(false)}
+                onCancel={() => guardClose(() => setIsFormModalOpen(false))}
             />
         </Modal>
+
+        <ConfirmModal
+          isOpen={isConfirmOpen}
+          onClose={cancelDiscard}
+          onConfirm={confirmDiscard}
+          title="Descartar alterações?"
+          message="Você preencheu dados que ainda não foram salvos. Deseja descartar essas alterações?"
+          variant="warning"
+          confirmText="Descartar"
+          cancelText="Continuar Editando"
+        />
 
         {/* Delete Confirmation Modal */}
         <ConfirmModal

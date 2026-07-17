@@ -31,6 +31,7 @@ import {
   Grid
 } from '../../components/ui/StandardComponents';
 import FaqForm from '../../components/forms/FaqFormPage';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 
 export const FaqListPage = () => {
   const { addNotification } = useNotifications();
@@ -44,6 +45,8 @@ export const FaqListPage = () => {
   const [editingFaq, setEditingFaq] = useState<FaqItem | null>(null);
   const [faqToDelete, setFaqToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
 
   const fetchFaqs = useCallback(async () => {
     try {
@@ -318,12 +321,13 @@ export const FaqListPage = () => {
       {/* Specialty Interface Modals */}
       <Modal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        onClose={() => guardClose(() => setIsFormModalOpen(false))}
         title={editingFaq ? 'Redação de Verbete Operacional' : 'Protocolo de Ingestão de Conhecimento'}
         size="lg"
       >
         <FaqForm
           initialData={editingFaq}
+          onDirtyChange={setIsFormDirty}
           onSuccess={() => {
             setIsFormModalOpen(false);
             fetchFaqs();
@@ -333,9 +337,20 @@ export const FaqListPage = () => {
               message: 'O novo verbete de FAQ foi indexado ao sistema.'
             });
           }}
-          onCancel={() => setIsFormModalOpen(false)}
+          onCancel={() => guardClose(() => setIsFormModalOpen(false))}
         />
       </Modal>
+
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        onClose={cancelDiscard}
+        onConfirm={confirmDiscard}
+        title="Descartar alterações?"
+        message="Você preencheu dados que ainda não foram salvos. Deseja descartar essas alterações?"
+        variant="warning"
+        confirmText="Descartar"
+        cancelText="Continuar Editando"
+      />
 
       <ConfirmModal
         isOpen={isDeleteModalOpen}

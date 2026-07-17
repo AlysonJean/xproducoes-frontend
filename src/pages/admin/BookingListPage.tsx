@@ -7,17 +7,19 @@ import { normalizeString } from '../../utils/string';
 import { Link } from 'react-router-dom';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { AdminLayout } from '../../components/admin/AdminLayout';
-import { 
-  Button, 
-  Input, 
-  Select, 
-  Modal, 
-  Card, 
+import {
+  Button,
+  Input,
+  Select,
+  Modal,
+  ConfirmModal,
+  Card,
   Badge,
   Grid,
   Alert
 } from '../../components/ui/StandardComponents';
 import { AdminBookingForm as BookingForm } from '@/components/forms/AdminBookingForm';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import type { BookingListItem, BookingStatus } from '../../types/types';
 import { 
   Search, 
@@ -58,6 +60,8 @@ export const BookingListPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<BookingListItem | null>(null);
   const [initialClientType, setInitialClientType] = useState<'registered' | 'manual'>('registered');
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -490,7 +494,7 @@ export const BookingListPage = () => {
       {/* Admin Booking Form Modal */}
       <Modal
         isOpen={isModalOpen}
-        onClose={handleCancel}
+        onClose={() => guardClose(handleCancel)}
         title={editingBooking ? 'Ficha de Edição de Reserva' : (initialClientType === 'manual' ? 'Lançamento de Reserva Manual' : 'Abertura de Nova Reserva')}
         size="full"
         className="max-h-[90vh] max-w-5xl"
@@ -505,10 +509,22 @@ export const BookingListPage = () => {
                         } : editingBooking}
             defaultClientType={initialClientType}
             onSuccess={handleSuccess}
-            onCancel={handleCancel}
+            onDirtyChange={setIsFormDirty}
+            onCancel={() => guardClose(handleCancel)}
           />
         </div>
       </Modal>
+
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        onClose={cancelDiscard}
+        onConfirm={confirmDiscard}
+        title="Descartar alterações?"
+        message="Você preencheu dados que ainda não foram salvos. Deseja descartar essas alterações?"
+        variant="warning"
+        confirmText="Descartar"
+        cancelText="Continuar Editando"
+      />
     </AdminLayout>
   );
 };

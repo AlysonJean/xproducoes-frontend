@@ -1,5 +1,5 @@
 // src/components/forms/KitFormPage.tsx (Updated: 2026-02-09)
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useForm, type SubmitHandler, useFieldArray } from 'react-hook-form';
 import { clsx } from 'clsx';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,6 +21,8 @@ import {
 } from '../ui/StandardComponents';
 import { Search, Plus, Trash2, ShoppingBag, Calculator, Package, User } from 'lucide-react';
 import { ExperienceLevelsEditor } from '../kits/ExperienceLevelsEditor';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
 
 // Combined item type for UI
 type SearchableItem = {
@@ -57,9 +59,21 @@ interface KitFormProps {
   initialData?: Kit | null;
   onSuccess: () => void;
   onCancel: () => void;
+  /** Notifica o formulário pai sobre alterações não salvas, para a trava de fechamento
+   * acidental (ver useUnsavedChangesGuard, usado em AdminKitListPage). */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCancel }) => {
+interface DraftableKitData {
+  name: string;
+  description: string;
+  price: number;
+  items: KitItemField[];
+  status: ItemStatus;
+  experienceLevels: Partial<KitExperienceLevel>[];
+}
+
+export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCancel, onDirtyChange }) => {
   const isEditing = Boolean(initialData);
 
   const [allItems, setAllItems] = useState<SearchableItem[]>([]);
@@ -69,6 +83,12 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
   const [experienceLevels, setExperienceLevels] = useState<Partial<KitExperienceLevel>[]>(
     initialData?.experienceLevels || []
   );
+  const [experienceLevelsDirty, setExperienceLevelsDirty] = useState(false);
+
+  const draftKey = `xp-draft-kit-${initialData?.id || 'new'}`;
+  const { save: saveDraft, load: loadDraft, clear: clearDraft } = useFormDraft<DraftableKitData>(draftKey);
+  const [draftPrompt, setDraftPrompt] = useState<{ values: DraftableKitData; savedAt: number } | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     register,
@@ -76,7 +96,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
     handleSubmit,
     watch,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty: isFormDirty },
   } = useForm<KitFormData>({
     resolver: zodResolver(kitFormSchema),
     defaultValues: {
@@ -87,6 +107,17 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
       status: ItemStatus.ACTIVE,
     },
   });
+
+  const isDirty = isFormDirty || experienceLevelsDirty;
+
+  const handleExperienceLevelsChange = (levels: Partial<KitExperienceLevel>[]) => {
+    setExperienceLevels(levels);
+    setExperienceLevelsDirty(true);
+  };
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -155,6 +186,9 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
             items: formItems,
           });
         }
+
+        const draft = loadDraft();
+        if (draft) setDraftPrompt(draft);
       } catch (err) {
         setServerError(
           err instanceof Error
@@ -166,7 +200,49 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
       }
     };
     fetchInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, reset]);
+
+  // Auto-salva um rascunho (debounced) enquanto o usuário digita — protege contra fechar o
+  // modal sem querer, fechar a aba ou um crash do navegador. Imagem (FileList) não é
+  // serializável, não entra no rascunho.
+  const watchedValues = watch();
+  useEffect(() => {
+    if (!isDirty) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveDraft({
+        name: watchedValues.name,
+        description: watchedValues.description,
+        price: watchedValues.price,
+        items: watchedValues.items as KitItemField[],
+        status: watchedValues.status,
+        experienceLevels,
+      });
+    }, 500);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(watchedValues), experienceLevels, isDirty]);
+
+  const handleRestoreDraft = () => {
+    if (!draftPrompt) return;
+    reset({
+      name: draftPrompt.values.name,
+      description: draftPrompt.values.description,
+      price: draftPrompt.values.price,
+      items: draftPrompt.values.items,
+      status: draftPrompt.values.status,
+    });
+    setExperienceLevels(draftPrompt.values.experienceLevels);
+    setDraftPrompt(null);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setDraftPrompt(null);
+  };
 
   // Calculations
   const totalPriceOfItems = useMemo(() => {
@@ -244,6 +320,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
       } else {
         await apiFetch('/kits', { method: 'POST', body: formData });
       }
+      clearDraft();
       onSuccess();
     } catch (err: unknown) {
       setServerError(err instanceof Error ? err.message : 'Ocorreu um erro ao salvar o kit.');
@@ -255,11 +332,19 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
   return (
     <div className="space-y-6">
       {serverError && (
-        <Alert 
-          variant="error" 
-          title="Erro" 
+        <Alert
+          variant="error"
+          title="Erro"
           description={serverError}
           onClose={() => setServerError(null)}
+        />
+      )}
+
+      {draftPrompt && (
+        <DraftRestoreBanner
+          savedAt={draftPrompt.savedAt}
+          onRestore={handleRestoreDraft}
+          onDiscard={handleDiscardDraft}
         />
       )}
 
@@ -480,7 +565,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                 <ExperienceLevelsEditor
                   kitId={initialData?.id || 'new'}
                   initialLevels={initialData?.experienceLevels}
-                  onChange={setExperienceLevels}
+                  onChange={handleExperienceLevelsChange}
                   basePrice={kitPrice || 0}
                 />
               </div>

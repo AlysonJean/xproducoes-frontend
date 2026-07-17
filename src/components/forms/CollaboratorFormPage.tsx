@@ -1,5 +1,5 @@
 // src/components/forms/CollaboratorFormPage.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,6 +16,8 @@ import {
   Select,
   Button
 } from '@/components/ui/StandardComponents';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
 
 // Definimos o schema de forma mais simples para evitar conflitos de inferência no Vercel/TSC
 const collaboratorSchema = z.object({
@@ -43,23 +45,33 @@ interface CollaboratorFormProps {
     initialData?: CollaboratorInitialData | null;
   onSuccess: () => void;
   onCancel: () => void;
+  /** Notifica o formulário pai sobre alterações não salvas, para a trava de fechamento
+   * acidental (ver useUnsavedChangesGuard, usado em CollaboratorListPage). */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
   initialData,
   onSuccess,
   onCancel,
+  onDirtyChange,
 }) => {
   const { addNotification } = useNotifications();
   const isEditing = Boolean(initialData);
   const [functions, setFunctions] = useState<CollaboratorFunction[]>([]);
+
+  const draftKey = `xp-draft-collaborator-${initialData?.id || 'new'}`;
+  const { save: saveDraft, load: loadDraft, clear: clearDraft } = useFormDraft<CollaboratorFormValues>(draftKey);
+  const [draftPrompt, setDraftPrompt] = useState<{ values: CollaboratorFormValues; savedAt: number } | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Usamos useForm sem o generic explícito se ele estiver causando problemas de tipos cruzados
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
+    watch,
+    formState: { errors, isSubmitting, isDirty },
     } = useForm<CollaboratorFormValues>({
     resolver: zodResolver(collaboratorSchema),
     defaultValues: {
@@ -95,7 +107,37 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
         status: initialData.status || 'ACTIVE',
       });
     }
+
+    const draft = loadDraft();
+    if (draft) setDraftPrompt(draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, reset]);
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  const watchedValues = watch();
+  useEffect(() => {
+    if (!isDirty) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => saveDraft(watchedValues), 500);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(watchedValues), isDirty]);
+
+  const handleRestoreDraft = () => {
+    if (!draftPrompt) return;
+    reset(draftPrompt.values);
+    setDraftPrompt(null);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setDraftPrompt(null);
+  };
 
     const onSubmit = async (data: CollaboratorFormValues) => {
     try {
@@ -118,6 +160,7 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
         });
         addNotification({ type: 'success', title: 'Sucesso', message: 'Colaborador criado!' });
       }
+      clearDraft();
       onSuccess();
     } catch (err) {
       logger.error('Erro', 'CollaboratorFormPage', err);
@@ -127,6 +170,13 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
 
   return (
         <Form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {draftPrompt && (
+        <DraftRestoreBanner
+          savedAt={draftPrompt.savedAt}
+          onRestore={handleRestoreDraft}
+          onDiscard={handleDiscardDraft}
+        />
+      )}
       <FormSection title="Dados Pessoais" description="Informações básicas do colaborador">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input

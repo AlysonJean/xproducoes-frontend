@@ -36,6 +36,7 @@ import {
 import KitForm from '../../components/forms/KitFormPage';
 import { StatusSelect } from '../../components/admin/StatusSelect';
 import { ItemStatus } from '../../types/types';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 
 export const AdminKitListPage = () => {
   const { addNotification } = useNotifications();
@@ -51,6 +52,8 @@ export const AdminKitListPage = () => {
   const [editingKit, setEditingKit] = useState<Kit | null>(null);
   const [kitToDelete, setKitToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
 
   const fetchKits = useCallback(async () => {
     try {
@@ -397,12 +400,13 @@ export const AdminKitListPage = () => {
       {/* Specialty Modals */}
       <Modal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        onClose={() => guardClose(() => setIsFormModalOpen(false))}
         title={editingKit ? 'Engenharia de Combo Personalizado' : 'Protocolo de Criação de Kit Operacional'}
         size="xl"
       >
         <KitForm
           initialData={editingKit}
+          onDirtyChange={setIsFormDirty}
           onSuccess={() => {
               setIsFormModalOpen(false);
               fetchKits();
@@ -412,9 +416,20 @@ export const AdminKitListPage = () => {
                 message: 'O novo combo foi integrado à base de dados operacional.'
               });
           }}
-          onCancel={() => setIsFormModalOpen(false)}
+          onCancel={() => guardClose(() => setIsFormModalOpen(false))}
         />
       </Modal>
+
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        onClose={cancelDiscard}
+        onConfirm={confirmDiscard}
+        title="Descartar alterações?"
+        message="Você preencheu dados que ainda não foram salvos. Deseja descartar essas alterações?"
+        variant="warning"
+        confirmText="Descartar"
+        cancelText="Continuar Editando"
+      />
 
       <ConfirmModal
         isOpen={isDeleteModalOpen}

@@ -36,6 +36,7 @@ import {
   Alert 
 } from '@/components/ui/StandardComponents';
 import ClientForm from '@/components/forms/ClientFormPage';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import type { Client } from '@/types/types';
 
 const ITEMS_PER_PAGE = 10;
@@ -68,6 +69,8 @@ export const ClientListPage: React.FC = () => {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [clientToDelete, setClientToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
 
   useEffect(() => {
     fetchClients();
@@ -472,12 +475,13 @@ export const ClientListPage: React.FC = () => {
       {/* Specialty Modals */}
       <Modal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        onClose={() => guardClose(() => setIsFormModalOpen(false))}
         title={editingClient ? `Ficha de Registro VIP: ${editingClient.name}` : 'Acordo de Parceria: Novo Cliente'}
         size="lg"
       >
         <ClientForm
                     initialData={editingClient}
+          onDirtyChange={setIsFormDirty}
           onSuccess={() => {
             setIsFormModalOpen(false);
             fetchClients();
@@ -487,9 +491,20 @@ export const ClientListPage: React.FC = () => {
               message: 'Os parâmetros do cliente foram atualizados no repositório.',
             });
           }}
-          onCancel={() => setIsFormModalOpen(false)}
+          onCancel={() => guardClose(() => setIsFormModalOpen(false))}
         />
       </Modal>
+
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        onClose={cancelDiscard}
+        onConfirm={confirmDiscard}
+        title="Descartar alterações?"
+        message="Você preencheu dados que ainda não foram salvos. Deseja descartar essas alterações?"
+        variant="warning"
+        confirmText="Descartar"
+        cancelText="Continuar Editando"
+      />
 
       <ConfirmModal
         isOpen={isDeleteModalOpen}

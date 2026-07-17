@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -15,6 +15,8 @@ import {
 } from '../ui/StandardComponents';
 import { BrandLoader } from '../ui/BrandLoader';
 import { logger } from '../../utils/logger';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
 
 const couponSchema = z.object({
   code: z.string().min(1, 'Código é obrigatório'),
@@ -37,6 +39,9 @@ interface CouponFormProps {
   initialData?: Coupon | null;
   onSuccess: () => void;
   onCancel: () => void;
+  /** Notifica o formulário pai sobre alterações não salvas, para a trava de fechamento
+   * acidental (ver useUnsavedChangesGuard, usado em CouponManagementPage). */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 function toDateInputValue(value?: string | null): string {
@@ -44,16 +49,22 @@ function toDateInputValue(value?: string | null): string {
   return value.slice(0, 10);
 }
 
-export const CouponForm: React.FC<CouponFormProps> = ({ initialData, onSuccess, onCancel }) => {
+export const CouponForm: React.FC<CouponFormProps> = ({ initialData, onSuccess, onCancel, onDirtyChange }) => {
   const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(false);
   const isEditing = Boolean(initialData?.id);
+
+  const draftKey = `xp-draft-coupon-${initialData?.id || 'new'}`;
+  const { save: saveDraft, load: loadDraft, clear: clearDraft } = useFormDraft<CouponFormInput>(draftKey);
+  const [draftPrompt, setDraftPrompt] = useState<{ values: CouponFormInput; savedAt: number } | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    watch,
+    formState: { errors, isDirty },
   } = useForm<CouponFormInput, unknown, CouponFormData>({
     resolver: zodResolver(couponSchema),
     defaultValues: {
@@ -83,7 +94,37 @@ export const CouponForm: React.FC<CouponFormProps> = ({ initialData, onSuccess, 
     } else {
       reset({ code: '', description: '', discountType: 'PERCENTAGE', discountValue: 10, active: true });
     }
+
+    const draft = loadDraft();
+    if (draft) setDraftPrompt(draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, reset]);
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  const watchedValues = watch();
+  useEffect(() => {
+    if (!isDirty) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => saveDraft(watchedValues), 500);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(watchedValues), isDirty]);
+
+  const handleRestoreDraft = () => {
+    if (!draftPrompt) return;
+    reset(draftPrompt.values);
+    setDraftPrompt(null);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setDraftPrompt(null);
+  };
 
   const onSubmit = async (data: CouponFormData) => {
     try {
@@ -105,6 +146,7 @@ export const CouponForm: React.FC<CouponFormProps> = ({ initialData, onSuccess, 
         await couponService.create(payload);
         addNotification({ type: 'success', title: 'Sucesso', message: 'Cupom criado.' });
       }
+      clearDraft();
       onSuccess();
     } catch (error) {
       logger.error('Erro', 'CouponForm', error);
@@ -119,6 +161,13 @@ export const CouponForm: React.FC<CouponFormProps> = ({ initialData, onSuccess, 
 
   return (
     <Form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {draftPrompt && (
+        <DraftRestoreBanner
+          savedAt={draftPrompt.savedAt}
+          onRestore={handleRestoreDraft}
+          onDiscard={handleDiscardDraft}
+        />
+      )}
       <FormSection title="Identificação" description="Código que o cliente vai digitar no orçamento">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input

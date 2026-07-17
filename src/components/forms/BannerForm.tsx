@@ -1,21 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api, apiFetch } from '../../services/api';
 import { useNotifications } from '../../contexts/NotificationContext';
-import { 
-  Form, 
-  FormSection, 
-  FormActions, 
-  Input, 
-  Textarea, 
+import {
+  Form,
+  FormSection,
+  FormActions,
+  Input,
+  Textarea,
   Button
 } from '../ui/StandardComponents';
 import { generateSeoFilename } from '../../utils/seoUtils';
 import { Banner } from '../../types/types';
 import { BrandLoader } from '../ui/BrandLoader';
 import { logger } from '../../utils/logger';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
 
 
 // Schema
@@ -35,14 +37,22 @@ interface BannerFormProps {
   initialData?: Partial<Banner> | null;
   onSuccess: () => void;
   onCancel: () => void;
+  /** Notifica o formulário pai sobre alterações não salvas, para a trava de fechamento
+   * acidental (ver useUnsavedChangesGuard, usado em BannerManagementPage). */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export const BannerForm: React.FC<BannerFormProps> = ({ initialData, onSuccess, onCancel }) => {
+export const BannerForm: React.FC<BannerFormProps> = ({ initialData, onSuccess, onCancel, onDirtyChange }) => {
   const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(false);
   const [uploadingDesktop, setUploadingDesktop] = useState(false);
   const [uploadingMobile, setUploadingMobile] = useState(false);
   const isEditing = Boolean(initialData && initialData.id);
+
+  const draftKey = `xp-draft-banner-${initialData?.id || 'new'}`;
+  const { save: saveDraft, load: loadDraft, clear: clearDraft } = useFormDraft<BannerFormData>(draftKey);
+  const [draftPrompt, setDraftPrompt] = useState<{ values: BannerFormData; savedAt: number } | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     register,
@@ -50,7 +60,8 @@ export const BannerForm: React.FC<BannerFormProps> = ({ initialData, onSuccess, 
     setValue,
     getValues,
     reset,
-    formState: { errors },
+    watch,
+    formState: { errors, isDirty },
   } = useForm<BannerFormData>({
     resolver: zodResolver(bannerSchema),
     defaultValues: {
@@ -81,7 +92,37 @@ export const BannerForm: React.FC<BannerFormProps> = ({ initialData, onSuccess, 
             sortOrder: 0
         });
     }
+
+    const draft = loadDraft();
+    if (draft) setDraftPrompt(draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, reset]);
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  const watchedValues = watch();
+  useEffect(() => {
+    if (!isDirty) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => saveDraft(watchedValues), 500);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(watchedValues), isDirty]);
+
+  const handleRestoreDraft = () => {
+    if (!draftPrompt) return;
+    reset(draftPrompt.values);
+    setDraftPrompt(null);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setDraftPrompt(null);
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'imageUrl' | 'mobileImageUrl') => {
     const file = e.target.files?.[0];
@@ -143,6 +184,7 @@ export const BannerForm: React.FC<BannerFormProps> = ({ initialData, onSuccess, 
         });
         addNotification({ type: 'success', title: 'Sucesso', message: 'Banner criado.' });
       }
+      clearDraft();
       onSuccess();
     } catch (error) {
       logger.error('Erro', 'BannerForm', error);
@@ -156,6 +198,13 @@ export const BannerForm: React.FC<BannerFormProps> = ({ initialData, onSuccess, 
 
   return (
     <Form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {draftPrompt && (
+        <DraftRestoreBanner
+          savedAt={draftPrompt.savedAt}
+          onRestore={handleRestoreDraft}
+          onDiscard={handleDiscardDraft}
+        />
+      )}
       <FormSection title="Informações Básicas" description="Defina os textos principais do banner">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="col-span-2">

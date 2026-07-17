@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,6 +18,8 @@ import {
 } from '../ui/StandardComponents';
 import { BrandLoader } from '../ui/BrandLoader';
 import { logger } from '../../utils/logger';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
 
 const idSchema = z.union([
   z.string().uuid(),
@@ -96,9 +98,12 @@ interface AdminBookingFormProps {
   defaultClientType?: 'registered' | 'manual';
   onSuccess: () => void;
   onCancel: () => void;
+  /** Notifica o formulário pai sobre alterações não salvas, para a trava de fechamento
+   * acidental (ver useUnsavedChangesGuard, usado em AdminBookingsPage). */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData, defaultClientType = 'registered', onSuccess, onCancel }) => {
+export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData, defaultClientType = 'registered', onSuccess, onCancel, onDirtyChange }) => {
   const isEditing = Boolean(initialData);
   const { addNotification } = useNotifications();
   const { user } = useAuth();
@@ -113,13 +118,18 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [equipSearch, setEquipSearch] = useState('');
 
+  const draftKey = `xp-draft-admin-booking-${initialData?.id || 'new'}`;
+  const { save: saveDraft, load: loadDraft, clear: clearDraft } = useFormDraft<Omit<BookingFormData, 'paymentProof'>>(draftKey);
+  const [draftPrompt, setDraftPrompt] = useState<{ values: Omit<BookingFormData, 'paymentProof'>; savedAt: number } | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const {
     register,
     handleSubmit,
     setValue,
     watch,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<BookingFormData>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
@@ -134,6 +144,36 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
 
   const clientType = watch('clientType');
   const selectionType = watch('selectionType');
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  const watchedValues = watch();
+  useEffect(() => {
+    if (!isDirty) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      const { paymentProof: _paymentProof, ...draftable } = watchedValues;
+      void _paymentProof;
+      saveDraft(draftable);
+    }, 500);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(watchedValues), isDirty]);
+
+  const handleRestoreDraft = () => {
+    if (!draftPrompt) return;
+    reset(draftPrompt.values);
+    setDraftPrompt(null);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setDraftPrompt(null);
+  };
 
   useEffect(() => {
     const loadInitial = async () => {
@@ -214,6 +254,9 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
             serviceValue: booking.serviceValue || undefined,
           });
         }
+
+        const draft = loadDraft();
+        if (draft) setDraftPrompt(draft);
       } catch (e: unknown) {
         setServerError(e instanceof Error ? e.message : 'Falha ao carregar dados do formulário');
       } finally {
@@ -221,6 +264,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
       }
     };
     loadInitial();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, reset]);
 
   const onSubmit = async (data: BookingFormData) => {
@@ -292,6 +336,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
         await apiFetch(`/bookings`, { method: 'POST', body: JSON.stringify(payload) });
         addNotification({ type: 'success', title: 'Reserva criada', message: 'Reserva criada com sucesso.' });
       }
+      clearDraft();
       onSuccess();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Falha ao salvar reserva';
@@ -311,6 +356,13 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
       )}
 
       <Form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {draftPrompt && (
+          <DraftRestoreBanner
+            savedAt={draftPrompt.savedAt}
+            onRestore={handleRestoreDraft}
+            onDiscard={handleDiscardDraft}
+          />
+        )}
         <FormSection title="Cliente" description="Associe a reserva a um cliente">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Select

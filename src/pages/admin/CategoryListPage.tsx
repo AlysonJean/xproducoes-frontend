@@ -27,6 +27,7 @@ import {
   Grid
 } from '@/components/ui/StandardComponents';
 import CategoryForm from '../../components/forms/CategoryFormPage';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 
 export const CategoryListPage = () => {
   const { addNotification } = useNotifications();
@@ -41,6 +42,8 @@ export const CategoryListPage = () => {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -299,19 +302,31 @@ export const CategoryListPage = () => {
       {/* Form Modal */}
       <Modal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        onClose={() => guardClose(() => setIsFormModalOpen(false))}
         title={editingCategory ? 'Refinar Categoria' : 'Mapear Nova Categoria'}
         size="md"
       >
-        <CategoryForm 
+        <CategoryForm
           initialData={editingCategory}
+          onDirtyChange={setIsFormDirty}
           onSuccess={() => {
             setIsFormModalOpen(false);
             fetchCategories();
           }}
-          onCancel={() => setIsFormModalOpen(false)}
+          onCancel={() => guardClose(() => setIsFormModalOpen(false))}
         />
       </Modal>
+
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        onClose={cancelDiscard}
+        onConfirm={confirmDiscard}
+        title="Descartar alterações?"
+        message="Você preencheu dados que ainda não foram salvos. Deseja descartar essas alterações?"
+        variant="warning"
+        confirmText="Descartar"
+        cancelText="Continuar Editando"
+      />
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal

@@ -35,6 +35,7 @@ import {
 import EquipmentForm from '../../components/forms/EquipmentFormPage';
 import { StatusSelect } from '../../components/admin/StatusSelect';
 import { ItemStatus } from '../../types/types';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 
 export const EquipmentListPage = () => {
   const { addNotification } = useNotifications();
@@ -50,6 +51,8 @@ export const EquipmentListPage = () => {
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [equipmentToDelete, setEquipmentToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
 
   const fetchEquipments = useCallback(async () => {
     try {
@@ -424,12 +427,13 @@ export const EquipmentListPage = () => {
       {/* Specialty Modals */}
       <Modal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        onClose={() => guardClose(() => setIsFormModalOpen(false))}
         title={editingEquipment ? `Ficha Técnica de Equipamento` : 'Protocolo de Inclusão de Ativo'}
         size="lg"
       >
         <EquipmentForm
           initialData={editingEquipment}
+          onDirtyChange={setIsFormDirty}
           onSuccess={() => {
             setIsFormModalOpen(false);
             fetchEquipments();
@@ -439,9 +443,23 @@ export const EquipmentListPage = () => {
               message: 'O terminal sincronizou as alterações do equipamento com sucesso.'
             });
           }}
-          onCancel={() => setIsFormModalOpen(false)}
+          onCancel={() => guardClose(() => setIsFormModalOpen(false))}
         />
       </Modal>
+
+      {/* Achado: fechar o modal (clique fora, Esc ou "Cancelar") descartava o preenchimento
+          sem confirmação nenhuma — trava via useUnsavedChangesGuard só pergunta quando há
+          alteração não salva de verdade. */}
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        onClose={cancelDiscard}
+        onConfirm={confirmDiscard}
+        title="Descartar alterações?"
+        message="Você preencheu dados que ainda não foram salvos. Deseja descartar essas alterações?"
+        variant="warning"
+        confirmText="Descartar"
+        cancelText="Continuar Editando"
+      />
 
       <ConfirmModal
         isOpen={isDeleteModalOpen}

@@ -27,6 +27,7 @@ import {
   Grid
 } from '@/components/ui/StandardComponents';
 import PortfolioForm from '@/components/forms/PortfolioFormPage';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 
 // DnD Imports
 import {
@@ -172,6 +173,8 @@ export const PortfolioListPage = () => {
   // Modal State
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
 
   const fetchPortfolioItems = async () => {
     try {
@@ -406,19 +409,31 @@ export const PortfolioListPage = () => {
       {/* Edit/Create Modal */}
       <Modal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        onClose={() => guardClose(() => setIsFormModalOpen(false))}
         title={editingItem ? 'Manutenção de Registro' : 'Novo Case de Sucesso'}
         size="lg"
       >
-        <PortfolioForm 
+        <PortfolioForm
             initialData={editingItem}
+            onDirtyChange={setIsFormDirty}
             onSuccess={() => {
               setIsFormModalOpen(false);
               fetchPortfolioItems();
             }}
-            onCancel={() => setIsFormModalOpen(false)}
+            onCancel={() => guardClose(() => setIsFormModalOpen(false))}
         />
       </Modal>
+
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        onClose={cancelDiscard}
+        onConfirm={confirmDiscard}
+        title="Descartar alterações?"
+        message="Você preencheu dados que ainda não foram salvos. Deseja descartar essas alterações?"
+        variant="warning"
+        confirmText="Descartar"
+        cancelText="Continuar Editando"
+      />
     </AdminLayout>
   );
 };

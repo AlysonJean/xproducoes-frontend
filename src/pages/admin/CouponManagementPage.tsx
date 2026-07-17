@@ -25,6 +25,7 @@ import {
 import { CouponForm } from '../../components/forms/CouponForm';
 import { formatPrice } from '../../utils/formatPrice';
 import { logger } from '../../utils/logger';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 
 function formatDiscount(coupon: Coupon): string {
   return coupon.discountType === 'PERCENTAGE'
@@ -43,6 +44,8 @@ export const CouponManagementPage = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [idToDelete, setIdToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
   const [searchTerm, setSearchTerm] = useState('');
   const { addNotification } = useNotifications();
 
@@ -291,16 +294,28 @@ export const CouponManagementPage = () => {
 
       <Modal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        onClose={() => guardClose(() => setIsFormModalOpen(false))}
         title={editingCoupon ? 'Editar Cupom' : 'Novo Cupom'}
         size="lg"
       >
         <CouponForm
           initialData={editingCoupon}
+          onDirtyChange={setIsFormDirty}
           onSuccess={handleSuccess}
-          onCancel={() => setIsFormModalOpen(false)}
+          onCancel={() => guardClose(() => setIsFormModalOpen(false))}
         />
       </Modal>
+
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        onClose={cancelDiscard}
+        onConfirm={confirmDiscard}
+        title="Descartar alterações?"
+        message="Você preencheu dados que ainda não foram salvos. Deseja descartar essas alterações?"
+        variant="warning"
+        confirmText="Descartar"
+        cancelText="Continuar Editando"
+      />
 
       <ConfirmModal
         isOpen={isDeleteModalOpen}

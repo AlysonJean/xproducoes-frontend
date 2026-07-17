@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/StandardComponents';
 import { formatPrice } from '@/utils/formatPrice';
 import { CollaboratorForm } from '@/components/forms/CollaboratorFormPage';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 
 const ROLE_LABELS: Record<string, string> = {
   PHOTOGRAPHER: 'Fotógrafo',
@@ -76,6 +77,8 @@ export const AdminCollaboratorsPage: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   
   const [editingCollaborator, setEditingCollaborator] = useState<CollaboratorDashboard | null>(null);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
   const [collaboratorToDelete, setCollaboratorToDelete] = useState<string | null>(null);
   const [selectedCollaborators, setSelectedCollaborators] = useState<Set<string>>(new Set());
   
@@ -536,12 +539,13 @@ export const AdminCollaboratorsPage: React.FC = () => {
       {/* Specialty Forms & Tactical Modals */}
       <Modal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        onClose={() => guardClose(() => setIsFormModalOpen(false))}
         title={editingCollaborator ? `Ficha Técnica: ${editingCollaborator.name}` : 'Mobilização de Novo Talento'}
         size="lg"
       >
         <CollaboratorForm
           initialData={editingCollaborator}
+          onDirtyChange={setIsFormDirty}
           onSuccess={() => {
             setIsFormModalOpen(false);
             fetchCollaborators();
@@ -551,10 +555,21 @@ export const AdminCollaboratorsPage: React.FC = () => {
               message: `O registro do especialista foi ${editingCollaborator ? 'sincronizado' : 'ativado'} no sistema.`
             });
           }}
-          onCancel={() => setIsFormModalOpen(false)}
+          onCancel={() => guardClose(() => setIsFormModalOpen(false))}
         />
       </Modal>
-      
+
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        onClose={cancelDiscard}
+        onConfirm={confirmDiscard}
+        title="Descartar alterações?"
+        message="Você preencheu dados que ainda não foram salvos. Deseja descartar essas alterações?"
+        variant="warning"
+        confirmText="Descartar"
+        cancelText="Continuar Editando"
+      />
+
       <Modal
          isOpen={isInviteModalOpen}
          onClose={() => setIsInviteModalOpen(false)}
