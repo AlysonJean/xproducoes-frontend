@@ -157,25 +157,34 @@ export default defineConfig({
           // ✅ VENDOR CHUNKS (long-term cache - change infrequently)
           if (id.includes('node_modules')) {
             // React core - always separate for framework updates.
-            // Achado (produção real, Safari/WebKit): react-hook-form importa createContext
-            // do React no próprio topo do módulo — separá-lo do chunk do React (como uma
-            // tentativa anterior desta mesma sessão fez, agrupando-o com zod em
-            // 'vendor-forms') cria uma referência circular entre chunks cuja ordem de
-            // execução o V8/Chrome tolera mas o JavaScriptCore do Safari não: "Cannot
-            // access 'e' before initialization" ao tentar ler createContext antes do chunk
-            // do React terminar de rodar seu código de topo. react-hook-form/@hookform-
-            // resolvers precisam ficar no MESMO chunk que o React.
+            // Achado (produção real, Safari/WebKit — site em branco/botões não respondendo
+            // em iPhone): qualquer lib que chame createContext() no TOPO do próprio módulo
+            // (não dentro de uma função/componente) trava se acabar num chunk carregado
+            // separadamente do chunk do React — a ordem de execução entre os dois chunks
+            // vira ambígua (circular), e o V8/Chrome tolera por sorte enquanto o
+            // JavaScriptCore do Safari lança "Cannot access 'e' before initialization" e
+            // quebra a hidratação (ou trava só o componente específico que importa aquele
+            // chunk, deixando "alguns botões" mortos e a página "incompleta"). Confirmado
+            // via grep no código-fonte: react-hook-form, framer-motion E recharts têm esse
+            // padrão — os 3 precisam ficar no MESMO chunk que o React. Isso não pesa mais
+            // nada: por causa de uma limitação separada do Vike (ver commit 25a0b87 — o
+            // app inteiro roda como UMA página do Vike, então esses chunks já eram
+            // pré-carregados em toda página de qualquer forma; só reorganizamos o limite
+            // do chunk, não os bytes baixados).
             if (
               id.includes('react/') ||
               id.includes('react-dom/') ||
               id.includes('react-router-dom') ||
               id.includes('scheduler') ||
               id.includes('react-hook-form') ||
-              id.includes('@hookform/resolvers')
+              id.includes('@hookform/resolvers') ||
+              id.includes('framer-motion') ||
+              id.includes('recharts')
             ) return 'vendor-react';
 
             // UI Library components + clsx (utilitário de className usado por praticamente
             // todo componente de UI do app — acompanha os libs de ícone/UI de propósito).
+            // Confirmado sem createContext no topo do módulo (seguro isolar do React).
             if (
               id.includes('@heroicons/react') ||
               id.includes('@headlessui/react') ||
@@ -183,8 +192,7 @@ export default defineConfig({
               id.includes('/clsx/')
             ) return 'vendor-ui';
 
-            // Data & state management (date-fns é utilitário genérico de data, usado em
-            // páginas fora de admin/colaborador — não deve compartilhar chunk com recharts).
+            // Data & state management. Sem dependência de React nesses pacotes.
             if (
               id.includes('axios') ||
               id.includes('zustand') ||
@@ -192,20 +200,10 @@ export default defineConfig({
               id.includes('date-fns')
             ) return 'vendor-data';
 
-            // Achado (auditoria de performance): jsPDF/html2canvas (~300KB) e recharts
-            // (~112KB) caíam no "return null" abaixo (sem regra própria) e o Rollup os
-            // agrupava com o que quer que mais fosse amplamente usado por outras páginas
-            // (ex.: react-ga4, carregado sempre via useGoogleAnalytics) — como o chunk
-            // resultante virava elegível em MUITAS páginas, o Vike (que só confia no grafo
-            // de imports estáticos do manifest, não em quem realmente usa React.lazy())
-            // pré-carregava esse peso todo até na home pública. Isolados em chunks
-            // próprios para não arrastar nada alheio a eles.
+            // jsPDF/html2canvas: sem dependência de React, seguro isolar sozinho.
             if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('canvg')) {
               return 'vendor-pdf';
             }
-
-            // Charting & visualization
-            if (id.includes('recharts') || id.includes('chart.js')) return 'vendor-charts';
 
             // Real-time (chat/notificações) — mantido isolado por peso e para não
             // compartilhar chunk com PDF/gráficos.
