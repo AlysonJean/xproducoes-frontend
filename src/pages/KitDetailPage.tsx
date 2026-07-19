@@ -395,8 +395,8 @@ export const KitDetailPage = () => {
                                 <span className="text-primary font-bold text-sm">
                                   {formatPrice(Number(price))}{isService ? '/serviço' : '/h'}
                                 </span>
-                                <Link 
-                                                                    to={isService ? `/servicos/${entity.slug}` : `/equipamentos/${entity.slug || entity.id}`}
+                                <Link
+                                  to={isService ? `/servicos/${entity.slug || entity.id}` : `/equipamentos/${entity.slug || entity.id}`}
                                   className="text-[10px] font-bold text-muted-foreground hover:text-primary underline-offset-4 hover:underline transition-colors uppercase tracking-widest"
                                 >
                                   Detalhes
