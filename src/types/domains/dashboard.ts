@@ -114,6 +114,13 @@ export interface WorkStats {
   averageRating: number;
 }
 
+export interface ReferralStats {
+  code: string;
+  discountPercent: number;
+  timesUsed: number;
+  rewardsEarned: number;
+}
+
 export interface AdminNotification {
   id: string;
   title: string;

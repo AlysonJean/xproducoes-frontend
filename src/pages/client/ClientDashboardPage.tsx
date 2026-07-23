@@ -34,6 +34,7 @@ import {
 import { DashboardStats, QuickAction } from '../../types/domains/dashboard';
 import { RecommendationSection } from '../../components/ui/RecommendationSection';
 import { useMultipleRecommendations } from '../../hooks/useRecommendations';
+import { ReferralCard } from '../../components/ui/ReferralCard';
 
 
 export const ClientDashboardPage = () => {
@@ -384,8 +385,11 @@ export const ClientDashboardPage = () => {
           </div>
         </Card>
 
+        {/* Indique um amigo */}
+        <ReferralCard />
+
         {/* Grid Principal */}
-        <Grid columns={{ sm: 1, lg: 3 }} gap={8}>
+        <Grid columns={{ sm: 1, lg: 3 }} gap={8} className="mt-8">
 
           {/* Próximas Reservas */}
           <div className="lg:col-span-2">

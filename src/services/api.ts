@@ -425,6 +425,7 @@ export const authAPI = {
   getProfile: () => api.get('/auth/profile'),
   getStats: () => api.get('/user/stats'),
   getFavorites: () => api.get('/user/favorites'),
+  getReferral: () => api.get('/user/referral'),
   updateProfile: (data: Record<string, unknown>) => api.put('/auth/profile', data),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post('/auth/change-password', { currentPassword, newPassword }),
