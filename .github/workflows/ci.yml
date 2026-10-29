@@ -21,7 +21,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # Mesma major do runtime de produção (engines.node em package.json): a Vercel
+          # desativou o Node 20 em 2026-10-01.
+          node-version: "24"
           cache: "npm"
 
       - name: Install dependencies
