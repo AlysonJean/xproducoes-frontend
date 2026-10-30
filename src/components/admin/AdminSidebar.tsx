@@ -357,6 +357,9 @@ export const AdminSidebar: React.FC = () => {
             <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
+              name="admin-page-search"
+              aria-label="Buscar páginas do painel"
+              autoComplete="off"
               placeholder="Buscar páginas..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
