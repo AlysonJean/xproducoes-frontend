@@ -219,11 +219,15 @@ export const BookingDetailPage = () => {
   const handleStatusChange = async (bookingId: string, value: string) => {
     try {
       setActionLoading(true);
-      await bookingAPI.updateStatus(bookingId, value);
+      // "A caminho" é status de entrega (DeliveryStatus), não de reserva.
+      if (value === 'ON_THE_WAY') await bookingAPI.updateDeliveryStatus(bookingId, value);
+      else await bookingAPI.updateStatus(bookingId, value);
       await fetchBooking();
       addNotification({ type: 'success', title: 'Estado Sincronizado', message: 'Status operativo atualizado.' });
-        } catch {
-      addNotification({ type: 'error', title: 'Erro de Protocolo', message: 'Falha ao comunicar alteração de status.' });
+        } catch (error: unknown) {
+      // Mostra o motivo vindo do backend (ex.: 409 de conflito de equipamento) quando houver.
+      const err = error as { response?: { data?: { error?: string; message?: string } } };
+      addNotification({ type: 'error', title: 'Erro de Protocolo', message: err.response?.data?.message || err.response?.data?.error || 'Falha ao comunicar alteração de status.' });
     } finally {
       setActionLoading(false);
     }

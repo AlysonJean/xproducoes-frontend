@@ -356,7 +356,9 @@ export const bookingAPI = {
     api.post(`/bookings/${id}/tasks`, data),
   toggleTask: (taskId: string, isCompleted: boolean) =>
     api.put(`/bookings/tasks/${taskId}/toggle`, { isCompleted }),
-  updateStatus: (id: string, status: string) => api.patch(`/bookings/${id}/status`, { status }),
+  // PUT: o backend só expõe PUT /bookings/:id/status — o PATCH dava 404 (o PATCH existe só em /admin/bookings).
+  updateStatus: (id: string, status: string) => api.put(`/bookings/${id}/status`, { status }),
+  updateDeliveryStatus: (id: string, status: string) => api.put(`/bookings/${id}/delivery-status`, { status }),
   confirm: (id: string) => api.post(`/bookings/${id}/confirm`),
   // Confirma a reserva com preço e colaboradores (admin)
   confirmWithDetails: (id: string, data: Record<string, unknown>) =>
