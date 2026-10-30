@@ -54,7 +54,7 @@
   ],
   "functions": {
     "api/ssr.js": {
-      "includeFiles": "dist/**"
+      "includeFiles": "{dist/**,node_modules/react-router/dist/**,node_modules/react-router-dom/dist/**}"
     }
   }
 }
