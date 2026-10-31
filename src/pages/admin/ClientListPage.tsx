@@ -38,6 +38,7 @@ import {
 import ClientForm from '@/components/forms/ClientFormPage';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import type { Client } from '@/types/types';
+import { downloadClientsSpreadsheet } from '@/utils/clientExport';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -117,6 +118,19 @@ export const ClientListPage: React.FC = () => {
 
     return result;
   }, [rawClients, searchTerm, statusFilter, sortBy]);
+
+  // O botão "Exportar Dados" existia sem onClick. Exporta os clientes filtrados (busca/status).
+  const handleExport = async () => {
+    if (filteredClients.length === 0) {
+      addNotification({ type: 'info', title: 'Nada para exportar', message: 'Nenhum cliente com os filtros atuais.' });
+      return;
+    }
+    try {
+      await downloadClientsSpreadsheet(filteredClients);
+    } catch {
+      addNotification({ type: 'error', title: 'Erro na exportação', message: 'Não foi possível gerar a planilha.' });
+    }
+  };
 
   const totalPages = Math.ceil(filteredClients.length / ITEMS_PER_PAGE);
   const paginatedClients = filteredClients.slice(
@@ -200,8 +214,8 @@ export const ClientListPage: React.FC = () => {
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
-             <Button variant="outline" className="h-11 px-6 font-black uppercase text-[10px] tracking-widest border-border/60 hover:bg-muted group">
-               <Download className="h-4 w-4 mr-2" /> Exportar Dados (CSV)
+             <Button onClick={handleExport} variant="outline" className="h-11 px-6 font-black uppercase text-[10px] tracking-widest border-border/60 hover:bg-muted group">
+               <Download className="h-4 w-4 mr-2" /> Exportar Dados (Excel)
              </Button>
              <Button onClick={handleCreate} className="h-11 px-8 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-500/20 bg-indigo-500 text-white hover:scale-[1.02] transition-transform active:scale-[0.98]">
                <UserPlus className="h-5 w-5 mr-2" /> Vincular Novo Cliente

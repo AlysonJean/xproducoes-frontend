@@ -1,10 +1,10 @@
 import type { BookingListItem } from '../types/types';
 import type { BookingStatus } from '../types/enums';
 import { formatBookingStatus } from './typeSafeFormatters';
+import { downloadSheet, formatDateTimeBR as formatDateTime, toMoney as money, type SheetRow } from './spreadsheet';
 
 // Exportação das reservas da tela de Reservas (o que estiver filtrado) para planilha .xlsx —
-// fechamento mensal e notas fiscais. .xlsx em vez de CSV: CSV com vírgula abre numa coluna só
-// no Excel em português, e os valores saem como números (somáveis), não texto.
+// fechamento mensal e notas fiscais.
 
 // A API devolve mais campos do que o tipo da lista declara.
 export type BookingExportSource = BookingListItem & Partial<{
@@ -26,18 +26,7 @@ const DELIVERY_LABELS: Record<string, string> = {
   COMPLETED: 'Concluída',
 };
 
-// Horário da empresa, independente do fuso de quem exporta.
-const dateTime = new Intl.DateTimeFormat('pt-BR', {
-  timeZone: 'America/Sao_Paulo',
-  day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-});
-const formatDateTime = (iso?: string | null) => (iso ? dateTime.format(new Date(iso)).replace(',', '') : '');
-const money = (value: unknown) => {
-  const n = Number(value);
-  return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
-};
-
-export function bookingsToSheetRows(bookings: BookingExportSource[]): Record<string, string | number>[] {
+export function bookingsToSheetRows(bookings: BookingExportSource[]): SheetRow[] {
   return bookings.map((b) => ({
     'Código': b.id,
     'Data do evento': formatDateTime(b.eventDate),
@@ -68,9 +57,5 @@ export async function downloadBookingsSpreadsheet(
   bookings: BookingExportSource[],
   period: { startDate?: string; endDate?: string },
 ): Promise<void> {
-  const XLSX = await import('xlsx-js-style');
-  const sheet = XLSX.utils.json_to_sheet(bookingsToSheetRows(bookings));
-  const book = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(book, sheet, 'Reservas');
-  XLSX.writeFile(book, exportFileName(period));
+  await downloadSheet(bookingsToSheetRows(bookings), 'Reservas', exportFileName(period));
 }
