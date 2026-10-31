@@ -23,16 +23,20 @@ export const useClients = (): UseClientsReturn => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await clientAPI.getAll(filters);
-      // O Axios retorna os dados em response.data
-      const result = response.data;
-      
-      if (result && result.data) {
-        setClients(asArray(result.data));
-        setMeta(result.meta);
-      } else {
-        setClients(asArray(result));
+      // GET /admin/clients pagina (produção: 50 por padrão, máx. 100) e o interceptor do axios
+      // descarta o `meta` — pedindo só a 1ª página, os clientes além dos 50 primeiros sumiam da
+      // tela (que filtra no navegador). Busca de 100 em 100 até vir uma página incompleta.
+      const PAGE_SIZE = 100;
+      const all: Client[] = [];
+      for (let page = 1; page <= 100; page++) {
+        const response = await clientAPI.getAll({ ...filters, page, pageSize: PAGE_SIZE });
+        const result = response.data;
+        const batch = asArray<Client>(result && result.data ? result.data : result);
+        all.push(...batch);
+        if (batch.length < PAGE_SIZE) break;
       }
+      setClients(all);
+      setMeta({ total: all.length });
         } catch (err: unknown) {
       setError((err instanceof Error ? err.message : String(err)) || 'Erro ao buscar clientes');
     } finally {
