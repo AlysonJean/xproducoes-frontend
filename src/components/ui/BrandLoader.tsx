@@ -14,6 +14,25 @@ interface BrandLoaderProps {
   fullScreen?: boolean;
 }
 
+// Um download do .lottie para todas as instâncias. Com `src`, cada player baixava o arquivo
+// sozinho — o painel admin, com vários cards carregando juntos, pedia 8 vezes em paralelo
+// (sem cache, porque as requisições saem ao mesmo tempo). Falhou: libera para tentar de novo.
+const BRAND_LOTTIE_URL = '/animations/Logo-xproducoes-eventos.lottie';
+let brandLottieBytes: Promise<ArrayBuffer> | null = null;
+
+function loadBrandLottie(): Promise<ArrayBuffer> {
+  brandLottieBytes ??= fetch(BRAND_LOTTIE_URL)
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.arrayBuffer();
+    })
+    .catch((error: unknown) => {
+      brandLottieBytes = null;
+      throw error;
+    });
+  return brandLottieBytes;
+}
+
 const SIZE_MAP: Record<string, string> = {
   sm: 'w-16 h-16 md:w-20 md:h-20',
   md: 'w-28 h-28 md:w-36 md:h-36',
@@ -31,10 +50,21 @@ const BrandLoader: React.FC<BrandLoaderProps> = ({
   fullScreen = false,
 }) => {
   const [isClient, setIsClient] = useState(false);
+  // undefined = baixando; null = download falhou (o player tenta sozinho pelo src)
+  const [lottieData, setLottieData] = useState<ArrayBuffer | null | undefined>(undefined);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsClient(true), 20);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    loadBrandLottie()
+      // Cópia por instância: o player não pode compartilhar (nem esvaziar) o buffer dos outros.
+      .then((bytes) => { if (active) setLottieData(bytes.slice(0)); })
+      .catch(() => { if (active) setLottieData(null); });
+    return () => { active = false; };
   }, []);
   
   const sizeClass = useMemo(() => {
@@ -78,12 +108,14 @@ const BrandLoader: React.FC<BrandLoaderProps> = ({
           </svg>
 
           <div className="w-full h-full transform-gpu brand-loader-filter-layer">
-            <DotLottieReact
-              src="/animations/Logo-xproducoes-eventos.lottie"
-              loop
-              autoplay
-              className="w-full h-full block"
-            />
+            {lottieData !== undefined && (
+              <DotLottieReact
+                {...(lottieData ? { data: lottieData } : { src: BRAND_LOTTIE_URL })}
+                loop
+                autoplay
+                className="w-full h-full block"
+              />
+            )}
           </div>
         </div>
       )}
