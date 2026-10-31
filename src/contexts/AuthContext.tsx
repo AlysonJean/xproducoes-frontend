@@ -33,7 +33,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   user: AuthUser | null;
-  logout: () => void;
+  logout: () => Promise<void>;
   loginWithCredentials?: (data: { email: string; password: string }) => Promise<string>;
   handleOAuthToken?: (token: string) => Promise<string>;
   refreshToken: () => Promise<boolean>;
@@ -73,11 +73,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return !!newToken;
   }, []);
 
-  // Logout usando o serviço centralizado
-  // Logout usando o serviço centralizado
-  const logout = useCallback(() => {
-    authService.logout();
+  // Achado: o logout só limpava o estado e recarregava em /login — os cookies de sessão são
+  // httpOnly (só o servidor apaga) e continuavam válidos, então a página recarregada logava a
+  // pessoa de novo. Primeiro o backend encerra a sessão (apaga os cookies e invalida o refresh
+  // token); se a chamada falhar, sai localmente mesmo assim.
+  const logout = useCallback(async () => {
+    try {
+      await authAPI.logout();
+    } catch (error) {
+      logger.warn('Falha ao encerrar a sessão no servidor', 'AuthContext', error);
+    }
     setUser(null);
+    authService.logout();
   }, []);
 
   // Escutar eventos globais de autenticação

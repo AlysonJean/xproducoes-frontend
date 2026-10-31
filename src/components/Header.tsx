@@ -1,7 +1,7 @@
 // src/components/Header.tsx
 
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import {
   HeartIcon,
   ChartBarSquareIcon,
@@ -29,7 +29,6 @@ export const Header = () => {
   const { itemCount } = useCart();
   const { items: compareItems } = useCompare();
   const { companyName } = useSettings();
-  const navigate = useNavigate();
   const { openWhatsAppModal } = useWhatsAppModal();
 
   const [isScrolled, setIsScrolled] = useState(false);
@@ -49,9 +48,9 @@ export const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // logout() encerra a sessão no servidor e redireciona para /login.
   const handleLogout = () => {
-    logout();
-    navigate('/');
+    void logout();
   };
 
   type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;

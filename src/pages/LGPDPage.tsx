@@ -44,7 +44,7 @@ export const LGPDPage: React.FC = () => {
     try {
       await apiFetch('/users/me/request-deletion', { method: 'POST' });
       setConfirmOpen(false);
-      logout();
+      await logout();
     } catch (err) {
       setFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Não foi possível processar a exclusão.' });
       setIsDeleting(false);
