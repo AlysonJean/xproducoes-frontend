@@ -24,9 +24,13 @@ describe('BrandLoader — um download do .lottie para todas as instâncias', () 
     const { BrandLoader } = await import('../BrandLoader');
     render(<>{Array.from({ length: 8 }, (_, i) => <BrandLoader key={i} size="sm" />)}</>);
 
-    const players = await screen.findAllByTestId('lottie');
-    await vi.waitFor(() => expect(players.every((p) => p.getAttribute('data-bytes') === '16')).toBe(true));
-    expect(players).toHaveLength(8);
+    // Espera os 8 players (findAllByTestId resolve com o primeiro que aparecer — no CI, mais
+    // lento por causa da cobertura, voltava com 2) e todos com os bytes.
+    await vi.waitFor(() => {
+      const players = screen.getAllByTestId('lottie');
+      expect(players).toHaveLength(8);
+      expect(players.every((p) => p.getAttribute('data-bytes') === '16')).toBe(true);
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith('/animations/Logo-xproducoes-eventos.lottie');
   });
