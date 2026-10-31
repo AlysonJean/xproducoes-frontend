@@ -16,7 +16,9 @@ export const CollaboratorLayout: React.FC<CollaboratorLayoutProps> = ({
     <div className="flex min-h-screen bg-background">
       <CollaboratorSidebar />
       
-      <div className="flex-1 md:ml-0 min-h-screen">
+      {/* min-w-0: item flex não encolhe abaixo do conteúdo sem isso — no celular a área
+          esticava (556 px numa tela de 390) e a página rolava para o lado. */}
+      <div className="flex-1 min-w-0 md:ml-0 min-h-screen">
         {/* Header */}
         {(title || breadcrumbs) && (
           <div className="bg-muted border-b px-6 py-4">

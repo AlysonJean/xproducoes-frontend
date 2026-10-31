@@ -17,7 +17,9 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
     <div className="flex min-h-screen bg-background">
       <AdminSidebar />
       
-      <div className="flex-1 md:ml-0 min-h-screen">
+      {/* min-w-0: item flex não encolhe abaixo do conteúdo sem isso — no celular a área
+          esticava além da tela (até 761 px numa tela de 390) e o painel rolava para o lado. */}
+      <div className="flex-1 min-w-0 md:ml-0 min-h-screen">
         {/* Header */}
         {(title || breadcrumbs) && (
           <div className="bg-muted border-b px-6 py-4 mt-16">
