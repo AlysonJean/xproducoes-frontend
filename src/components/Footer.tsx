@@ -22,7 +22,8 @@ export const Footer = () => {
 
   // Ocultar footer nas páginas admin ou colaborador
   const isAdminPage = pathname.startsWith('/admin');
-  const isCollaboratorPage = pathname.startsWith('/collaborator');
+  // O portal do colaborador vive em /colaborador/*; /collaborator/* são redirects legados.
+  const isCollaboratorPage = pathname.startsWith('/colaborador') || pathname.startsWith('/collaborator');
   if (isAdminPage || isCollaboratorPage) return null;
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {

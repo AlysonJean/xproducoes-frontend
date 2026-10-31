@@ -107,7 +107,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       {
         name: 'Dashboard',
-        href: '/collaborator/dashboard',
+        href: '/colaborador/painel',
         icon: HomeIcon,
         description: 'Visão geral e métricas',
       },
@@ -118,7 +118,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       {
         name: 'Meu Perfil',
-        href: '/collaborator/profile',
+        href: '/colaborador/perfil',
         icon: UserIcon,
         description: 'Informações pessoais',
       },
@@ -129,13 +129,13 @@ const menuGroups: MenuGroup[] = [
     items: [
       {
         name: 'Ganhos',
-        href: '/collaborator/earnings',
+        href: '/colaborador/ganhos',
         icon: DollarIcon,
         description: 'Receitas e pagamentos',
       },
       {
         name: 'Relatórios',
-        href: '/collaborator/reports',
+        href: '/colaborador/relatorios',
         icon: AnalyticsIcon,
         description: 'Análises detalhadas',
       },
@@ -146,13 +146,13 @@ const menuGroups: MenuGroup[] = [
     items: [
       {
         name: 'Cronograma',
-        href: '/collaborator/schedule',
+        href: '/colaborador/agenda',
         icon: CalendarIcon,
         description: 'Agenda de trabalho',
       },
       {
         name: 'Disponibilidade',
-        href: '/collaborator/availability',
+        href: '/colaborador/disponibilidade',
         icon: ClockIcon,
         description: 'Configurar horários',
       },
@@ -163,13 +163,13 @@ const menuGroups: MenuGroup[] = [
     items: [
       {
         name: 'Notificações',
-        href: '/collaborator/notifications',
+        href: '/colaborador/notificacoes',
         icon: BellIcon,
         description: 'Alertas e mensagens',
       },
       {
         name: 'Configurações',
-        href: '/collaborator/settings',
+        href: '/colaborador/configuracoes',
         icon: SettingsIcon,
         description: 'Preferências da conta',
       },
@@ -190,7 +190,9 @@ export const CollaboratorSidebar: React.FC = () => {
   }
 
   // Don't show on non-collaborator pages
-  if (!location.pathname.startsWith('/collaborator')) {
+  // O portal vive em /colaborador/* (CollaboratorRoutes); /collaborator/* são só redirects
+  // legados. Testar só /collaborator fazia a barra nunca aparecer.
+  if (!location.pathname.startsWith('/colaborador') && !location.pathname.startsWith('/collaborator')) {
     return null;
   }
 
@@ -318,6 +320,7 @@ export const CollaboratorSidebar: React.FC = () => {
                             key={item.href}
                             to={item.href}
                             onClick={() => setIsOpen(false)}
+                            aria-current={isActive ? 'page' : undefined}
                             className={`group flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 ${
                               isActive
                                 ? 'bg-primary/10 text-primary border-l-2 border-primary shadow-sm'

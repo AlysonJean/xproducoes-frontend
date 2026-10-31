@@ -19,8 +19,7 @@ describe('engrenagem de configurações no rodapé das sidebars', () => {
 
   it('colaborador: leva para /colaborador/configuracoes', () => {
     useAuth.mockReturnValue({ user: { id: 'c1', name: 'Colab', role: 'COLLABORATOR' } });
-    // A sidebar só renderiza sob /collaborator (as rotas reais são /colaborador — achado à parte).
-    render(<MemoryRouter initialEntries={['/collaborator/dashboard']}><CollaboratorSidebar /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={['/colaborador/painel']}><CollaboratorSidebar /></MemoryRouter>);
     expect(screen.getByRole('link', { name: 'Configurações de usuário' })).toHaveAttribute('href', '/colaborador/configuracoes');
   });
 });
