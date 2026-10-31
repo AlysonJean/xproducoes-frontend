@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+
+// Fuso da empresa (o filtro de período compara dias locais).
+process.env.TZ = 'America/Sao_Paulo';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 const { apiFetch, useAuth } = vi.hoisted(() => ({ apiFetch: vi.fn(), useAuth: vi.fn() }));
@@ -33,5 +36,22 @@ describe('BookingListPage — carrega todas as reservas', () => {
   it('130 reservas no banco → a lista mostra as 130 (antes: só a 1ª página)', async () => {
     render(<MemoryRouter initialEntries={['/admin/reservas']}><BookingListPage /></MemoryRouter>);
     expect(await screen.findByText(/Mostrando 130 de 130 registros/)).toBeInTheDocument();
+  });
+
+  it('período "01/10 a 31/10" pega o evento de 31/10 às 20h e não o de 30/09 às 22h (horário de Brasília)', async () => {
+    apiFetch.mockReset();
+    apiFetch.mockResolvedValue([
+      { ...booking(1), id: 'XP-31-OUT', eventDate: '2026-10-31T23:00:00.000Z' }, // 31/10 20h BRT
+      { ...booking(2), id: 'XP-30-SET', eventDate: '2026-10-01T01:00:00.000Z' }, // 30/09 22h BRT
+    ]);
+    render(<MemoryRouter initialEntries={['/admin/reservas']}><BookingListPage /></MemoryRouter>);
+    await screen.findByText(/Mostrando 2 de 2 registros/);
+
+    fireEvent.change(screen.getByLabelText('Data inicial'), { target: { value: '2026-10-01' } });
+    fireEvent.change(screen.getByLabelText('Data final'), { target: { value: '2026-10-31' } });
+
+    expect(await screen.findByText(/Mostrando 1 de 2 registros/)).toBeInTheDocument();
+    expect(screen.getByText('XP-31-OUT', { exact: false })).toBeInTheDocument();
+    expect(screen.queryByText('XP-30-SET', { exact: false })).not.toBeInTheDocument();
   });
 });

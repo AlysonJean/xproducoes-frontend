@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'rea
 import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { fetchAllAdminBookings } from '../../services/adminBookings';
+import { isWithinLocalDateRange } from '../../utils/dateRange';
 import { formatPrice } from '../../utils/formatPrice';
 import { normalizeString } from '../../utils/string';
 import { Link } from 'react-router-dom';
@@ -167,16 +168,8 @@ export const BookingListPage = () => {
       const matchesSearch = clientName.includes(q) || bookingId.includes(q);
       const matchesStatus = filterStatus === 'all' || booking.status === filterStatus;
       
-      let matchesDate = true;
-      if (booking.eventDate) {
-        const bDate = new Date(booking.eventDate).getTime();
-        if (startDate) {
-          matchesDate = matchesDate && bDate >= new Date(startDate).getTime();
-        }
-        if (endDate) {
-          matchesDate = matchesDate && bDate <= new Date(endDate).getTime();
-        }
-      }
+      // Dias locais inteiros: new Date('AAAA-MM-DD') é meia-noite UTC (21h do dia anterior no Brasil).
+      const matchesDate = !booking.eventDate || isWithinLocalDateRange(booking.eventDate, startDate, endDate);
       
       return matchesSearch && matchesStatus && matchesDate;
     });
