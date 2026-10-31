@@ -24,6 +24,7 @@ import type { Booking } from '../../types/types';
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
+import { quoteSuccessMessage } from '../../utils/quoteSubmission';
 import { TrustStrip } from '../../components/ui/TrustStrip';
 
 type QuoteFormInput = z.input<typeof quoteRequestSchema>;
@@ -223,7 +224,8 @@ export const QuoteRequestPage: React.FC = () => {
 
       // api.ts desembrulha { success, data } automaticamente, então resp.data já é o `data`
       // do backend. Para /bookings ele é a própria reserva; para /bookings/guest ele é
-      // { booking, user, token, refreshToken } (ver bookingController.createGuest) — daí o
+      // { booking, user, token, refreshToken } — ou { booking, existingAccount: true }, sem
+      // sessão, quando o e-mail já tem conta (ver bookingController.createGuest) — daí o
       // fallback: usa `.booking` quando existe, senão trata resp.data como a reserva em si.
       const responseData = resp?.data?.data ?? resp?.data;
       const createdBooking: Booking | null = responseData?.booking ?? responseData ?? null;
@@ -244,10 +246,10 @@ export const QuoteRequestPage: React.FC = () => {
 
       await clearCart();
       
-      addNotification({ 
-        type: 'success', 
-        title: 'Sucesso!', 
-        message: 'Seu pedido de orçamento foi enviado com sucesso.' 
+      addNotification({
+        type: 'success',
+        title: 'Sucesso!',
+        message: quoteSuccessMessage(responseData)
       });
       
       const statePayload = { 
