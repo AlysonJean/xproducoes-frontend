@@ -173,6 +173,10 @@ export const Footer = () => {
             <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
               <input
                 type="email"
+                id="footer-newsletter-email"
+                name="email"
+                autoComplete="email"
+                aria-label="E-mail para receber a newsletter"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Seu melhor e-mail"
