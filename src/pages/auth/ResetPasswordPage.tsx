@@ -13,10 +13,11 @@ import {
   Alert 
 } from '../../components/ui/StandardComponents';
 import { Lock, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { strongPasswordSchema } from '../../validators/userSchema';
 
 const resetPasswordSchema = z.object({
-  password: z.string().min(8, 'A senha deve ter pelo menos 8 caracteres'),
-  confirmPassword: z.string().min(8, 'A confirmação deve ter pelo menos 8 caracteres'),
+  password: strongPasswordSchema,
+  confirmPassword: z.string().min(1, 'Confirme a nova senha'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "As senhas não coincidem",
   path: ["confirmPassword"],
@@ -66,7 +67,8 @@ const ResetPasswordPage: React.FC = () => {
       await apiFetch('/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password: data.password }),
+        // A API valida `newPassword` (resetPasswordSchema); com `password` voltava 400.
+        body: JSON.stringify({ token, newPassword: data.password }),
       });
 
       addNotification({ 
@@ -114,7 +116,7 @@ const ResetPasswordPage: React.FC = () => {
             leftIcon={<Lock className="h-4 w-4" />}
             {...register('password')}
             error={errors.password?.message}
-            placeholder="Mínimo 8 caracteres"
+            placeholder="8+ caracteres, com maiúscula, minúscula e número"
           />
 
           <Input
