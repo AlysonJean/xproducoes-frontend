@@ -265,7 +265,7 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Preço por Hora (€)"
+              label="Preço por Hora (R$)"
               type="number"
               step="0.01"
               {...register('pricePerHour', { valueAsNumber: true })}

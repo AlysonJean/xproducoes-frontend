@@ -221,7 +221,7 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
             />
 
              <Input
-              label="Preço Base (€)"
+              label="Preço Base (R$)"
               type="number"
               step="0.01"
               value={price}
