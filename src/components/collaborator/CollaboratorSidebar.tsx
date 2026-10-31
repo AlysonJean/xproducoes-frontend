@@ -372,12 +372,14 @@ export const CollaboratorSidebar: React.FC = () => {
                 Colaborador
               </p>
             </div>
-            <button 
+            {/* Era um <button> sem onClick — mesmo destino do item "Configurações" do menu. */}
+            <Link
+              to="/colaborador/configuracoes"
               className="p-1.5 hover:bg-muted rounded-md transition-colors"
               aria-label="Configurações de usuário"
             >
               <SettingsIcon className="w-4 h-4 text-muted-foreground" />
-            </button>
+            </Link>
           </div>
         </div>
       </div>

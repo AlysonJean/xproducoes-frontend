@@ -456,12 +456,14 @@ export const AdminSidebar: React.FC = () => {
                 Administrador
               </p>
             </div>
-            <button 
+            {/* Era um <button> sem onClick. /perfil tem dados da conta e troca de senha. */}
+            <Link
+              to="/perfil"
               className="p-1.5 hover:bg-muted rounded-md transition-colors"
               aria-label="Configurações de usuário"
             >
               <SettingsIcon className="w-4 h-4 text-muted-foreground" />
-            </button>
+            </Link>
           </div>
         </div>
       </div>
