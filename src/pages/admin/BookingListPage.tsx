@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
-import { asArray } from '../../utils/normalize';
+import { fetchAllAdminBookings } from '../../services/adminBookings';
 import { formatPrice } from '../../utils/formatPrice';
 import { normalizeString } from '../../utils/string';
 import { Link } from 'react-router-dom';
@@ -66,8 +66,8 @@ export const BookingListPage = () => {
   const fetchBookings = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await apiFetch('/admin/bookings');
-      setBookings(asArray(response));
+      // Todas as páginas: a API pagina (padrão 20, as mais antigas) e esta tela filtra no navegador.
+      setBookings(await fetchAllAdminBookings());
       setError(null);
         } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Não foi possível carregar a lista de reservas.');
