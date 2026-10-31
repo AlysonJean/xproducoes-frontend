@@ -1,6 +1,6 @@
 
 import type { ICollaborator } from '@/types/types';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { asArray } from '../utils/normalize';
 // importação removida: tipos devem ser importados de '../types'
 import { api } from '../services/api';
@@ -19,7 +19,10 @@ export const useCollaborators = (): UseCollaboratorsReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCollaborators = async () => {
+  // useCallback com deps vazias (só usa setters de estado, que são estáveis): a página chama
+  // fetchCollaborators num useEffect que depende dela — recriada a cada render, cada busca
+  // disparava outra, em loop (dezenas de requisições por segundo, até tomar 429).
+  const fetchCollaborators = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -53,9 +56,9 @@ export const useCollaborators = (): UseCollaboratorsReturn => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const deleteCollaborator = async (id: string) => {
+  const deleteCollaborator = useCallback(async (id: string) => {
     try {
       setError(null);
 
@@ -66,11 +69,11 @@ export const useCollaborators = (): UseCollaboratorsReturn => {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao deletar colaborador');
     }
-  };
+  }, []);
 
-  const getCollaboratorEvents = (_id: string) => {
+  const getCollaboratorEvents = useCallback((_id: string) => {
     return [];
-  };
+  }, []);
 
   // Remover auto-fetch para evitar loop infinito e erro 401
   // useEffect(() => {
