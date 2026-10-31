@@ -1,5 +1,6 @@
 import { getApiBaseUrl } from '../utils/apiConfig';
 import { logDebug } from '../utils/logger';
+import { shouldTrySessionRestore, markSessionRestoreTried } from '../utils/sessionHint';
 
 /**
  * ✅ CENTRALIZED AUTH SERVICE
@@ -26,6 +27,13 @@ class AuthService {
    * Handles multiple simultaneous requests by queuing them.
    */
   public async refreshToken(): Promise<string | null> {
+    // Sem o sinal de sessão (cookie x_session) não há refresh token para renovar.
+    if (!shouldTrySessionRestore()) {
+      logDebug('No session hint - skipping token refresh');
+      return null;
+    }
+    markSessionRestoreTried();
+
     if (this.isRefreshing) {
       logDebug('Token refresh already in progress, queuing request');
       return new Promise((resolve) => {
@@ -97,6 +105,8 @@ class AuthService {
    */
   public logout() {
     logDebug('AuthService: Executing global logout');
+    // Sessão encerrada: a próxima página não precisa perguntar ao servidor.
+    markSessionRestoreTried();
 
     // Notify application
     window.dispatchEvent(new Event('auth:logout'));

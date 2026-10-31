@@ -7,6 +7,7 @@ import { logger } from '../utils/logger';
 import { getApiBaseUrl } from '../utils/apiConfig';
 import { authService } from '../services/authservice';
 import { authAPI } from '../services/api';
+import { shouldTrySessionRestore } from '../utils/sessionHint';
 
 // Lazy sentry getter to avoid circular dependency with main.tsx
 
@@ -114,6 +115,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
     const initializeAuth = async () => {
+      // Sem sinal de sessão (cookie x_session) e já tentado nesta aba: não há o que restaurar.
+      if (!shouldTrySessionRestore()) {
+        if (isMounted) setIsLoading(false);
+        return;
+      }
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 8000);
 
