@@ -3,6 +3,8 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { fetchAllAdminBookings } from '../../services/adminBookings';
 import { isWithinLocalDateRange } from '../../utils/dateRange';
+import { downloadBookingsSpreadsheet } from '../../utils/bookingExport';
+import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
 import { normalizeString } from '../../utils/string';
 import { Link } from 'react-router-dom';
@@ -54,6 +56,7 @@ export const BookingListPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [exporting, setExporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -175,6 +178,24 @@ export const BookingListPage = () => {
     });
   }, [bookings, searchTerm, filterStatus, startDate, endDate]);
 
+  // O botão "Exportar" existia sem ação. Exporta o que está filtrado na tela (período, status e
+  // busca) — o período vira o recorte do fechamento mensal.
+  const handleExport = async () => {
+    if (filteredBookings.length === 0) {
+      addNotification({ type: 'info', title: 'Nada para exportar', message: 'Nenhuma reserva com os filtros atuais.' });
+      return;
+    }
+    setExporting(true);
+    try {
+      await downloadBookingsSpreadsheet(filteredBookings, { startDate, endDate });
+    } catch (err) {
+      logger.error('Erro ao exportar reservas', 'BookingListPage', err);
+      addNotification({ type: 'error', title: 'Erro na exportação', message: 'Não foi possível gerar a planilha.' });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const stats = useMemo(() => ({
     total: bookings.length,
     pending: bookings.filter(b => b.status === 'PENDING').length,
@@ -211,8 +232,14 @@ export const BookingListPage = () => {
           </div>
           
           <div className="flex flex-wrap gap-3">
-            <Button variant="outline" className="gap-2">
-              <Download className="h-4 w-4" /> Exportar
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={handleExport}
+              disabled={exporting}
+              title="Exporta para planilha as reservas filtradas (período, status e busca)"
+            >
+              <Download className="h-4 w-4" /> {exporting ? 'Exportando...' : 'Exportar'}
             </Button>
             <Button onClick={handleCreateManual} variant="outline" className="gap-2 border-primary/20 hover:border-primary/40">
               <Plus className="h-4 w-4" /> Reserva Manual
