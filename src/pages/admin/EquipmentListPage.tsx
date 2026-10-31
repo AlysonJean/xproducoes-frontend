@@ -44,7 +44,12 @@ export const EquipmentListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  
+
+  // Ação em lote: mesmo status para vários equipamentos (PATCH /equipments/bulk-status)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState<ItemStatus>(ItemStatus.MAINTENANCE);
+  const [bulkSaving, setBulkSaving] = useState(false);
+
   // Modal states
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -158,6 +163,52 @@ export const EquipmentListPage = () => {
         return matchesSearch && matchesCategory && matchesStatus;
     });
   }, [equipments, searchTerm, categoryFilter, statusFilter]);
+
+  // Filtro mudou: limpa a seleção, para a ação em lote nunca atingir item que saiu da tela.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [searchTerm, categoryFilter, statusFilter]);
+
+  const allFilteredSelected = filteredEquipments.length > 0 && filteredEquipments.every((e) => selectedIds.has(e.id));
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllFiltered = () => {
+    setSelectedIds(allFilteredSelected ? new Set() : new Set(filteredEquipments.map((e) => e.id)));
+  };
+
+  const handleBulkStatus = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkSaving(true);
+    try {
+      const result = await apiFetch<{ updated: number }>('/equipments/bulk-status', {
+        method: 'PATCH',
+        body: JSON.stringify({ ids: [...selectedIds], status: bulkStatus }),
+      });
+      addNotification({
+        type: 'success',
+        title: 'Status atualizado',
+        message: `${result?.updated ?? selectedIds.size} equipamento(s) atualizado(s).`,
+      });
+      setSelectedIds(new Set());
+      fetchEquipments();
+    } catch (err: unknown) {
+      addNotification({
+        type: 'error',
+        title: 'Falha na ação em lote',
+        message: err instanceof Error ? err.message : 'Não foi possível alterar o status dos equipamentos.',
+      });
+    } finally {
+      setBulkSaving(false);
+    }
+  };
 
   const stats = useMemo(() => ({
     total: equipments.length,
@@ -314,12 +365,51 @@ export const EquipmentListPage = () => {
           </div>
         </Card>
 
+        {selectedIds.size > 0 && (
+          <section
+            aria-label="Ações em lote"
+            className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3"
+          >
+            <span className="text-sm font-semibold text-foreground">{selectedIds.size} selecionado(s)</span>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              Alterar status para
+              <select
+                aria-label="Novo status"
+                value={bulkStatus}
+                onChange={(e) => setBulkStatus(e.target.value as ItemStatus)}
+                className="h-9 rounded-lg border border-border bg-card px-2 text-sm text-foreground"
+              >
+                <option value={ItemStatus.ACTIVE}>Ativo</option>
+                <option value={ItemStatus.MAINTENANCE}>Manutenção</option>
+                <option value={ItemStatus.INACTIVE}>Inativo</option>
+                <option value={ItemStatus.COMING_SOON}>Em breve</option>
+              </select>
+            </label>
+            <Button size="sm" onClick={handleBulkStatus} disabled={bulkSaving}>
+              {bulkSaving ? 'Aplicando...' : 'Aplicar'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} disabled={bulkSaving}>
+              Limpar seleção
+            </Button>
+          </section>
+        )}
+
         {/* Master Inventory Registry */}
         <Card className="overflow-hidden border-border/60 shadow-2xl bg-card animate-in fade-in duration-700">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-muted/40 border-b border-border/50">
+                  <th className="pl-6 py-5 w-10">
+                    <input
+                      type="checkbox"
+                      aria-label="Selecionar todos os equipamentos filtrados"
+                      checked={allFilteredSelected}
+                      onChange={toggleSelectAllFiltered}
+                      disabled={filteredEquipments.length === 0}
+                      className="h-4 w-4 rounded border-border accent-primary"
+                    />
+                  </th>
                   <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">Assinatura Visual & TAG</th>
                   <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">Classificadores</th>
                   <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em] text-right">Taxa Operativa</th>
@@ -330,7 +420,7 @@ export const EquipmentListPage = () => {
               <tbody className="divide-y divide-border/40">
                 {filteredEquipments.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-24 text-center">
+                    <td colSpan={6} className="px-6 py-24 text-center">
                       <div className="inline-flex h-20 w-20 items-center justify-center rounded-[2rem] bg-primary/5 mb-6 ring-8 ring-primary/5 transition-all">
                         <Database className="h-10 w-10 text-primary/30" />
                       </div>
@@ -344,6 +434,15 @@ export const EquipmentListPage = () => {
                 ) : (
                   filteredEquipments.map((item) => (
                     <tr key={item.id} className="hover:bg-muted/30 transition-all group animate-in fade-in slide-in-from-left-4 duration-500">
+                      <td className="pl-6 py-5 w-10">
+                        <input
+                          type="checkbox"
+                          aria-label={`Selecionar ${item.name}`}
+                          checked={selectedIds.has(item.id)}
+                          onChange={() => toggleSelected(item.id)}
+                          className="h-4 w-4 rounded border-border accent-primary"
+                        />
+                      </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-5">
                           <div className="relative">
