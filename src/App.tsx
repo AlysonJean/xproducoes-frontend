@@ -37,6 +37,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import VerifyEmailPage from './pages/auth/VerifyEmailPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 // ===== LAZY LOADED PAGES (ETAPA 3 - Code Splitting) =====
@@ -266,6 +267,9 @@ const AppRoutes: React.FC = () => {
       />
       <Route path="/recuperar-senha" element={<ForgotPasswordPage />} />
       <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
+      {/* /verify-email é o caminho que o backend põe no link do e-mail de verificação */}
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/verificar-email" element={<VerifyEmailPage />} />
       <Route
         path="/cadastro"
         element={
