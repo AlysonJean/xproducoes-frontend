@@ -144,7 +144,7 @@ export const RegisterPage = () => {
               leftIcon={<Lock className="h-4 w-4" />}
               {...register('password')}
               error={errors.password?.message}
-              placeholder="Mínimo 6 caracteres"
+              placeholder="8+ caracteres, com maiúscula, minúscula e número"
               autoComplete="new-password"
             />
 
