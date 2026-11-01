@@ -1,42 +1,63 @@
 import { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
-import { 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  Clock, 
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Clock,
   Briefcase,
   DollarSign,
   XCircle,
   Search,
-  ChevronRight,
   Database,
-  Zap,
+  RefreshCw,
   Award,
-  ShieldCheck,
+  CheckCircle2,
   Star
 } from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import type { Service } from '../../types/types';
-import { formatMoney, toNumber } from '../../utils/typeSafeFormatters'; 
+import { formatMoney, toNumber } from '../../utils/typeSafeFormatters';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { BrandLoader } from '../../components/ui/BrandLoader';
-import { 
-  Button, 
-  Card, 
-  Modal, 
-  ConfirmModal, 
+import {
+  Button,
+  Card,
+  Modal,
+  ConfirmModal,
   Alert,
   Badge,
   Grid,
   Input,
-  Select 
+  Select
 } from '../../components/ui/StandardComponents';
 import ServiceForm from '../../components/forms/ServiceFormPage';
 import { StatusSelect } from '../../components/admin/StatusSelect';
 import { ItemStatus } from '../../types/types';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+
+const PAGE_TITLE = 'Serviços';
+const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Serviços' }];
+
+// Mesmas 4 opções (e rótulos) do StatusSelect da linha — antes o filtro só tinha Ativo/Inativo.
+const STATUS_FILTER_OPTIONS = [
+  { value: 'all', label: 'Todos os status' },
+  { value: ItemStatus.ACTIVE, label: 'Ativo' },
+  { value: ItemStatus.INACTIVE, label: 'Inativo' },
+  { value: ItemStatus.MAINTENANCE, label: 'Manutenção' },
+  { value: ItemStatus.COMING_SOON, label: 'Em Breve' },
+];
+
+// Duração em minutos → "1h30", "45 min", "2h".
+const formatDuration = (minutes?: number) => {
+  const total = Number(minutes) || 0;
+  if (total <= 0) return '—';
+  const h = Math.floor(total / 60);
+  const m = Math.round(total % 60);
+  if (h === 0) return `${m} min`;
+  return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
+};
 
 export const AdminServiceListPage = () => {
   const { addNotification } = useNotifications();
@@ -61,18 +82,12 @@ export const AdminServiceListPage = () => {
       const data = await apiFetch('/services');
       setServices(asArray<Service>(data));
       setError(null);
-        } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Falha ao sincronizar catálogo de soluções.';
-      setError(msg);
-      addNotification({
-        type: 'error',
-        title: 'Terminal de Serviços Offline',
-        message: msg
-      });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Não foi possível carregar os serviços.');
     } finally {
       setLoading(false);
     }
-  }, [addNotification]);
+  }, []);
 
   useEffect(() => {
     fetchServices();
@@ -92,15 +107,15 @@ export const AdminServiceListPage = () => {
       await fetchServices();
       addNotification({
         type: 'success',
-        title: 'Especialidade Suspendida',
-        message: 'O serviço foi removido do catálogo operativo com sucesso.'
+        title: 'Serviço excluído',
+        message: 'O serviço foi removido do catálogo.'
       });
       setIsDeleteModalOpen(false);
-        } catch (err: unknown) {
+    } catch (err: unknown) {
       addNotification({
         type: 'error',
-        title: 'Erro de Purga',
-        message: err instanceof Error ? err.message : 'Não foi possível desativar este serviço no momento.'
+        title: 'Erro ao excluir',
+        message: err instanceof Error ? err.message : 'Não foi possível excluir este serviço agora.'
       });
     } finally {
       setIsDeleting(false);
@@ -110,23 +125,23 @@ export const AdminServiceListPage = () => {
 
   const handleStatusChange = async (service: Service, newStatus: ItemStatus) => {
     try {
-      await apiFetch(`/services/${service.id}`, { 
-        method: 'PUT', 
+      await apiFetch(`/services/${service.id}`, {
+        method: 'PUT',
         body: JSON.stringify({ status: newStatus }),
         headers: { 'Content-Type': 'application/json' }
       });
-      
+
       fetchServices();
       addNotification({
         type: 'success',
-        title: 'Status Sincronizado',
-        message: `Disponibilidade de ${service.name} atualizada.`
+        title: 'Status atualizado',
+        message: `Status de ${service.name} atualizado.`
       });
-        } catch (err: unknown) {
+    } catch (err: unknown) {
       addNotification({
         type: 'error',
-        title: 'Erro de Sinal',
-        message: err instanceof Error ? err.message : 'Falha ao comunicar alteração de status operacional.'
+        title: 'Erro ao atualizar status',
+        message: err instanceof Error ? err.message : 'Não foi possível atualizar o status.'
       });
     }
   };
@@ -141,6 +156,8 @@ export const AdminServiceListPage = () => {
     setIsFormModalOpen(true);
   };
 
+  const resetFilters = () => { setSearchTerm(''); setStatusFilter('all'); };
+
   const filteredServices = useMemo(() => {
     return services.filter(s => {
         const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || (s.description || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -152,223 +169,226 @@ export const AdminServiceListPage = () => {
   const stats = useMemo(() => ({
     total: services.length,
     active: services.filter(s => s.status === 'ACTIVE').length,
-    avgPrice: services.length > 0 
-      ? services.reduce((acc, curr) => acc + toNumber(curr.price), 0) / services.length 
+    avgPrice: services.length > 0
+      ? services.reduce((acc, curr) => acc + toNumber(curr.price), 0) / services.length
       : 0
   }), [services]);
 
   if (loading && services.length === 0) {
     return (
-      <AdminLayout title="Matriz de Soluções" breadcrumbs={[{ name: 'Admin' }, { name: 'Serviços' }]}>
+      <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
         <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <BrandLoader size={120} label="Interrogando catálogo de serviços..." />
+          <BrandLoader size={120} label="Carregando serviços…" />
         </div>
       </AdminLayout>
     );
   }
 
+  const loadFailed = !!error && services.length === 0;
+
   return (
-    <AdminLayout title="Catálogo de Especialidades" breadcrumbs={[{ name: 'Admin' }, { name: 'Inventário' }, { name: 'Serviços' }]}>
-      <div className="space-y-8">
-        {/* Modern Header */}
+    <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
+      <div className="space-y-6">
+        {/* Cabeçalho */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg ring-1 ring-primary/20">
-              <Award className="h-7 w-7" />
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+              <Award className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-black text-foreground uppercase tracking-tighter">Corpo de Soluções</h2>
-                <Badge variant="outline" className="text-[10px] font-black uppercase px-2 h-5 bg-primary/5 border-primary/20 text-primary">{stats.total} Especialidades</Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-bold text-foreground">Catálogo de serviços</h2>
+                <Badge variant="primary">{stats.total} serviços</Badge>
               </div>
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">Gestão de entregáveis técnicos e precificação estratégica</p>
+              <p className="text-sm text-muted-foreground">Serviços oferecidos, com preço, duração e disponibilidade.</p>
             </div>
           </div>
-          
+
           <div className="flex flex-wrap items-center gap-3">
-             <Button variant="outline" onClick={fetchServices} className="h-11 px-6 font-black uppercase text-[10px] tracking-widest border-border/60 hover:bg-muted group">
-               <Zap className="h-4 w-4 mr-2" /> Sincronizar Portfólio
+             <Button variant="outline" size="sm" onClick={fetchServices} className="gap-2">
+               <RefreshCw className="h-4 w-4" /> Recarregar
              </Button>
-             <Button onClick={handleCreate} className="h-11 px-8 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20 bg-primary hover:scale-[1.02] transition-transform active:scale-[0.98]">
-               <Plus className="h-5 w-5 mr-2" /> Nova Solução Técnica
+             <Button size="sm" onClick={handleCreate} className="gap-2 shadow-lg shadow-primary/20">
+               <Plus className="h-4 w-4" /> Novo serviço
              </Button>
           </div>
         </div>
 
-        {/* Tactical Pulse Grid */}
+        {/* Estatísticas */}
         <Grid columns={{ sm: 1, md: 3 }} gap={6}>
-          <Card className="p-6 bg-card border-border/40 overflow-hidden relative group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Briefcase size={80} />
-            </div>
-            <div className="relative z-10 space-y-4">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Mix de Serviços</p>
-                <div className="flex items-end justify-between">
-                    <div>
-                        <p className="text-3xl font-black text-foreground tracking-tighter">{stats.total}</p>
-                        <p className="text-[10px] font-bold text-emerald-600 uppercase mt-1">Especialidades Mapeadas</p>
-                    </div>
-                </div>
-            </div>
-          </Card>
-          
-          <Card className="p-6 bg-emerald-500/5 border-emerald-500/10 overflow-hidden relative group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <ShieldCheck size={80} />
-            </div>
-            <div className="relative z-10 space-y-4">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Disponibilidade</p>
-                <div className="flex items-end justify-between">
-                    <div>
-                        <p className="text-3xl font-black text-foreground tracking-tighter">{stats.active}</p>
-                        <p className="text-[10px] font-bold text-emerald-600 uppercase mt-1">Sinal Verde Ativo</p>
-                    </div>
-                </div>
+          <Card className="p-4 bg-primary/5 border-primary/10">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Briefcase className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Serviços cadastrados</p>
+                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+              </div>
             </div>
           </Card>
 
-          <Card className="p-6 bg-indigo-500/5 border-indigo-500/10 overflow-hidden relative group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <DollarSign size={80} />
+          <Card className="p-4 bg-success/5 border-success/10">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-success" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Ativos</p>
+                <p className="text-2xl font-bold text-foreground">{stats.active}</p>
+              </div>
             </div>
-            <div className="relative z-10 space-y-4">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Ticket Estratégico</p>
-                <div className="flex items-end justify-between">
-                    <div>
-                        <p className="text-3xl font-black text-foreground tracking-tighter">{formatMoney(stats.avgPrice)}</p>
-                        <p className="text-[10px] font-bold text-indigo-500 uppercase mt-1">Investimento Médio</p>
-                    </div>
-                </div>
+          </Card>
+
+          <Card className="p-4 bg-info/5 border-info/10">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-info/10 flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-info" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Preço médio</p>
+                <p className="text-2xl font-bold text-foreground">{formatMoney(stats.avgPrice)}</p>
+              </div>
             </div>
           </Card>
         </Grid>
 
-        {/* Command Console */}
-        <Card className="p-4 bg-muted/20 border-border/50 relative overflow-visible z-20 backdrop-blur-sm">
+        {/* Filtros */}
+        <Card className="p-4 border-dashed border-2 bg-muted/20">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Escancear por nome do serviço, descrição técnica ou termos de busca..."
-                className="pl-10 h-10 text-xs font-medium bg-card border-border/60"
+                aria-label="Buscar serviço"
+                placeholder="Buscar por nome ou descrição do serviço..."
+                className="pl-10 h-10 bg-card"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="flex items-center gap-2">
-              <Select
-                className="w-56 h-10 text-[10px] font-bold uppercase tracking-widest bg-card border-border/60"
-                value={statusFilter}
-                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
-                options={[
-                    { value: 'all', label: 'Todos os Estados' },
-                    { value: 'ACTIVE', label: 'Operacional / Ativo' },
-                    { value: 'INACTIVE', label: 'Suspenso / Inativo' },
-                ]}
-              />
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-10 w-10 border-border/60 hover:bg-muted text-muted-foreground group"
-                onClick={() => { setSearchTerm(''); setStatusFilter('all'); }}
+              <div className="w-full sm:w-56">
+                <Select
+                  aria-label="Filtrar por status"
+                  size="sm"
+                  className="bg-card"
+                  value={statusFilter}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
+                  options={STATUS_FILTER_OPTIONS}
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                onClick={resetFilters}
+                title="Limpar filtros"
+                aria-label="Limpar filtros"
               >
-                <XCircle className="h-4 w-4 group-hover:rotate-90 transition-all duration-300" />
+                <XCircle className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </Card>
 
-        {error && <Alert variant="error" title="Falha de Comunicação" description={error} />}
+        {error && (
+          <Alert
+            variant="error"
+            title="Erro ao carregar os serviços"
+            action={<Button size="sm" variant="outline" onClick={fetchServices}>Tentar de novo</Button>}
+          >
+            {error}
+          </Alert>
+        )}
 
-        {/* Service Registry Table */}
-        <Card className="overflow-hidden border-border/60 shadow-2xl bg-card animate-in fade-in duration-700">
-          <div className="overflow-x-auto custom-scrollbar">
+        {/* Tabela */}
+        {!loadFailed && (
+        <Card className="overflow-hidden border-border shadow-sm animate-in fade-in duration-700">
+          <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-muted/40 border-b border-border/50">
-                  <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">Sinal Solução & Protótipo</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em] text-right">Base Investimento</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em] text-center">Protocolo Tempo</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">Status</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-right text-muted-foreground uppercase tracking-[0.1em]">Controle</th>
+                <tr className="bg-muted/50 border-b border-border">
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Serviço</th>
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Preço</th>
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Duração</th>
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-xs font-bold text-right text-muted-foreground uppercase tracking-wider">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/40">
+              <tbody className="divide-y divide-border">
                 {filteredServices.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-24 text-center">
-                      <div className="inline-flex h-20 w-20 items-center justify-center rounded-[2rem] bg-primary/5 mb-6 ring-8 ring-primary/5 transition-all">
-                        <Database className="h-10 w-10 text-primary/30" />
+                    <td colSpan={5} className="px-6 py-20 text-center">
+                      <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
+                        <Database className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Catálogo Silencioso</h3>
-                      <p className="text-xs text-muted-foreground max-w-xs mx-auto mt-2 font-medium">Os parâmetros de busca não retornaram correspondências no repositório.</p>
-                      <Button variant="outline" className="mt-8 font-black uppercase text-[10px] tracking-widest h-10 px-6 rounded-xl border-primary/20 text-primary hover:bg-primary/5" onClick={() => { setSearchTerm(''); setStatusFilter('all'); }}>
-                        Redefinir Filtros
+                      <h3 className="text-lg font-bold text-foreground">Nenhum serviço encontrado</h3>
+                      <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">Ajuste a busca ou os filtros para encontrar o que procura.</p>
+                      <Button variant="outline" size="sm" className="mt-6" onClick={resetFilters}>
+                        Limpar filtros
                       </Button>
                     </td>
                   </tr>
                 ) : (
                   filteredServices.map((item) => (
-                    <tr key={item.id} className="hover:bg-muted/30 transition-all group animate-in fade-in slide-in-from-left-4 duration-500">
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-5">
+                    <tr key={item.id} className="hover:bg-muted/20 transition-colors group animate-in fade-in slide-in-from-left-4 duration-500">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-4">
                           <div className="relative">
-                            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-border/60 flex items-center justify-center overflow-hidden flex-shrink-0 group-hover:scale-110 transition-transform duration-500 shadow-sm font-black text-primary/40 uppercase">
+                            <div className="h-14 w-14 rounded-2xl bg-primary/10 border border-border flex items-center justify-center overflow-hidden flex-shrink-0 text-primary">
                               {item.imageUrl ? (
                                 <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
                               ) : (
                                 <Briefcase className="h-6 w-6" />
                               )}
                             </div>
-                            <div className={`absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-card ${item.status === 'ACTIVE' || item.status === 'AVAILABLE' ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground'}`} />
+                            <div className={`absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-card ${item.status === 'ACTIVE' || item.status === 'AVAILABLE' ? 'bg-success' : 'bg-muted-foreground'}`} />
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                                <p className="text-[13px] font-black text-foreground truncate uppercase tracking-tight">{item.name}</p>
-                                {item.price && item.price > 2000 && <Star size={10} className="text-amber-500 fill-amber-500" />}
+                                <p className="text-sm font-bold text-foreground truncate">{item.name}</p>
+                                {item.price && item.price > 2000 && <Star size={12} className="text-warning fill-warning" aria-hidden="true" />}
                             </div>
-                            <p className="text-[9px] font-black text-muted-foreground uppercase opacity-40 tracking-widest mt-0.5 font-mono">CODE: SRV-{item.id.slice(0, 8).toUpperCase()}</p>
+                            <p className="text-xs text-muted-foreground font-mono mt-0.5">SRV-{item.id.slice(0, 8).toUpperCase()}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-5 text-right">
-                        <div className="flex flex-col items-end">
-                            <span className="text-sm font-black text-primary tracking-tighter">{formatMoney(item.price || 0)}</span>
-                            <span className="text-[9px] font-black text-muted-foreground uppercase opacity-40 tracking-widest">Valor Base</span>
-                        </div>
+                      <td className="px-6 py-4 text-right">
+                        <span className="text-sm font-bold text-foreground">{formatMoney(item.price || 0)}</span>
                       </td>
-                      <td className="px-6 py-5 text-center">
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/60 border border-border/50 text-[10px] font-black text-foreground uppercase tracking-widest">
-                            <Clock size={14} className="text-muted-foreground" />
-                            {(item.duration / 60).toFixed(1).replace('.0', '')} H
-                        </div>
+                      <td className="px-6 py-4 text-center">
+                        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted border border-border text-sm font-medium text-foreground">
+                            <Clock size={14} className="text-muted-foreground" aria-hidden="true" />
+                            {formatDuration(item.duration)}
+                        </span>
                       </td>
-                      <td className="px-6 py-5">
-                        <StatusSelect 
+                      <td className="px-6 py-4">
+                        <StatusSelect
                           currentStatus={item.status as ItemStatus || ItemStatus.ACTIVE}
-                                                    onStatusChange={(newStatus) => handleStatusChange(item, newStatus)}
+                          onStatusChange={(newStatus) => handleStatusChange(item, newStatus)}
                         />
                       </td>
-                      <td className="px-6 py-5">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-1 group-hover:translate-x-0">
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-9 w-9 rounded-xl border-border/40 hover:text-primary hover:border-primary/50 bg-card shadow-sm" 
+                      <td className="px-6 py-4">
+                        <div className="flex justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9"
                             onClick={() => handleEdit(item)}
+                            title="Editar serviço"
+                            aria-label={`Editar ${item.name}`}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-9 w-9 rounded-xl border-border/40 hover:text-destructive hover:border-destructive/50 bg-card shadow-sm" 
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 border-destructive/40 text-destructive hover:bg-destructive/10"
                             onClick={() => handleDeleteClick(item.id)}
+                            title="Excluir serviço"
+                            aria-label={`Excluir ${item.name}`}
                           >
                             <Trash2 className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-border/40 hover:bg-muted group/ext">
-                            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                           </Button>
                         </div>
                       </td>
@@ -379,24 +399,20 @@ export const AdminServiceListPage = () => {
             </table>
           </div>
 
-          {/* Tactical Status Bar */}
-          <div className="px-8 py-5 bg-muted/10 border-t border-border/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 italic">
-               <Zap size={14} className="text-primary animate-pulse" /> Catálogo sincronizado com a matriz de precificação dinâmica
+          {/* Rodapé — antes: "Catálogo sincronizado com a matriz de precificação dinâmica" (texto fixo). */}
+          <div className="px-6 py-4 bg-muted/10 border-t border-border">
+             <p className="text-sm text-muted-foreground">
+               Exibindo {filteredServices.length} de {services.length} serviços.
              </p>
-             <div className="flex items-center gap-3">
-                <span className="text-[10px] font-black text-muted-foreground uppercase">Especialidades Carregadas:</span>
-                <Badge variant="outline" className="text-[10px] font-black px-3">{filteredServices.length}</Badge>
-             </div>
           </div>
         </Card>
+        )}
       </div>
 
-      {/* Specialty Interface Modals */}
       <Modal
         isOpen={isFormModalOpen}
         onClose={() => guardClose(() => setIsFormModalOpen(false))}
-        title={editingService ? 'Ajuste de Escopo Técnico' : 'Protocolo de Inclusão de Nova Solução'}
+        title={editingService ? 'Editar serviço' : 'Novo serviço'}
         size="lg"
       >
         <ServiceForm
@@ -407,8 +423,8 @@ export const AdminServiceListPage = () => {
               fetchServices();
               addNotification({
                 type: 'success',
-                title: 'Matriz Atualizada',
-                message: 'O novo serviço foi integrado ao portfólio operativo.'
+                title: 'Serviço salvo',
+                message: `O serviço foi ${editingService ? 'atualizado' : 'criado'}.`
               });
             }}
             onCancel={() => guardClose(() => setIsFormModalOpen(false))}
@@ -430,12 +446,12 @@ export const AdminServiceListPage = () => {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmDelete}
-        title="Validar Purga de Solução?"
-        message="Esta operação desativará o serviço no catálogo ativo para novos contratos. Históricos passados permanecem inalterados por razões legais."
+        title="Excluir serviço?"
+        message="O serviço deixa de aparecer no catálogo para novos contratos. Os contratos anteriores não mudam."
         variant="danger"
         isLoading={isDeleting}
-        confirmText="Confirmar Purga"
-        cancelText="Manter Portfólio"
+        confirmText="Excluir"
+        cancelText="Manter"
       />
     </AdminLayout>
   );

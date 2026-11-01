@@ -8,38 +8,33 @@ interface ExperienceLevelSelectorProps {
   basePrice?: number;
 }
 
+// Cores por token (antes: gradientes cinza/amarelo/índigo fixos e fundos -50 claros).
 const LEVEL_CONFIG = {
   [ExperienceLevel.SILVER]: {
     name: 'Silver',
     icon: '🥈',
-    color: 'from-gray-400 to-gray-500',
-    borderColor: 'border-gray-400',
-    bgColor: 'bg-gray-50 dark:bg-gray-800/50',
+    nameColor: 'text-muted-foreground',
     defaultIncludes: ['Kit de Equipamentos', 'Manual de montagem', 'Suporte por WhatsApp'],
   },
   [ExperienceLevel.GOLD]: {
     name: 'Gold',
     icon: '🥇',
-    color: 'from-yellow-400 to-amber-500',
-    borderColor: 'border-yellow-400',
-    bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
+    nameColor: 'text-warning',
     defaultIncludes: ['Kit de Equipamentos', 'Montagem Profissional', 'Desmontagem incluída', 'Teste de som no local'],
   },
   [ExperienceLevel.PLATINUM]: {
     name: 'Platinum',
     icon: '💎',
-    color: 'from-slate-400 to-indigo-500',
-    borderColor: 'border-slate-400',
-    bgColor: 'bg-slate-50 dark:bg-slate-900/20',
+    nameColor: 'text-primary',
     defaultIncludes: ['Kit de Equipamentos', 'Montagem Profissional', 'Técnico de Som', 'DJ Profissional', 'Operação completa'],
   },
 };
 
-export function ExperienceLevelSelector({ 
-  levels, 
-  selected, 
+export function ExperienceLevelSelector({
+  levels,
+  selected,
   onSelect,
-  basePrice 
+  basePrice
 }: ExperienceLevelSelectorProps) {
   if (!levels || levels.length === 0) {
     return null;
@@ -51,42 +46,49 @@ export function ExperienceLevelSelector({
     return order[a.level] - order[b.level];
   });
 
+  // A dica usa o nível marcado como "Mais Popular" no admin — antes dizia sempre "Gold é o mais
+  // popular entre nossos clientes em Belo Horizonte", mesmo quando outro nível era o destacado.
+  const popularLevel = sortedLevels.find((level) => level.isPopular);
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-        <span className="text-2xl">🎯</span>
+        <span className="text-2xl" aria-hidden="true">🎯</span>
         Escolha seu Nível de Experiência
       </h3>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {sortedLevels.map((level) => {
           const config = LEVEL_CONFIG[level.level];
           const isSelected = selected === level.level;
-          const savings = basePrice ? Number(level.price) - basePrice : 0;
-          
+          const aboveBase = basePrice ? Number(level.price) - basePrice : 0;
+
           return (
             <button
               key={level.id}
+              type="button"
+              aria-pressed={isSelected}
               onClick={() => onSelect(level.level)}
               className={`
-                relative p-5 rounded-xl border-2 transition-all duration-300
-                ${isSelected 
-                  ? `${config.borderColor} ${config.bgColor} shadow-lg scale-[1.02]` 
+                relative p-5 rounded-xl border-2 text-left transition-all duration-300
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background
+                ${isSelected
+                  ? 'border-primary bg-primary/5 shadow-lg scale-[1.02]'
                   : 'border-border hover:border-primary/50 bg-card hover:shadow-md'
                 }
               `}
             >
-              {/* Badge Popular */}
+              {/* Selo "Mais Popular" */}
               {level.isPopular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-xs font-bold px-3 py-1 rounded-full shadow-md">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full shadow-md whitespace-nowrap">
                   Mais Popular
                 </div>
               )}
 
-              {/* Header */}
+              {/* Cabeçalho */}
               <div className="text-center mb-4">
-                <span className="text-4xl mb-2 block">{config.icon}</span>
-                <h4 className={`text-xl font-bold bg-gradient-to-r ${config.color} bg-clip-text text-transparent`}>
+                <span className="text-4xl mb-2 block" aria-hidden="true">{config.icon}</span>
+                <h4 className={`text-xl font-bold ${config.nameColor}`}>
                   {config.name}
                 </h4>
               </div>
@@ -97,9 +99,10 @@ export function ExperienceLevelSelector({
                   {formatPrice(Number(level.price))}
                 </span>
                 <span className="text-sm text-muted-foreground">/hora</span>
-                {savings > 0 && level.level !== ExperienceLevel.SILVER && (
+                {/* A diferença é sobre o preço base do kit (o texto dizia "do Silver"). */}
+                {aboveBase > 0 && level.level !== ExperienceLevel.SILVER && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    +{formatPrice(savings)} do Silver
+                    +{formatPrice(aboveBase)} sobre o preço base
                   </p>
                 )}
               </div>
@@ -115,11 +118,12 @@ export function ExperienceLevelSelector({
               <ul className="space-y-2 text-left">
                 {(level.includes.length > 0 ? level.includes : config.defaultIncludes).map((item, idx) => (
                   <li key={idx} className="flex items-center gap-2 text-sm">
-                    <svg 
-                      className={`w-4 h-4 flex-shrink-0 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
+                    <svg
+                      className={`w-4 h-4 flex-shrink-0 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
                       stroke="currentColor"
+                      aria-hidden="true"
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
@@ -131,8 +135,8 @@ export function ExperienceLevelSelector({
               {/* Indicador de seleção */}
               {isSelected && (
                 <div className="absolute top-3 right-3">
-                  <div className={`w-6 h-6 rounded-full bg-gradient-to-r ${config.color} flex items-center justify-center`}>
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
@@ -144,9 +148,11 @@ export function ExperienceLevelSelector({
       </div>
 
       {/* Dica */}
-      <p className="text-xs text-muted-foreground text-center">
-        💡 Não sabe qual escolher? O nível <strong>Gold</strong> é o mais popular entre nossos clientes em Belo Horizonte.
-      </p>
+      {popularLevel && (
+        <p className="text-xs text-muted-foreground text-center">
+          💡 Na dúvida? Comece pelo nível <strong>{LEVEL_CONFIG[popularLevel.level].name}</strong>, o mais popular.
+        </p>
+      )}
     </div>
   );
 }

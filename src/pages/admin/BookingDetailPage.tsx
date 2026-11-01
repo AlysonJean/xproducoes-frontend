@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, type ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -24,7 +24,6 @@ import {
   Camera,
   Layers,
   Award,
-  Settings,
   ShieldCheck,
   CreditCard,
   Paperclip,
@@ -34,6 +33,10 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatPrice } from '@/utils/formatPrice';
 import { formatBookingPaymentStatus } from '@/utils/typeSafeFormatters';
+import { bookingStatusLabel, bookingStatusVariant, deliveryStatusLabel, DELIVERY_STATUS_OPTIONS } from '@/utils/bookingStatus';
+import { COLLABORATOR_ROLE_OPTIONS } from '@/utils/collaboratorRoles';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
+import { AdminBookingForm } from '@/components/forms/AdminBookingForm';
 import { isToday } from 'date-fns';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { useAuth } from '../../contexts/AuthContext';
@@ -57,6 +60,7 @@ import {
   Select 
 } from '@/components/ui/StandardComponents';
 import type {
+  Booking,
   BookingDetails as BaseBookingDetails,
   Equipment,
   Kit,
@@ -160,6 +164,12 @@ export const BookingDetailPage = () => {
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isConfirmModalOpen, setConfirmModalOpen] = useState(false);
   const [isEventModalOpen, setEventModalOpen] = useState(false);
+  const [isEditModalOpen, setEditModalOpen] = useState(false);
+  const [isEditDirty, setEditDirty] = useState(false);
+  const { guardClose, isConfirmOpen: isDiscardOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isEditDirty);
+  const [attachmentToDelete, setAttachmentToDelete] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [actionLoading, setActionLoading] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -175,10 +185,11 @@ export const BookingDetailPage = () => {
     if (!id) return;
     try {
       setLoading(true);
+      setError(null);
       const res = await bookingAPI.getById(id);
             setBooking(res.data as BookingDetails);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Falha ao sincronizar detalhes do contrato.');
+      setError(err instanceof Error ? err.message : 'Não foi possível carregar a reserva.');
     } finally {
       setLoading(false);
     }
@@ -200,7 +211,7 @@ export const BookingDetailPage = () => {
     if (!booking) return;
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(booking, null, 2));
     createAndClickAnchor({ href: dataStr, download: `booking_${booking.id?.substring(0, 8)}.json` });
-    addNotification({ type: 'info', title: 'Exportação', message: 'Payload da reserva gerado com sucesso.' });
+    addNotification({ type: 'info', title: 'Exportação', message: 'Arquivo JSON da reserva baixado.' });
   };
 
   const handleDeleteBooking = async () => {
@@ -208,10 +219,10 @@ export const BookingDetailPage = () => {
     try {
       setActionLoading(true);
       await bookingAPI.delete(booking.id);
-      addNotification({ type: 'success', title: 'Purga Concluída', message: 'Contrato removido do repositório ativo.' });
+      addNotification({ type: 'success', title: 'Reserva excluída', message: 'A reserva foi excluída.' });
       navigate('/admin/reservas');
         } catch {
-      addNotification({ type: 'error', title: 'Falha Crítica', message: 'Erro ao processar exclusão do contrato.' });
+      addNotification({ type: 'error', title: 'Erro ao excluir', message: 'Não foi possível excluir a reserva.' });
     } finally {
       setActionLoading(false);
       setDeleteModalOpen(false);
@@ -225,11 +236,11 @@ export const BookingDetailPage = () => {
       if (value === 'ON_THE_WAY') await bookingAPI.updateDeliveryStatus(bookingId, value);
       else await bookingAPI.updateStatus(bookingId, value);
       await fetchBooking();
-      addNotification({ type: 'success', title: 'Estado Sincronizado', message: 'Status operativo atualizado.' });
+      addNotification({ type: 'success', title: 'Status atualizado', message: 'O status da reserva foi atualizado.' });
         } catch (error: unknown) {
       // Mostra o motivo vindo do backend (ex.: 409 de conflito de equipamento) quando houver.
       const err = error as { response?: { data?: { error?: string; message?: string } } };
-      addNotification({ type: 'error', title: 'Erro de Protocolo', message: err.response?.data?.message || err.response?.data?.error || 'Falha ao comunicar alteração de status.' });
+      addNotification({ type: 'error', title: 'Erro ao atualizar', message: err.response?.data?.message || err.response?.data?.error || 'Não foi possível atualizar o status.' });
     } finally {
       setActionLoading(false);
     }
@@ -252,9 +263,9 @@ export const BookingDetailPage = () => {
       await bookingAPI.confirmWithDetails(booking.id, payload);
       await fetchBooking();
       setConfirmModalOpen(false);
-      addNotification({ type: 'success', title: 'Contrato Ativado', message: 'Reserva validada e sincronizada.' });
+      addNotification({ type: 'success', title: 'Reserva confirmada', message: 'Valor e equipe salvos.' });
         } catch {
-      addNotification({ type: 'error', title: 'Falha na Ativação', message: 'Não foi possível confirmar os parâmetros financeiros.' });
+      addNotification({ type: 'error', title: 'Erro ao confirmar', message: 'Não foi possível confirmar a reserva.' });
     } finally {
       setActionLoading(false);
     }
@@ -265,7 +276,7 @@ export const BookingDetailPage = () => {
   ) => {
     const contact = booking?.client?.phone || booking?.clientContact;
     if (!contact) {
-      addNotification({ type: 'warning', title: 'Contato Ausente', message: 'O cliente não possui terminal móvel associado.' });
+      addNotification({ type: 'warning', title: 'Sem telefone', message: 'O cliente não tem telefone cadastrado.' });
       return;
     }
 
@@ -645,7 +656,7 @@ export const BookingDetailPage = () => {
       await generateBookingPdf();
       addNotification({ type: 'success', title: 'PDF pronto', message: 'Arquivo gerado com sucesso.' });
     } catch (err: unknown) {
-      addNotification({ type: 'error', title: 'Falha no PDF', message: err instanceof Error ? err.message : 'Nao foi possivel gerar o PDF.' });
+      addNotification({ type: 'error', title: 'Erro no PDF', message: err instanceof Error ? err.message : 'Não foi possível gerar o PDF.' });
     } finally {
       setGeneratingPdf(false);
     }
@@ -655,7 +666,7 @@ export const BookingDetailPage = () => {
     const rawPhone = booking?.client?.phone || booking?.clientContact || '';
     const normalizedPhone = normalizeWhatsAppNumber(rawPhone);
     if (!normalizedPhone) {
-      addNotification({ type: 'error', title: 'WhatsApp invalido', message: 'O cliente nao possui telefone valido cadastrado.' });
+      addNotification({ type: 'error', title: 'WhatsApp inválido', message: 'O cliente não tem um telefone válido cadastrado.' });
       return;
     }
     try {
@@ -665,12 +676,52 @@ export const BookingDetailPage = () => {
       window.open(waUrl, '_blank', 'noopener,noreferrer');
       addNotification({ type: 'success', title: 'WhatsApp aberto', message: 'PDF baixado. Anexe-o na conversa do WhatsApp.' });
     } catch (err: unknown) {
-      addNotification({ type: 'error', title: 'Falha', message: err instanceof Error ? err.message : 'Nao foi possivel abrir o WhatsApp.' });
+      addNotification({ type: 'error', title: 'Erro', message: err instanceof Error ? err.message : 'Não foi possível abrir o WhatsApp.' });
     } finally {
       setSendingWhatsApp(false);
     }
   };
   // ─────────────────────────────────────────────────────────────────────────────
+
+  // Anexos: o upload ficava inline no JSX; a lixeira de cada anexo não tinha ação (o backend já
+  // tem DELETE /bookings/:id/attachments/:attachmentId).
+  const handleUploadAttachments = async (files: FileList | null) => {
+    if (!booking?.id || !files || !files.length) return;
+    try {
+      setUploading(true);
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        const fd = new FormData();
+        fd.append('image', f);
+        fd.append('folder', 'bookings');
+        const uploadResp = await api.post('/upload/image', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        const imageUrl = String(uploadResp.data?.imageUrl || uploadResp.data);
+        await api.post(`/bookings/${booking.id}/attachments`, { url: imageUrl, filename: f.name, mimeType: f.type });
+      }
+      await fetchBooking();
+      addNotification({ type: 'success', title: 'Anexos enviados', message: 'Os arquivos foram anexados à reserva.' });
+    } catch {
+      addNotification({ type: 'error', title: 'Erro no envio', message: 'Não foi possível enviar o arquivo.' });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteAttachment = async () => {
+    if (!booking?.id || !attachmentToDelete) return;
+    try {
+      setActionLoading(true);
+      await api.delete(`/bookings/${booking.id}/attachments/${attachmentToDelete}`);
+      await fetchBooking();
+      addNotification({ type: 'success', title: 'Anexo excluído', message: 'O anexo foi removido da reserva.' });
+    } catch {
+      addNotification({ type: 'error', title: 'Erro ao excluir', message: 'Não foi possível excluir o anexo.' });
+    } finally {
+      setActionLoading(false);
+      setAttachmentToDelete(null);
+    }
+  };
 
   const requiredServices = useMemo(() => {
     if (!booking) return [];
@@ -687,14 +738,28 @@ export const BookingDetailPage = () => {
     return Array.from(services);
   }, [booking]);
 
-  if (loading) {
+  // Dados do formulário de edição com referência ESTÁVEL. Achado (revisão): `initialData={{ ...booking }}`
+  // criava um objeto novo a cada render; o AdminBookingForm recarrega e faz reset() quando initialData
+  // muda, e o onDirtyChange da 1ª tecla re-renderizava a página — o que a pessoa digitava sumia.
+  // (Fica antes dos returns antecipados: hook não pode ser condicional.)
+  const editInitialData = useMemo(
+    () => (booking ? ({ ...booking, totalPrice: Number(booking.totalPrice || 0) } as unknown as Booking) : null),
+    [booking]
+  );
+
+  // Título e breadcrumb constantes (antes: "Análise de Contrato" → "Anomalia de Sistema" → "Protocolo #…").
+  const PAGE_TITLE = 'Detalhes da Reserva';
+  const BREADCRUMBS = [
+    { name: 'Admin', href: '/admin/painel' },
+    { name: 'Reservas', href: '/admin/reservas' },
+    { name: 'Detalhes' },
+  ];
+
+  if (loading && !booking) {
     return (
-      <AdminLayout title="Análise de Contrato" breadcrumbs={[{ name: 'Admin' }, { name: 'Reservas' }]}>
+      <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
         <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in duration-700">
-          <BrandLoader size="xl" />
-          <p className="mt-8 text-muted-foreground font-medium tracking-widest uppercase text-[10px] animate-pulse">
-            Preparando documentação X Produções...
-          </p>
+          <BrandLoader size="xl" label="Carregando reserva…" />
         </div>
       </AdminLayout>
     );
@@ -702,476 +767,449 @@ export const BookingDetailPage = () => {
 
   if (error || !booking) {
     return (
-      <AdminLayout title="Anomalia de Sistema" breadcrumbs={[{ name: 'Admin' }, { name: 'Reservas' }]}>
-        <div className="flex flex-col items-center justify-center min-h-[400px]">
-           <Alert variant="error" title="Contrato Não Localizado" description={error || 'O identificador fornecido não corresponde a nenhum registro ativo.'} />
-           <Button variant="outline" className="mt-6" onClick={() => navigate('/admin/reservas')}>Voltar ao Terminal</Button>
+      <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
+        <div className="max-w-xl mx-auto space-y-4 py-10">
+          <Alert
+            variant="error"
+            title="Reserva não encontrada"
+            description={error || 'Não existe reserva com este código.'}
+            action={<Button variant="outline" size="sm" onClick={fetchBooking}>Tentar de novo</Button>}
+          />
+          <Button variant="outline" size="sm" onClick={() => navigate('/admin/reservas')} leftIcon={<ArrowLeft className="h-4 w-4" />}>
+            Voltar para reservas
+          </Button>
         </div>
       </AdminLayout>
     );
   }
 
-  return (
-    <AdminLayout 
-      title={`Protocolo #${booking.id?.substring(0, 8)}`} 
-      breadcrumbs={[{ name: 'Admin' }, { name: 'Reservas', href: '/admin/reservas' }, { name: 'Detalhes' }]}
-    >
-      <div className="space-y-8">
-        {/* Modern Header Navigation */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={() => navigate('/admin/reservas')}>
-               <ArrowLeft size={18} />
-            </Button>
-            <div>
-              <div className="flex flex-col gap-4">
-                <h2 className="text-xl font-black text-foreground uppercase tracking-tighter">Ficha Operacional</h2>
-                
-                {/* Visual Status Timeline */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide max-w-full">
-                  {[
-                    { key: 'PENDING', label: 'Lead', icon: Clock },
-                    { key: 'CONFIRMED', label: 'Confirmado', icon: ShieldCheck },
-                    { key: 'ON_THE_WAY', label: 'Em Trânsito', icon: Truck },
-                    { key: 'ARRIVED', label: 'No Local', icon: MapPin },
-                    { key: 'COMPLETED', label: 'Entrega', icon: CheckCircle2 }
-                  ].map((step, idx, arr) => {
-                    const isCurrent = booking.status === step.key;
-                    // Logic for "past" steps
-                    const statusOrder = ['PENDING', 'CONFIRMED', 'ON_THE_WAY', 'ARRIVED', 'COMPLETED'];
-                    const currentIndex = statusOrder.indexOf(booking.status || 'PENDING');
-                    const isPast = idx < currentIndex;
-                    const isCancelled = booking.status === 'CANCELLED';
+  const bookingCode = booking.id?.startsWith('XP-') ? booking.id : `#${booking.id?.substring(0, 8)}`;
+  const status = booking.status || 'PENDING';
+  const canConfirm = status === 'DRAFT' || status === 'PENDING';
+  const isClosed = status === 'CANCELLED' || status === 'REFUNDED';
+  const deliveryIndex = DELIVERY_STATUS_OPTIONS.findIndex((o) => o.value === (booking.deliveryStatus || 'PENDING'));
+  const eventDate = booking.eventDate ? new Date(booking.eventDate) : null;
+  const clientName = booking.client?.name || booking.client?.user?.name || booking.clientName || 'Cliente sem nome';
+  const clientPhone = booking.client?.phone || booking.clientContact;
+  const clientEmail = booking.client?.email || booking.client?.user?.email || booking.clientEmail;
 
+  return (
+    <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
+      <div className="space-y-8">
+        {/* Cabeçalho */}
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+          <div className="flex items-start gap-4 min-w-0">
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              onClick={() => navigate('/admin/reservas')}
+              aria-label="Voltar para reservas"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="min-w-0 space-y-3">
+              <h2 className="text-xl font-bold text-foreground">Reserva {bookingCode}</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={bookingStatusVariant(status)}>{bookingStatusLabel(status)}</Badge>
+                <Badge variant="outline">Entrega: {deliveryStatusLabel(booking.deliveryStatus || 'PENDING')}</Badge>
+                <Badge variant="ghost">Pagamento: {formatBookingPaymentStatus(booking.paymentStatus)}</Badge>
+              </div>
+
+              {/* Andamento da entrega. Antes era uma "linha do tempo" de booking.status que misturava
+                  status de entrega (A caminho, No local) com o da reserva e não tinha Rascunho/Em andamento. */}
+              {!isClosed && (
+                <ol className="flex items-center gap-1 overflow-x-auto pb-1 max-w-full" aria-label="Andamento da entrega">
+                  {DELIVERY_STATUS_OPTIONS.map((step, idx) => {
+                    const isCurrent = idx === deliveryIndex;
+                    const isPast = idx < deliveryIndex;
                     return (
-                      <div key={step.key} className="flex items-center">
-                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-500 whitespace-nowrap ${
-                          isCurrent 
-                            ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20 scale-105 z-10' 
-                            : isPast 
-                              ? 'bg-primary/10 border-primary/20 text-primary' 
-                              : 'bg-muted/50 border-border/50 text-muted-foreground opacity-50'
-                        } ${isCancelled && 'grayscale opacity-30 cursor-not-allowed'}`}>
-                          <step.icon size={12} className={isCurrent ? 'animate-pulse' : ''} />
-                          <span className="text-[10px] font-black uppercase tracking-widest">{step.label}</span>
-                        </div>
-                        {idx < arr.length - 1 && (
-                          <div className={`w-4 h-[1px] ${isPast ? 'bg-primary/30' : 'bg-border/30'}`} />
-                        )}
-                      </div>
+                      <li key={step.value} className="flex items-center shrink-0" aria-current={isCurrent ? 'step' : undefined}>
+                        <span
+                          className={`px-2.5 py-1 rounded-full border text-xs font-medium whitespace-nowrap ${
+                            isCurrent
+                              ? 'bg-primary border-primary text-primary-foreground'
+                              : isPast
+                                ? 'bg-primary/10 border-primary/20 text-primary'
+                                : 'bg-muted border-border text-muted-foreground'
+                          }`}
+                        >
+                          {step.label}
+                        </span>
+                        {idx < DELIVERY_STATUS_OPTIONS.length - 1 && <span className="w-3 h-px bg-border" aria-hidden="true" />}
+                      </li>
                     );
                   })}
-                  
-                  {booking.status === 'CANCELLED' && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20 text-destructive animate-in zoom-in duration-300">
-                      <XCircle size={12} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">CANCELADO</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-2">Visão detalhada de alocação e fluxogramas</p>
+                </ol>
+              )}
             </div>
           </div>
-          
-          <div className="flex flex-wrap items-center gap-3">
-             <Button variant="outline" onClick={handleDownloadBookingPdf} isLoading={generatingPdf} className="h-11 px-5 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/5">
-               <FileText className="h-4 w-4 mr-2" /> Baixar PDF
-             </Button>
-             <Button variant="outline" onClick={handleDownloadAndWhatsApp} isLoading={sendingWhatsApp} className="h-11 px-5 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/5">
-               <MessageSquare className="h-4 w-4 mr-2" /> PDF + WhatsApp
-             </Button>
-             <Button variant="outline" onClick={handleExportBooking} className="h-11 px-5 border-border/60 hover:bg-muted">
-               <Download className="h-4 w-4 mr-2" /> JSON Payload
-             </Button>
-             <Button variant="outline" onClick={() => navigate(`/admin/reservas/${booking.id}/editar`)} className="h-11 px-5 border-border/60 hover:text-primary">
-               <Edit2 className="h-4 w-4 mr-2" /> Ajustar Parâmetros
-             </Button>
-             <Button variant="destructive" onClick={() => setDeleteModalOpen(true)} className="h-11 px-5">
-               <Trash2 className="h-4 w-4 mr-2" /> Purga Contratual
-             </Button>
-             <Button onClick={() => navigate('/admin/reservas/nova')} className="h-11 px-6 shadow-xl shadow-primary/20">
-               <Plus className="h-5 w-5 mr-2" /> Novo Draft
-             </Button>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleDownloadBookingPdf} isLoading={generatingPdf} leftIcon={<FileText className="h-4 w-4" />}>
+              Baixar PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDownloadAndWhatsApp} isLoading={sendingWhatsApp} leftIcon={<MessageSquare className="h-4 w-4" />}>
+              PDF + WhatsApp
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportBooking} leftIcon={<Download className="h-4 w-4" />}>
+              Exportar JSON
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/admin/reservas/calendario')} leftIcon={<Calendar className="h-4 w-4" />}>
+              Ver na agenda
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setEditModalOpen(true)} leftIcon={<Edit2 className="h-4 w-4" />}>
+              Editar
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => setDeleteModalOpen(true)} leftIcon={<Trash2 className="h-4 w-4" />}>
+              Excluir
+            </Button>
           </div>
         </div>
 
-        {/* Action Command Center */}
-        <Grid columns={{ sm: 1, md: 3 }} gap={6}>
-            <Card className="p-6 border-primary/20 bg-primary/5 flex flex-col justify-between relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                    <ShieldCheck size={100} />
-                </div>
-                <div className="relative z-10">
-                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-4">Núcleo de Confirmação</p>
-                    <div className="space-y-3">
-                        {booking.status !== 'CONFIRMED' && (
-                            <Button className="w-full h-12 font-black uppercase text-[10px] tracking-widest" onClick={() => { setConfirmPrice(String(booking.totalPrice || '')); fetchAvailableCollaborators().then(() => setConfirmModalOpen(true)); }}>
-                                Validar & Ativar Reserva
-                            </Button>
-                        )}
-                        <Button variant="outline" className="w-full h-12 font-black uppercase text-[10px] tracking-widest border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/5" onClick={() => prepareWhatsAppMessage('confirm')}>
-                            <MessageSquare className="mr-2 h-4 w-4" /> Notificar Via WhatsApp
-                        </Button>
-                    </div>
-                </div>
-            </Card>
+        {/* Ações de status */}
+        <Grid columns={{ sm: 1, md: 2 }} gap={6}>
+          <Card className="p-6 border-primary/20 bg-primary/5">
+            <h3 className="text-xs font-medium text-primary uppercase tracking-wider mb-4">Confirmação</h3>
+            {canConfirm ? (
+              <div className="space-y-3">
+                <Button
+                  fullWidth
+                  size="sm"
+                  onClick={() => { setConfirmPrice(String(booking.totalPrice || '')); fetchAvailableCollaborators().then(() => setConfirmModalOpen(true)); }}
+                  leftIcon={<ShieldCheck className="h-4 w-4" />}
+                >
+                  Confirmar reserva
+                </Button>
+                <Button
+                  variant="outline"
+                  fullWidth
+                  size="sm"
+                  className="border-success/40 text-success hover:bg-success/10"
+                  onClick={() => prepareWhatsAppMessage('confirm')}
+                  leftIcon={<MessageSquare className="h-4 w-4" />}
+                >
+                  Confirmar e avisar pelo WhatsApp
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Reserva {bookingStatusLabel(status).toLowerCase()}. Use o botão Editar para mudar o status.
+              </p>
+            )}
+          </Card>
 
-            <Card className="p-6 border-border/60 bg-card flex flex-col justify-between">
-                <div>
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">Fluxo Logístico</p>
-                    <div className="space-y-2">
-                        <Button variant="outline" className="w-full h-10 text-[9px] font-black uppercase text-left justify-start" onClick={() => prepareWhatsAppMessage('on_the_way')}>
-                           <Truck className="mr-3 h-4 w-4 text-indigo-500" /> Reportar: Equipe a Caminho
-                        </Button>
-                        <Button variant="outline" className="w-full h-10 text-[9px] font-black uppercase text-left justify-start" onClick={() => handleStatusChange(booking.id!, 'COMPLETED')}>
-                           <CheckCircle2 className="mr-3 h-4 w-4 text-emerald-500" /> Marcar: Missão Concluída
-                        </Button>
-                        <Button variant="outline" className="w-full h-10 text-[9px] font-black uppercase text-left justify-start text-destructive border-destructive/20 hover:bg-destructive/5" onClick={() => prepareWhatsAppMessage('cancel')}>
-                           <XCircle className="mr-3 h-4 w-4" /> Protocolar: Cancelamento
-                        </Button>
-                    </div>
-                </div>
-            </Card>
-
-            <Card className="p-6 border-border/60 bg-card flex flex-col justify-between">
-                <div>
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">Ações Rápidas</p>
-                    <div className="space-y-2">
-                        <Button variant="outline" className="w-full h-10 text-[9px] font-black uppercase text-left justify-start" onClick={handleDownloadBookingPdf} isLoading={generatingPdf}>
-                           <FileText className="mr-3 h-4 w-4 text-emerald-500" /> Baixar PDF da Proposta
-                        </Button>
-                        <Button variant="outline" className="w-full h-10 text-[9px] font-black uppercase text-left justify-start" onClick={handleDownloadAndWhatsApp} isLoading={sendingWhatsApp}>
-                           <MessageSquare className="mr-3 h-4 w-4 text-emerald-500" /> PDF + Abrir WhatsApp
-                        </Button>
-                        <Button variant="outline" className="w-full h-10 text-[9px] font-black uppercase text-left justify-start" onClick={() => handleExportBooking()}>
-                           <Download className="mr-3 h-4 w-4 text-primary" /> Download Offline Payload
-                        </Button>
-                        <Button variant="outline" className="w-full h-10 text-[9px] font-black uppercase text-left justify-start" onClick={() => navigate('/admin/producao')}>
-                           <Calendar className="mr-3 h-4 w-4 text-amber-500" /> Visualizar na Agenda Global
-                        </Button>
-                    </div>
-                </div>
-            </Card>
+          <Card className="p-6">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">Logística</h3>
+            <div className="space-y-2">
+              <Button variant="outline" size="sm" fullWidth className="justify-start" onClick={() => prepareWhatsAppMessage('on_the_way')} leftIcon={<Truck className="h-4 w-4 text-info" />}>
+                Avisar: equipe a caminho
+              </Button>
+              <Button variant="outline" size="sm" fullWidth className="justify-start" onClick={() => handleStatusChange(booking.id!, 'COMPLETED')} leftIcon={<CheckCircle2 className="h-4 w-4 text-success" />}>
+                Marcar como concluída
+              </Button>
+              <Button variant="outline" size="sm" fullWidth className="justify-start text-destructive border-destructive/30 hover:bg-destructive/5" onClick={() => prepareWhatsAppMessage('cancel')} leftIcon={<XCircle className="h-4 w-4" />}>
+                Cancelar reserva
+              </Button>
+            </div>
+          </Card>
         </Grid>
 
-        {/* Main Content Details */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Primary Analysis Column */}
-            <div className="lg:col-span-2 space-y-8">
-                {/* Visual Summary Card */}
-                <Card className="p-8 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-32 -mt-32 blur-3xl" />
-                    <div className="relative z-10 flex flex-col md:flex-row gap-8 justify-between">
-                        <div className="space-y-6">
-                            <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                                    <MapPin size={20} />
-                                </div>
-                                <div>
-                                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Localização Operacional</p>
-                                    <p className="text-sm font-black text-foreground uppercase tracking-tight">{booking.location || booking.eventLocation || 'Terminal Não Especificado'}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
-                                    <Calendar size={20} />
-                                </div>
-                                <div>
-                                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Janela de Tempo</p>
-                                    <p className="text-sm font-black text-foreground uppercase tracking-tight">
-                                        {new Date(booking.eventDate).toLocaleDateString()} — {new Date(booking.eventDate).toLocaleTimeString()}
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4 pt-4">
-                                <Badge variant="outline" className="bg-muted h-7 px-3 text-[10px] font-black uppercase border-border/60">
-                                                                        Duração Estimada: {booking.estimatedDuration || '4h'}
-                                </Badge>
-                                {isToday(new Date(booking.eventDate)) && (
-                                    <Badge variant="success" className="h-7 px-3 text-[10px] font-black uppercase animate-pulse">
-                                        EVENTO HOJE
-                                    </Badge>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="min-w-[280px] p-6 rounded-[2rem] bg-muted/40 border border-border/40 backdrop-blur-md">
-                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-4 text-center">Perfil do Cliente</p>
-                            <div className="flex flex-col items-center text-center gap-4">
-                                <div className="h-16 w-16 rounded-[2rem] bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-white shadow-xl">
-                                    <User size={30} />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-black text-foreground tracking-tighter uppercase">{booking.client?.name || booking.clientName}</h3>
-                                    <div className="flex flex-col gap-1.5 mt-2">
-                                        <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-muted-foreground">
-                                           <Phone size={12} className="text-primary" /> {booking.client?.phone || booking.clientContact || 'Sem terminal'}
-                                        </div>
-                                        <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-muted-foreground">
-                                           <Mail size={12} className="text-primary" /> {booking.client?.email || booking.clientEmail || 'N/A'}
-                                        </div>
-                                    </div>
-                                </div>
-                                <Button size="sm" variant="outline" className="w-full mt-2 h-9 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-primary hover:text-white hover:border-transparent transition-all" onClick={() => navigate(`/admin/clientes`)}>
-                                    Visualizar CRM <ChevronRight size={12} className="ml-1" />
-                                </Button>
-                            </div>
-                        </div>
+          {/* Coluna principal */}
+          <div className="lg:col-span-2 space-y-8 min-w-0">
+            {/* Resumo do evento e cliente */}
+            <Card className="p-6 sm:p-8">
+              <div className="flex flex-col md:flex-row gap-8 justify-between">
+                <div className="space-y-6 min-w-0">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                      <MapPin size={20} />
                     </div>
-                </Card>
-
-                {/* Technical Inventory Section */}
-                <Card className="p-8">
-                    <div className="flex items-center justify-between mb-8">
-                        <div className="flex items-center gap-3">
-                            <Layers className="text-primary h-6 w-6" />
-                            <h3 className="text-lg font-black text-foreground uppercase tracking-tighter">Engenharia de Recursos</h3>
-                        </div>
-                        <Badge variant="outline" className="bg-muted px-3 text-[10px] font-black">Escaneamento Completo</Badge>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Local</p>
+                      <p className="text-sm font-semibold text-foreground break-words">{booking.location || booking.eventLocation || 'Local não informado'}</p>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-6">
-                            <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest border-b border-border pb-2">Hardware & Combos</h4>
-                            <div className="space-y-4">
-                                {((booking.kits && booking.kits.length > 0) || booking.kit) ? (
-                                                                        (booking.kits && booking.kits.length > 0 ? booking.kits : (booking.kit ? [booking.kit] : [])).map((k, idx) => (
-                                        <div key={idx} className="flex items-center gap-3 p-3 rounded-2xl bg-muted/30 border border-border/40 group hover:border-primary/30 transition-colors">
-                                           <div className="h-10 w-10 rounded-xl bg-card border border-border overflow-hidden flex items-center justify-center">
-                                              <Package className="text-muted-foreground/40" size={18} />
-                                           </div>
-                                           <div className="flex-1">
-                                              <p className="text-xs font-black text-foreground uppercase tracking-tight">{('kit' in k ? (k.name || k.kit?.name) : k.name) || 'Módulo Customizado'}</p>
-                                              <div className="flex items-center gap-2 mt-0.5">
-                                                 <Badge variant="outline" className="text-[8px] h-4 font-black bg-primary/5 border-primary/10 text-primary">KIT-ACTIVE</Badge>
-                                                 <span className="text-[9px] font-medium text-muted-foreground opacity-60">ID: {k.id?.substring(0,8) || 'AUTO'}</span>
-                                              </div>
-                                           </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <p className="text-[10px] font-bold text-muted-foreground italic">Nenhum combo hardware associado.</p>
-                                )}
-                            </div>
-                        </div>
-                        
-                        <div className="space-y-6">
-                            <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest border-b border-border pb-2">Competências & Serviços</h4>
-                            <div className="space-y-3">
-                                {requiredServices.length > 0 ? (
-                                    requiredServices.map((s, idx) => (
-                                        <div key={idx} className="flex items-center justify-between p-3 rounded-2xl border border-transparent hover:border-indigo-500/20 hover:bg-indigo-500/5 transition-all">
-                                           <div className="flex items-center gap-3">
-                                              <Zap size={14} className="text-indigo-500" />
-                                              <span className="text-xs font-black text-foreground uppercase tracking-tight">{s}</span>
-                                           </div>
-                                           <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,1)]" />
-                                        </div>
-                                    ))
-                                ) : (
-                                    <p className="text-[10px] font-bold text-muted-foreground italic">Padrão: Alocação Assistida</p>
-                                )}
-                            </div>
-                        </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                      <Calendar size={20} />
                     </div>
-                </Card>
-
-                {/* Talent Allocation Hub */}
-                <Card className="p-0 border-border/60 overflow-hidden shadow-xl">
-                   <div className="p-8 border-b border-border/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                         <Award className="text-indigo-500 h-6 w-6" />
-                         <h3 className="text-lg font-black text-foreground uppercase tracking-tighter">Corpo Técnico Alocado</h3>
-                      </div>
-                      <Button variant="outline" onClick={() => fetchAvailableCollaborators().then(() => setEventModalOpen(true))} className="h-10 px-6 font-black uppercase text-[10px] tracking-widest bg-indigo-500/5 border-indigo-500/20 text-indigo-600 hover:bg-indigo-500 hover:text-white transition-all">
-                         <Users size={16} className="mr-2" /> Gerenciar Alocação
-                      </Button>
-                   </div>
-                   <div className="p-8 bg-muted/10">
-                      <BookingCollaborators 
-                        bookingId={booking.id!} 
-                        eventDate={booking.eventDate}
-                        requiredServices={requiredServices}
-                      />
-                   </div>
-                </Card>
-
-                {/* Assets & Files Registry */}
-                <Card className="p-8">
-                   <div className="flex items-center justify-between mb-8">
-                       <div className="flex items-center gap-3">
-                           <Paperclip className="text-amber-500 h-6 w-6" />
-                           <h3 className="text-lg font-black text-foreground uppercase tracking-tighter">Repositório de Mídia & Comprovantes</h3>
-                       </div>
-                       <label className="cursor-pointer group">
-                          <input type="file" multiple className="hidden" onChange={async (e) => {
-                             const files = e.target.files;
-                             if (!files || !files.length) return;
-                             try {
-                                setActionLoading(true);
-                                for (let i = 0; i < files.length; i++) {
-                                   const f = files[i];
-                                   const fd = new FormData();
-                                   fd.append('image', f);
-                                   fd.append('folder', 'bookings');
-                                   const uploadResp = await api.post('/upload/image', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-                                   const imageUrl = String(uploadResp.data?.imageUrl || uploadResp.data);
-                                   await api.post(`/bookings/${booking.id}/attachments`, { url: imageUrl, filename: f.name, mimeType: f.type });
-                                }
-                                await fetchBooking();
-                                addNotification({ type: 'success', title: 'Upload OK', message: 'Mídias sincronizadas com o contrato.' });
-                             } catch {
-                                addNotification({ type: 'error', title: 'Erro de Protocolo', message: 'Falha no upload para o servidor.' });
-                             } finally {
-                                setActionLoading(false);
-                             }
-                          }} />
-                          <Badge variant="outline" className="bg-amber-500/5 border-amber-500/20 text-amber-600 hover:bg-amber-500 hover:text-white font-black uppercase py-1 p-3 cursor-pointer transition-all">
-                             <Plus size={12} className="mr-2" /> Anexar Prova Digital
-                          </Badge>
-                       </label>
-                   </div>
-
-                   {booking.attachments && booking.attachments.length > 0 ? (
-                       <Grid columns={{ sm: 2, md: 3, lg: 4 }} gap={4}>
-                                                      {booking.attachments.map((a) => (
-                               <div key={a.id} className="relative group overflow-hidden rounded-2xl border border-border/60 aspect-[4/3] bg-muted/30">
-                                   <img src={a.url} alt={a.filename} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 p-4 text-center">
-                                       <p className="text-[10px] font-black text-white uppercase truncate w-full px-4">{a.filename || 'Anexo'}</p>
-                                       <div className="flex gap-2">
-                                          <a href={a.url} target="_blank" rel="noreferrer" title="Ver anexo em nova aba" aria-label="Ver anexo em nova aba" className="h-9 w-9 rounded-xl bg-white/20 hover:bg-white/40 flex items-center justify-center text-white backdrop-blur-md transition-all">
-                                             <ExternalLink size={16} />
-                                          </a>
-                                          <Button variant="destructive" size="icon" className="h-9 w-9 rounded-xl">
-                                             <Trash2 size={16} />
-                                          </Button>
-                                       </div>
-                                   </div>
-                               </div>
-                           ))}
-                       </Grid>
-                   ) : (
-                       <div className="bg-muted/30 rounded-[2rem] border-2 border-dashed border-border/60 py-16 text-center">
-                          <Camera className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
-                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Nenhuma prova digital interceptada.</p>
-                       </div>
-                   )}
-                </Card>
-            </div>
-
-            {/* Sidebar Command Column */}
-            <div className="space-y-8">
-                {/* Financial Summary Widget */}
-                {user?.role === 'ADMIN' && (
-                    <div className="bg-card border-border/60 shadow-2xl rounded-[2.5rem] overflow-hidden">
-                        <div className="p-8 bg-gradient-to-br from-indigo-600 to-indigo-800 text-white">
-                            <div className="flex items-center gap-3 mb-2 opacity-80">
-                                <CreditCard size={18} />
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em]">Fluxo Financeiro</p>
-                            </div>
-                            <h3 className="text-4xl font-black tracking-tighter">R$ {Number(booking.totalPrice || 0).toFixed(2)}</h3>
-                            <div className="flex items-center gap-2 mt-4">
-                                <Badge variant="outline" className="border-white/20 text-white bg-white/10 font-black h-5 uppercase text-[9px]">
-                                   Pagamento: {formatBookingPaymentStatus(booking.paymentStatus)}
-                                </Badge>
-                            </div>
-                        </div>
-                        <div className="p-8 bg-card">
-                            <BookingFinancialSummary booking={booking} />
-                            <div className="mt-8 pt-8 border-t border-border/50">
-                                <Button className="w-full h-12 font-black uppercase text-[10px] tracking-widest bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-500/20">
-                                    Processar Faturamento
-                                </Button>
-                                <p className="text-[9px] font-medium text-muted-foreground text-center mt-4 italic">Auditoria financeira sincronizada em {(new Date()).toLocaleDateString()}</p>
-                            </div>
-                        </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Data e horário</p>
+                      <p className="text-sm font-semibold text-foreground">
+                        {eventDate
+                          ? `${eventDate.toLocaleDateString('pt-BR')} às ${eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                          : 'Data não informada'}
+                      </p>
                     </div>
-                )}
-
-                {/* Audit & Metadata Timeline */}
-                <Card className="p-8 space-y-8">
-                    <div className="flex items-center gap-3">
-                        <Settings className="text-muted-foreground h-5 w-5" />
-                        <h3 className="text-sm font-black text-foreground uppercase tracking-tighter">Meta-Data Auditoria</h3>
-                    </div>
-                    
-                    <div className="space-y-6">
-                        <div className="flex gap-4">
-                            <div className="flex flex-col items-center">
-                                <div className="h-2 w-2 rounded-full bg-emerald-500 mt-1 shadow-[0_0_8px_rgba(16,185,129,1)]" />
-                                <div className="w-px flex-1 bg-border my-2" />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black text-foreground uppercase">Criação do Protocolo</p>
-                                <p className="text-[9px] font-medium text-muted-foreground mt-1">{new Date(booking.createdAt || '').toLocaleString()}</p>
-                            </div>
-                        </div>
-                        <div className="flex gap-4">
-                            <div className="flex flex-col items-center">
-                                <div className="h-2 w-2 rounded-full bg-primary mt-1 shadow-[0_0_8px_rgba(var(--primary),1)]" />
-                                <div className="w-px flex-1 bg-border my-2" />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black text-foreground uppercase">Agendamento Identificado</p>
-                                <p className="text-[9px] font-medium text-muted-foreground mt-1">Sincronizado via Calendário Global</p>
-                            </div>
-                        </div>
-                        <div className="flex gap-4">
-                            <div className="flex flex-col items-center">
-                                <div className={`h-2 w-2 rounded-full mt-1 ${booking.status === 'CONFIRMED' ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,1)]' : 'bg-muted'}`} />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black text-foreground uppercase">Estado Operativo Atual</p>
-                                <p className="text-[9px] font-medium text-muted-foreground mt-1">{booking.status || 'Draft'}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="p-4 rounded-2xl bg-muted/30 border border-border/40">
-                         <div className="flex items-center gap-3 text-muted-foreground">
-                             <FileText size={16} />
-                             <span className="text-[10px] font-black uppercase tracking-widest">Observações Técnicas</span>
-                         </div>
-                         <p className="text-[11px] font-medium text-foreground mt-3 leading-relaxed italic opacity-80">
-                            {booking.notes || 'Sem anotações críticas de campo para este contrato.'}
-                         </p>
-                    </div>
-
-                    {/* Observações internas (ex.: histórico importado das agendas — equipe, valor
-                        estimado, texto original). Não havia onde vê-las no painel. */}
-                    {user?.role === 'ADMIN' && booking.internalNotes?.trim() && (
-                        <div className="p-4 rounded-2xl bg-muted/30 border border-border/40">
-                             <div className="flex items-center gap-3 text-muted-foreground">
-                                 <FileText size={16} />
-                                 <span className="text-[10px] font-black uppercase tracking-widest">Observações Internas</span>
-                             </div>
-                             <p className="text-[11px] font-medium text-foreground mt-3 leading-relaxed whitespace-pre-line">
-                                {booking.internalNotes}
-                             </p>
-                        </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Antes: "Duração Estimada: 4h" inventado quando não havia duração. */}
+                    {booking.estimatedDuration && (
+                      <Badge variant="outline">Duração estimada: {booking.estimatedDuration}</Badge>
                     )}
-                </Card>
-
-                {/* Tactical Help Indicator */}
-                <div className="p-6 rounded-[2rem] bg-indigo-500/5 border border-indigo-500/20 text-center">
-                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-relaxed">
-                        Sistema em Modo Administrativo Full-Privilege
-                    </p>
+                    {eventDate && isToday(eventDate) && <Badge variant="success">Evento hoje</Badge>}
+                  </div>
                 </div>
-            </div>
+
+                <div className="w-full md:w-auto md:min-w-[280px] p-6 rounded-2xl bg-muted/40 border border-border">
+                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4 text-center">Cliente</h3>
+                  <div className="flex flex-col items-center text-center gap-4">
+                    <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                      <User size={30} />
+                    </div>
+                    <div className="min-w-0 w-full">
+                      <p className="text-lg font-bold text-foreground break-words">{clientName}</p>
+                      <div className="flex flex-col gap-1.5 mt-2">
+                        <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                          <Phone size={14} className="text-primary shrink-0" /> {clientPhone || 'Sem telefone'}
+                        </p>
+                        <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground break-all">
+                          <Mail size={14} className="text-primary shrink-0" /> {clientEmail || 'Sem e-mail'}
+                        </p>
+                      </div>
+                    </div>
+                    {booking.client?.id && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        fullWidth
+                        onClick={() => navigate(`/admin/clientes/${booking.client?.id}`)}
+                        rightIcon={<ChevronRight size={14} />}
+                      >
+                        Ver cliente
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Itens */}
+            <Card className="p-6 sm:p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <Layers className="text-primary h-6 w-6" />
+                <h3 className="text-lg font-bold text-foreground">Itens da reserva</h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border pb-2">Kits</h4>
+                  <div className="space-y-3">
+                    {((booking.kits && booking.kits.length > 0) || booking.kit) ? (
+                      (booking.kits && booking.kits.length > 0 ? booking.kits : (booking.kit ? [booking.kit] : [])).map((k, idx) => (
+                        <div key={idx} className="flex items-center gap-3 p-3 rounded-2xl bg-muted/30 border border-border">
+                          <div className="h-10 w-10 shrink-0 rounded-xl bg-card border border-border flex items-center justify-center">
+                            <Package className="text-muted-foreground" size={18} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground truncate">{('kit' in k ? (k.name || k.kit?.name) : k.name) || 'Kit sem nome'}</p>
+                            {k.id && <p className="text-xs text-muted-foreground font-mono">#{k.id.substring(0, 8)}</p>}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Nenhum kit nesta reserva.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border pb-2">Serviços</h4>
+                  <div className="space-y-2">
+                    {requiredServices.length > 0 ? (
+                      requiredServices.map((s, idx) => (
+                        <div key={idx} className="flex items-center gap-3 p-3 rounded-2xl border border-border">
+                          <Zap size={14} className="text-primary shrink-0" />
+                          <span className="text-sm font-semibold text-foreground">{s}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Nenhum serviço nesta reserva.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Equipe */}
+            <Card className="p-0 overflow-hidden">
+              <div className="p-6 sm:p-8 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <Award className="text-primary h-6 w-6" />
+                  <h3 className="text-lg font-bold text-foreground">Equipe</h3>
+                </div>
+                {/* Este fluxo grava por /confirm-details, que também CONFIRMA a reserva — o rótulo diz isso. */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fetchAvailableCollaborators().then(() => setEventModalOpen(true))}
+                  leftIcon={<Users size={16} />}
+                >
+                  Alocar equipe e confirmar
+                </Button>
+              </div>
+              <div className="p-6 sm:p-8 bg-muted/10">
+                <BookingCollaborators
+                  bookingId={booking.id!}
+                  eventDate={booking.eventDate}
+                  requiredServices={requiredServices}
+                />
+              </div>
+            </Card>
+
+            {/* Anexos */}
+            <Card className="p-6 sm:p-8">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <Paperclip className="text-primary h-6 w-6" />
+                  <h3 className="text-lg font-bold text-foreground">Anexos e comprovantes</h3>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  onChange={(e) => handleUploadAttachments(e.target.files)}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  isLoading={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                  leftIcon={<Plus size={14} />}
+                >
+                  Anexar arquivo
+                </Button>
+              </div>
+
+              {booking.attachments && booking.attachments.length > 0 ? (
+                <Grid columns={{ sm: 2, md: 3, lg: 4 }} gap={4}>
+                  {booking.attachments.map((a) => (
+                    <div key={a.id} className="relative group overflow-hidden rounded-2xl border border-border aspect-[4/3] bg-muted/30">
+                      <img src={a.url} alt={a.filename || 'Anexo'} className="w-full h-full object-cover" />
+                      {/* Sobre foto: scrim escuro + texto branco (exceção do guia). Visível no toque e no foco. */}
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 flex items-end justify-between gap-2 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                        <p className="text-xs font-medium text-white truncate">{a.filename || 'Anexo'}</p>
+                        <div className="flex gap-2 shrink-0">
+                          <a
+                            href={a.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Ver anexo em nova aba"
+                            aria-label={`Abrir ${a.filename || 'anexo'} em nova aba`}
+                            className="h-9 w-9 rounded-xl bg-white/20 hover:bg-white/40 flex items-center justify-center text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            <ExternalLink size={16} />
+                          </a>
+                          {a.id && (
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="h-9 w-9"
+                              onClick={() => setAttachmentToDelete(a.id!)}
+                              aria-label={`Excluir ${a.filename || 'anexo'}`}
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </Grid>
+              ) : (
+                <div className="bg-muted/30 rounded-2xl border-2 border-dashed border-border py-12 text-center">
+                  <Camera className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+                  <p className="text-sm text-muted-foreground">Nenhum anexo nesta reserva.</p>
+                </div>
+              )}
+            </Card>
+          </div>
+
+          {/* Coluna lateral */}
+          <div className="space-y-8 min-w-0">
+            {user?.role === 'ADMIN' && (
+              <Card className="p-0 overflow-hidden">
+                <div className="p-6 bg-primary text-primary-foreground">
+                  <div className="flex items-center gap-2 mb-2 opacity-90">
+                    <CreditCard size={18} />
+                    <h3 className="text-xs font-medium uppercase tracking-wider">Valor da reserva</h3>
+                  </div>
+                  <p className="text-3xl font-bold break-words">{formatPrice(Number(booking.totalPrice || 0))}</p>
+                  <p className="mt-3 inline-flex items-center rounded-full border border-primary-foreground/30 bg-primary-foreground/10 px-2.5 py-0.5 text-xs font-semibold">
+                    Pagamento: {formatBookingPaymentStatus(booking.paymentStatus)}
+                  </p>
+                </div>
+                <div className="p-4 sm:p-6">
+                  <BookingFinancialSummary booking={booking} />
+                </div>
+              </Card>
+            )}
+
+            <Card className="p-6 space-y-6">
+              <div className="flex items-center gap-3">
+                <Clock className="text-muted-foreground h-5 w-5" />
+                <h3 className="text-base font-bold text-foreground">Histórico</h3>
+              </div>
+
+              <ol className="space-y-4">
+                <li className="flex gap-3">
+                  <span className="h-2 w-2 mt-1.5 rounded-full bg-success shrink-0" aria-hidden="true" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Reserva criada</p>
+                    <p className="text-sm text-muted-foreground">
+                      {booking.createdAt ? new Date(booking.createdAt).toLocaleString('pt-BR') : 'Data não registrada'}
+                    </p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <span className="h-2 w-2 mt-1.5 rounded-full bg-primary shrink-0" aria-hidden="true" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Status atual</p>
+                    <p className="text-sm text-muted-foreground">{bookingStatusLabel(status)}</p>
+                  </div>
+                </li>
+              </ol>
+
+              <div className="p-4 rounded-2xl bg-muted/30 border border-border">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <FileText size={16} />
+                  <h4 className="text-xs font-medium uppercase tracking-wider">Observações</h4>
+                </div>
+                <p className="text-sm text-foreground mt-3 leading-relaxed whitespace-pre-line">
+                  {booking.notes || 'Sem observações.'}
+                </p>
+              </div>
+
+              {/* Observações internas (ex.: histórico importado das agendas — equipe, valor
+                  estimado, texto original). Não havia onde vê-las no painel. */}
+              {user?.role === 'ADMIN' && booking.internalNotes?.trim() && (
+                <div className="p-4 rounded-2xl bg-muted/30 border border-border">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <FileText size={16} />
+                    <h4 className="text-xs font-medium uppercase tracking-wider">Observações internas</h4>
+                  </div>
+                  <p className="text-sm text-foreground mt-3 leading-relaxed whitespace-pre-line">
+                    {booking.internalNotes}
+                  </p>
+                </div>
+              )}
+            </Card>
+          </div>
         </div>
       </div>
 
-      {/* Specialty Interface Modals */}
       <WhatsAppConfirmationModal
         isOpen={isWppModalOpen}
         onClose={() => setWppModalOpen(false)}
         onConfirm={async () => {
-            if (actionToConfirm) await actionToConfirm();
-            setWppModalOpen(false);
-            setActionToConfirm(null);
+          if (actionToConfirm) await actionToConfirm();
+          setWppModalOpen(false);
+          setActionToConfirm(null);
         }}
         message={wppMessage}
         contactNumber={wppContact}
@@ -1181,57 +1219,44 @@ export const BookingDetailPage = () => {
       <Modal
         isOpen={isConfirmModalOpen}
         onClose={() => setConfirmModalOpen(false)}
-        title="Protocolo de Ativação Contratual"
+        title="Confirmar reserva"
         size="sm"
       >
         <div className="space-y-6 pt-4">
-            <Alert variant="info" title="Revisão de Parâmetros" description="Valide o valor final do serviço antes de autorizar a alocação de equipe." />
-            <div className="space-y-4">
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 mb-2 block">Custo Total do Serviço (R$)</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  className="h-12 bg-muted/30 border-border/60"
-                  value={confirmPrice}
-                  onChange={(e) => setConfirmPrice(e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 mb-2 block">Líder Operacional (Opcional)</label>
-                <Select
-                  className="h-12 bg-muted/30"
-                  value={confirmCollaboratorId}
-                                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setConfirmCollaboratorId(e.target.value)}
-                  options={[
-                    { value: '', label: 'Não Atribuir No Momento' },
-                    ...availableCollaborators.map(c => ({ value: c.id, label: c.name }))
-                  ]}
-                />
-              </div>
-              {confirmCollaboratorId && (
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 mb-2 block">Função Primária</label>
-                  <Select
-                    className="h-12 bg-muted/30"
-                    value={confirmRole}
-                                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setConfirmRole(e.target.value)}
-                    options={[
-                        { value: 'PHOTOGRAPHER', label: 'Fotógrafo Líder' },
-                        { value: 'ASSISTANT', label: 'Assistente Operacional' },
-                        { value: 'PRODUCER', label: 'Produtor Master' },
-                    ]}
-                  />
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-2 pt-6">
-              <Button onClick={handleConfirmWithDetails} isLoading={actionLoading} className="w-full h-12 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20">
-                Autorizar Protocolo
-              </Button>
-              <Button variant="outline" onClick={() => setConfirmModalOpen(false)} className="w-full h-12 font-black uppercase text-[10px] tracking-widest">Abortar</Button>
-            </div>
+          <Alert variant="info" title="Confira o valor" description="Revise o valor final do serviço antes de confirmar e alocar a equipe." />
+          <div className="space-y-4">
+            <Input
+              label="Valor total do serviço (R$)"
+              type="number"
+              step="0.01"
+              value={confirmPrice}
+              onChange={(e) => setConfirmPrice(e.target.value)}
+              placeholder="0,00"
+            />
+            <Select
+              label="Colaborador responsável (opcional)"
+              value={confirmCollaboratorId}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => setConfirmCollaboratorId(e.target.value)}
+              options={[
+                { value: '', label: 'Não atribuir agora' },
+                ...availableCollaborators.map(c => ({ value: c.id, label: c.name }))
+              ]}
+            />
+            {confirmCollaboratorId && (
+              <Select
+                label="Função"
+                value={confirmRole}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => setConfirmRole(e.target.value)}
+                options={COLLABORATOR_ROLE_OPTIONS}
+              />
+            )}
+          </div>
+          <div className="flex flex-col gap-2 pt-2">
+            <Button onClick={handleConfirmWithDetails} isLoading={actionLoading} fullWidth size="sm">
+              Confirmar reserva
+            </Button>
+            <Button variant="outline" onClick={() => setConfirmModalOpen(false)} fullWidth size="sm">Cancelar</Button>
+          </div>
         </div>
       </Modal>
 
@@ -1239,7 +1264,7 @@ export const BookingDetailPage = () => {
         <EventManagement
           event={{
             id: booking.id!,
-            title: booking.kit?.name || booking.clientName || 'Evento Corporativo',
+            title: booking.kit?.name || clientName || 'Reserva',
             startDate: booking.eventDate,
             startTime: new Date(booking.eventDate).toISOString(),
             endTime: booking.eventEndDate || undefined,
@@ -1247,42 +1272,83 @@ export const BookingDetailPage = () => {
           }}
           collaborators={availableCollaborators}
           onSave={async (assignments) => {
-             if (!booking?.id) return;
-             try {
-                setActionLoading(true);
-                                const payload = assignments.map((a) => ({
-                   collaboratorId: a.collaboratorId,
-                   role: a.role || 'PHOTOGRAPHER',
-                   totalHours: a.estimatedHours || 0,
-                   hourlyRate: a.hourlyRate || 0,
-                   totalPayment: Number(a.hourlyRate || 0) * (a.estimatedHours || 0)
-                }));
-                let totalPrice = Number(booking.totalPrice ?? 0);
-                                if (!totalPrice) totalPrice = payload.reduce((sum, c) => sum + Number(c.totalPayment || 0), 0);
-                await bookingAPI.confirmWithDetails(booking.id, { totalPrice, collaborators: payload });
-                await fetchBooking();
-                setEventModalOpen(false);
-                addNotification({ type: 'success', title: 'Equipe Sincronizada', message: 'Alocação técnica de campo concluída.' });
-             } catch {
-                addNotification({ type: 'error', title: 'Erro de Alocação', message: 'Falha ao salvar atribuições de equipe.' });
-             } finally {
-                setActionLoading(false);
-             }
+            if (!booking?.id) return;
+            try {
+              setActionLoading(true);
+              const payload = assignments.map((a) => ({
+                collaboratorId: a.collaboratorId,
+                role: a.role || 'PHOTOGRAPHER',
+                totalHours: a.estimatedHours || 0,
+                hourlyRate: a.hourlyRate || 0,
+                totalPayment: Number(a.hourlyRate || 0) * (a.estimatedHours || 0)
+              }));
+              let totalPrice = Number(booking.totalPrice ?? 0);
+              if (!totalPrice) totalPrice = payload.reduce((sum, c) => sum + Number(c.totalPayment || 0), 0);
+              await bookingAPI.confirmWithDetails(booking.id, { totalPrice, collaborators: payload });
+              await fetchBooking();
+              setEventModalOpen(false);
+              addNotification({ type: 'success', title: 'Equipe salva', message: 'Equipe alocada e reserva confirmada.' });
+            } catch {
+              addNotification({ type: 'error', title: 'Erro ao salvar equipe', message: 'Não foi possível salvar a equipe.' });
+            } finally {
+              setActionLoading(false);
+            }
           }}
           onClose={() => setEventModalOpen(false)}
         />
       )}
 
+      {/* Editar: antes navegava para /admin/reservas/:id/editar, rota que não existe. */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => guardClose(() => setEditModalOpen(false))}
+        title="Editar reserva"
+        size="full"
+        className="max-h-[90vh] max-w-5xl"
+      >
+        <div className="min-w-0">
+          <AdminBookingForm
+            initialData={editInitialData}
+            onSuccess={() => { setEditModalOpen(false); fetchBooking(); }}
+            onDirtyChange={setEditDirty}
+            onCancel={() => guardClose(() => setEditModalOpen(false))}
+          />
+        </div>
+      </Modal>
+
+      <ConfirmModal
+        isOpen={isDiscardOpen}
+        onClose={cancelDiscard}
+        onConfirm={confirmDiscard}
+        title="Descartar alterações?"
+        message="Você preencheu dados que ainda não foram salvos. Deseja descartar essas alterações?"
+        variant="warning"
+        confirmText="Descartar"
+        cancelText="Continuar editando"
+      />
+
+      <ConfirmModal
+        isOpen={!!attachmentToDelete}
+        onClose={() => setAttachmentToDelete(null)}
+        onConfirm={handleDeleteAttachment}
+        title="Excluir anexo?"
+        message="O arquivo deixará de aparecer nesta reserva."
+        variant="danger"
+        isLoading={actionLoading}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+      />
+
       <ConfirmModal
         isOpen={isDeleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleDeleteBooking}
-        title="Protocolo de Purga Contratual"
-        message="Esta ação é IRREVERSÍVEL. Todos os dados financeiros e alocações de hardware vinculados a este identificador serão purgados do ecossistema ativo."
+        title="Excluir reserva?"
+        message="Esta ação não pode ser desfeita. A reserva, os valores e a equipe alocada serão removidos."
         variant="danger"
         isLoading={actionLoading}
-        confirmText="Confirmar Purga"
-        cancelText="Abortar Operação"
+        confirmText="Excluir"
+        cancelText="Cancelar"
       />
     </AdminLayout>
   );

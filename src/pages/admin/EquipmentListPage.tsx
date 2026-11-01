@@ -1,46 +1,60 @@
 import { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
-import { 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  Camera, 
-  Search, 
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Camera,
+  Search,
   Package,
-  DollarSign,
   AlertCircle,
   XCircle,
-  ChevronRight,
   Database,
   Cpu,
-  ShieldCheck,
-  Zap
+  CheckCircle2,
+  RefreshCw
 } from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import type { Equipment } from '../../types/types';
-import { formatMoney, toNumber } from '../../utils/typeSafeFormatters'; 
+import { formatMoney } from '../../utils/typeSafeFormatters';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { BrandLoader } from '@/components/ui/BrandLoader';
-import { 
-  Button, 
-  Card, 
-  Modal, 
-  ConfirmModal, 
+import {
+  Button,
+  Card,
+  Modal,
+  ConfirmModal,
   Input,
   Badge,
   Grid,
-  Select
+  Select,
+  Checkbox,
+  Alert
 } from '@/components/ui/StandardComponents';
 import EquipmentForm from '../../components/forms/EquipmentFormPage';
 import { StatusSelect } from '../../components/admin/StatusSelect';
 import { ItemStatus } from '../../types/types';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 
+const PAGE_TITLE = 'Equipamentos';
+const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Equipamentos' }];
+
+// Mesmas 4 opções (e rótulos) do StatusSelect da linha, no filtro e na ação em lote — antes o
+// filtro não tinha "Em Breve" e o select em lote era um <select> nativo com outra lista.
+const ITEM_STATUS_OPTIONS = [
+  { value: ItemStatus.ACTIVE, label: 'Ativo' },
+  { value: ItemStatus.INACTIVE, label: 'Inativo' },
+  { value: ItemStatus.MAINTENANCE, label: 'Manutenção' },
+  { value: ItemStatus.COMING_SOON, label: 'Em Breve' },
+];
+const STATUS_FILTER_OPTIONS = [{ value: 'all', label: 'Todos os status' }, ...ITEM_STATUS_OPTIONS];
+
 export const EquipmentListPage = () => {
   const { addNotification } = useNotifications();
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -64,16 +78,14 @@ export const EquipmentListPage = () => {
       setLoading(true);
       const data = await apiFetch('/equipments');
       setEquipments(asArray<Equipment>(data));
+      setLoadError(null);
     } catch (err: unknown) {
-      addNotification({
-        type: 'error',
-        title: 'Radar de Ativos Offline',
-        message: err instanceof Error ? err.message : 'Falha crítica ao tentar recuperar inventário.'
-      });
+      // Antes só um toast — e a tabela dizia "Terminal Vazio", como se não houvesse equipamentos.
+      setLoadError(err instanceof Error ? err.message : 'Não foi possível carregar os equipamentos.');
     } finally {
       setLoading(false);
     }
-  }, [addNotification]);
+  }, []);
 
   useEffect(() => {
     fetchEquipments();
@@ -90,19 +102,19 @@ export const EquipmentListPage = () => {
     try {
       setIsDeleting(true);
       await apiFetch(`/equipments/${equipmentToDelete}`, { method: 'DELETE' });
-      
+
       fetchEquipments();
       addNotification({
         type: 'success',
-        title: 'Baixa Concluída',
-        message: 'O ativo foi removido permanentemente do ecossistema.'
+        title: 'Equipamento excluído',
+        message: 'O equipamento foi removido do inventário.'
       });
       setIsDeleteModalOpen(false);
     } catch (err: unknown) {
       addNotification({
         type: 'error',
-        title: 'Erro de Protocolo',
-        message: err instanceof Error ? err.message : 'Falha ao processar solicitação de exclusão.'
+        title: 'Erro ao excluir',
+        message: err instanceof Error ? err.message : 'Não foi possível excluir o equipamento.'
       });
     } finally {
       setIsDeleting(false);
@@ -114,23 +126,23 @@ export const EquipmentListPage = () => {
     try {
       const formData = new FormData();
       formData.append('status', newStatus);
-      
-      await apiFetch(`/equipments/${equipment.id}`, { 
-        method: 'PUT', 
-        body: formData 
+
+      await apiFetch(`/equipments/${equipment.id}`, {
+        method: 'PUT',
+        body: formData
       });
-      
+
       fetchEquipments();
       addNotification({
         type: 'success',
-        title: 'Status Sincronizado',
-        message: `Estado operacional do item ${equipment.name} atualizado.`
+        title: 'Status atualizado',
+        message: `Status de ${equipment.name} atualizado.`
       });
     } catch {
       addNotification({
         type: 'error',
-        title: 'Falha de Sincronia',
-        message: 'O terminal não respondeu à tentativa de alteração de status.'
+        title: 'Erro ao atualizar status',
+        message: 'Não foi possível atualizar o status. Tente de novo.'
       });
     }
   };
@@ -144,6 +156,8 @@ export const EquipmentListPage = () => {
     setEditingEquipment(equipment);
     setIsFormModalOpen(true);
   };
+
+  const resetFilters = () => { setSearchTerm(''); setCategoryFilter('all'); setStatusFilter('all'); };
 
   const categories = useMemo(() => {
     const cats = new Set<string>();
@@ -210,156 +224,148 @@ export const EquipmentListPage = () => {
     }
   };
 
+  // O card "Poder de Alocação" (preço/hora × 10, "valuation arbitrária") foi removido: não era dado real.
   const stats = useMemo(() => ({
     total: equipments.length,
     active: equipments.filter(e => e.status === 'ACTIVE' || e.status === 'AVAILABLE').length,
     maintenance: equipments.filter(e => e.status === 'MAINTENANCE').length,
-    valuation: equipments.reduce((acc, curr) => acc + toNumber(curr.pricePerHour) * 10, 0) // Arbitrary valuation for UI
   }), [equipments]);
 
   if (loading && equipments.length === 0) {
     return (
-      <AdminLayout title="Repositório de Ativos" breadcrumbs={[{ name: 'Admin' }, { name: 'Equipamentos' }]}>
+      <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
         <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <BrandLoader size={120} label="Iniciando escaneamento de inventário..." />
+          <BrandLoader size={120} label="Carregando equipamentos…" />
         </div>
       </AdminLayout>
     );
   }
 
+  const loadFailed = !!loadError && equipments.length === 0;
+
   return (
-    <AdminLayout title="Cofre de Equipamentos" breadcrumbs={[{ name: 'Admin' }, { name: 'Inventário' }, { name: 'Equipamentos' }]}>
-      <div className="space-y-8">
-        {/* Advanced Header */}
+    <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
+      <div className="space-y-6">
+        {/* Cabeçalho */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg ring-1 ring-primary/20">
-              <Cpu className="h-7 w-7" />
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+              <Cpu className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-black text-foreground uppercase tracking-tighter">Hardware Operacional</h2>
-                <Badge variant="outline" className="text-[10px] font-black uppercase px-2 h-5">{stats.total} Unidades</Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-bold text-foreground">Inventário de equipamentos</h2>
+                <Badge variant="outline">{stats.total} unidades</Badge>
               </div>
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">Gestão técnica de ativos e ciclo de manutenção</p>
+              <p className="text-sm text-muted-foreground">Cadastro, preço por hora e status de manutenção.</p>
             </div>
           </div>
-          
+
           <div className="flex flex-wrap items-center gap-3">
-             <Button variant="outline" onClick={fetchEquipments} className="h-11 px-6 font-black uppercase text-[10px] tracking-widest border-border/60 hover:bg-muted group">
-               <Zap className="h-4 w-4 mr-2 group-hover:animate-pulse" /> Sincronizar Estoque
+             <Button variant="outline" size="sm" onClick={fetchEquipments} className="gap-2">
+               <RefreshCw className="h-4 w-4" /> Recarregar
              </Button>
-             <Button onClick={handleCreate} className="h-11 px-8 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20 bg-primary hover:scale-[1.02] transition-transform active:scale-[0.98]">
-               <Plus className="h-5 w-5 mr-2" /> Cadastrar Novo Ativo 
+             <Button size="sm" onClick={handleCreate} className="gap-2 shadow-lg shadow-primary/20">
+               <Plus className="h-4 w-4" /> Novo equipamento
              </Button>
           </div>
         </div>
 
-        {/* Tactical Pulse Grid */}
-        <Grid columns={{ sm: 1, md: 2, lg: 4 }} gap={6}>
-          <Card className="p-6 bg-primary/5 border-primary/10 overflow-hidden relative group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Package size={80} />
-            </div>
-            <div className="relative z-10 space-y-4">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Ativos Totais</p>
-                <div className="flex items-end justify-between">
-                    <div>
-                        <p className="text-3xl font-black text-foreground tracking-tighter">{stats.total}</p>
-                        <p className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 mt-1 uppercase">
-                           Lista Completa
-                        </p>
-                    </div>
-                </div>
-            </div>
-          </Card>
-          
-          <Card className="p-6 bg-emerald-500/5 border-emerald-500/10 overflow-hidden relative group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <ShieldCheck size={80} />
-            </div>
-            <div className="relative z-10 space-y-4">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Disponibilidade</p>
-                <div className="flex items-end justify-between">
-                    <div>
-                        <p className="text-3xl font-black text-foreground tracking-tighter">{stats.active}</p>
-                        <p className="text-[10px] font-bold text-emerald-600 uppercase mt-1">Sinal Verde Operacional</p>
-                    </div>
-                </div>
+        {/* Estatísticas */}
+        <Grid columns={{ sm: 1, md: 3 }} gap={6}>
+          <Card className="p-4 bg-primary/5 border-primary/10">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Package className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total</p>
+                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+              </div>
             </div>
           </Card>
 
-          <Card className="p-6 bg-amber-500/5 border-amber-500/10 overflow-hidden relative group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <AlertCircle size={80} />
-            </div>
-            <div className="relative z-10 space-y-4">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Em Manutenção</p>
-                <div className="flex items-end justify-between">
-                    <div>
-                        <p className="text-3xl font-black text-foreground tracking-tighter">{stats.maintenance}</p>
-                        <p className="text-[10px] font-bold text-amber-500 uppercase mt-1">Intervenção Técnica</p>
-                    </div>
-                </div>
+          <Card className="p-4 bg-success/5 border-success/10">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-success" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Disponíveis</p>
+                <p className="text-2xl font-bold text-foreground">{stats.active}</p>
+              </div>
             </div>
           </Card>
 
-          <Card className="p-6 bg-indigo-500/5 border-indigo-500/10 overflow-hidden relative group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <DollarSign size={80} />
-            </div>
-            <div className="relative z-10 space-y-4">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Poder de Alocação</p>
-                <div className="flex items-end justify-between">
-                    <div>
-                        <p className="text-3xl font-black text-foreground tracking-tighter">{formatMoney(stats.valuation)}</p>
-                        <p className="text-[10px] font-bold text-indigo-500 uppercase mt-1">Capacidade de Receita</p>
-                    </div>
-                </div>
+          <Card className="p-4 bg-warning/5 border-warning/10">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center">
+                <AlertCircle className="h-5 w-5 text-warning" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Em manutenção</p>
+                <p className="text-2xl font-bold text-foreground">{stats.maintenance}</p>
+              </div>
             </div>
           </Card>
         </Grid>
 
-        {/* Filters and Command Console */}
-        <Card className="p-4 bg-muted/20 border-border/50 relative overflow-visible z-20 backdrop-blur-sm">
+        {loadError && (
+          <Alert
+            variant="error"
+            title="Erro ao carregar os equipamentos"
+            action={<Button size="sm" variant="outline" onClick={fetchEquipments}>Tentar de novo</Button>}
+          >
+            {loadError}
+          </Alert>
+        )}
+
+        {/* Filtros */}
+        <Card className="p-4 border-dashed border-2 bg-muted/20">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Escancear por nome do dispositivo, TAG de inventário ou especificações..."
-                className="pl-10 h-10 text-xs font-medium bg-card border-border/60"
+                aria-label="Buscar equipamento"
+                placeholder="Buscar por nome ou categoria..."
+                className="pl-10 h-10 bg-card"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Select
-                className="w-48 h-10 text-[10px] font-bold uppercase tracking-widest bg-card border-border/60"
-                value={categoryFilter}
-                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setCategoryFilter(e.target.value)}
-                options={[
-                    { value: 'all', label: 'Todas as Categorias' },
-                    ...categories.map(c => ({ value: c, label: c }))
-                ]}
-              />
-              <Select
-                className="w-44 h-10 text-[10px] font-bold uppercase tracking-widest bg-card border-border/60"
-                value={statusFilter}
-                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
-                options={[
-                    { value: 'all', label: 'Todos os Estados' },
-                    { value: 'ACTIVE', label: 'Ativo/Disponível' },
-                    { value: 'MAINTENANCE', label: 'Manutenção' },
-                    { value: 'INACTIVE', label: 'Inativo' },
-                ]}
-              />
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-10 w-10 border-border/60 hover:text-destructive transition-colors group"
-                onClick={() => { setSearchTerm(''); setCategoryFilter('all'); setStatusFilter('all'); }}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <div className="w-full sm:w-48">
+                <Select
+                  aria-label="Filtrar por categoria"
+                  size="sm"
+                  className="bg-card"
+                  value={categoryFilter}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setCategoryFilter(e.target.value)}
+                  options={[
+                      { value: 'all', label: 'Todas as categorias' },
+                      ...categories.map(c => ({ value: c, label: c }))
+                  ]}
+                />
+              </div>
+              <div className="w-full sm:w-44">
+                <Select
+                  aria-label="Filtrar por status"
+                  size="sm"
+                  className="bg-card"
+                  value={statusFilter}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
+                  options={STATUS_FILTER_OPTIONS}
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0 self-end sm:self-auto"
+                onClick={resetFilters}
+                title="Limpar filtros"
+                aria-label="Limpar filtros"
               >
-                <XCircle className="h-4 w-4 group-hover:rotate-90 transition-all duration-300" />
+                <XCircle className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -371,20 +377,18 @@ export const EquipmentListPage = () => {
             className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3"
           >
             <span className="text-sm font-semibold text-foreground">{selectedIds.size} selecionado(s)</span>
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              Alterar status para
-              <select
-                aria-label="Novo status"
-                value={bulkStatus}
-                onChange={(e) => setBulkStatus(e.target.value as ItemStatus)}
-                className="h-9 rounded-lg border border-border bg-card px-2 text-sm text-foreground"
-              >
-                <option value={ItemStatus.ACTIVE}>Ativo</option>
-                <option value={ItemStatus.MAINTENANCE}>Manutenção</option>
-                <option value={ItemStatus.INACTIVE}>Inativo</option>
-                <option value={ItemStatus.COMING_SOON}>Em breve</option>
-              </select>
-            </label>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span aria-hidden="true">Alterar status para</span>
+              <div className="w-40">
+                <Select
+                  aria-label="Novo status"
+                  size="xs"
+                  value={bulkStatus}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setBulkStatus(e.target.value as ItemStatus)}
+                  options={ITEM_STATUS_OPTIONS}
+                />
+              </div>
+            </div>
             <Button size="sm" onClick={handleBulkStatus} disabled={bulkSaving}>
               {bulkSaving ? 'Aplicando...' : 'Aplicar'}
             </Button>
@@ -394,112 +398,106 @@ export const EquipmentListPage = () => {
           </section>
         )}
 
-        {/* Master Inventory Registry */}
-        <Card className="overflow-hidden border-border/60 shadow-2xl bg-card animate-in fade-in duration-700">
-          <div className="overflow-x-auto custom-scrollbar">
+        {/* Tabela */}
+        {!loadFailed && (
+        <Card className="overflow-hidden border-border shadow-sm animate-in fade-in duration-700">
+          <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-muted/40 border-b border-border/50">
-                  <th className="pl-6 py-5 w-10">
-                    <input
-                      type="checkbox"
+                <tr className="bg-muted/50 border-b border-border">
+                  <th className="pl-6 py-4 w-10">
+                    <Checkbox
                       aria-label="Selecionar todos os equipamentos filtrados"
                       checked={allFilteredSelected}
                       onChange={toggleSelectAllFiltered}
                       disabled={filteredEquipments.length === 0}
-                      className="h-4 w-4 rounded border-border accent-primary"
                     />
                   </th>
-                  <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">Assinatura Visual & TAG</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">Classificadores</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em] text-right">Taxa Operativa</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">Status de Pulso</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-right text-muted-foreground uppercase tracking-[0.1em]">Controle</th>
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Equipamento</th>
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Categoria</th>
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Preço/hora</th>
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-xs font-bold text-right text-muted-foreground uppercase tracking-wider">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/40">
+              <tbody className="divide-y divide-border">
                 {filteredEquipments.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-24 text-center">
-                      <div className="inline-flex h-20 w-20 items-center justify-center rounded-[2rem] bg-primary/5 mb-6 ring-8 ring-primary/5 transition-all">
-                        <Database className="h-10 w-10 text-primary/30" />
+                    <td colSpan={6} className="px-6 py-20 text-center">
+                      <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
+                        <Database className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Terminal Vazio</h3>
-                      <p className="text-xs text-muted-foreground max-w-xs mx-auto mt-2 font-medium">Não foram interceptados ativos com os parâmetros de consulta atuais.</p>
-                      <Button variant="outline" className="mt-8 font-black uppercase text-[10px] tracking-widest h-10 px-6 rounded-xl border-primary/20 text-primary hover:bg-primary/5" onClick={() => { setSearchTerm(''); setCategoryFilter('all'); }}>
-                        Redefinir Indexadores
+                      <h3 className="text-lg font-bold text-foreground">Nenhum equipamento encontrado</h3>
+                      <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">Ajuste a busca ou os filtros para encontrar o que procura.</p>
+                      <Button variant="outline" size="sm" className="mt-6" onClick={resetFilters}>
+                        Limpar filtros
                       </Button>
                     </td>
                   </tr>
                 ) : (
                   filteredEquipments.map((item) => (
-                    <tr key={item.id} className="hover:bg-muted/30 transition-all group animate-in fade-in slide-in-from-left-4 duration-500">
-                      <td className="pl-6 py-5 w-10">
-                        <input
-                          type="checkbox"
+                    <tr key={item.id} className="hover:bg-muted/20 transition-colors group animate-in fade-in slide-in-from-left-4 duration-500">
+                      <td className="pl-6 py-4 w-10">
+                        <Checkbox
                           aria-label={`Selecionar ${item.name}`}
                           checked={selectedIds.has(item.id)}
                           onChange={() => toggleSelected(item.id)}
-                          className="h-4 w-4 rounded border-border accent-primary"
                         />
                       </td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-5">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-4">
                           <div className="relative">
-                            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-border/60 flex items-center justify-center overflow-hidden flex-shrink-0 group-hover:scale-110 transition-transform duration-500 shadow-sm">
+                            <div className="h-14 w-14 rounded-2xl bg-primary/10 border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
                               {item.imageUrl ? (
                                 <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
                               ) : (
-                                <Camera className="h-6 w-6 text-muted-foreground/30" />
+                                <Camera className="h-6 w-6 text-muted-foreground" />
                               )}
                             </div>
-                            <div className={`absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-card ${item.status === 'ACTIVE' || item.status === 'AVAILABLE' ? 'bg-emerald-500' : item.status === 'MAINTENANCE' ? 'bg-amber-500' : 'bg-muted-foreground'}`} />
+                            <div className={`absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-card ${item.status === 'ACTIVE' || item.status === 'AVAILABLE' ? 'bg-success' : item.status === 'MAINTENANCE' ? 'bg-warning' : 'bg-muted-foreground'}`} />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-[13px] font-black text-foreground truncate uppercase tracking-tight">{item.name}</p>
-                            <p className="text-[9px] font-black text-muted-foreground uppercase opacity-40 tracking-widest mt-0.5 font-mono">ID: {item.id.slice(0, 12)}</p>
+                            <p className="text-sm font-bold text-foreground truncate">{item.name}</p>
+                            <p className="text-xs text-muted-foreground font-mono mt-0.5">ID: {item.id.slice(0, 12)}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-5">
-                        <div className="flex flex-col gap-1.5">
-                            <Badge variant="outline" className="w-fit text-[9px] font-black uppercase tracking-widest border-primary/30 bg-primary/5 text-primary h-5 px-2">
-                                                                {typeof item.category === 'string' ? item.category : item.category?.name || 'Generalista'}
-                            </Badge>
-                        </div>
+                      <td className="px-6 py-4">
+                        <Badge variant="primary">
+                          {typeof item.category === 'string' ? item.category : item.category?.name || 'Sem categoria'}
+                        </Badge>
                       </td>
-                      <td className="px-6 py-5 text-right">
-                        <div className="flex flex-col items-end">
-                            <span className="text-sm font-black text-primary tracking-tighter">{formatMoney(item.pricePerHour || 0)}</span>
-                            <span className="text-[9px] font-black text-muted-foreground uppercase opacity-40 tracking-widest">Base / H</span>
-                        </div>
+                      <td className="px-6 py-4 text-right">
+                        <span className="text-sm font-bold text-foreground">{formatMoney(item.pricePerHour || 0)}</span>
+                        <span className="text-xs text-muted-foreground">/h</span>
                       </td>
-                      <td className="px-6 py-5">
-                        <StatusSelect 
+                      <td className="px-6 py-4">
+                        <StatusSelect
                           currentStatus={item.status as ItemStatus || ItemStatus.ACTIVE}
-                                                    onStatusChange={(newStatus) => handleStatusChange(item, newStatus)}
+                          onStatusChange={(newStatus) => handleStatusChange(item, newStatus)}
                         />
                       </td>
-                      <td className="px-6 py-5">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-1 group-hover:translate-x-0">
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-9 w-9 rounded-xl border-border/40 hover:text-primary hover:border-primary/50 bg-card shadow-sm" 
+                      <td className="px-6 py-4">
+                        <div className="flex justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9"
                             onClick={() => handleEdit(item)}
+                            title="Editar equipamento"
+                            aria-label={`Editar ${item.name}`}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-9 w-9 rounded-xl border-border/40 hover:text-destructive hover:border-destructive/50 bg-card shadow-sm" 
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 border-destructive/40 text-destructive hover:bg-destructive/10"
                             onClick={() => handleDeleteClick(item.id)}
+                            title="Excluir equipamento"
+                            aria-label={`Excluir ${item.name}`}
                           >
                             <Trash2 className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-border/40 hover:bg-muted group/ext">
-                            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                           </Button>
                         </div>
                       </td>
@@ -510,24 +508,20 @@ export const EquipmentListPage = () => {
             </table>
           </div>
 
-          {/* Tactical Status Bar */}
-          <div className="px-8 py-5 bg-muted/10 border-t border-border/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 italic">
-               <Zap size={14} className="text-primary animate-pulse" /> Registro sincronizado com núcleo de operações em tempo real
+          {/* Rodapé — antes: "Registro sincronizado com núcleo de operações em tempo real" (texto fixo). */}
+          <div className="px-6 py-4 bg-muted/10 border-t border-border">
+             <p className="text-sm text-muted-foreground">
+               Exibindo {filteredEquipments.length} de {equipments.length} equipamentos.
              </p>
-             <div className="flex items-center gap-3">
-                <span className="text-[10px] font-black text-muted-foreground uppercase">Ativos Retornados:</span>
-                <Badge variant="outline" className="text-[10px] font-black px-3">{filteredEquipments.length}</Badge>
-             </div>
           </div>
         </Card>
+        )}
       </div>
 
-      {/* Specialty Modals */}
       <Modal
         isOpen={isFormModalOpen}
         onClose={() => guardClose(() => setIsFormModalOpen(false))}
-        title={editingEquipment ? `Ficha Técnica de Equipamento` : 'Protocolo de Inclusão de Ativo'}
+        title={editingEquipment ? 'Editar equipamento' : 'Novo equipamento'}
         size="lg"
       >
         <EquipmentForm
@@ -538,8 +532,8 @@ export const EquipmentListPage = () => {
             fetchEquipments();
             addNotification({
               type: 'success',
-              title: 'Cofre Atualizado',
-              message: 'O terminal sincronizou as alterações do equipamento com sucesso.'
+              title: 'Equipamento salvo',
+              message: 'As alterações do equipamento foram salvas.'
             });
           }}
           onCancel={() => guardClose(() => setIsFormModalOpen(false))}
@@ -564,12 +558,12 @@ export const EquipmentListPage = () => {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmDelete}
-        title="Validar Baixa de Ativo?"
-        message="Esta operação removerá o hardware da base de alocação ativa. Todos os kits vinculados a este item serão impactados."
+        title="Excluir equipamento?"
+        message="O equipamento sai da base de locação. Os kits que o incluem são afetados."
         variant="danger"
         isLoading={isDeleting}
-        confirmText="Confirmar Baixa"
-        cancelText="Manter Item"
+        confirmText="Excluir"
+        cancelText="Manter"
       />
     </AdminLayout>
   );

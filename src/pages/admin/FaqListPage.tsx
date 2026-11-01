@@ -1,18 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  HelpCircle,
-  TrendingUp,
+import {
+  Plus,
+  Edit2,
+  Trash2,
   MessageCircle,
   XCircle,
   Search,
-  ChevronRight,
-  Database,
-  Zap,
+  RefreshCw,
   BookOpen,
-  Sparkles
 } from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
@@ -20,18 +15,21 @@ import { asArray } from '../../utils/normalize';
 import type { FaqItem } from '../../types/types';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { AdminLayout } from '../../components/admin/AdminLayout';
-import { 
-  Button, 
-  Card, 
-  Modal, 
-  ConfirmModal, 
+import {
+  Button,
+  Card,
+  Modal,
+  ConfirmModal,
   Alert,
   Input,
   Badge,
-  Grid
 } from '../../components/ui/StandardComponents';
 import FaqForm from '../../components/forms/FaqFormPage';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+
+// Título e breadcrumb iguais no carregamento e com dados.
+const PAGE_TITLE = 'Perguntas frequentes';
+const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'FAQ' }];
 
 export const FaqListPage = () => {
   const { addNotification } = useNotifications();
@@ -39,7 +37,7 @@ export const FaqListPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingFaq, setEditingFaq] = useState<FaqItem | null>(null);
@@ -55,17 +53,12 @@ export const FaqListPage = () => {
       setFaqs(asArray<FaqItem>(data));
       setError(null);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Falha ao sincronizar base de conhecimento.';
-      setError(msg);
-      addNotification({
-        type: 'error',
-        title: 'Terminal de Documentação Offline',
-        message: msg
-      });
+      // O erro aparece no Alert da página (com "Tentar de novo"); o toast duplicava a mensagem.
+      setError(err instanceof Error ? err.message : 'Não foi possível carregar as perguntas.');
     } finally {
       setLoading(false);
     }
-  }, [addNotification]);
+  }, []);
 
   useEffect(() => {
     fetchFaqs();
@@ -85,15 +78,15 @@ export const FaqListPage = () => {
       await fetchFaqs();
       addNotification({
         type: 'success',
-        title: 'Registro Purgado',
-        message: 'A pergunta foi removida da base de conhecimento ativa.'
+        title: 'Pergunta excluída',
+        message: 'A pergunta foi removida do site.'
       });
       setIsDeleteModalOpen(false);
     } catch (err: unknown) {
       addNotification({
         type: 'error',
-        title: 'Erro de Protocolo',
-        message: err instanceof Error ? err.message : 'Não foi possível autorizar a purga.'
+        title: 'Erro ao excluir',
+        message: err instanceof Error ? err.message : 'Não foi possível excluir a pergunta.'
       });
     } finally {
       setIsDeleting(false);
@@ -112,7 +105,7 @@ export const FaqListPage = () => {
   };
 
   const filteredFaqs = useMemo(() => {
-    return faqs.filter(f => 
+    return faqs.filter(f =>
       f.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
       f.answer.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -120,181 +113,145 @@ export const FaqListPage = () => {
 
   if (loading && faqs.length === 0) {
     return (
-      <AdminLayout title="Base de Conhecimento" breadcrumbs={[{ name: 'Admin' }, { name: 'FAQ' }]}>
+      <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
         <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <BrandLoader size={120} label="Indexando fluxogramas de resposta..." />
+          <BrandLoader size={120} label="Carregando perguntas…" />
         </div>
       </AdminLayout>
     );
   }
 
   return (
-    <AdminLayout title="Base de Conhecimento" breadcrumbs={[{ name: 'Admin' }, { name: 'Configurações' }, { name: 'FAQ' }]}>
-      <div className="space-y-8">
-        {/* Dynamic Header */}
+    <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
+      <div className="space-y-6">
+        {/* Cabeçalho. Achado (auditoria): os cards "84% Deflexão de Chamados", "SEO Health: Otimizado"
+            e "Conhecimento Sincronizado" eram textos fixos, sem dado por trás — removidos. */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg ring-1 ring-primary/20">
-              <BookOpen className="h-7 w-7" />
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+              <BookOpen className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-black text-foreground uppercase tracking-tighter">Central de FAQ</h2>
-                <Badge variant="outline" className="text-[10px] font-black uppercase px-2 h-5 bg-primary/5 border-primary/20 text-primary">{faqs.length} Verbetes</Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-bold text-foreground">Perguntas e respostas</h2>
+                <Badge variant="primary">{faqs.length} {faqs.length === 1 ? 'pergunta' : 'perguntas'}</Badge>
               </div>
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">Gestão de semântica e suporte automatizado</p>
+              <p className="text-sm text-muted-foreground">Perguntas frequentes exibidas no site.</p>
             </div>
           </div>
-          
+
           <div className="flex flex-wrap items-center gap-3">
-             <Button variant="outline" onClick={fetchFaqs} className="h-11 px-6 font-black uppercase text-[10px] tracking-widest border-border/60 hover:bg-muted group">
-               <Zap className="h-4 w-4 mr-2" /> Recarregar Base
+             <Button variant="outline" size="sm" onClick={fetchFaqs} leftIcon={<RefreshCw className="h-4 w-4" />}>
+               Recarregar
              </Button>
-             <Button onClick={handleCreate} className="h-11 px-8 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20 bg-primary hover:scale-[1.02] transition-transform active:scale-[0.98]">
-               <Plus className="h-5 w-5 mr-2" /> Mapear Nova Dúvida
+             <Button size="sm" onClick={handleCreate} leftIcon={<Plus className="h-4 w-4" />}>
+               Nova pergunta
              </Button>
           </div>
         </div>
 
-        {/* Tactical Pulse Grid */}
-        <Grid columns={{ sm: 1, md: 3 }} gap={6}>
-          <Card className="p-6 bg-card border-border/40 overflow-hidden relative group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <HelpCircle size={80} />
-            </div>
-            <div className="relative z-10 space-y-4">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">FAQs Ativos</p>
-                <div className="flex items-end justify-between">
-                    <div>
-                        <p className="text-3xl font-black text-foreground tracking-tighter">{faqs.length}</p>
-                        <p className="text-[10px] font-bold text-emerald-600 uppercase mt-1">Conhecimento Sincronizado</p>
-                    </div>
-                </div>
-            </div>
-          </Card>
-          
-          <Card className="p-6 bg-emerald-500/5 border-emerald-500/10 overflow-hidden relative group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <TrendingUp size={80} />
-            </div>
-            <div className="relative z-10 space-y-4">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Impacto de Suporte</p>
-                <div className="flex items-end justify-between">
-                    <div>
-                        <p className="text-3xl font-black text-foreground tracking-tighter">84%</p>
-                        <p className="text-[10px] font-bold text-emerald-600 uppercase mt-1">Deflexão de Chamados</p>
-                    </div>
-                </div>
-            </div>
-          </Card>
-
-          <Card className="p-6 bg-amber-500/5 border-amber-500/10 overflow-hidden relative group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Sparkles size={80} />
-            </div>
-            <div className="relative z-10 space-y-4">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">SEO Health</p>
-                <div className="flex items-end justify-between">
-                    <div>
-                        <p className="text-3xl font-black text-foreground tracking-tighter">Otimizado</p>
-                        <p className="text-[10px] font-bold text-amber-600 uppercase mt-1">Estrutura de Dados Schema</p>
-                    </div>
-                </div>
-            </div>
-          </Card>
-        </Grid>
-
-        {/* Console Control */}
-        <Card className="p-4 bg-muted/20 border-border/50 relative overflow-visible z-20 backdrop-blur-sm">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        {/* Busca */}
+        <Card className="p-4 bg-muted/20 border-border">
+          <div className="flex gap-2">
+            <div className="flex-1">
               <Input
-                placeholder="Escancear por palavras-chave na pergunta ou fragmentos da resposta técnica..."
-                className="pl-10 h-10 text-xs font-medium bg-card border-border/60"
+                size="sm"
+                placeholder="Buscar na pergunta ou na resposta..."
+                aria-label="Buscar perguntas"
+                leftIcon={<Search className="h-4 w-4" />}
+                className="bg-card"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-10 w-10 border-border/60 hover:bg-muted text-muted-foreground group"
-                onClick={() => setSearchTerm('')}
-              >
-                <XCircle className="h-4 w-4 group-hover:rotate-90 transition-all duration-300" />
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              onClick={() => setSearchTerm('')}
+              aria-label="Limpar busca"
+              title="Limpar busca"
+            >
+              <XCircle className="h-4 w-4" />
+            </Button>
           </div>
         </Card>
 
-        {error && <Alert variant="error" title="Falha de Comunicação" description={error} />}
+        {error && (
+          <Alert
+            variant="error"
+            title="Não foi possível carregar as perguntas"
+            description={error}
+            action={<Button size="sm" variant="outline" onClick={fetchFaqs}>Tentar de novo</Button>}
+          />
+        )}
 
-        {/* FAQ Registry Table */}
-        <Card className="overflow-hidden border-border/60 shadow-2xl bg-card animate-in fade-in duration-700">
-          <div className="overflow-x-auto custom-scrollbar">
+        {!(error && faqs.length === 0) && (
+        <Card className="overflow-hidden border-border shadow-sm animate-in fade-in duration-700">
+          <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-muted/40 border-b border-border/50">
-                  <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">Enunciado & Protótipo</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">Vetor de Resposta</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-right text-muted-foreground uppercase tracking-[0.1em]">Controle</th>
+                <tr className="bg-muted/50 border-b border-border">
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Pergunta</th>
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Resposta</th>
+                  <th className="px-6 py-4 text-xs font-bold text-right text-muted-foreground uppercase tracking-wider">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/40">
+              <tbody className="divide-y divide-border">
                 {filteredFaqs.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-6 py-24 text-center">
-                      <div className="inline-flex h-20 w-20 items-center justify-center rounded-[2rem] bg-primary/5 mb-6 ring-8 ring-primary/5 transition-all">
-                        <Database className="h-10 w-10 text-primary/30" />
+                    <td colSpan={3} className="px-6 py-20 text-center">
+                      <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
+                        <MessageCircle className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Vácuo de Conhecimento</h3>
-                      <p className="text-xs text-muted-foreground max-w-xs mx-auto mt-2 font-medium">Os parâmetros de busca não retornaram correspondências no repositório semântico.</p>
-                      <Button variant="outline" className="mt-8 font-black uppercase text-[10px] tracking-widest h-10 px-6 rounded-xl border-primary/20 text-primary hover:bg-primary/5" onClick={() => setSearchTerm('')}>
-                        Redefinir Filtros
-                      </Button>
+                      <h3 className="text-lg font-bold text-foreground">Nenhuma pergunta encontrada</h3>
+                      <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">
+                        {searchTerm ? 'Ajuste a busca.' : 'Cadastre a primeira pergunta frequente.'}
+                      </p>
+                      {searchTerm && (
+                        <Button variant="outline" size="sm" className="mt-6" onClick={() => setSearchTerm('')}>
+                          Limpar busca
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ) : (
                   filteredFaqs.map((faq) => (
-                    <tr key={faq.id} className="hover:bg-muted/30 transition-all group animate-in fade-in slide-in-from-left-4 duration-500">
-                      <td className="px-6 py-5 max-w-md">
-                        <div className="flex items-start gap-5">
-                          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/10 to-transparent border border-border/60 flex items-center justify-center overflow-hidden flex-shrink-0 group-hover:scale-110 transition-transform duration-500 shadow-sm font-black text-primary/40 uppercase mt-1">
-                             <MessageCircle className="h-6 w-6" />
+                    <tr key={faq.id} className="hover:bg-muted/20 transition-colors group animate-in fade-in slide-in-from-left-4 duration-500">
+                      <td className="px-6 py-4 max-w-md">
+                        <div className="flex items-start gap-4">
+                          <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                             <MessageCircle className="h-5 w-5 text-primary" />
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-[13px] font-black text-foreground leading-tight uppercase tracking-tight">{faq.question}</p>
-                            <p className="text-[9px] font-black text-muted-foreground uppercase opacity-40 tracking-widest mt-1.5 font-mono">ID: FAQ-{faq.id.slice(0, 8).toUpperCase()}</p>
-                          </div>
+                          <p className="text-sm font-bold text-foreground leading-snug">{faq.question}</p>
                         </div>
                       </td>
-                      <td className="px-6 py-5 max-w-lg">
-                        <p className="text-xs text-muted-foreground font-medium line-clamp-2 leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity italic">
+                      <td className="px-6 py-4 max-w-lg">
+                        <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                            {faq.answer}
                         </p>
                       </td>
-                      <td className="px-6 py-5">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-1 group-hover:translate-x-0">
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-9 w-9 rounded-xl border-border/40 hover:text-primary hover:border-primary/50 bg-card shadow-sm" 
+                      <td className="px-6 py-4">
+                        <div className="flex justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9"
                             onClick={() => handleEdit(faq)}
+                            aria-label={`Editar pergunta: ${faq.question}`}
+                            title="Editar"
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-9 w-9 rounded-xl border-border/40 hover:text-destructive hover:border-destructive/50 bg-card shadow-sm" 
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 hover:text-destructive hover:border-destructive/50"
                             onClick={() => handleDeleteClick(faq.id)}
+                            aria-label={`Excluir pergunta: ${faq.question}`}
+                            title="Excluir"
                           >
                             <Trash2 className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-border/40 hover:bg-muted group/ext">
-                            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                           </Button>
                         </div>
                       </td>
@@ -305,24 +262,21 @@ export const FaqListPage = () => {
             </table>
           </div>
 
-          {/* Tactical Status Bar */}
-          <div className="px-8 py-5 bg-muted/10 border-t border-border/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 italic">
-               <Zap size={14} className="text-primary animate-pulse" /> Sincronização de base de conhecimento ativa com o portal do cliente
-             </p>
-             <div className="flex items-center gap-3">
-                <span className="text-[10px] font-black text-muted-foreground uppercase">Verbetes Carregados:</span>
-                <Badge variant="outline" className="text-[10px] font-black px-3">{filteredFaqs.length}</Badge>
-             </div>
-          </div>
+          {filteredFaqs.length > 0 && (
+            <div className="px-6 py-4 bg-muted/10 border-t border-border">
+              <p className="text-xs text-muted-foreground">
+                Mostrando {filteredFaqs.length} de {faqs.length} {faqs.length === 1 ? 'pergunta' : 'perguntas'}.
+              </p>
+            </div>
+          )}
         </Card>
+        )}
       </div>
 
-      {/* Specialty Interface Modals */}
       <Modal
         isOpen={isFormModalOpen}
         onClose={() => guardClose(() => setIsFormModalOpen(false))}
-        title={editingFaq ? 'Redação de Verbete Operacional' : 'Protocolo de Ingestão de Conhecimento'}
+        title={editingFaq ? 'Editar pergunta' : 'Nova pergunta'}
         size="lg"
       >
         <FaqForm
@@ -333,8 +287,8 @@ export const FaqListPage = () => {
             fetchFaqs();
             addNotification({
               type: 'success',
-              title: 'Matriz Atualizada',
-              message: 'O novo verbete de FAQ foi indexado ao sistema.'
+              title: 'Pergunta salva',
+              message: 'A pergunta foi salva.'
             });
           }}
           onCancel={() => guardClose(() => setIsFormModalOpen(false))}
@@ -356,12 +310,12 @@ export const FaqListPage = () => {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmDelete}
-        title="Validar Purga de Conhecimento?"
-        message="Esta operação removerá permanentemente o verbete da base ativa. Esta ação é irreversível e afetará a deflexão de chamados imediata."
+        title="Excluir pergunta?"
+        message="A pergunta será removida do site. Esta ação não pode ser desfeita."
         variant="danger"
         isLoading={isDeleting}
-        confirmText="Confirmar Purga"
-        cancelText="Manter Registro"
+        confirmText="Excluir"
+        cancelText="Cancelar"
       />
     </AdminLayout>
   );

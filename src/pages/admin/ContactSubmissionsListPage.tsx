@@ -4,12 +4,11 @@ import {
   Trash2, 
   CheckCircle2, 
   Clock, 
-  AlertCircle, 
+  AlertCircle,
   Search,
   MessageSquare,
   TrendingUp,
   XCircle,
-  MoreHorizontal,
   Calendar,
   User
 } from 'lucide-react';
@@ -29,6 +28,10 @@ import {
   Grid,
   Alert
 } from '@/components/ui/StandardComponents';
+
+// Título e breadcrumb iguais no carregamento e com dados (antes: "Mensagens de Contato" → "Mensagens").
+const PAGE_TITLE = 'Mensagens de contato';
+const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Contatos' }];
 
 export const ContactSubmissionsListPage = () => {
   const { addNotification } = useNotifications();
@@ -131,16 +134,16 @@ export const ContactSubmissionsListPage = () => {
 
   if (loading && submissions.length === 0) {
     return (
-      <AdminLayout title="Mensagens de Contato" breadcrumbs={[{ name: 'Admin' }, { name: 'Contatos' }]}>
+      <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
         <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <BrandLoader size={120} label="Sincronizando caixa de entrada..." />
+          <BrandLoader size={120} label="Carregando mensagens…" />
         </div>
       </AdminLayout>
     );
   }
 
   return (
-    <AdminLayout title="Mensagens" breadcrumbs={[{ name: 'Admin' }, { name: 'Contatos' }]}>
+    <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
       <div className="space-y-6">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -169,17 +172,17 @@ export const ContactSubmissionsListPage = () => {
             </div>
           </Card>
 
-          <Card className="p-5 bg-amber-500/5 border-amber-500/10">
+          <Card className="p-5 bg-warning/5 border-warning/10">
             <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+              <div className="h-12 w-12 rounded-2xl bg-warning/10 flex items-center justify-center text-warning">
                 <Clock className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Pendentes de Leitura</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Não lidas</p>
                 <div className="flex items-baseline gap-2">
                   <p className="text-2xl font-black text-foreground">{stats.pending}</p>
                   {stats.pending > 0 && (
-                    <span className="text-xs text-amber-600 font-bold flex items-center animate-pulse">
+                    <span className="text-xs text-warning font-bold flex items-center animate-pulse">
                       <AlertCircle className="h-3 w-3 mr-1" /> Requer atenção
                     </span>
                   )}
@@ -188,16 +191,16 @@ export const ContactSubmissionsListPage = () => {
             </div>
           </Card>
 
-          <Card className="p-5 bg-emerald-500/5 border-emerald-500/10">
+          <Card className="p-5 bg-success/5 border-success/10">
             <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+              <div className="h-12 w-12 rounded-2xl bg-success/10 flex items-center justify-center text-success">
                 <CheckCircle2 className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Processados</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Lidas</p>
                 <div className="flex items-baseline gap-2">
                   <p className="text-2xl font-black text-foreground">{stats.read}</p>
-                  <span className="text-xs text-emerald-600 font-bold flex items-center">
+                  <span className="text-xs text-success font-bold flex items-center">
                     <TrendingUp className="h-3 w-3 mr-1" /> {((stats.read / (stats.total || 1)) * 100).toFixed(0)}%
                   </span>
                 </div>
@@ -209,31 +212,35 @@ export const ContactSubmissionsListPage = () => {
         {/* Filters */}
         <Card className="p-4 bg-card/50 border-border">
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="flex-1">
               <Input
-                placeholder="Filtrar por nome, e-mail ou conteúdo..."
-                className="pl-10"
+                placeholder="Buscar por nome, e-mail ou conteúdo..."
+                aria-label="Buscar mensagens"
+                leftIcon={<Search className="h-4 w-4" />}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="flex gap-2">
-              <Select
-                className="w-44"
-                value={filterStatus}
-                                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as 'all' | 'PENDING' | 'READ')}
-                options={[
-                  { value: 'all', label: 'Todas as mensagens' },
-                  { value: 'PENDING', label: 'Apenas novas' },
-                  { value: 'READ', label: 'Já processadas' }
-                ]}
-              />
-              <Button 
-                variant="outline" 
-                size="icon" 
+              <div className="flex-1 md:w-48">
+                <Select
+                  aria-label="Filtrar por situação"
+                  value={filterStatus}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as 'all' | 'PENDING' | 'READ')}
+                  options={[
+                    { value: 'all', label: 'Todas as mensagens' },
+                    { value: 'PENDING', label: 'Não lidas' },
+                    { value: 'READ', label: 'Lidas' }
+                  ]}
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-12 w-12 shrink-0"
                 onClick={() => { setSearchTerm(''); setFilterStatus('all'); }}
-                title="Limpar Filtros"
+                title="Limpar filtros"
+                aria-label="Limpar filtros"
               >
                 <XCircle className="h-4 w-4" />
               </Button>
@@ -243,11 +250,12 @@ export const ContactSubmissionsListPage = () => {
 
         {/* List Section */}
         {error ? (
-          <Alert variant="error" title="Erro de Conexão" description={error}>
-            <Button variant="outline" size="sm" onClick={fetchSubmissions} className="mt-2 text-xs">
-              Tentar reconectar
-            </Button>
-          </Alert>
+          <Alert
+            variant="error"
+            title="Não foi possível carregar as mensagens"
+            description={error}
+            action={<Button variant="outline" size="sm" onClick={fetchSubmissions}>Tentar de novo</Button>}
+          />
         ) : filteredSubmissions.length > 0 ? (
           <div className="space-y-4">
             {filteredSubmissions.map((sub) => (
@@ -267,11 +275,8 @@ export const ContactSubmissionsListPage = () => {
                           <User className="h-4 w-4 text-primary" />
                         </div>
                         <h3 className="text-lg font-bold text-foreground">{sub.name}</h3>
-                        <Badge 
-                          variant={sub.status === 'PENDING' ? 'primary' : 'outline'} 
-                          className="h-5 text-[10px] uppercase font-black tracking-widest px-2"
-                        >
-                          {sub.status === 'PENDING' ? 'Novo Contato' : 'Mensagem Lida'}
+                        <Badge variant={sub.status === 'PENDING' ? 'primary' : 'outline'}>
+                          {sub.status === 'PENDING' ? 'Nova' : 'Lida'}
                         </Badge>
                       </div>
 
@@ -312,9 +317,6 @@ export const ContactSubmissionsListPage = () => {
                         className="gap-2 font-bold"
                       >
                         <Trash2 className="h-4 w-4" /> Excluir
-                      </Button>
-                      <Button variant="outline" size="icon" className="h-8 w-8 ml-auto lg:ml-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>

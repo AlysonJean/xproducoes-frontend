@@ -1,30 +1,27 @@
 import { useState, useEffect, useMemo } from 'react';
-import { 
-  Edit, 
-  Trash2, 
-  Plus, 
+import {
+  Edit,
+  Trash2,
+  Plus,
   GripVertical,
   Briefcase,
-  TrendingUp,
   Image as ImageIcon,
   Search,
   XCircle,
-  Activity
 } from 'lucide-react';
 import { apiFetch } from '../../services/api';
 import type { PortfolioItem } from '../../types/types';
 import { asArray } from '@/utils/normalize';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { BrandLoader } from '@/components/ui/BrandLoader';
-import { 
-  Button, 
-  Card, 
-  Modal, 
-  ConfirmModal, 
+import { useNotifications } from '@/contexts/NotificationContext';
+import {
+  Button,
+  Card,
+  Modal,
+  ConfirmModal,
   Alert,
   Input,
-  Badge,
-  Grid
 } from '@/components/ui/StandardComponents';
 import PortfolioForm from '@/components/forms/PortfolioFormPage';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
@@ -49,6 +46,9 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { logger } from '../../utils/logger';
 
+const PAGE_TITLE = 'Portfólio';
+const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Portfólio' }];
+
 // Componente Sortable Item
 interface SortableItemProps {
   item: PortfolioItem;
@@ -66,8 +66,6 @@ const SortableItem = ({ item, onEdit, onDelete }: SortableItemProps) => {
     isDragging
   } = useSortable({ id: item.id });
 
-
-
   const style = {
     '--transform': CSS.Transform.toString(transform),
     '--transition': transition,
@@ -76,77 +74,73 @@ const SortableItem = ({ item, onEdit, onDelete }: SortableItemProps) => {
   } as React.CSSProperties;
 
   return (
-    <div 
-      ref={setNodeRef} 
+    <div
+      ref={setNodeRef}
       {...{ style }}
       className="h-full [transform:var(--transform)] [transition:var(--transition)] [z-index:var(--z-index)] [opacity:var(--opacity)]"
     >
       <Card className="overflow-hidden flex flex-col h-full p-0 relative group border-border hover:border-primary/50 transition-all shadow-sm hover:shadow-md">
-        {/* Drag Handle Overlay */}
-         <div 
-          {...attributes} 
-          {...listeners} 
-          className="absolute top-2 left-2 z-10 p-2 bg-black/60 backdrop-blur-md text-white rounded-lg cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity border border-white/10"
+        {/* Alça de arraste — botão (antes uma div só visível no hover, inacessível no toque). */}
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="absolute top-2 left-2 z-10 p-2 bg-black/60 backdrop-blur-md text-white rounded-lg cursor-grab active:cursor-grabbing md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity border border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           title="Arrastar para reordenar"
+          aria-label={`Arrastar para reordenar ${item.title}`}
         >
-          <GripVertical size={16} />
-        </div>
+          <GripVertical size={16} aria-hidden="true" />
+        </button>
 
-        <div className="relative h-48 sm:h-56 overflow-hidden">
-          <div 
-            className="absolute inset-0 bg-cover bg-center pointer-events-none transition-transform duration-500 group-hover:scale-105" 
-            data-bg-image={item.imageUrl || '/placeholder-portfolio.jpg'}
-          />
-          
-          <style>{`
-            div[data-bg-image] { background-image: url(attr(data-bg-image)); }
-            /* Fallback because attr() in backgroundImage is not widely supported in browsers yet, 
-               but satisfying the linter here is the primary goal for the user. 
-               In a real world scenario, we'd use a CSS variable. */
-             div[data-bg-image] { background-image: var(--bg-url); }
-          `}</style>
-          
+        <div className="relative h-48 sm:h-56 overflow-hidden bg-muted">
+          {/* Achado: a foto vinha de data-bg-image + <style> com url(attr()) / var(--bg-url) nunca
+              definida — os cards ficavam sem imagem, e o <style> era repetido em cada card. */}
+          {item.imageUrl ? (
+            <img
+              src={item.imageUrl}
+              alt={item.title}
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover pointer-events-none transition-transform duration-500 group-hover:scale-105"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+              <ImageIcon className="h-10 w-10" aria-hidden="true" />
+            </div>
+          )}
 
-          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent" />
-          
-          {/* Action Buttons */}
-          <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button 
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+
+          {/* Ações */}
+          <div className="absolute top-2 right-2 flex flex-col gap-2 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+            <Button
               variant="outline"
               size="icon"
               onClick={(e) => { e.stopPropagation(); onEdit(item); }}
-              className="h-8 w-8 bg-black/40 backdrop-blur-md border-white/20 text-white hover:bg-primary hover:border-primary"
+              className="h-8 w-8 bg-black/40 backdrop-blur-md border-white/20 text-white hover:bg-primary hover:text-primary-foreground hover:border-primary"
+              title="Editar projeto"
+              aria-label={`Editar ${item.title}`}
             >
               <Edit size={14} />
             </Button>
-            <Button 
+            <Button
               variant="destructive"
               size="icon"
               onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
-              className="h-8 w-8 bg-red-500/80 backdrop-blur-md border-transparent text-white"
+              className="h-8 w-8"
+              title="Excluir projeto"
+              aria-label={`Excluir ${item.title}`}
             >
               <Trash2 size={14} />
             </Button>
           </div>
         </div>
 
+        {/* O selo "PROJETO", o status "Online" e o botão "Ver Mais" (sem ação) eram fixos e foram removidos. */}
         <div className="p-5 flex flex-col flex-1">
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <h3 className="font-bold text-base text-foreground line-clamp-1">{item.title}</h3>
-            <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter shrink-0">PROJETO</Badge>
-          </div>
-          <p className="text-muted-foreground text-xs leading-relaxed line-clamp-3 mb-4 flex-1">
+          <h3 className="font-bold text-base text-foreground line-clamp-1 mb-2">{item.title}</h3>
+          <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3 flex-1">
             {item.description}
           </p>
-          
-          <div className="flex items-center justify-between pt-4 border-t border-border/50">
-             <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-               <Activity className="h-3 w-3" /> Online
-             </div>
-             <Button variant="outline" size="sm" className="h-7 text-[10px] font-black uppercase tracking-widest px-3 border-transparent group-hover:border-border transition-colors">
-               Ver Mais
-             </Button>
-          </div>
         </div>
       </Card>
     </div>
@@ -154,11 +148,12 @@ const SortableItem = ({ item, onEdit, onDelete }: SortableItemProps) => {
 };
 
 export const PortfolioListPage = () => {
+  const { addNotification } = useNotifications();
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // DnD Sensors
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -195,32 +190,37 @@ export const PortfolioListPage = () => {
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-    if (over && active.id !== over.id) {
-      setItems((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
-        
-        const newItems = arrayMove(items, oldIndex, newIndex);
-        
-        const updatedItems = newItems.map((item, index) => ({
-             ...item,
-             sortOrder: index
-        }));
+    const previous = items;
+    const oldIndex = previous.findIndex((item) => item.id === active.id);
+    const newIndex = previous.findIndex((item) => item.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
 
-        const orderPayload = updatedItems.map(item => ({
-            id: item.id,
-            sortOrder: item.sortOrder || 0
-        }));
+    const updatedItems = arrayMove(previous, oldIndex, newIndex).map((item, index) => ({
+      ...item,
+      sortOrder: index
+    }));
+    setItems(updatedItems);
 
-        apiFetch('/portfolio/reorder', {
-            method: 'PUT',
-            body: JSON.stringify({ items: orderPayload })
-        }).catch(err => {
-            logger.error("Falha ao salvar ordem:", 'PortfolioListPage', err);
-        });
-
-        return updatedItems;
+    try {
+      await apiFetch('/portfolio/reorder', {
+        method: 'PUT',
+        body: JSON.stringify({
+          items: updatedItems.map(item => ({ id: item.id, sortOrder: item.sortOrder || 0 }))
+        })
+      });
+    } catch (err) {
+      // Antes a falha só ia para o log: a tela mostrava uma ordem que não tinha sido salva.
+      logger.error("Falha ao salvar ordem:", 'PortfolioListPage', err);
+      setItems(previous);
+      // Recarrega do servidor: com dois arrastes seguidos (1º falha, 2º salva), restaurar só a foto
+      // local deixava a tela com uma ordem diferente da que ficou gravada.
+      void fetchPortfolioItems();
+      addNotification({
+        type: 'error',
+        title: 'Ordem não salva',
+        message: 'Não foi possível salvar a nova ordem. A ordem anterior foi restaurada.'
       });
     }
   };
@@ -237,8 +237,13 @@ export const PortfolioListPage = () => {
       await apiFetch(`/portfolio/${itemToDelete}`, { method: 'DELETE' });
       await fetchPortfolioItems();
       setIsDeleteModalOpen(false);
+      addNotification({ type: 'success', title: 'Projeto excluído', message: 'O projeto saiu do portfólio.' });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erro ao apagar item');
+      addNotification({
+        type: 'error',
+        title: 'Erro ao excluir',
+        message: err instanceof Error ? err.message : 'Não foi possível excluir o projeto.'
+      });
     } finally {
       setIsDeleting(false);
       setItemToDelete(null);
@@ -256,7 +261,7 @@ export const PortfolioListPage = () => {
   };
 
   const filteredItems = useMemo(() => {
-    return items.filter(it => 
+    return items.filter(it =>
       it.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (it.description || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -264,29 +269,31 @@ export const PortfolioListPage = () => {
 
   if (loading && !items.length) {
     return (
-      <AdminLayout title="Portfólio" breadcrumbs={[{ name: 'Admin' }, { name: 'Portfólio' }]}>
+      <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
         <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <BrandLoader size={120} label="Curando galeria de sucessos..." />
+          <BrandLoader size={120} label="Carregando portfólio…" />
         </div>
       </AdminLayout>
     );
   }
 
+  const loadFailed = !!error && items.length === 0;
+
   return (
-    <AdminLayout title="Portfólio" breadcrumbs={[{ name: 'Admin' }, { name: 'Portfólio' }]}>
+    <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
       <div className="space-y-6">
-        {/* Header Section */}
+        {/* Cabeçalho */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
               <Briefcase className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground">Exposição de Projetos</h2>
+              <h2 className="text-xl font-bold text-foreground">Projetos em destaque</h2>
               <p className="text-sm text-muted-foreground">Arraste os cards para priorizar os destaques no site.</p>
             </div>
           </div>
-          
+
           <div className="flex gap-2">
             <Button onClick={handleCreate} className="gap-2 shadow-lg shadow-primary/20">
               <Plus className="h-5 w-5" /> Novo Projeto
@@ -294,51 +301,26 @@ export const PortfolioListPage = () => {
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <Grid columns={{ sm: 1, md: 3 }} gap={4}>
-          <Card className="p-4 bg-primary/5 border-primary/10">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                <ImageIcon className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Galeria Total</p>
-                <p className="text-xl font-black text-foreground">{items.length}</p>
-              </div>
+        {/* Estatística — "Conversão: Alta" e "Status Global: Publicado" eram textos fixos e foram removidos. */}
+        <Card className="p-4 bg-primary/5 border-primary/10 sm:max-w-xs">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+              <ImageIcon className="h-5 w-5" />
             </div>
-          </Card>
-          
-          <Card className="p-4 bg-emerald-500/5 border-emerald-500/10">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                <TrendingUp className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Conversão</p>
-                <p className="text-xl font-black text-foreground">Alta</p>
-              </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Projetos</p>
+              <p className="text-xl font-black text-foreground">{items.length}</p>
             </div>
-          </Card>
+          </div>
+        </Card>
 
-          <Card className="p-4 bg-cyan-500/5 border-cyan-500/10">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-500">
-                <Activity className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Status Global</p>
-                <p className="text-xl font-black text-foreground">Publicado</p>
-              </div>
-            </div>
-          </Card>
-        </Grid>
-
-        {/* Filters and Search */}
+        {/* Busca */}
         <Card className="p-4 bg-card/50 border-border">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
+                aria-label="Buscar projeto"
                 placeholder="Buscar por título ou palavras-chave do projeto..."
                 className="pl-10"
                 value={searchTerm}
@@ -346,7 +328,7 @@ export const PortfolioListPage = () => {
               />
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="icon" onClick={() => setSearchTerm('')} title="Limpar Filtro">
+              <Button variant="outline" size="icon" onClick={() => setSearchTerm('')} title="Limpar filtro" aria-label="Limpar filtro">
                 <XCircle className="h-4 w-4" />
               </Button>
             </div>
@@ -354,37 +336,43 @@ export const PortfolioListPage = () => {
         </Card>
 
         {error && (
-          <Alert variant="error" title="Falha Técnica" description={error} />
+          <Alert
+            variant="error"
+            title="Erro ao carregar o portfólio"
+            action={<Button size="sm" variant="outline" onClick={fetchPortfolioItems}>Tentar de novo</Button>}
+          >
+            {error}
+          </Alert>
         )}
 
-        {filteredItems.length === 0 ? (
-          <div className="py-24 text-center border-2 border-dashed border-border rounded-3xl bg-muted/20">
-            <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-6 text-muted-foreground/20 ring-8 ring-muted/10">
-              <ImageIcon className="h-10 w-10" />
+        {loadFailed ? null : filteredItems.length === 0 ? (
+          <div className="py-20 text-center border-2 border-dashed border-border rounded-3xl bg-muted/20">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
+              <ImageIcon className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-bold text-foreground">Nenhum projeto encontrado</h3>
-            <p className="text-muted-foreground text-sm max-w-sm mx-auto mt-2">Personalize sua busca ou comece a povoar sua vitrine de sucessos.</p>
-            <Button variant="outline" className="mt-6" onClick={() => setSearchTerm('')}>
-              Limpar Filtros
+            <h3 className="text-lg font-bold text-foreground">Nenhum projeto encontrado</h3>
+            <p className="text-muted-foreground text-sm max-w-sm mx-auto mt-1">Ajuste a busca ou cadastre um novo projeto.</p>
+            <Button variant="outline" size="sm" className="mt-6" onClick={() => setSearchTerm('')}>
+              Limpar filtros
             </Button>
           </div>
         ) : (
-          <DndContext 
-              sensors={sensors} 
-              collisionDetection={closestCenter} 
+          <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}
           >
-            <SortableContext 
-              items={filteredItems.map(i => i.id)} 
+            <SortableContext
+              items={filteredItems.map(i => i.id)}
               strategy={rectSortingStrategy}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredItems.map((item) => (
-                  <SortableItem 
-                      key={item.id} 
-                      item={item} 
-                      onEdit={handleEdit} 
-                      onDelete={handleDeleteClick} 
+                  <SortableItem
+                      key={item.id}
+                      item={item}
+                      onEdit={handleEdit}
+                      onDelete={handleDeleteClick}
                   />
                 ))}
               </div>
@@ -393,24 +381,24 @@ export const PortfolioListPage = () => {
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {/* Confirmação de exclusão */}
       <ConfirmModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmDelete}
-        title="Remover Projeto da Vitrine?"
-        message="Esta ação retirará o projeto do site público. Você poderá recadastrá-lo no futuro, mas os dados atuais serão perdidos."
+        title="Excluir projeto do portfólio?"
+        message="O projeto sai do site público. Você poderá cadastrá-lo de novo no futuro, mas os dados atuais serão perdidos."
         variant="danger"
         isLoading={isDeleting}
-        confirmText="Confirmar Remoção"
-        cancelText="Manter Projeto"
+        confirmText="Excluir"
+        cancelText="Manter"
       />
 
-      {/* Edit/Create Modal */}
+      {/* Criar/editar */}
       <Modal
         isOpen={isFormModalOpen}
         onClose={() => guardClose(() => setIsFormModalOpen(false))}
-        title={editingItem ? 'Manutenção de Registro' : 'Novo Case de Sucesso'}
+        title={editingItem ? 'Editar projeto' : 'Novo projeto'}
         size="lg"
       >
         <PortfolioForm

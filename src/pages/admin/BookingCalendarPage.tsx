@@ -5,9 +5,11 @@ import { ptBR } from 'date-fns/locale/pt-BR';
 import { apiFetch } from '@/services/api';
 import { asArray } from '@/utils/normalize';
 import { toNumber } from '@/utils/typeSafeFormatters';
-import { BookingStatus, ECollaboratorRole } from '@/types/enums';
+import { formatPrice } from '@/utils/formatPrice';
+import type { BookingStatus } from '@/types/enums';
+import { BOOKING_STATUS_OPTIONS, bookingStatusLabel, bookingStatusVariant } from '@/utils/bookingStatus';
+import { COLLABORATOR_ROLE_OPTIONS, collaboratorRoleLabel } from '@/utils/collaboratorRoles';
 import type { Equipment, Kit, ICollaborator, CalendarBooking } from '@/types/types';
-import type { StandardVariant } from '@/components/ui/StandardTypes';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { 
@@ -33,6 +35,7 @@ import {
   XCircle,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
   Calendar as CalendarIcon
 } from 'lucide-react';
 import { ManualBookingModal } from '@/components/modals/ManualBookingModal';
@@ -64,7 +67,16 @@ interface CalendarFilters {
   dateRange: FilterDateRange;
 }
 
-const BookingDetailsModal = ({ event, onClose }: { event: CalendarEvent; onClose: () => void }) => {
+const BookingDetailsModal = ({
+  event,
+  onClose,
+  onConfirm,
+}: {
+  event: CalendarEvent;
+  onClose: () => void;
+  /** Abre a confirmação (valor + responsável). Antes só existia no tooltip de hover — inacessível no toque e no teclado. */
+  onConfirm: (booking: CalendarBooking) => void;
+}) => {
   const booking = event.resource;
   const navigate = useNavigate();
   const fullAddress = booking.venue
@@ -73,16 +85,7 @@ const BookingDetailsModal = ({ event, onClose }: { event: CalendarEvent; onClose
         .join(', ')
     : '';
 
-    const statusMap: Record<string, { variant: StandardVariant; label: string }> = {
-    PENDING: { variant: 'warning', label: 'Pendente' },
-    CONFIRMED: { variant: 'success', label: 'Confirmada' },
-    IN_PROGRESS: { variant: 'primary', label: 'Em Andamento' },
-    COMPLETED: { variant: 'success', label: 'Concluída' },
-    CANCELLED: { variant: 'destructive', label: 'Cancelada' },
-    DRAFT: { variant: 'outline', label: 'Rascunho' },
-  };
-
-  const getStatus = (status: string | undefined) => statusMap[status || ''] || { variant: 'outline', label: 'Desconhecido' };
+  const canConfirm = booking.status === 'DRAFT' || booking.status === 'PENDING';
 
   const equipmentCount = (booking.equipments?.length || 0) + (booking.kits?.length || 0);
   const totalValue = booking.serviceValue || booking.totalPrice || 0;
@@ -91,7 +94,7 @@ const BookingDetailsModal = ({ event, onClose }: { event: CalendarEvent; onClose
     <Modal
       isOpen={true}
       onClose={onClose}
-      title="Ficha Detalhada da Reserva"
+      title="Detalhes da reserva"
       size="lg"
       className="max-h-[90vh]"
     >
@@ -103,13 +106,13 @@ const BookingDetailsModal = ({ event, onClose }: { event: CalendarEvent; onClose
                 <FileText className="h-6 w-6" />
              </div>
              <div>
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1.5">Identificador</p>
-                <p className="text-sm font-black text-foreground uppercase tracking-wider">{booking.id}</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Código</p>
+                <p className="text-sm font-bold text-foreground break-all">{booking.id}</p>
              </div>
           </div>
           <div className="flex items-center gap-3">
-             <Badge variant={getStatus(booking.status).variant} className="text-[10px] font-black uppercase tracking-widest px-4 py-1.5 ring-4 ring-offset-2 ring-transparent">
-                {getStatus(booking.status).label}
+             <Badge variant={bookingStatusVariant(booking.status)} size="lg">
+                {bookingStatusLabel(booking.status)}
              </Badge>
           </div>
         </div>
@@ -122,9 +125,9 @@ const BookingDetailsModal = ({ event, onClose }: { event: CalendarEvent; onClose
                 <CalendarIcon className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1.5">Data e Cronologia</h4>
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Data e horário</h4>
                 <p className="text-sm font-bold text-foreground">{new Date(booking.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-                <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground font-medium">
+                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                   <Clock className="h-3 w-3" />
                   {new Date(booking.eventDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} — 
                   {new Date(new Date(booking.eventDate).getTime() + (booking.duration || 4) * 3600000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
@@ -137,10 +140,10 @@ const BookingDetailsModal = ({ event, onClose }: { event: CalendarEvent; onClose
                 <Users className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1.5">Stakeholder / Cliente</h4>
-                <p className="text-sm font-bold text-foreground truncate">{booking.client?.name || 'Não Identificado'}</p>
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Cliente</h4>
+                <p className="text-sm font-bold text-foreground truncate">{booking.client?.name || 'Cliente não informado'}</p>
                 {booking.client?.phone && (
-                  <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground font-medium">
+                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                     <Phone className="h-3 w-3" /> {booking.client.phone}
                   </div>
                 )}
@@ -152,8 +155,8 @@ const BookingDetailsModal = ({ event, onClose }: { event: CalendarEvent; onClose
                 <MapPin className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1.5">Localização Técnica</h4>
-                <p className="text-xs font-bold text-foreground leading-relaxed italic">{fullAddress || 'Endereço não parametrizado'}</p>
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Endereço</h4>
+                <p className="text-sm text-foreground leading-relaxed">{fullAddress || 'Endereço não informado'}</p>
               </div>
             </div>
           </div>
@@ -164,32 +167,32 @@ const BookingDetailsModal = ({ event, onClose }: { event: CalendarEvent; onClose
                 <Package className="h-5 w-5" />
               </div>
               <div className="flex-1">
-                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1.5">Escopo de Ativos ({equipmentCount})</h4>
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Itens ({equipmentCount})</h4>
                 <div className="bg-muted/30 rounded-xl p-3 border border-border/50">
                   <ul className="space-y-2">
                     {booking.equipments?.map((eq: Equipment) => (
-                      <li key={eq.id} className="text-[10px] font-bold text-foreground flex items-center gap-2">
-                         <div className="h-1 w-1 bg-primary rounded-full" /> {eq.name}
+                      <li key={eq.id} className="text-sm text-foreground flex items-center gap-2">
+                         <span className="h-1.5 w-1.5 bg-primary rounded-full shrink-0" aria-hidden="true" /> {eq.name}
                       </li>
                     ))}
                     {booking.kits?.map((kit: Kit) => (
-                      <li key={kit.id} className="text-[10px] font-bold text-foreground flex items-center gap-2">
-                         <div className="h-1 w-1 bg-indigo-500 rounded-full" /> KIT: {kit.name}
+                      <li key={kit.id} className="text-sm text-foreground flex items-center gap-2">
+                         <span className="h-1.5 w-1.5 bg-primary rounded-full shrink-0" aria-hidden="true" /> Kit: {kit.name}
                       </li>
                     ))}
-                    {equipmentCount === 0 && <li className="text-[10px] text-muted-foreground font-medium uppercase italic opacity-50">Sem itens alocados</li>}
+                    {equipmentCount === 0 && <li className="text-sm text-muted-foreground">Nenhum item nesta reserva</li>}
                   </ul>
                 </div>
               </div>
             </div>
 
             <div className="flex items-start gap-4">
-              <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+              <div className="p-2.5 rounded-xl bg-success/10 text-success border border-success/20">
                 <DollarSign className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1.5">Acordo Comercial</h4>
-                <p className="text-2xl font-black text-foreground tracking-tighter">
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Valor</h4>
+                <p className="text-2xl font-bold text-foreground">
                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValue)}
                 </p>
               </div>
@@ -200,7 +203,7 @@ const BookingDetailsModal = ({ event, onClose }: { event: CalendarEvent; onClose
         {/* Collaborators Section */}
         {booking.collaborators && booking.collaborators.length > 0 && (
            <div className="pt-6 border-t border-border/50">
-              <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-4">Equipe Técnica Atribuída</h4>
+              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">Equipe</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                  {booking.collaborators.map((c) => (
                     <div key={c.collaboratorId || c.collaborator?.id} className="flex items-center gap-3 p-3 rounded-2xl bg-muted/20 border border-border/40">
@@ -208,8 +211,8 @@ const BookingDetailsModal = ({ event, onClose }: { event: CalendarEvent; onClose
                           {c.collaborator?.avatar ? <img src={c.collaborator.avatar} alt={c.collaborator.name} className="h-full w-full object-cover" /> : c.collaborator?.name?.charAt(0)}
                        </div>
                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-foreground truncate">{c.collaborator?.name || 'Técnico'}</p>
-                          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter">{c.role}</p>
+                          <p className="text-sm font-bold text-foreground truncate">{c.collaborator?.name || 'Colaborador'}</p>
+                          <p className="text-xs text-muted-foreground">{collaboratorRoleLabel(c.role)}</p>
                        </div>
                     </div>
                  ))}
@@ -218,11 +221,16 @@ const BookingDetailsModal = ({ event, onClose }: { event: CalendarEvent; onClose
         )}
 
         {/* Footer Actions */}
-        <div className="flex justify-end gap-3 pt-8 border-t border-border/50">
-           <Button variant="outline" size="sm" className="font-black uppercase text-[10px] tracking-widest h-10 px-6 rounded-2xl" onClick={() => navigate(`/admin/reservas/${booking.id}`)}>
-              Gestão Full <ExternalLink className="ml-2 h-3 w-3" />
+        <div className="flex flex-wrap justify-end gap-3 pt-6 border-t border-border/50">
+           <Button variant="outline" size="sm" onClick={() => navigate(`/admin/reservas/${booking.id}`)} rightIcon={<ExternalLink className="h-4 w-4" />}>
+              Abrir reserva
            </Button>
-           <Button variant="primary" size="sm" className="font-black uppercase text-[10px] tracking-widest h-10 px-8 rounded-2xl shadow-lg shadow-primary/20" onClick={onClose}>
+           {canConfirm && (
+             <Button variant="success" size="sm" onClick={() => onConfirm(booking)}>
+                Confirmar reserva
+             </Button>
+           )}
+           <Button variant="ghost" size="sm" onClick={onClose}>
               Fechar
            </Button>
         </div>
@@ -243,17 +251,18 @@ const DayEventsModal = ({
   <Modal
     isOpen={true}
     onClose={onClose}
-    title={`Operações em: ${format(events[0].start!, 'dd/MM/yyyy')}`}
+    title={`Reservas de ${format(events[0].start!, 'dd/MM/yyyy')}`}
     size="lg"
   >
-    <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+    <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto pr-2">
       {events.map((ev) => {
         const b = ev.resource;
         const totalValue = b.serviceValue || b.totalPrice || 0;
         return (
-          <div 
+          <button
+             type="button"
              key={b.id}
-             className="group cursor-pointer hover:bg-muted/30 hover:border-primary/30 transition-all duration-300 border-border/50 bg-card/50 rounded-xl border p-4"
+             className="w-full text-left group hover:bg-muted/30 hover:border-primary/30 transition-all duration-300 border-border bg-card rounded-xl border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
              onClick={() => {
                onSelectEvent(ev);
                onClose();
@@ -265,29 +274,25 @@ const DayEventsModal = ({
                      <Users className="h-5 w-5" />
                   </div>
                   <div className="min-w-0">
-                     <h4 className="text-[13px] font-black text-foreground uppercase tracking-tight truncate">{b.client?.name || 'Registro Manual'}</h4>
+                     <h4 className="text-sm font-bold text-foreground truncate">{b.client?.name || 'Cliente não informado'}</h4>
                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant={b.status === 'CONFIRMED' ? 'success' : 'warning'} className="text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5">
-                           {b.status}
+                        <Badge variant={bookingStatusVariant(b.status)} size="sm">
+                           {bookingStatusLabel(b.status)}
                         </Badge>
-                        <span className="text-[10px] font-medium text-muted-foreground">— {format(ev.start!, 'HH:mm')}</span>
+                        <span className="text-sm text-muted-foreground">{format(ev.start!, 'HH:mm')}</span>
                      </div>
                   </div>
                </div>
                <div className="text-right shrink-0">
-                  <p className="text-sm font-black text-foreground tracking-tighter">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValue)}</p>
-                  <p className="text-[9px] font-black text-muted-foreground uppercase opacity-50">Clique para expandir</p>
+                  <p className="text-sm font-bold text-foreground">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValue)}</p>
+                  <p className="text-xs text-muted-foreground">Ver detalhes</p>
                </div>
              </div>
-          </div>
+          </button>
         );
       })}
     </div>
   </Modal>
-);
-
-const ExternalLink = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
 );
 
 const safeDate = (input?: string | Date | null): Date | null => {
@@ -298,7 +303,6 @@ const safeDate = (input?: string | Date | null): Date | null => {
 
 export const BookingCalendarPage = () => {
     const DnDCalendar = useMemo(() => withDragAndDrop<CalendarEvent>(Calendar as unknown as ComponentType<CalendarProps<CalendarEvent, object>>), []);
-  const navigate = useNavigate();
   const { addNotification } = useNotifications();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -336,7 +340,7 @@ export const BookingCalendarPage = () => {
   const [confirmBookingId, setConfirmBookingId] = useState<string | null>(null);
   const [confirmPrice, setConfirmPrice] = useState<string>('');
   const [confirmCollaboratorId, setConfirmCollaboratorId] = useState<string>('');
-  const [confirmRole, setConfirmRole] = useState<ECollaboratorRole>(ECollaboratorRole.ASSISTANT);
+  const [confirmRole, setConfirmRole] = useState<string>('ASSISTANT');
 
   const calendarStats = useMemo(() => {
     const total = events.length;
@@ -378,8 +382,8 @@ export const BookingCalendarPage = () => {
           });
         setEvents(calendarEvents);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Falha na sincronização operacional.');
-      addNotification({ type: 'error', title: 'Radar Offline', message: 'Não foi possível sincronizar o calendário em tempo real.' });
+      setError(err instanceof Error ? err.message : 'Não foi possível carregar o calendário.');
+      addNotification({ type: 'error', title: 'Erro ao carregar a agenda', message: 'Não foi possível carregar as reservas do calendário.' });
     } finally {
       setLoading(false);
     }
@@ -495,7 +499,7 @@ export const BookingCalendarPage = () => {
       const payload: Partial<CalendarBooking> = {};
       if (confirmPrice) payload.totalPrice = Number(confirmPrice);
       if (confirmCollaboratorId) {
-        payload.collaborators = [{ collaboratorId: confirmCollaboratorId, role: confirmRole || ECollaboratorRole.ASSISTANT }];
+        payload.collaborators = [{ collaboratorId: confirmCollaboratorId, role: confirmRole || 'ASSISTANT' }];
       }
       await apiFetch(`/bookings/${confirmBookingId}/confirm-details`, {
         method: 'PUT',
@@ -532,9 +536,10 @@ export const BookingCalendarPage = () => {
     try {
       setEvents((curr) => curr.map((ev) => (ev === event ? { ...ev, start: s, end: e } : ev)));
       await updateDates(event.resource.id, s, e);
-      addNotification({ type: 'success', title: 'Horário Reprogramado', message: 'Bloqueio de agenda atualizado via drag & drop.' });
+      addNotification({ type: 'success', title: 'Horário alterado', message: 'Data e horário da reserva atualizados.' });
     } catch {
       setEvents(prev);
+      addNotification({ type: 'error', title: 'Erro ao mover', message: 'Não foi possível alterar a data da reserva.' });
     }
   };
 
@@ -545,14 +550,24 @@ export const BookingCalendarPage = () => {
     try {
       setEvents((curr) => curr.map((ev) => (ev === event ? { ...ev, start: s, end: e } : ev)));
       await updateDates(event.resource.id, s, e);
-      addNotification({ type: 'success', title: 'Duração Ajustada', message: 'Vigência do evento atualizada.' });
+      addNotification({ type: 'success', title: 'Duração alterada', message: 'Duração da reserva atualizada.' });
     } catch {
       setEvents(prev);
+      addNotification({ type: 'error', title: 'Erro ao alterar', message: 'Não foi possível alterar a duração da reserva.' });
     }
   };
 
+  const openConfirm = (b: CalendarBooking) => {
+    setConfirmBookingId(b.id);
+    setConfirmPrice(String(b.serviceValue || b.totalPrice || ''));
+    setConfirmOpen(true);
+  };
+
   return (
-    <AdminLayout title="Agenda Operativa" breadcrumbs={[{ name: 'Admin' }, { name: 'Painel' }, { name: 'Calendário' }]}>
+    <AdminLayout
+      title="Calendário de Reservas"
+      breadcrumbs={[{ name: 'Admin', href: '/admin/painel' }, { name: 'Reservas', href: '/admin/reservas' }, { name: 'Calendário' }]}
+    >
       <div className="space-y-6">
         {/* Header Section */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -561,111 +576,128 @@ export const BookingCalendarPage = () => {
                 <CalendarIcon className="h-6 w-6" />
              </div>
              <div>
-                <h2 className="text-xl font-black text-foreground uppercase tracking-tighter">Cronograma de Reservas</h2>
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-[0.1em]">Visão unificada de ativos e eventos</p>
+                <h2 className="text-xl font-bold text-foreground">Agenda de eventos</h2>
+                <p className="text-sm text-muted-foreground">Clique num dia ou evento para ver detalhes; arraste um evento para mudar a data.</p>
              </div>
           </div>
           <div className="flex flex-wrap items-center gap-4">
-            <div className="hidden sm:flex items-center gap-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
+            <dl className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500" /> Conf: <span className="text-foreground">{calendarStats.confirmed}</span>
+                    <span className="h-2 w-2 rounded-full bg-success" aria-hidden="true" /> <dt>Confirmadas:</dt> <dd className="font-semibold text-foreground">{calendarStats.confirmed}</dd>
                 </div>
                 <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-amber-500" /> Pend: <span className="text-foreground">{calendarStats.pending}</span>
+                    <span className="h-2 w-2 rounded-full bg-warning" aria-hidden="true" /> <dt>Pendentes:</dt> <dd className="font-semibold text-foreground">{calendarStats.pending}</dd>
                 </div>
                 <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-primary" /> Equipe: <span className="text-foreground">{calendarStats.withCollaborators}</span>
+                    <span className="h-2 w-2 rounded-full bg-primary" aria-hidden="true" /> <dt>Com equipe:</dt> <dd className="font-semibold text-foreground">{calendarStats.withCollaborators}</dd>
                 </div>
-            </div>
-            <Button onClick={() => setIsModalOpen(true)} className="gap-2 font-black uppercase text-[10px] tracking-widest h-11 px-6 px shadow-xl shadow-primary/20">
-               <Plus className="h-4 w-4" /> Reserva Manual
+            </dl>
+            <Button size="sm" onClick={() => setIsModalOpen(true)} leftIcon={<Plus className="h-4 w-4" />}>
+               Reserva manual
             </Button>
           </div>
         </div>
 
         {/* Toolbar & Global Filters */}
         <Card className="border-border/50 bg-card/30 backdrop-blur-sm p-4 overflow-visible z-30 relative">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-               <div className="flex items-center gap-2 shrink-0">
-                  <Button variant="outline" size="icon" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="h-9 w-9 border-border/60">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+               <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <Button variant="outline" size="icon" aria-label="Mês anterior" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="h-9 w-9">
                      <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" className="h-9 px-4 font-black uppercase text-[10px] tracking-widest border-border/60" onClick={() => setCurrentDate(new Date())}>Hoje</Button>
-                  <Button variant="outline" size="icon" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="h-9 w-9 border-border/60">
+                  <Button variant="outline" size="xs" className="h-9" onClick={() => setCurrentDate(new Date())}>Hoje</Button>
+                  <Button variant="outline" size="icon" aria-label="Próximo mês" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="h-9 w-9">
                      <ChevronRight className="h-4 w-4" />
                   </Button>
-                  <h3 className="text-sm font-black text-foreground uppercase tracking-widest ml-4 min-w-[140px] text-center">
+                  <h3 className="text-sm font-bold text-foreground capitalize ml-2 min-w-[140px] text-center" aria-live="polite">
                      {format(currentDate, 'MMMM yyyy', { locale: ptBR })}
                   </h3>
                </div>
 
-               <div className="h-8 w-px bg-border/50 hidden md:block" />
+               <div className="h-8 w-px bg-border/50 hidden lg:block" aria-hidden="true" />
 
                <div className="flex-1 flex flex-wrap items-center gap-3">
-                  <Select 
-                    className="w-40 h-9 text-[10px] font-bold uppercase tracking-widest !bg-muted/30"
-                    placeholder="Status"
+                  <div className="w-full sm:w-44">
+                  <Select
+                    size="xs"
+                    className="h-9 !bg-muted/30"
+                    aria-label="Filtrar por status"
                     value={filters.status}
                                         onChange={(e: ChangeEvent<HTMLSelectElement>) => setFilters(f => ({ ...f, status: e.target.value as FilterStatus }))}
                     options={[
-                        { value: 'ALL', label: 'Todos Status' },
-                        ...Object.values(BookingStatus).map(s => ({ value: s, label: s.replace('_', ' ') }))
+                        { value: 'ALL', label: 'Todos os status' },
+                        ...BOOKING_STATUS_OPTIONS
                     ]}
                   />
-                  <Select 
-                    className="w-44 h-9 text-[10px] font-bold uppercase tracking-widest !bg-muted/30"
-                    placeholder="Colaborador"
+                  </div>
+                  <div className="w-full sm:w-48">
+                  <Select
+                    size="xs"
+                    className="h-9 !bg-muted/30"
+                    aria-label="Filtrar por colaborador"
                     value={filters.collaboratorId}
                                         onChange={(e: ChangeEvent<HTMLSelectElement>) => setFilters(f => ({ ...f, collaboratorId: e.target.value }))}
                     options={[
-                        { value: '', label: 'Toda Equipe' },
+                        { value: '', label: 'Toda a equipe' },
                         ...collaborators.map(c => ({ value: c.id, label: c.name }))
                     ]}
                   />
-                  <div className="relative flex-1 min-w-[200px]">
-                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                     <Input 
-                        className="pl-9 h-9 text-xs font-medium placeholder:text-muted-foreground/50 border-border/60 !bg-muted/30"
-                        placeholder="Pesquisar cliente, id ou notas..."
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                     <Input
+                        size="xs"
+                        leftIcon={<Search className="h-3.5 w-3.5" />}
+                        aria-label="Buscar reservas"
+                        className="h-9 !bg-muted/30"
+                        placeholder="Buscar cliente, telefone ou observação..."
                         value={filters.search}
                                                 onChange={(e: ChangeEvent<HTMLInputElement>) => setFilters(f => ({ ...f, search: e.target.value }))}
                      />
                   </div>
-                  <Button variant="outline" size="icon" className="h-9 w-9 border-border/60 text-muted-foreground" onClick={() => setFilters({
+                  <Button variant="outline" size="icon" className="h-9 w-9 text-muted-foreground" aria-label="Limpar filtros" title="Limpar filtros" onClick={() => setFilters({
                     status: 'ALL', search: '', collaboratorId: '', hasCollaborators: 'ALL', hasItems: 'ALL', dateRange: 'ALL'
                   })}>
                      <XCircle className="h-4 w-4" />
                   </Button>
                </div>
 
-               <div className="flex items-center gap-1 p-1 bg-muted/40 border border-border/40 rounded-xl shrink-0">
+               <div className="flex items-center gap-1 p-1 bg-muted/40 border border-border rounded-xl shrink-0 self-start" role="group" aria-label="Visualização do calendário">
                    {[
                        { id: Views_MONTH, label: 'Mês' },
-                       { id: Views_WEEK, label: 'Sem' },
+                       { id: Views_WEEK, label: 'Semana' },
                        { id: Views_DAY, label: 'Dia' },
                        { id: Views_AGENDA, label: 'Lista' }
                    ].map(v => (
-                       <button 
+                       <Button
                         key={v.id}
-                                                onClick={() => setView(v.id)}
-                        className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all ${view === v.id ? 'bg-primary text-primary-foreground shadow-lg' : 'text-muted-foreground hover:bg-muted'}`}
+                        size="xs"
+                        variant={view === v.id ? 'primary' : 'ghost'}
+                        aria-pressed={view === v.id}
+                        onClick={() => setView(v.id)}
                        >
                            {v.label}
-                       </button>
+                       </Button>
                    ))}
                </div>
             </div>
         </Card>
 
         {/* Global Loading / Error */}
-        {error && <Alert variant="error" title="Erro de Sincronia" description={error} />}
+        {error && (
+          <Alert
+            variant="error"
+            title="Erro ao carregar o calendário"
+            description={error}
+            action={<Button variant="outline" size="sm" onClick={fetchCalendarBookings}>Tentar de novo</Button>}
+          />
+        )}
         {loading && (
             <div className="flex items-center justify-center p-20">
-                <BrandLoader size={80} label="Equalizando fluxo operativo..." />
+                <BrandLoader size={80} label="Carregando agenda…" />
             </div>
         )}
 
-        <div className="bg-card border border-border/50 rounded-[2rem] p-4 h-[75vh] relative shadow-2xl overflow-hidden animate-in fade-in duration-700">
+        <div className="bg-card border border-border rounded-3xl p-2 sm:p-4 h-[75vh] relative shadow-sm overflow-hidden animate-in fade-in duration-700">
             <DnDCalendar
               localizer={localizer}
               events={filteredEvents}
@@ -697,16 +729,16 @@ export const BookingCalendarPage = () => {
                       onMouseLeave={() => setTimeout(() => setHovered(prev => prev?.resource.id === event.resource.id ? null : prev), 50)}
                     >
                       <div className="event-header shrink-0">
-                        <div className="event-title text-[9px] font-black uppercase tracking-tighter truncate leading-none">
-                          {booking.client?.name || 'Manual'}
+                        <div className="event-title text-xs font-semibold truncate leading-tight">
+                          {booking.client?.name || 'Sem cliente'}
                         </div>
                       </div>
 
                       <div className="event-details mt-auto">
-                        <div className="event-time text-[8px] font-bold opacity-60">
+                        <div className="event-time text-xs">
                           {format(event.start!, 'HH:mm')}
                         </div>
-                        {count > 0 && <div className="text-[8px] font-bold opacity-60 flex items-center gap-0.5"><Package className="h-2 w-2" /> {count}</div>}
+                        {count > 0 && <div className="text-xs flex items-center gap-0.5"><Package className="h-3 w-3" aria-hidden="true" /> {count}</div>}
                       </div>
 
                       <div className={`status-indicator status-${status}`} />
@@ -719,40 +751,34 @@ export const BookingCalendarPage = () => {
               onEventResize={onEventResize}
               resizable
             />
-            {/* Action Tooltip (Enhanced Hover) */}
+            {/* Resumo no hover (só informativo). As ações — Abrir, Confirmar — ficavam aqui e só
+                existiam com mouse; agora estão no modal de detalhes, que abre com clique/toque/teclado.
+                O "Editar" ia para /admin/reservas/:id/editar, rota que não existe. */}
             {hovered && (
-                <div 
+                <div
                     ref={tooltipRef}
-                    className="bc-tooltip animate-in zoom-in-95 duration-200"
-                    onMouseEnter={() => setHovered(hovered)}
-                    onMouseLeave={() => setHovered(null)}
+                    className="bc-tooltip pointer-events-none animate-in zoom-in-95 duration-200"
+                    aria-hidden="true"
                 >
-                    <Card className="p-0 border-primary/20 bg-card/95 backdrop-blur-xl shadow-2xl overflow-hidden w-72">
-                        <div className="p-5 border-b border-border/50 bg-primary/5">
-                            <div className="flex items-center justify-between mb-2">
-                                <h4 className="text-xs font-black text-foreground uppercase tracking-tighter truncate w-40">{hovered.resource.client?.name || 'Evento'}</h4>
-                                <Badge variant={hovered.resource.status === 'CONFIRMED' ? 'success' : 'warning'} className="text-[8px] font-black uppercase tracking-widest">{hovered.resource.status}</Badge>
+                    <Card className="p-0 border-primary/20 bg-card shadow-2xl overflow-hidden w-72">
+                        <div className="p-4 border-b border-border bg-primary/5">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                                <h4 className="text-sm font-bold text-foreground truncate">{hovered.resource.client?.name || 'Reserva'}</h4>
+                                <Badge variant={bookingStatusVariant(hovered.resource.status)} size="sm">{bookingStatusLabel(hovered.resource.status)}</Badge>
                             </div>
-                            <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase opacity-70">
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                                 <Clock className="h-3 w-3" /> {format(hovered.start!, 'HH:mm')} — {format(hovered.end!, 'HH:mm')}
                             </div>
                         </div>
-                        <div className="p-5 space-y-3">
-                            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">
-                                <span>Patrimônio</span>
-                                <span>{(hovered.resource.equipments?.length || 0) + (hovered.resource.kits?.length || 0)} Itens</span>
+                        <div className="p-4 space-y-2">
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                <span>Itens</span>
+                                <span className="text-foreground">{(hovered.resource.equipments?.length || 0) + (hovered.resource.kits?.length || 0)}</span>
                             </div>
-                            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">
-                                <span>Investimento</span>
-                                <span className="text-foreground">R$ {toNumber(hovered.resource.serviceValue || hovered.resource.totalPrice).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                <span>Valor</span>
+                                <span className="text-foreground">{formatPrice(toNumber(hovered.resource.serviceValue || hovered.resource.totalPrice))}</span>
                             </div>
-                        </div>
-                        <div className="p-3 bg-muted/30 grid grid-cols-2 gap-2">
-                            <Button variant="outline" size="sm" className="h-8 text-[9px] uppercase font-black tracking-widest bg-card" onClick={() => navigate(`/admin/reservas/${hovered.resource.id}/editar`)}>Editar</Button>
-                            <Button variant="outline" size="sm" className="h-8 text-[9px] uppercase font-black tracking-widest bg-card" onClick={() => setSelectedEvent(hovered)}>Detalhes</Button>
-                            {hovered.resource.status !== 'CONFIRMED' && (
-                                <Button className="h-8 text-[9px] uppercase font-black tracking-widest col-span-2 bg-emerald-600 hover:bg-emerald-500" onClick={() => { setConfirmBookingId(hovered.resource.id); setConfirmPrice(String(hovered.resource.serviceValue || hovered.resource.totalPrice || '')); setConfirmOpen(true); }}>Confirmar Operação</Button>
-                            )}
                         </div>
                     </Card>
                 </div>
@@ -760,7 +786,13 @@ export const BookingCalendarPage = () => {
         </div>
 
         {/* Modals Section */}
-        {selectedEvent && <BookingDetailsModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />}
+        {selectedEvent && (
+          <BookingDetailsModal
+            event={selectedEvent}
+            onClose={() => setSelectedEvent(null)}
+            onConfirm={(b) => { setSelectedEvent(null); openConfirm(b); }}
+          />
+        )}
         {selectedDayEvents && (
           <DayEventsModal
             events={selectedDayEvents}
@@ -771,44 +803,34 @@ export const BookingCalendarPage = () => {
         
         {/* Advanced Confirmation Modal */}
         {confirmOpen && (
-          <Modal isOpen={true} onClose={() => setConfirmOpen(false)} title="Chancela Operativa" size="md">
+          <Modal isOpen={true} onClose={() => setConfirmOpen(false)} title="Confirmar reserva" size="md">
             <div className="space-y-6 py-2">
-               <Alert variant="info" title="Finalização Sugerida" description="Defina os parâmetros finais para confirmar a alocação de equipe e itens." />
+               <Alert variant="info" title="Confira os dados" description="Defina o valor final e, se quiser, o colaborador responsável." />
                <div className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Ajuste de Valor (R$)</label>
-                                        <Input type="number" step="0.01" value={confirmPrice} onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirmPrice(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Atribuir Master Líder</label>
-                    <Select 
-                        value={confirmCollaboratorId}
-                                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setConfirmCollaboratorId(e.target.value)}
-                        placeholder="Pesquisar na equipe..."
-                        options={[
-                            { value: '', label: 'Sem líder fixo' },
-                            ...collaborators.map(c => ({ value: c.id, label: c.name }))
-                        ]}
-                    />
-                  </div>
+                  <Input label="Valor final (R$)" type="number" step="0.01" value={confirmPrice} onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirmPrice(e.target.value)} />
+                  <Select
+                      label="Colaborador responsável (opcional)"
+                      value={confirmCollaboratorId}
+                      onChange={(e: ChangeEvent<HTMLSelectElement>) => setConfirmCollaboratorId(e.target.value)}
+                      options={[
+                          { value: '', label: 'Sem responsável' },
+                          ...collaborators.map(c => ({ value: c.id, label: c.name }))
+                      ]}
+                  />
                   {confirmCollaboratorId && (
                     <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                        <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Responsabilidade</label>
-                        <Select 
+                        <Select
+                            label="Função"
                             value={confirmRole}
-                                                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setConfirmRole(e.target.value as ECollaboratorRole)}
-                            options={[
-                                { value: 'PHOTOGRAPHER', label: 'Líder Fotógrafo' },
-                                { value: 'ASSISTANT', label: 'Suporte Operacional' },
-                                { value: 'PRODUCER', label: 'Coordenação' }
-                            ]}
+                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setConfirmRole(e.target.value)}
+                            options={COLLABORATOR_ROLE_OPTIONS}
                         />
                     </div>
                   )}
                </div>
-               <div className="flex justify-end gap-3 pt-4 font-black uppercase text-[10px] tracking-widest">
-                  <Button variant="outline" className="h-11 px-6 rounded-2xl" onClick={() => setConfirmOpen(false)}>Abortar</Button>
-                  <Button className="h-11 px-8 rounded-2xl shadow-xl shadow-primary/20 bg-emerald-600 hover:bg-emerald-500" isLoading={!!actionLoading} onClick={confirmWithDetails}>Efetivar Agenda</Button>
+               <div className="flex flex-wrap justify-end gap-3 pt-4">
+                  <Button variant="outline" size="sm" onClick={() => setConfirmOpen(false)}>Cancelar</Button>
+                  <Button variant="success" size="sm" isLoading={!!actionLoading} onClick={confirmWithDetails}>Confirmar reserva</Button>
                </div>
             </div>
           </Modal>
@@ -817,7 +839,7 @@ export const BookingCalendarPage = () => {
         <ManualBookingModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          onSuccess={() => { setIsModalOpen(false); fetchCalendarBookings(); addNotification({ type: 'success', title: 'Reserva Gerada', message: 'Ficha de reserva manual incluída no sistema.' }); }}
+          onSuccess={() => { setIsModalOpen(false); fetchCalendarBookings(); addNotification({ type: 'success', title: 'Reserva criada', message: 'A reserva manual foi criada.' }); }}
         />
       </div>
     </AdminLayout>

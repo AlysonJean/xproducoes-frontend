@@ -7,7 +7,6 @@ import {
   Search, 
   TrendingUp,
   Calendar,
-  MoreHorizontal,
   ThumbsUp,
   ThumbsDown,
   AlertCircle
@@ -16,19 +15,23 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { apiFetch } from '../../services/api';
 import { normalizeString } from '../../utils/string';
 import { 
-  Button, 
-  Input, 
-  Select, 
-  Badge, 
-  Card, 
-  Grid, 
-  Modal, 
+  Button,
+  Input,
+  Select,
+  Textarea,
+  Badge,
+  Card,
+  Grid,
+  Modal,
   ConfirmModal,
   Alert
 } from '../../components/ui/StandardComponents';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { Pagination } from '../../components/ui/Pagination';
+
+const PAGE_TITLE = 'Avaliações';
+const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Avaliações' }];
 
 type AdminReview = {
   id: string;
@@ -186,16 +189,19 @@ export default function ReviewManagementPage() {
 
   if (loading && items.length === 0) {
     return (
-      <AdminLayout title="Avaliações" breadcrumbs={[{ name: 'Admin' }, { name: 'Avaliações' }]}>
+      <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
         <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <BrandLoader size={120} label="Analisando feedback dos clientes..." />
+          <BrandLoader size={120} label="Carregando avaliações…" />
         </div>
       </AdminLayout>
     );
   }
 
+  const clearFilters = () => { setQuery(''); setMinRating(''); setStatusFilter('all'); };
+  const hasFilters = query !== '' || minRating !== '' || statusFilter !== 'all';
+
   return (
-    <AdminLayout title="Avaliações" breadcrumbs={[{ name: 'Admin' }, { name: 'Avaliações' }]}>
+    <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
       <div className="space-y-6">
         {/* Header Section */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -204,14 +210,14 @@ export default function ReviewManagementPage() {
               <Star className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground">Gestão de Feedback</h2>
-              <p className="text-sm text-muted-foreground">Monitore e modere o depoimento de seus clientes.</p>
+              <h2 className="text-xl font-bold text-foreground">Avaliações dos clientes</h2>
+              <p className="text-sm text-muted-foreground">Aprove, rejeite ou edite os depoimentos dos clientes.</p>
             </div>
           </div>
-          
+
           <div className="flex gap-2">
-             <Button variant="outline" className="gap-2" onClick={load}>
-               Recarregar Dados
+             <Button variant="outline" size="sm" onClick={load}>
+               Recarregar
              </Button>
           </div>
         </div>
@@ -224,31 +230,31 @@ export default function ReviewManagementPage() {
                 <MessageSquare className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Total de Avaliações</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Total de avaliações</p>
                 <p className="text-xl font-black text-foreground">{stats.total}</p>
               </div>
             </div>
           </Card>
-          
-          <Card className="p-4 bg-emerald-500/5 border-emerald-500/10">
+
+          <Card className="p-4 bg-success/5 border-success/10">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+              <div className="h-10 w-10 rounded-xl bg-success/10 flex items-center justify-center text-success">
                 <TrendingUp className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Média de Satisfação</p>
-                <p className="text-xl font-black text-foreground">{stats.avgRating.toFixed(1)} <span className="text-sm font-bold opacity-50">/ 5.0</span></p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Nota média</p>
+                <p className="text-xl font-black text-foreground">{stats.avgRating.toFixed(1)} <span className="text-sm font-bold text-muted-foreground">/ 5,0</span></p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-4 bg-amber-500/5 border-amber-500/10">
+          <Card className="p-4 bg-warning/5 border-warning/10">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+              <div className="h-10 w-10 rounded-xl bg-warning/10 flex items-center justify-center text-warning">
                 <AlertCircle className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Rejeitadas/Ocultas</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Rejeitadas/ocultas</p>
                 <p className="text-xl font-black text-foreground">{stats.reported}</p>
               </div>
             </div>
@@ -258,48 +264,59 @@ export default function ReviewManagementPage() {
         {/* Filters and Search */}
         <Card className="p-4 bg-card/50 border-border">
           <div className="flex flex-col lg:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="flex-1">
               <Input
+                size="sm"
                 placeholder="Buscar por comentário, autor ou equipamento..."
-                className="pl-10"
+                aria-label="Buscar avaliações"
+                leftIcon={<Search className="h-4 w-4" />}
                 value={query}
-                                onChange={(e: ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
               />
             </div>
             <div className="flex flex-wrap gap-2">
-              <Select
-                className="w-32"
-                value={minRating}
-                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setMinRating(e.target.value)}
-                options={[
-                  { value: '', label: 'Nota: Todas' },
-                  { value: '4', label: '4+ Estrelas' },
-                  { value: '3', label: '3+ Estrelas' },
-                  { value: '1', label: '1+ Estrela' },
-                ]}
-              />
-              <Select
-                className="w-32"
-                value={statusFilter}
-                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value as 'all' | 'approved' | 'rejected')}
-                options={[
-                  { value: 'all', label: 'Status: Todos' },
-                  { value: 'approved', label: 'Aprovadas' },
-                  { value: 'rejected', label: 'Rejeitadas' },
-                ]}
-              />
-              <Select
-                className="w-40"
-                value={sortBy}
-                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setSortBy(e.target.value as 'date_desc' | 'date_asc' | 'rating_desc' | 'rating_asc')}
-                options={[
-                  { value: 'date_desc', label: 'Mais Recentes' },
-                  { value: 'rating_desc', label: 'Maior Nota' },
-                  { value: 'rating_asc', label: 'Menor Nota' },
-                ]}
-              />
-               <Button variant="outline" size="icon" onClick={() => { setQuery(''); setMinRating(''); setStatusFilter('all'); }} title="Limpar Filtro">
+              <div className="w-full sm:w-36">
+                <Select
+                  size="sm"
+                  aria-label="Filtrar por nota"
+                  value={minRating}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setMinRating(e.target.value)}
+                  options={[
+                    { value: '', label: 'Todas as notas' },
+                    { value: '4', label: '4+ estrelas' },
+                    { value: '3', label: '3+ estrelas' },
+                    { value: '1', label: '1+ estrela' },
+                  ]}
+                />
+              </div>
+              <div className="w-full sm:w-36">
+                <Select
+                  size="sm"
+                  aria-label="Filtrar por status"
+                  value={statusFilter}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value as 'all' | 'approved' | 'rejected')}
+                  options={[
+                    { value: 'all', label: 'Todos os status' },
+                    { value: 'approved', label: 'Aprovadas' },
+                    { value: 'rejected', label: 'Rejeitadas' },
+                  ]}
+                />
+              </div>
+              <div className="w-full sm:w-40">
+                <Select
+                  size="sm"
+                  aria-label="Ordenar por"
+                  value={sortBy}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setSortBy(e.target.value as 'date_desc' | 'date_asc' | 'rating_desc' | 'rating_asc')}
+                  options={[
+                    { value: 'date_desc', label: 'Mais recentes' },
+                    { value: 'date_asc', label: 'Mais antigas' },
+                    { value: 'rating_desc', label: 'Maior nota' },
+                    { value: 'rating_asc', label: 'Menor nota' },
+                  ]}
+                />
+              </div>
+              <Button variant="outline" size="icon" onClick={clearFilters} title="Limpar filtros" aria-label="Limpar filtros">
                 <XCircle className="h-4 w-4" />
               </Button>
             </div>
@@ -307,21 +324,30 @@ export default function ReviewManagementPage() {
         </Card>
 
         {error && (
-          <Alert variant="error" title="Erro de Sincronização" description={error} />
+          <Alert
+            variant="error"
+            title="Não foi possível carregar as avaliações"
+            description={error}
+            action={<Button size="sm" variant="outline" onClick={load}>Tentar de novo</Button>}
+          />
         )}
 
-        {/* Reviews List */}
+        {/* Lista */}
         <div className="space-y-4">
-          {paginated.length === 0 ? (
+          {error && items.length === 0 ? null : paginated.length === 0 ? (
             <div className="py-24 text-center border-2 border-dashed border-border rounded-3xl bg-muted/20">
-              <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-6 text-muted-foreground/20 ring-8 ring-muted/10">
+              <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-6 text-muted-foreground">
                 <MessageSquare className="h-10 w-10" />
               </div>
-              <h3 className="text-xl font-bold text-foreground">Sem avaliações localizadas</h3>
-              <p className="text-muted-foreground text-sm max-w-sm mx-auto mt-2">Personalize sua busca ou aguarde o feedback espontâneo dos clientes.</p>
-              <Button variant="outline" className="mt-6" onClick={() => { setQuery(''); setMinRating(''); setStatusFilter('all'); }}>
-                Limpar Filtros
-              </Button>
+              <h3 className="text-xl font-bold text-foreground">Nenhuma avaliação encontrada</h3>
+              <p className="text-muted-foreground text-sm max-w-sm mx-auto mt-2">
+                {hasFilters ? 'Ajuste a busca ou os filtros.' : 'As avaliações enviadas pelos clientes aparecem aqui.'}
+              </p>
+              {hasFilters && (
+                <Button variant="outline" size="sm" className="mt-6" onClick={clearFilters}>
+                  Limpar filtros
+                </Button>
+              )}
             </div>
           ) : (
             paginated.map((r) => (
@@ -332,28 +358,28 @@ export default function ReviewManagementPage() {
                       {r.reviewer?.avatarUrl ? (
                          <img src={r.reviewer.avatarUrl} alt="" className="h-full w-full object-cover" />
                       ) : (
-                         <div className="text-lg font-black text-primary/40 uppercase">{(r.reviewer?.name || 'C').charAt(0)}</div>
+                         <div className="text-lg font-black text-primary uppercase">{(r.reviewer?.name || 'C').charAt(0)}</div>
                       )}
                     </div>
-                    
+
                     <div className="min-w-0 space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="font-bold text-foreground">{r.reviewer?.name || 'Cliente Elite'}</h4>
-                        <div className="flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 text-[10px] font-black">
+                        <h4 className="font-bold text-foreground">{r.reviewer?.name || 'Cliente'}</h4>
+                        <div className="flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-warning/10 text-warning text-xs font-bold" aria-label={`Nota ${r.rating} de 5`}>
                           {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} className={`h-3 w-3 ${i < r.rating ? 'fill-current' : 'opacity-20'}`} />
+                            <Star key={i} aria-hidden="true" className={`h-3 w-3 ${i < r.rating ? 'fill-current' : 'opacity-20'}`} />
                           ))}
-                          <span className="ml-1">{r.rating}.0</span>
+                          <span className="ml-1">{r.rating},0</span>
                         </div>
-                        <Badge variant={r.reported ? 'destructive' : 'success'} className="text-[9px] font-black uppercase tracking-tighter">
-                          {r.reported ? 'Oculta / Rejeitada' : 'Publicada / Ativa'}
+                        <Badge variant={r.reported ? 'destructive' : 'success'}>
+                          {r.reported ? 'Rejeitada (oculta)' : 'Publicada'}
                         </Badge>
                       </div>
                       
                       <p className="text-xs text-muted-foreground font-medium flex items-center gap-2">
                         <Calendar className="h-3 w-3" />
                         {new Date(r.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        <span className="opacity-50">#ID {r.id.slice(0, 8)}</span>
+                        <span>#{r.id.slice(0, 8)}</span>
                       </p>
                       
                       {r.comment && (
@@ -364,9 +390,9 @@ export default function ReviewManagementPage() {
                       
                       {r.booking?.equipments && r.booking.equipments.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 pt-2">
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mr-1">ITENS:</span>
+                          <span className="text-xs font-medium text-muted-foreground mr-1">Itens:</span>
                           {r.booking.equipments.map((e, idx) => (
-                            <Badge key={idx} variant="outline" className="text-[9px] bg-muted/30">
+                            <Badge key={idx} variant="outline" size="sm">
                               {e.name}
                             </Badge>
                           ))}
@@ -408,18 +434,16 @@ export default function ReviewManagementPage() {
                       </Button>
                     )}
                     
-                    <Button 
-                      size="sm" 
-                      variant="destructive" 
-                      disabled={actionId === r.id} 
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={actionId === r.id}
                       onClick={() => handleDeleteClick(r.id)}
                       className="h-9 px-4 text-xs font-bold"
+                      aria-label={`Excluir avaliação de ${r.reviewer?.name || 'cliente'}`}
+                      title="Excluir avaliação"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                    
-                    <Button variant="outline" size="icon" className="h-9 w-9 border-transparent">
-                       <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                     </Button>
                   </div>
                 </div>
@@ -446,43 +470,38 @@ export default function ReviewManagementPage() {
       <Modal
         isOpen={!!editingReview}
         onClose={() => setEditingReview(null)}
-        title="Escopo de Edição de Avaliação"
+        title="Editar avaliação"
         size="md"
       >
         {editingReview && (
           <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-bold text-foreground mb-2">Nota de Satisfação (1-5)</label>
-              <div className="flex items-center gap-2">
-                 <Input 
-                   type="number" 
-                   min={1} 
-                   max={5} 
-                   value={editingReview.rating} 
-                                      onChange={(e: ChangeEvent<HTMLInputElement>) => setEditingReview({ ...editingReview, rating: parseInt(e.target.value || '0', 10) })}
-                   className="w-full"
-                 />
-                 <div className="flex items-center gap-1 text-amber-500">
-                   {Array.from({ length: 5 }).map((_, i) => (
-                     <Star key={i} className={`h-5 w-5 ${i < editingReview.rating ? 'fill-current' : 'opacity-20'}`} />
-                   ))}
-                 </div>
-              </div>
+            <div className="flex items-end gap-3">
+               <Input
+                 label="Nota (1 a 5)"
+                 type="number"
+                 min={1}
+                 max={5}
+                 value={editingReview.rating}
+                 onChange={(e: ChangeEvent<HTMLInputElement>) => setEditingReview({ ...editingReview, rating: parseInt(e.target.value || '0', 10) })}
+               />
+               <div className="flex items-center gap-1 text-warning h-12 shrink-0" aria-hidden="true">
+                 {Array.from({ length: 5 }).map((_, i) => (
+                   <Star key={i} className={`h-5 w-5 ${i < editingReview.rating ? 'fill-current' : 'opacity-20'}`} />
+                 ))}
+               </div>
             </div>
-            
-            <div>
-              <label className="block text-sm font-bold text-foreground mb-2">Comentário / Depoimento</label>
-              <textarea 
-                value={editingReview.comment || ''} 
-                onChange={(e) => setEditingReview({ ...editingReview, comment: e.target.value })} 
-                rows={4} 
-                className="w-full flex min-h-[120px] rounded-2xl border border-input bg-card px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all font-medium text-foreground"
-                placeholder="Edite o comentário do cliente respeitando a essência do feedback..."
-              />
-            </div>
-            
+
+            <Textarea
+              label="Comentário"
+              value={editingReview.comment || ''}
+              onChange={(e) => setEditingReview({ ...editingReview, comment: e.target.value })}
+              rows={4}
+              className="min-h-[120px] text-sm"
+              placeholder="Comentário do cliente"
+            />
+
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setEditingReview(null)}>Cancelar Operação</Button>
+              <Button variant="outline" onClick={() => setEditingReview(null)}>Cancelar</Button>
               <Button 
                 onClick={() => handleUpdate(editingReview.id, { rating: editingReview.rating, comment: editingReview.comment })} 
                 isLoading={actionId === editingReview.id}
@@ -500,12 +519,12 @@ export default function ReviewManagementPage() {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmDelete}
-        title="Expurgar Avaliação do Registro?"
-        message="Esta ação é irreversível. O feedback será deletado permanentemente do banco de dados e não poderá ser recuperado."
+        title="Excluir avaliação?"
+        message="A avaliação será apagada e não poderá ser recuperada."
         variant="danger"
         isLoading={isDeleting}
-        confirmText="Confirmar Expurgo"
-        cancelText="Manter Registro"
+        confirmText="Excluir"
+        cancelText="Cancelar"
       />
     </AdminLayout>
   );

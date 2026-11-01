@@ -1,39 +1,36 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Search, 
-  UserPlus, 
-  Trash2, 
-  Edit2, 
-  Download, 
-  Filter, 
-  CheckCircle2, 
-  Clock, 
-  XCircle, 
+import {
+  Search,
+  UserPlus,
+  Trash2,
+  Edit2,
+  Download,
+  Filter,
+  CheckCircle2,
+  Clock,
+  XCircle,
   Mail,
   Phone,
   Building2,
   Users,
-  TrendingUp,
-  CreditCard,
-  Briefcase,
   Star,
-  ChevronRight,
-  Database
 } from 'lucide-react';
 import { useClients } from '@/hooks';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { 
-  Button, 
-  Input, 
-  Select, 
-  Modal, 
-  ConfirmModal, 
-  Card, 
-  Badge, 
+import {
+  Button,
+  Input,
+  Select,
+  Modal,
+  ConfirmModal,
+  Card,
+  Badge,
   Grid,
-  Alert 
+  Alert,
+  Pagination,
+  type StandardVariant,
 } from '@/components/ui/StandardComponents';
 import ClientForm from '@/components/forms/ClientFormPage';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
@@ -42,29 +39,36 @@ import { downloadClientsSpreadsheet } from '@/utils/clientExport';
 
 const ITEMS_PER_PAGE = 10;
 
+// Título e breadcrumb iguais no carregamento e com dados (antes trocavam: "Base de Clientes" → "Gestão de Clientes").
+const PAGE_TITLE = 'Clientes';
+const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Clientes' }];
+
 const STATUS_OPTIONS = [
-  { value: 'all', label: 'Todos os Status' },
+  { value: 'all', label: 'Todos os status' },
   { value: 'ACTIVE', label: 'Ativo' },
   { value: 'INACTIVE', label: 'Inativo' },
   { value: 'PENDING', label: 'Pendente' },
 ];
 
 const SORT_OPTIONS = [
-  { value: 'newest', label: 'Mais Recentes' },
-  { value: 'oldest', label: 'Mais Antigos' },
+  { value: 'newest', label: 'Mais recentes' },
+  { value: 'oldest', label: 'Mais antigos' },
   { value: 'name-asc', label: 'Nome (A-Z)' },
   { value: 'name-desc', label: 'Nome (Z-A)' },
 ];
 
+// Mesmo critério do card "Clientes VIP" (gasto acumulado).
+const VIP_SPENT_THRESHOLD = 5000;
+
 export const ClientListPage: React.FC = () => {
   const { addNotification } = useNotifications();
   const { clients: rawClients, isLoading: loading, error, fetchClients, deleteClient } = useClients();
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -77,6 +81,8 @@ export const ClientListPage: React.FC = () => {
     fetchClients();
   }, [fetchClients]);
 
+  // Achado (auditoria): havia um 4º card "Mix de Faturamento" com "68%" fixo e rótulos inventados
+  // ("Saudável", "High Volume Clients"). Ficam só as contagens calculadas da própria lista.
   const stats = useMemo(() => {
     const list = rawClients || [];
     return {
@@ -87,7 +93,7 @@ export const ClientListPage: React.FC = () => {
          const now = new Date();
          return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
       }).length,
-      vip: list.filter(c => (c.totalSpent || 0) > 5000).length,
+      vip: list.filter(c => (c.totalSpent || 0) > VIP_SPENT_THRESHOLD).length,
     };
   }, [rawClients]);
 
@@ -97,10 +103,10 @@ export const ClientListPage: React.FC = () => {
       const email = (client.email || '').toLowerCase();
       const company = (client.companyName || '').toLowerCase();
       const search = searchTerm.toLowerCase();
-      
+
       const matchesSearch = name.includes(search) || email.includes(search) || company.includes(search);
       const matchesStatus = statusFilter === 'all' || client.status === statusFilter;
-      
+
       return matchesSearch && matchesStatus;
     });
 
@@ -132,11 +138,15 @@ export const ClientListPage: React.FC = () => {
     }
   };
 
-  const totalPages = Math.ceil(filteredClients.length / ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filteredClients.length / ITEMS_PER_PAGE));
+  // Se o filtro encolher a lista, a página atual pode passar do fim — sem isto aparecia "nenhum cliente".
+  const page = Math.min(currentPage, totalPages);
   const paginatedClients = filteredClients.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    (page - 1) * ITEMS_PER_PAGE,
+    page * ITEMS_PER_PAGE
   );
+
+  const clearFilters = () => { setSearchTerm(''); setStatusFilter('all'); setSortBy('newest'); };
 
   const handleCreate = () => {
     setEditingClient(null);
@@ -160,15 +170,15 @@ export const ClientListPage: React.FC = () => {
       await deleteClient(clientToDelete);
       addNotification({
         type: 'success',
-        title: 'Cliente Excluído',
-        message: 'O registro do cliente foi removido permanentemente.',
+        title: 'Cliente excluído',
+        message: 'O cliente foi removido.',
       });
       setIsDeleteModalOpen(false);
     } catch {
       addNotification({
         type: 'error',
-        title: 'Erro na Exclusão',
-        message: 'Não foi possível remover o cliente devido a vínculos ativos.',
+        title: 'Erro ao excluir',
+        message: 'Não foi possível excluir o cliente.',
       });
     } finally {
       setIsDeleting(false);
@@ -176,7 +186,7 @@ export const ClientListPage: React.FC = () => {
     }
   };
 
-  const getStatusInfo = (status: string) => {
+  const getStatusInfo = (status: string): { variant: StandardVariant; label: string; icon: typeof Users } => {
     switch (status) {
       case 'ACTIVE': return { variant: 'success', label: 'Ativo', icon: CheckCircle2 };
       case 'INACTIVE': return { variant: 'destructive', label: 'Inativo', icon: XCircle };
@@ -187,154 +197,139 @@ export const ClientListPage: React.FC = () => {
 
   if (loading && (!rawClients || rawClients.length === 0)) {
     return (
-      <AdminLayout title="Base de Clientes" breadcrumbs={[{ name: 'Admin' }, { name: 'Clientes' }]}>
+      <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
         <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <BrandLoader size={120} label="Sincronizando base de dados..." />
+          <BrandLoader size={120} label="Carregando clientes…" />
         </div>
       </AdminLayout>
     );
   }
 
+  const hasFilters = searchTerm !== '' || statusFilter !== 'all' || sortBy !== 'newest';
+  // Erro de API nunca pode aparecer como "nenhum cliente": sem dados, mostra só o aviso de erro.
+  const showTable = !(error && (!rawClients || rawClients.length === 0));
+
   return (
-    <AdminLayout title="Gestão de Clientes" breadcrumbs={[{ name: 'Admin' }, { name: 'CRM' }, { name: 'Clientes' }]}>
-      <div className="space-y-8">
-        {/* Header and Quick Actions */}
+    <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
+      <div className="space-y-6">
+        {/* Cabeçalho e ações */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 shadow-lg ring-1 ring-indigo-500/20">
-              <Users className="h-7 w-7" />
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+              <Users className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-black text-foreground uppercase tracking-tighter">Central de Relacionamento</h2>
-                <Badge variant="outline" className="text-[10px] font-black uppercase px-2 h-5 bg-indigo-500/5 border-indigo-500/20 text-indigo-500">{stats.total} Registros</Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-bold text-foreground">Base de clientes</h2>
+                <Badge variant="primary">{stats.total} cadastrados</Badge>
               </div>
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">Gestão de parceiros, empresas e faturamento recorrente</p>
+              <p className="text-sm text-muted-foreground">Clientes, empresas e dados de contato.</p>
             </div>
           </div>
-          
+
           <div className="flex flex-wrap items-center gap-3">
-             <Button onClick={handleExport} variant="outline" className="h-11 px-6 font-black uppercase text-[10px] tracking-widest border-border/60 hover:bg-muted group">
-               <Download className="h-4 w-4 mr-2" /> Exportar Dados (Excel)
+             <Button onClick={handleExport} variant="outline" size="sm" leftIcon={<Download className="h-4 w-4" />}>
+               Exportar (Excel)
              </Button>
-             <Button onClick={handleCreate} className="h-11 px-8 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-500/20 bg-indigo-500 text-white hover:scale-[1.02] transition-transform active:scale-[0.98]">
-               <UserPlus className="h-5 w-5 mr-2" /> Vincular Novo Cliente
+             <Button onClick={handleCreate} size="sm" leftIcon={<UserPlus className="h-4 w-4" />}>
+               Novo cliente
              </Button>
           </div>
         </div>
 
-        {/* Stats Pulse Grid */}
-        <Grid columns={{ sm: 1, md: 2, lg: 4 }} gap={6}>
-          <Card className="p-6 bg-card border-border/40 overflow-hidden relative group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Users size={80} />
-            </div>
-            <div className="relative z-10 space-y-4">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Base Ativa</p>
-                <div className="flex items-end justify-between">
-                    <div>
-                        <p className="text-3xl font-black text-foreground tracking-tighter">{stats.active}</p>
-                        <p className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 mt-1 uppercase">
-                           <TrendingUp className="h-3 w-3" /> Saudável
-                        </p>
-                    </div>
-                    <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
-                        <Users size={20} />
-                    </div>
-                </div>
-            </div>
-          </Card>
-          
-          <Card className="p-6 bg-card border-border/40 overflow-hidden relative group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <UserPlus size={80} />
-            </div>
-            <div className="relative z-10 space-y-4">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Novas Entradas</p>
-                <div className="flex items-end justify-between">
-                    <div>
-                        <p className="text-3xl font-black text-foreground tracking-tighter">{stats.newThisMonth}</p>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60 mt-1">Este período fiscal</p>
-                    </div>
-                    <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                        <Clock size={20} />
-                    </div>
-                </div>
+        {/* Indicadores */}
+        <Grid columns={{ sm: 1, md: 3 }} gap={6}>
+          <Card className="p-4 bg-primary/5 border-primary/10">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Clientes ativos</p>
+                <p className="text-2xl font-bold text-foreground">{stats.active}</p>
+              </div>
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-border/40 overflow-hidden relative group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Star size={80} />
-            </div>
-            <div className="relative z-10 space-y-4">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Parceiros VIP</p>
-                <div className="flex items-end justify-between">
-                    <div>
-                        <p className="text-3xl font-black text-foreground tracking-tighter">{stats.vip}</p>
-                        <p className="text-[10px] font-bold text-amber-500 uppercase mt-1">High Volume Clients</p>
-                    </div>
-                    <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
-                        <Star size={20} />
-                    </div>
-                </div>
+          <Card className="p-4 bg-success/5 border-success/10">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
+                <UserPlus className="h-5 w-5 text-success" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Cadastrados no mês</p>
+                <p className="text-2xl font-bold text-foreground">{stats.newThisMonth}</p>
+              </div>
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-border/40 overflow-hidden relative group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Briefcase size={80} />
-            </div>
-            <div className="relative z-10 space-y-4">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Mix de Faturamento</p>
-                <div className="flex items-end justify-between">
-                    <div>
-                        <p className="text-3xl font-black text-foreground tracking-tighter">68%</p>
-                        <p className="text-[10px] font-bold text-emerald-600 uppercase mt-1">Conversão recorrente</p>
-                    </div>
-                    <div className="h-10 w-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500">
-                        <CreditCard size={20} />
-                    </div>
-                </div>
+          <Card className="p-4 bg-warning/5 border-warning/10">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center">
+                <Star className="h-5 w-5 text-warning" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Clientes VIP</p>
+                <p className="text-2xl font-bold text-foreground">{stats.vip}</p>
+                <p className="text-xs text-muted-foreground">Gasto acima de R$ 5.000</p>
+              </div>
             </div>
           </Card>
         </Grid>
 
-        {error && <Alert variant="error" title="Falha de Comunicação" description="Ocorreu uma instabilidade ao recuperar os registros do CRM." />}
+        {error && (
+          <Alert
+            variant="error"
+            title="Não foi possível carregar os clientes"
+            description={error}
+            action={<Button size="sm" variant="outline" onClick={() => fetchClients()}>Tentar de novo</Button>}
+          />
+        )}
 
-        {/* Filters and Control Center */}
-        <Card className="p-4 border-dashed border-2 bg-muted/20 relative overflow-visible z-20">
+        {/* Filtros */}
+        <Card className="p-4 border-dashed border-2 bg-muted/20">
           <div className="flex flex-col lg:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="flex-1">
               <Input
-                placeholder="Rastrear por nome, empresa, e-mail institucional ou identificador..."
-                className="pl-10 h-10 text-xs font-medium bg-card border-border/60"
+                size="sm"
+                placeholder="Buscar por nome, empresa ou e-mail..."
+                aria-label="Buscar clientes"
+                leftIcon={<Search className="h-4 w-4" />}
+                className="bg-card"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex items-center gap-2">
-              <div className="relative w-48">
-                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground z-10" />
+            {/* flex-col no celular: dois selects de 192px + botão estouravam a tela de 375px */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <div className="relative w-full sm:w-48">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
                 <Select
-                  className="pl-9 h-10 text-[10px] font-bold uppercase tracking-widest bg-card border-border/60"
+                  size="sm"
+                  className="pl-9 bg-card"
+                  aria-label="Filtrar por status"
                   value={statusFilter}
-                                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
                   options={STATUS_OPTIONS}
                 />
               </div>
-              <Select
-                className="w-48 h-10 text-[10px] font-bold uppercase tracking-widest bg-card border-border/60"
-                value={sortBy}
-                                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSortBy(e.target.value)}
-                options={SORT_OPTIONS}
-              />
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-10 w-10 border-border/60 hover:bg-muted text-muted-foreground"
-                onClick={() => { setSearchTerm(''); setStatusFilter('all'); setSortBy('newest'); }}
+              <div className="w-full sm:w-48">
+                <Select
+                  size="sm"
+                  className="bg-card"
+                  aria-label="Ordenar por"
+                  value={sortBy}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSortBy(e.target.value)}
+                  options={SORT_OPTIONS}
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0 self-end sm:self-auto"
+                onClick={clearFilters}
+                aria-label="Limpar filtros"
+                title="Limpar filtros"
               >
                 <XCircle className="h-4 w-4" />
               </Button>
@@ -342,108 +337,104 @@ export const ClientListPage: React.FC = () => {
           </div>
         </Card>
 
-        {/* Global Client Registry */}
-        <Card className="overflow-hidden border-border/60 shadow-2xl bg-card animate-in fade-in duration-700">
-          <div className="overflow-x-auto custom-scrollbar">
+        {showTable && (
+        <Card className="overflow-hidden border-border shadow-sm animate-in fade-in duration-700">
+          <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-muted/40 border-b border-border/50">
-                  <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">Sinal de Identidade</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">Corporativo / Empresa</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">Status</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em] text-right">Lançamento</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-right text-muted-foreground uppercase tracking-[0.1em]">Ações de Terminal</th>
+                <tr className="bg-muted/50 border-b border-border">
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Cliente</th>
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Empresa</th>
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Cadastro</th>
+                  <th className="px-6 py-4 text-xs font-bold text-right text-muted-foreground uppercase tracking-wider">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/40">
+              <tbody className="divide-y divide-border">
                 {paginatedClients.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-24 text-center">
-                      <div className="inline-flex h-20 w-20 items-center justify-center rounded-[2rem] bg-indigo-500/5 mb-6 ring-8 ring-indigo-500/5 transition-all">
-                        <Database className="h-10 w-10 text-indigo-500/30" />
+                    <td colSpan={5} className="px-6 py-20 text-center">
+                      <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
+                        <Users className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Base Silenciosa</h3>
-                      <p className="text-xs text-muted-foreground max-w-xs mx-auto mt-2 font-medium">Não foram interceptados registros com os parâmetros de consulta atuais.</p>
-                      <Button variant="outline" className="mt-8 font-black uppercase text-[10px] tracking-widest h-10 px-6 rounded-xl border-indigo-500/20 text-indigo-500 hover:bg-indigo-500/5" onClick={() => { setSearchTerm(''); setStatusFilter('all'); }}>
-                        Redefinir Indexadores
-                      </Button>
+                      <h3 className="text-lg font-bold text-foreground">Nenhum cliente encontrado</h3>
+                      <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">
+                        {hasFilters ? 'Ajuste a busca ou os filtros.' : 'Ainda não há clientes cadastrados.'}
+                      </p>
+                      {hasFilters && (
+                        <Button variant="outline" size="sm" className="mt-6" onClick={clearFilters}>
+                          Limpar filtros
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ) : (
                   paginatedClients.map((client) => {
                     const statusInfo = getStatusInfo(client.status || 'ACTIVE');
+                    const clientName = client.name || 'Sem nome';
                     return (
-                      <tr key={client.id} className="hover:bg-muted/30 transition-all group animate-in fade-in slide-in-from-left-4 duration-500">
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-4">
-                            <div className="h-11 w-11 rounded-[1rem] bg-gradient-to-br from-indigo-500/10 to-indigo-500/30 border border-indigo-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                              <span className="text-sm font-black text-indigo-600 uppercase">{(client.name || '?').charAt(0)}</span>
+                      <tr key={client.id} className="hover:bg-muted/20 transition-colors group animate-in fade-in slide-in-from-left-4 duration-500">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                              <span className="text-sm font-bold text-primary uppercase">{(client.name || '?').charAt(0)}</span>
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <p className="text-[13px] font-black text-foreground truncate tracking-tight uppercase">{client.name || 'Incompleto'}</p>
-                                {client.isVip && <Star size={10} className="text-amber-500 fill-amber-500" />}
+                                <p className="text-sm font-bold text-foreground truncate">{clientName}</p>
+                                {client.isVip && <Star size={12} className="text-warning fill-warning" aria-label="Cliente VIP" />}
                               </div>
-                              <div className="flex items-center gap-3 mt-0.5">
-                                <div className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground lowercase opacity-70">
-                                   <Mail size={10} /> {client.email || 'N/A'}
-                                </div>
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                   <Mail size={12} aria-hidden="true" /> {client.email || 'Sem e-mail'}
+                                </span>
                                 {client.phone && (
-                                   <div className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground opacity-70">
-                                      <Phone size={10} /> {client.phone}
-                                   </div>
+                                   <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                      <Phone size={12} aria-hidden="true" /> {client.phone}
+                                   </span>
                                 )}
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-5">
-                          <div className="flex flex-col gap-1">
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-0.5">
                              <div className="flex items-center gap-2">
-                                <Building2 size={12} className="text-muted-foreground" />
-                                <span className="text-[11px] font-black text-foreground uppercase tracking-wider">{client.companyName || 'Pessoa Física'}</span>
+                                <Building2 size={14} className="text-muted-foreground" aria-hidden="true" />
+                                <span className="text-sm font-medium text-foreground">{client.companyName || 'Pessoa física'}</span>
                              </div>
                              {client.taxId && (
-                                <div className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground opacity-50 uppercase tracking-tighter">
-                                   <span className="bg-muted px-1 rounded">DOC</span> {client.taxId}
-                                </div>
+                                <span className="text-xs text-muted-foreground">CPF/CNPJ: {client.taxId}</span>
                              )}
                           </div>
                         </td>
-                        <td className="px-6 py-5">
-                           <div className="flex items-center gap-2">
-                               <div className={`h-1.5 w-1.5 rounded-full ${statusInfo.variant === 'success' ? 'bg-emerald-500 animate-pulse' : statusInfo.variant === 'destructive' ? 'bg-destructive' : 'bg-amber-500'}`} />
-                               <span className={`text-[10px] font-black uppercase tracking-tighter ${statusInfo.variant === 'success' ? 'text-emerald-600' : 'text-muted-foreground opacity-60'}`}>
-                                  {statusInfo.label}
-                                </span>
-                           </div>
+                        <td className="px-6 py-4">
+                          <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
                         </td>
-                        <td className="px-6 py-5 text-right">
-                          <div className="flex flex-col items-end">
-                              <span className="text-xs font-black text-foreground tracking-tighter">{new Date(client.createdAt || '').toLocaleDateString('pt-BR')}</span>
-                              <span className="text-[9px] font-black text-muted-foreground uppercase opacity-40 tracking-widest">Início Ciclo</span>
-                          </div>
+                        <td className="px-6 py-4 text-right">
+                          <span className="text-sm text-foreground">{new Date(client.createdAt || '').toLocaleDateString('pt-BR')}</span>
                         </td>
-                        <td className="px-6 py-5">
-                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-1 group-hover:translate-x-0">
-                            <Button 
-                              variant="outline" 
-                              size="icon" 
-                              className="h-9 w-9 rounded-xl border-border/40 hover:text-indigo-500 hover:border-indigo-500/50 bg-card shadow-sm" 
+                        <td className="px-6 py-4">
+                          <div className="flex justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-9 w-9"
                               onClick={() => handleEdit(client)}
+                              aria-label={`Editar ${clientName}`}
+                              title="Editar"
                             >
                               <Edit2 className="h-4 w-4" />
                             </Button>
-                            <Button 
-                              variant="outline" 
-                              size="icon" 
-                              className="h-9 w-9 rounded-xl border-border/40 hover:text-destructive hover:border-destructive/50 bg-card shadow-sm" 
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-9 w-9 hover:text-destructive hover:border-destructive/50"
                               onClick={() => handleDeleteClick(client.id)}
+                              aria-label={`Excluir ${clientName}`}
+                              title="Excluir"
                             >
                               <Trash2 className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-border/40 hover:bg-muted group/ext">
-                              <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                             </Button>
                           </div>
                         </td>
@@ -454,55 +445,36 @@ export const ClientListPage: React.FC = () => {
               </tbody>
             </table>
           </div>
-
-          {/* Tactical Pagination Footer */}
-          {totalPages > 1 && (
-             <div className="px-8 py-6 bg-muted/10 border-t border-border/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                   <Database size={14} className="opacity-50" /> Mostrando {paginatedClients.length} de {filteredClients.length} entidades de negócio
-                </p>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => prev - 1)}
-                    className="h-10 px-5 text-[10px] font-black uppercase tracking-widest rounded-xl"
-                  >
-                    Retroceder
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => (prev as number) + 1)}
-                    className="h-10 px-5 text-[10px] font-black uppercase tracking-widest rounded-xl"
-                  >
-                    Avançar
-                  </Button>
-                </div>
-             </div>
-          )}
         </Card>
+        )}
+
+        {showTable && (
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={filteredClients.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={(p: number) => setCurrentPage(p)}
+          />
+        )}
       </div>
 
-      {/* Specialty Modals */}
       <Modal
         isOpen={isFormModalOpen}
         onClose={() => guardClose(() => setIsFormModalOpen(false))}
-        title={editingClient ? `Ficha de Registro VIP: ${editingClient.name}` : 'Acordo de Parceria: Novo Cliente'}
+        title={editingClient ? `Editar cliente: ${editingClient.name}` : 'Novo cliente'}
         size="lg"
       >
         <ClientForm
-                    initialData={editingClient}
+          initialData={editingClient}
           onDirtyChange={setIsFormDirty}
           onSuccess={() => {
             setIsFormModalOpen(false);
             fetchClients();
             addNotification({
               type: 'success',
-              title: 'Sincronização OK',
-              message: 'Os parâmetros do cliente foram atualizados no repositório.',
+              title: 'Cliente salvo',
+              message: 'Os dados do cliente foram salvos.',
             });
           }}
           onCancel={() => guardClose(() => setIsFormModalOpen(false))}
@@ -520,16 +492,17 @@ export const ClientListPage: React.FC = () => {
         cancelText="Continuar Editando"
       />
 
+      {/* A mensagem antiga prometia "cache de auditoria por 5 anos" — retenção que não existe no sistema. */}
       <ConfirmModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
-        title="Validar Exclusão de Entidade?"
-        message="Esta operação removerá o cliente e suas preferências da base ativa. Dados vinculados a contratos financeiros existentes permanecerão em cache de auditoria por 5 anos."
+        title="Excluir cliente?"
+        message="O cliente será removido da base. Esta ação não pode ser desfeita."
         variant="danger"
         isLoading={isDeleting}
-        confirmText="Confirmar Purga"
-        cancelText="Manter Registro"
+        confirmText="Excluir"
+        cancelText="Cancelar"
       />
     </AdminLayout>
   );

@@ -13,6 +13,7 @@ import { BrandLoader } from '@/components/ui/BrandLoader';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import {
   Button,
+  buttonVariants,
   Input,
   Select,
   Modal,
@@ -36,7 +37,6 @@ import {
   Clock, 
   CheckCircle2, 
   AlertCircle,
-  MoreHorizontal,
   Eye,
   Edit2,
   Download,
@@ -57,6 +57,9 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'all', label: 'TODOS OS STATUS' },
   ...BOOKING_STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label.toUpperCase() })),
 ];
+
+const PAGE_TITLE = 'Gestão de Reservas';
+const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Reservas' }];
 
 // Aux function for safe price parsing
 const safeParsePrice = (value: string | number | undefined): number => {
@@ -81,6 +84,20 @@ export const BookingListPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<BookingListItem | null>(null);
+  // Referência estável: o AdminBookingForm faz reset() quando initialData muda, e um objeto novo a
+  // cada render (antes, inline no JSX) apagava o que a pessoa digitava na edição.
+  const editInitialData = useMemo(
+    () =>
+      editingBooking
+        ? {
+            ...editingBooking,
+            totalPrice: Number(editingBooking.totalPrice),
+            status: editingBooking.status as BookingStatus,
+            client: { name: editingBooking.client?.user?.name },
+          }
+        : null,
+    [editingBooking]
+  );
   const [initialClientType, setInitialClientType] = useState<'registered' | 'manual'>('registered');
   const [isFormDirty, setIsFormDirty] = useState(false);
   const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
@@ -254,19 +271,16 @@ export const BookingListPage = () => {
 
   if (loading && bookings.length === 0) {
     return (
-      <AdminLayout title="Gestão de Reservas" breadcrumbs={[{ name: 'Admin' }, { name: 'Reservas' }]}>
+      <AdminLayout title={PAGE_TITLE}  breadcrumbs={BREADCRUMBS}>
         <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in duration-700">
-          <BrandLoader size="xl" />
-          <p className="mt-8 text-muted-foreground font-medium tracking-widest uppercase text-[10px] animate-pulse">
-            Carregando sua frota X Produções...
-          </p>
+          <BrandLoader size="xl" label="Carregando reservas…" />
         </div>
       </AdminLayout>
     );
   }
 
   return (
-    <AdminLayout title="Gestão de Reservas" breadcrumbs={[{ name: 'Admin' }, { name: 'Reservas' }]}>
+    <AdminLayout title={PAGE_TITLE}  breadcrumbs={BREADCRUMBS}>
       <div className="space-y-6">
         {/* Header and Quick Stats */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -301,10 +315,8 @@ export const BookingListPage = () => {
             <Button onClick={handleCreateManual} variant="outline" className="gap-2 border-primary/20 hover:border-primary/40">
               <Plus className="h-4 w-4" /> Reserva Manual
             </Button>
-            <Link to="/admin/orcamentos/novo">
-              <Button className="gap-2 bg-primary text-white border border-primary/20 hover:bg-primary/80 hover:text-white transition-all shadow-lg shadow-primary/5 focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                <Zap className="h-4 w-4" /> Criar Proposta Rápida
-              </Button>
+            <Link to="/admin/orcamentos/novo" className={buttonVariants({ className: 'gap-2 shadow-lg shadow-primary/5' })}>
+              <Zap className="h-4 w-4" /> Criar Proposta Rápida
             </Link>
             <Button onClick={handleCreate} className="gap-2 shadow-lg shadow-primary/20">
               <Plus className="h-5 w-5" /> Nova Reserva
@@ -325,10 +337,10 @@ export const BookingListPage = () => {
               </div>
             </div>
           </Card>
-          <Card className="p-4 bg-amber-500/5 border-amber-500/10">
+          <Card className="p-4 bg-warning/5 border-warning/20">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-amber-500" />
+              <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-warning" />
               </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pendentes</p>
@@ -336,10 +348,10 @@ export const BookingListPage = () => {
               </div>
             </div>
           </Card>
-          <Card className="p-4 bg-emerald-500/5 border-emerald-500/10">
+          <Card className="p-4 bg-success/5 border-success/20">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+              <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-success" />
               </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Confirmadas</p>
@@ -347,10 +359,10 @@ export const BookingListPage = () => {
               </div>
             </div>
           </Card>
-          <Card className="p-4 bg-blue-500/5 border-blue-500/10">
+          <Card className="p-4 bg-info/5 border-info/20">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <CreditCard className="h-5 w-5 text-blue-500" />
+              <div className="h-10 w-10 rounded-full bg-info/10 flex items-center justify-center">
+                <CreditCard className="h-5 w-5 text-info" />
               </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Concluídas</p>
@@ -361,7 +373,7 @@ export const BookingListPage = () => {
         </Grid>
 
         {error && (
-          <Alert variant="error" action={<Button variant="outline" size="sm" onClick={() => window.location.reload()}>Recarregar</Button>}>
+          <Alert variant="error" action={<Button variant="outline" size="sm" onClick={fetchBookings}>Tentar de novo</Button>}>
             {error}
           </Alert>
         )}
@@ -369,11 +381,12 @@ export const BookingListPage = () => {
         {/* Filters and Search Bar */}
         <Card className="p-4 border-dashed border-2 bg-muted/20">
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="flex-1">
               <Input
+                leftIcon={<Search className="h-4 w-4" />}
+                aria-label="Buscar reservas"
                 placeholder="Buscar por cliente, empresa ou ID da reserva..."
-                className="pl-10 h-10 border-border bg-card"
+                className="h-10 border-border bg-card"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -385,15 +398,15 @@ export const BookingListPage = () => {
                   type="date" 
                   value={startDate} 
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest focus:ring-0 w-24 outline-none"
+                  className="bg-transparent border-none text-xs font-semibold text-foreground focus-visible:ring-2 focus-visible:ring-ring rounded w-28 outline-none"
                   aria-label="Data inicial"
                 />
-                <span className="text-[10px] font-black text-muted-foreground opacity-30 px-1">ATÉ</span>
+                <span className="text-xs font-medium text-muted-foreground px-1">até</span>
                 <input 
                   type="date" 
                   value={endDate} 
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest focus:ring-0 w-24 outline-none"
+                  className="bg-transparent border-none text-xs font-semibold text-foreground focus-visible:ring-2 focus-visible:ring-ring rounded w-28 outline-none"
                   aria-label="Data final"
                 />
               </div>
@@ -403,7 +416,7 @@ export const BookingListPage = () => {
                 <Select
                   value={filterStatus}
                                     onChange={(e: ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value)}
-                  className="pl-10 h-10 border-border bg-card rounded-xl text-[10px] font-black uppercase tracking-widest"
+                  className="pl-10 h-10 border-border bg-card rounded-xl text-xs font-semibold uppercase tracking-wider"
                   aria-label="Filtrar por status"
                   options={STATUS_FILTER_OPTIONS}
                 />
@@ -415,7 +428,7 @@ export const BookingListPage = () => {
                   value={filterPayment}
                   onChange={(e: ChangeEvent<HTMLSelectElement>) => setFilterPayment(e.target.value)}
                   aria-label="Filtrar por pagamento"
-                  className="pl-10 h-10 border-border bg-card rounded-xl text-[10px] font-black uppercase tracking-widest"
+                  className="pl-10 h-10 border-border bg-card rounded-xl text-xs font-semibold uppercase tracking-wider"
                   options={[
                     { value: 'all', label: 'TODOS OS PAGAMENTOS' },
                     { value: 'PAID', label: '💰 PAGO' },
@@ -436,7 +449,7 @@ export const BookingListPage = () => {
                     setStartDate('');
                     setEndDate('');
                   }}
-                  className="h-10 px-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground"
+                  className="h-10 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
                 >
                   <AlertCircle size={14} className="mr-2" /> Limpar
                 </Button>
@@ -453,7 +466,7 @@ export const BookingListPage = () => {
                 <tr className="bg-muted/50 border-b border-border">
                   <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Cliente / ID</th>
                   <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Evento</th>
-                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Investimento</th>
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Valor</th>
                   <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status Reserva</th>
                   <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Pagamento</th>
                   <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Entrega</th>
@@ -461,15 +474,22 @@ export const BookingListPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filteredBookings.length === 0 ? (
+                {filteredBookings.length === 0 && error && bookings.length === 0 ? (
+                  // Falha ao carregar: o Alert acima já explica — não dizer "nenhuma reserva localizada".
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                      Não foi possível carregar as reservas.
+                    </td>
+                  </tr>
+                ) : filteredBookings.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-20 text-center">
-                      <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4 opacity-50">
+                      <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
                         <AlertCircle className="h-8 w-8 text-muted-foreground" />
                       </div>
                       <h3 className="text-lg font-bold text-foreground">Nenhuma reserva localizada</h3>
                       <p className="text-muted-foreground max-w-xs mx-auto">Tente ajustar seus filtros ou busca para encontrar o que procura.</p>
-                      <Button variant="outline" className="mt-6" onClick={() => { setSearchTerm(''); setFilterStatus('all'); setFilterPayment('all'); }}>
+                      <Button variant="outline" className="mt-6" onClick={() => { setSearchTerm(''); setFilterStatus('all'); setFilterPayment('all'); setStartDate(''); setEndDate(''); }}>
                         Limpar Filtros
                       </Button>
                     </td>
@@ -493,7 +513,7 @@ export const BookingListPage = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <Badge variant="outline" className="text-sm font-bold border-emerald-500/20 text-emerald-600 bg-emerald-500/5">
+                        <Badge variant="success" size="lg" className="font-bold">
                           {formatPrice(safeParsePrice(booking.totalPrice))}
                         </Badge>
                       </td>
@@ -525,16 +545,20 @@ export const BookingListPage = () => {
                         />
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Link to={`/admin/reservas/${booking.id}`}>
-                            <Button variant="outline" size="icon" className="h-8 w-8" title="Ver Detalhes">
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
+                        {/* Visíveis no toque e no foco por teclado; só no desktop com mouse aparecem no hover. */}
+                        <div className="flex justify-end gap-1.5 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                          <Link
+                            to={`/admin/reservas/${booking.id}`}
+                            className={buttonVariants({ variant: 'outline', size: 'icon', className: 'h-9 w-9' })}
+                            title="Ver detalhes"
+                            aria-label={`Ver detalhes da reserva ${booking.id}`}
+                          >
+                            <Eye className="h-4 w-4" />
                           </Link>
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-8 w-8 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900 border-green-200 dark:border-green-400 focus:ring-2 focus:ring-green-500 focus:ring-offset-2" 
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 text-success border-success/30 hover:bg-success/10"  
                             onClick={() => {
                               const url = `${window.location.origin}/proposta/${booking.id}`;
                               const text = `Olá! Sou da X Produções. Segue o link com a sua proposta comercial exclusiva para o evento: ${url}`;
@@ -542,20 +566,19 @@ export const BookingListPage = () => {
                               window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
                             }} 
                             title="WhatsApp"
+                            aria-label={`Enviar proposta da reserva ${booking.id} pelo WhatsApp`}
                           >
-                            <MessageSquare className="h-3.5 w-3.5" />
+                            <MessageSquare className="h-4 w-4" />
                           </Button>
                           <Button 
                             variant="outline" 
                             size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => handleEdit(booking)} 
-                            title="Editar Reserva"
+                            className="h-9 w-9"
+                            onClick={() => handleEdit(booking)}
+                            title="Editar reserva"
+                            aria-label={`Editar reserva ${booking.id}`}
                           >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="outline" size="icon" className="h-8 w-8 text-muted-foreground/50 hover:text-foreground">
-                            <MoreHorizontal className="h-3.5 w-3.5" />
+                            <Edit2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </td>
@@ -566,16 +589,13 @@ export const BookingListPage = () => {
             </table>
           </div>
 
-          {/* Footer / Pagination Placeholder */}
+          {/* Rodapé: a lista inteira já vem carregada e filtrada no navegador — os botões
+              "Anterior/Próxima" que ficavam aqui eram enfeite (sempre desabilitados). */}
           {filteredBookings.length > 0 && (
-            <div className="px-6 py-4 bg-muted/10 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <p className="text-xs text-muted-foreground italic font-medium">
+            <div className="px-6 py-4 bg-muted/10 border-t border-border">
+              <p className="text-sm text-muted-foreground">
                 Mostrando {filteredBookings.length} de {bookings.length} registros encontrados.
               </p>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled className="h-8 text-xs">Anterior</Button>
-                <Button variant="outline" size="sm" disabled className="h-8 text-xs">Próxima</Button>
-              </div>
             </div>
           )}
         </Card>
@@ -585,18 +605,13 @@ export const BookingListPage = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => guardClose(handleCancel)}
-        title={editingBooking ? 'Ficha de Edição de Reserva' : (initialClientType === 'manual' ? 'Lançamento de Reserva Manual' : 'Abertura de Nova Reserva')}
+        title={editingBooking ? 'Editar reserva' : (initialClientType === 'manual' ? 'Nova reserva manual' : 'Nova reserva')}
         size="full"
         className="max-h-[90vh] max-w-5xl"
       >
         <div className="min-w-0">
           <BookingForm
-                        initialData={editingBooking ? {
-                          ...editingBooking,
-                          totalPrice: Number(editingBooking.totalPrice),
-                          status: editingBooking.status as BookingStatus,
-                          client: { name: editingBooking.client?.user?.name },
-                        } : editingBooking}
+                        initialData={editInitialData}
             defaultClientType={initialClientType}
             onSuccess={handleSuccess}
             onDirtyChange={setIsFormDirty}

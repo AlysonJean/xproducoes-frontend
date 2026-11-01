@@ -3,26 +3,29 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { socialService, SocialPost } from '../../services/socialService';
 import { ModerationGrid } from '../../components/social/ModerationGrid';
-import { 
-  RefreshCw, 
-  Settings, 
-  Check, 
-  Tv, 
-  Zap, 
-  ShieldCheck, 
-  Layout, 
-  Globe, 
+import {
+  RefreshCw,
+  Settings,
+  Check,
+  Tv,
+  Zap,
+  ShieldCheck,
+  Layout,
+  Globe,
   ArrowLeft,
   XCircle
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { AdminLayout } from '../../components/admin/AdminLayout';
-import { 
-  Button, 
-  Card, 
-  Modal, 
+import {
+  Button,
+  Card,
+  Modal,
   Badge,
-  Input
+  Input,
+  Select,
+  Checkbox,
+  Alert,
 } from '../../components/ui/StandardComponents';
 import { apiFetch } from '../../services/api';
 import { BrandLoader } from '../../components/ui/BrandLoader';
@@ -35,12 +38,29 @@ interface SponsorLogo {
     imageUrl: string;
 }
 
+type ModerationTab = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+// Título e breadcrumb constantes (antes o título trocava de "Social Moderation" para "Mural: …"
+// quando os dados chegavam). O nome do mural aparece no cabeçalho da página.
+const PAGE_TITLE = 'Moderação do mural';
+const BREADCRUMBS = [
+  { name: 'Admin', href: '/admin/painel' },
+  { name: 'Mural social', href: '/admin/social' },
+  { name: 'Moderação' },
+];
+
+const TABS: { id: ModerationTab; label: string; icon: typeof Check; color: string }[] = [
+  { id: 'PENDING', label: 'Aguardando moderação', icon: ShieldCheck, color: 'text-warning' },
+  { id: 'APPROVED', label: 'No telão', icon: Check, color: 'text-success' },
+  { id: 'REJECTED', label: 'Arquivadas', icon: XCircle, color: 'text-destructive' },
+];
+
 const AdminSocialPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
-  
+
   // Distinguish context based on URL
   const isBookingContext = location.pathname.includes('/reservas/');
   const eventId = isBookingContext ? id : undefined;
@@ -48,41 +68,46 @@ const AdminSocialPage: React.FC = () => {
 
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [processing, setProcessing] = useState<string[]>([]);
-  const [tab, setTab] = useState<'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
+  const [tab, setTab] = useState<ModerationTab>('PENDING');
   const [pairingCode, setPairingCode] = useState('');
   const [pairingLoading, setPairingLoading] = useState(false);
-    const [wall, setWall] = useState<Record<string, unknown> | null>(null);
+  const [wall, setWall] = useState<Record<string, unknown> | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [allSponsors, setAllSponsors] = useState<SponsorLogo[]>([]);
   const [selectedSponsorIds, setSelectedSponsorIds] = useState<string[]>([]);
   const [savingSettings, setSavingSettings] = useState(false);
+  // Estado real da conexão em tempo real (antes um rodapé fixo dizia "Socket.io Conectado" sempre).
+  const [socketConnected, setSocketConnected] = useState(false);
 
   const fetchPosts = useCallback(async () => {
     try {
         if (!id) return;
         setLoading(true);
-        const response = await socialService.getPosts({ 
-            eventId: eventId, 
+        const response = await socialService.getPosts({
+            eventId: eventId,
             settingId: settingId,
             status: tab,
-            limit: 100 
+            limit: 100
         });
         setPosts(response.data || []);
-        
+
         const targetId = response.settingId || settingId;
         if (targetId) {
             const configRes = await socialService.getAdminWall(targetId);
             setWall(configRes.data);
-                        setSelectedSponsorIds((configRes.data.sponsors as {id: string}[] | undefined)?.map(s => s.id) || []);
+            setSelectedSponsorIds((configRes.data.sponsors as {id: string}[] | undefined)?.map(s => s.id) || []);
         }
+        setLoadError(null);
     } catch (error) {
+        // Antes: só toast — a grade dizia que não havia publicações.
         logger.error('Failed to fetch posts', 'AdminSocialPage', error);
-        addNotification({ type: 'error', title: 'Falha Técnica', message: 'Erro ao tentar conectar com a API social.' });
+        setLoadError('Não foi possível carregar as publicações do mural.');
     } finally {
         setLoading(false);
     }
-  }, [id, eventId, settingId, tab, addNotification]);
+  }, [id, eventId, settingId, tab]);
 
   useEffect(() => {
     fetchPosts();
@@ -96,20 +121,23 @@ const AdminSocialPage: React.FC = () => {
          logger.error('Erro', 'AdminSocialPage', err);
      }
   };
-  
+
   useEffect(() => {
     if (!id) return;
-    
+
     const socketUrl = window.location.hostname === 'localhost' ? 'http://localhost:4000' : '/';
     const socket = io(socketUrl, { path: '/socket.io' });
 
     socket.on('connect', () => {
+        setSocketConnected(true);
         if (settingId) {
             socket.emit('join', `wall:${settingId}`);
         } else if (eventId) {
             socket.emit('join', `event:${eventId}`);
         }
     });
+
+    socket.on('disconnect', () => setSocketConnected(false));
 
     socket.on('post:new', (post: SocialPost) => {
         setPosts(prev => {
@@ -121,7 +149,7 @@ const AdminSocialPage: React.FC = () => {
             }
         });
         if (post.status === 'PENDING') {
-            addNotification({ type: 'info', title: 'Novo Post', message: 'Mural recebeu uma nova mídia para moderação.' });
+            addNotification({ type: 'info', title: 'Nova publicação', message: 'O mural recebeu uma nova foto para moderar.' });
         }
     });
 
@@ -131,26 +159,27 @@ const AdminSocialPage: React.FC = () => {
 
     return () => {
         socket.disconnect();
+        setSocketConnected(false);
     };
   }, [id, eventId, settingId, tab, addNotification]);
 
   const handlePair = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pairingCode || (!settingId && !eventId)) return;
-    
+
     try {
         setPairingLoading(true);
         await socialService.pairDevice({
             pairingCode: String(pairingCode),
             settingId: settingId ? String(settingId) : undefined,
             eventId: eventId ? String(eventId) : undefined,
-            deviceName: 'TV Evento Main'
+            deviceName: 'TV do evento'
         });
-        
-        addNotification({ type: 'success', title: 'TV Pareada', message: 'Conexão estabelecida com o telão com sucesso!' });
+
+        addNotification({ type: 'success', title: 'TV pareada', message: 'O telão está conectado a este mural.' });
         setPairingCode('');
-        } catch (error: unknown) {
-        addNotification({ type: 'error', title: 'Falha de Pareamento', message: (error instanceof Error ? error.message : String(error)) || 'Código inválido ou expirado.' });
+    } catch (error: unknown) {
+        addNotification({ type: 'error', title: 'Falha no pareamento', message: (error instanceof Error ? error.message : String(error)) || 'Código inválido ou expirado.' });
     } finally {
         setPairingLoading(false);
     }
@@ -163,15 +192,16 @@ const AdminSocialPage: React.FC = () => {
 
     try {
       await socialService.moderatePost(postId, status);
-      addNotification({ 
-        type: status === 'APPROVED' ? 'success' : 'info', 
-        title: status === 'APPROVED' ? 'Post Aprovado' : 'Post Rejeitado', 
-        message: `Mídia encaminhada para o feed de ${status.toLowerCase()}.` 
+      // A mensagem antiga interpolava o enum em inglês ("feed de approved").
+      addNotification({
+        type: status === 'APPROVED' ? 'success' : 'info',
+        title: status === 'APPROVED' ? 'Foto aprovada' : 'Foto rejeitada',
+        message: status === 'APPROVED' ? 'A foto vai aparecer no telão.' : 'A foto foi arquivada.'
       });
     } catch (error) {
        logger.error('Erro', 'AdminSocialPage', error);
        setPosts(originalPosts);
-       addNotification({ type: 'error', title: 'Erro Operacional', message: 'Não foi possível salvar o status da moderação.' });
+       addNotification({ type: 'error', title: 'Erro na moderação', message: 'Não foi possível salvar a moderação.' });
     } finally {
        setProcessing(prev => prev.filter(pid => pid !== postId));
     }
@@ -181,9 +211,9 @@ const AdminSocialPage: React.FC = () => {
     if (!id) return;
     try {
         await socialService.syncNow(id, settingId ? 'setting' : 'event');
-        addNotification({ type: 'info', title: 'Radar Ativo', message: 'Sincronização forçada iniciada. Aguarde novos posts.' });
+        addNotification({ type: 'info', title: 'Sincronização iniciada', message: 'Buscando novas publicações. Aguarde.' });
     } catch {
-        addNotification({ type: 'error', title: 'Falha Sync', message: 'Erro ao tentar forçar atualização do feed.' });
+        addNotification({ type: 'error', title: 'Erro na sincronização', message: 'Não foi possível atualizar o feed.' });
     }
   };
 
@@ -194,6 +224,10 @@ const AdminSocialPage: React.FC = () => {
           setSavingSettings(true);
           const form = e.target as HTMLFormElement;
           const formData = new FormData(form);
+          // Achado (auditoria): o payload enviava `enableMosaic`/`enableGamification` lidos de campos que
+          // não existem neste formulário — sempre false. Cada "Salvar" desligava o mosaico (padrão: ligado)
+          // e a gamificação do telão. Agora os dois ficam fora do payload: o backend só altera os campos
+          // enviados, então os valores atuais do mural são preservados.
           const data: Record<string, unknown> = {
               name: formData.get('name') as string,
               slug: formData.get('slug') as string,
@@ -202,8 +236,6 @@ const AdminSocialPage: React.FC = () => {
               qrCodeText: formData.get('qrCodeText') as string,
               enableQrCode: formData.get('enableQrCode') === 'on',
               autoApprove: formData.get('autoApprove') === 'on',
-              enableMosaic: formData.get('enableMosaic') === 'on',
-              enableGamification: formData.get('enableGamification') === 'on',
               sponsorIds: selectedSponsorIds
           };
 
@@ -211,12 +243,12 @@ const AdminSocialPage: React.FC = () => {
         setIsSettingsOpen(false);
         const updated = await socialService.getAdminWall(wall.id as string);
         setWall(updated.data);
-        addNotification({ type: 'success', title: 'Configurações Salvas', message: 'Parâmetros do mural atualizados com êxito.' });
-        } catch (err: unknown) {
-        addNotification({ 
-          type: 'error', 
-          title: 'Erro de Validação', 
-          message: (err as {response?: {data?: {error?: string}}})?.response?.data?.error || 'Verifique se o slug ou hashtag já estão em uso.' 
+        addNotification({ type: 'success', title: 'Configurações salvas', message: 'As configurações do mural foram atualizadas.' });
+    } catch (err: unknown) {
+        addNotification({
+          type: 'error',
+          title: 'Erro ao salvar',
+          message: (err as {response?: {data?: {error?: string}}})?.response?.data?.error || 'Verifique se o endereço (slug) ou a hashtag já estão em uso.'
         });
     } finally {
         setSavingSettings(false);
@@ -224,119 +256,136 @@ const AdminSocialPage: React.FC = () => {
   };
 
   const stats = useMemo(() => ({
-    count: posts.length,
-    activeWall: !!wall,
-    hashtag: wall?.hashtag || '---'
-  }), [posts, wall]);
+    hashtag: (wall?.hashtag as string | undefined) || '',
+  }), [wall]);
 
-  if (loading && posts.length === 0) {
+  if (loading && posts.length === 0 && !loadError) {
       return (
-        <AdminLayout title="Social Moderation" breadcrumbs={[{ name: 'Admin' }, { name: 'Social Walls' }]}>
+        <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
             <div className="flex flex-col items-center justify-center min-h-[400px]">
-                <BrandLoader size={120} label="Equalizando feed de redes sociais..." />
+                <BrandLoader size={120} label="Carregando publicações…" />
             </div>
         </AdminLayout>
       );
   }
 
   return (
-    <AdminLayout 
-        title={wall?.name ? `Mural: ${wall.name as string}` : "Social Moderation"}
-        breadcrumbs={[
-            { name: 'Admin', href: '/admin/painel' },
-            { name: 'Social Walls', href: '/admin/social' },
-            { name: (wall?.name as string) || 'Mural Operativo' }
-        ]}
-    >
-        <div className="space-y-8">
-            {/* Control Bar */}
+    <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
+        <div className="space-y-6">
+            {/* Barra de controle */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                 <div className="flex items-center gap-4">
-                    <Button variant="outline" size="icon" onClick={() => navigate(-1)} className="rounded-xl shrink-0">
+                    <Button variant="outline" size="icon" onClick={() => navigate(-1)} className="rounded-xl shrink-0" aria-label="Voltar" title="Voltar">
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <div>
-                        <div className="flex items-center gap-2">
-                             <h2 className="text-xl font-black text-foreground uppercase tracking-tighter">Radar de Engajamento</h2>
-                             <Badge variant="primary" className="text-[9px] font-black uppercase ring-1 ring-primary/20">LIVE</Badge>
+                        <div className="flex flex-wrap items-center gap-2">
+                             <h2 className="text-xl font-bold text-foreground">{(wall?.name as string) || 'Mural'}</h2>
+                             <Badge variant={socketConnected ? 'success' : 'warning'}>
+                               {socketConnected ? 'Ao vivo' : 'Reconectando…'}
+                             </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 mt-0.5">
-                            Monitorando hashtag <span className="text-pink-600 font-black italic">#{(stats.hashtag as string) || ''}</span>
-                        </p>
+                        {stats.hashtag && (
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                              Hashtag monitorada: <span className="text-primary font-bold">#{stats.hashtag}</span>
+                          </p>
+                        )}
                     </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
                     <form onSubmit={handlePair} className="flex gap-2 w-full sm:w-auto">
-                        <Input 
-                            type="text" 
-                            placeholder="Cód. TV" 
-                            className="w-24 h-10 text-center font-black tracking-widest uppercase border-primary/20 bg-primary/5 focus:ring-primary/30"
-                            value={pairingCode}
-                            onChange={e => setPairingCode(e.target.value)}
-                            maxLength={4}
-                        />
-                        <Button type="submit" size="sm" className="h-10 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20 px-6" disabled={pairingLoading || !pairingCode}>
-                            {pairingLoading ? '...' : 'Parear TV'}
+                        <div className="w-28">
+                          <Input
+                              size="sm"
+                              type="text"
+                              placeholder="Código"
+                              aria-label="Código de pareamento da TV"
+                              className="text-center font-bold tracking-widest uppercase"
+                              value={pairingCode}
+                              onChange={e => setPairingCode(e.target.value)}
+                              maxLength={4}
+                          />
+                        </div>
+                        <Button type="submit" size="sm" isLoading={pairingLoading} disabled={!pairingCode}>
+                            Parear TV
                         </Button>
                     </form>
-                    
+
                     <div className="h-8 w-px bg-border hidden sm:block mx-1" />
-                    
-                    <div className="flex gap-2 shrink-0">
-                        <Button variant="outline" size="sm" className="h-10 font-black uppercase text-[10px] tracking-widest px-4 border-border/60 hover:border-primary transition-all" onClick={handleManualSync}>
-                            <RefreshCw className="mr-2 h-4 w-4" /> Sync
+
+                    <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" size="sm" onClick={handleManualSync} leftIcon={<RefreshCw className="h-4 w-4" />}>
+                            Sincronizar
                         </Button>
-                        <Button variant="outline" size="sm" className="h-10 font-black uppercase text-[10px] tracking-widest px-4 border-border/60 hover:bg-muted" onClick={() => {
+                        <Button variant="outline" size="sm" leftIcon={<Tv className="h-4 w-4" />} onClick={() => {
                             const url = wall?.slug ? `/tv?slug=${wall.slug}` : `/tv?settingId=${id}`;
                             window.open(url, '_blank');
                         }}>
-                            <Tv className="mr-2 h-4 w-4" /> TV View
+                            Abrir telão
                         </Button>
-                        <Button variant="primary" size="icon" className="h-10 w-10 shrink-0 shadow-lg shadow-primary/20" onClick={() => {
-                            fetchSponsors();
-                            setIsSettingsOpen(true);
-                        }}>
+                        <Button
+                            variant="primary"
+                            size="icon"
+                            className="shrink-0"
+                            aria-label="Configurações do mural"
+                            title="Configurações do mural"
+                            onClick={() => {
+                                fetchSponsors();
+                                setIsSettingsOpen(true);
+                            }}
+                        >
                             <Settings className="h-4 w-4" />
                         </Button>
                     </div>
                 </div>
             </div>
 
-            {/* Moderation Hub */}
-            <Card className="border-border/50 bg-card/30 backdrop-blur-sm p-0 overflow-hidden shadow-2xl">
-                <div className="flex overflow-x-auto scroller-hide bg-muted/20 border-b border-border/50">
-                    {[
-                        { id: 'PENDING', label: 'Em Moderação', icon: ShieldCheck, color: 'text-amber-500' },
-                        { id: 'APPROVED', label: 'Exibindo no Telão', icon: Check, color: 'text-emerald-500' },
-                        { id: 'REJECTED', label: 'Arquivados', icon: XCircle, color: 'text-destructive' }
-                    ].map((status) => (
-                        <button
-                            key={status.id}
-                                                        onClick={() => setTab(status.id as 'PENDING' | 'APPROVED' | 'REJECTED')}
-                            className={`flex-1 min-w-[150px] py-5 px-6 text-[10px] font-black uppercase tracking-widest transition-all relative flex items-center justify-center gap-2.5 ${
-                                tab === status.id 
-                                ? 'text-primary bg-primary/5' 
-                                : 'text-muted-foreground hover:bg-muted/50'
-                            }`}
-                        >
-                            <status.icon className={`h-4 w-4 ${tab === status.id ? 'text-primary' : status.color}`} />
-                            {status.label}
-                            {tab === status.id && (
-                                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary animate-in fade-in duration-300" />
-                            )}
-                        </button>
-                    ))}
+            {loadError && (
+              <Alert
+                variant="error"
+                title="Erro ao carregar"
+                description={loadError}
+                action={<Button size="sm" variant="outline" onClick={fetchPosts}>Tentar de novo</Button>}
+              />
+            )}
+
+            {/* Moderação */}
+            <Card className="border-border p-0 overflow-hidden shadow-sm">
+                <div className="flex overflow-x-auto bg-muted/20 border-b border-border" role="tablist" aria-label="Situação das publicações">
+                    {TABS.map((status) => {
+                        const selected = tab === status.id;
+                        return (
+                          <button
+                              key={status.id}
+                              type="button"
+                              role="tab"
+                              aria-selected={selected}
+                              onClick={() => setTab(status.id)}
+                              className={`flex-1 min-w-[150px] py-4 px-6 text-xs font-bold uppercase tracking-wider transition-all relative flex items-center justify-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${
+                                  selected
+                                  ? 'text-primary bg-primary/5'
+                                  : 'text-muted-foreground hover:bg-muted/50'
+                              }`}
+                          >
+                              <status.icon className={`h-4 w-4 ${selected ? 'text-primary' : status.color}`} aria-hidden="true" />
+                              {status.label}
+                              {selected && (
+                                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary animate-in fade-in duration-300" />
+                              )}
+                          </button>
+                        );
+                    })}
                 </div>
-                
-                <div className="p-8 min-h-[500px]">
+
+                <div className="p-4 sm:p-8 min-h-[500px]" role="tabpanel">
                     {loading ? (
                         <div className="flex flex-col justify-center items-center h-[400px]">
-                            <BrandLoader size={80} label="Carregando galeria..." />
+                            <BrandLoader size={80} label="Carregando publicações…" />
                         </div>
-                    ) : (
-                        <ModerationGrid 
-                            posts={posts} 
+                    ) : loadError && posts.length === 0 ? null : (
+                        <ModerationGrid
+                            posts={posts}
                             onApprove={(postId) => handleModerate(postId, 'APPROVED')}
                             onReject={(postId) => handleModerate(postId, 'REJECTED')}
                             processingIds={processing}
@@ -344,130 +393,130 @@ const AdminSocialPage: React.FC = () => {
                     )}
                 </div>
             </Card>
-
-            {/* Status Footer */}
-            <div className="flex items-center gap-3 px-4 py-2 rounded-full border border-border/50 bg-muted/20 self-start">
-               <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-               <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Socket.io Conectado: Transmissão em tempo real ativa</span>
-            </div>
         </div>
 
-        {/* Global Settings Modal */}
-        <Modal 
-            isOpen={isSettingsOpen} 
-            onClose={() => setIsSettingsOpen(false)} 
-            title="Parâmetros Operativos do Mural"
+        <Modal
+            isOpen={isSettingsOpen}
+            onClose={() => setIsSettingsOpen(false)}
+            title="Configurações do mural"
             size="lg"
         >
             <form onSubmit={handleUpdateSettings} className="space-y-8 py-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-6">
                         <div className="flex items-center gap-2 mb-2">
-                            <Zap className="h-4 w-4 text-primary" />
-                            <h4 className="font-black text-xs uppercase tracking-widest text-foreground">Identidade da Campanha</h4>
+                            <Zap className="h-4 w-4 text-primary" aria-hidden="true" />
+                            <h4 className="font-bold text-sm text-foreground">Identificação</h4>
                         </div>
                         <div className="space-y-4">
-                            <div>
-                                <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Nome do Mural</label>
-                                <Input name="name" defaultValue={(wall?.name as string) || ''} placeholder="Ex: Casamento Premium" />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Hashtag Principal (#)</label>
-                                <Input name="hashtag" defaultValue={(wall?.hashtag as string) || ''} placeholder="festa2024" />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Slug da URL (TV View)</label>
-                                <Input name="slug" defaultValue={(wall?.slug as string) || ''} placeholder="festa-exclusiva" />
-                                <p className="text-[9px] text-muted-foreground mt-1.5 font-medium italic">Acesso via: /tv?slug=seu-val</p>
-                            </div>
+                            <Input size="sm" label="Nome do mural" name="name" defaultValue={(wall?.name as string) || ''} placeholder="Ex.: Casamento Ana e João" />
+                            <Input size="sm" label="Hashtag (sem #)" name="hashtag" defaultValue={(wall?.hashtag as string) || ''} placeholder="festa2026" />
+                            <Input
+                              size="sm"
+                              label="Endereço do telão (slug)"
+                              name="slug"
+                              defaultValue={(wall?.slug as string) || ''}
+                              placeholder="festa-ana-joao"
+                              description="Acesso pelo endereço /tv?slug=seu-endereco"
+                            />
                         </div>
                     </div>
 
                     <div className="space-y-6">
                         <div className="flex items-center gap-2 mb-2">
-                            <Layout className="h-4 w-4 text-primary" />
-                            <h4 className="font-black text-xs uppercase tracking-widest text-foreground">Motor de Exibição</h4>
+                            <Layout className="h-4 w-4 text-primary" aria-hidden="true" />
+                            <h4 className="font-bold text-sm text-foreground">Exibição</h4>
                         </div>
                         <div className="space-y-4">
-                            <div>
-                                <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Orientação Física</label>
-                                <select name="layoutMode" defaultValue={(wall?.layoutMode as string) || 'LANDSCAPE'} className="w-full flex h-10 rounded-xl border border-input bg-card px-3 text-sm font-bold text-foreground" title="Selecione a orientação do layout">
-                                    <option value="LANDSCAPE">Horizontal (Padrão TV)</option>
-                                    <option value="PORTRAIT">Vertical (Totem)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Call-to-Action QR Code</label>
-                                <Input name="qrCodeText" defaultValue={(wall?.qrCodeText as string) || ''} placeholder="Escaneie para participar" />
-                            </div>
+                            <Select
+                              size="sm"
+                              label="Orientação da tela"
+                              name="layoutMode"
+                              defaultValue={(wall?.layoutMode as string) || 'LANDSCAPE'}
+                              options={[
+                                { value: 'LANDSCAPE', label: 'Horizontal (TV)' },
+                                { value: 'PORTRAIT', label: 'Vertical (totem)' },
+                              ]}
+                            />
+                            <Input size="sm" label="Texto do QR Code" name="qrCodeText" defaultValue={(wall?.qrCodeText as string) || ''} placeholder="Escaneie para participar" />
                             <div className="grid grid-cols-1 gap-3 pt-2">
-                                <label className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors">
-                                    <input type="checkbox" name="enableQrCode" defaultChecked={Boolean(wall?.enableQrCode)} className="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
-                                    <div className="flex flex-col">
-                                        <span className="text-xs font-bold text-foreground uppercase tracking-widest">Ativar Instruções QR</span>
-                                        <span className="text-[9px] text-muted-foreground font-medium">Renderiza o card de instruções na TV</span>
-                                    </div>
-                                </label>
-                                <label className="flex items-center gap-3 p-3 rounded-xl border border-destructive/20 bg-destructive/5 cursor-pointer hover:bg-destructive/10 transition-colors">
-                                    <input type="checkbox" name="autoApprove" defaultChecked={Boolean(wall?.autoApprove)} className="w-4 h-4 rounded border-border text-destructive focus:ring-destructive" />
-                                    <div className="flex flex-col">
-                                        <span className="text-xs font-bold text-destructive uppercase tracking-widest">Aprovação Automática</span>
-                                        <span className="text-[9px] text-destructive/70 font-medium">Bypass total de moderação (Risco Crítico)</span>
-                                    </div>
-                                </label>
+                                <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-1">
+                                    <Checkbox
+                                      name="enableQrCode"
+                                      label="Mostrar instruções com QR Code"
+                                      defaultChecked={Boolean(wall?.enableQrCode)}
+                                      aria-describedby="enableQrCode-hint"
+                                    />
+                                    <p id="enableQrCode-hint" className="text-xs text-muted-foreground pl-6">Exibe no telão o card com o QR Code e as instruções.</p>
+                                </div>
+                                <div className="p-3 rounded-xl border border-destructive/20 bg-destructive/5 space-y-1">
+                                    <Checkbox
+                                      name="autoApprove"
+                                      label="Aprovação automática"
+                                      defaultChecked={Boolean(wall?.autoApprove)}
+                                      aria-describedby="autoApprove-hint"
+                                    />
+                                    <p id="autoApprove-hint" className="text-xs text-destructive pl-6">Toda foto vai direto para o telão, sem moderação. Use com cuidado.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="pt-6 border-t border-border/50">
-                    <div className="flex items-center gap-2 mb-6">
-                        <Globe className="h-4 w-4 text-primary" />
-                        <h4 className="font-black text-xs uppercase tracking-widest text-foreground">Chancela de Patrocinadores</h4>
+                <div className="pt-6 border-t border-border">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Globe className="h-4 w-4 text-primary" aria-hidden="true" />
+                        <h4 className="font-bold text-sm text-foreground">Patrocinadores exibidos</h4>
                     </div>
-                    
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 max-h-48 overflow-y-auto p-1 custom-scrollbar">
-                        {allSponsors.map(sponsor => (
-                            <div 
-                                key={sponsor.id}
-                                onClick={() => {
-                                    setSelectedSponsorIds(prev => 
-                                        prev.includes(sponsor.id) 
-                                        ? prev.filter(id => id !== sponsor.id)
-                                        : [...prev, sponsor.id]
-                                    );
-                                }}
-                                className={`relative p-3 border-2 rounded-2xl cursor-pointer transition-all flex flex-col items-center gap-3 group ${
-                                    selectedSponsorIds.includes(sponsor.id)
-                                    ? 'border-primary bg-primary/5 shadow-inner'
-                                    : 'border-border bg-card filter grayscale hover:filter-none hover:border-primary/50'
-                                }`}
-                            >
-                                <div className="h-12 w-full flex items-center justify-center p-1">
-                                    <img src={sponsor.imageUrl} alt={sponsor.name} className="max-h-full max-w-full object-contain" />
-                                </div>
-                                <span className="text-[9px] font-black uppercase tracking-tighter truncate w-full text-center">{sponsor.name}</span>
-                                
-                                {selectedSponsorIds.includes(sponsor.id) && (
-                                    <div className="absolute -top-1.5 -right-1.5 bg-primary text-white rounded-full p-1 shadow-lg ring-2 ring-background">
-                                        <Check size={10} strokeWidth={4} />
-                                    </div>
-                                )}
-                            </div>
-                        ))}
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 max-h-48 overflow-y-auto p-1">
+                        {allSponsors.map(sponsor => {
+                            const selected = selectedSponsorIds.includes(sponsor.id);
+                            return (
+                              // Era um <div onClick> — sem foco nem teclado. Agora é um botão de alternar.
+                              <button
+                                  key={sponsor.id}
+                                  type="button"
+                                  aria-pressed={selected}
+                                  onClick={() => {
+                                      setSelectedSponsorIds(prev =>
+                                          prev.includes(sponsor.id)
+                                          ? prev.filter(sid => sid !== sponsor.id)
+                                          : [...prev, sponsor.id]
+                                      );
+                                  }}
+                                  className={`relative p-3 border-2 rounded-2xl transition-all flex flex-col items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                                      selected
+                                      ? 'border-primary bg-primary/5 shadow-inner'
+                                      : 'border-border bg-card grayscale hover:grayscale-0 hover:border-primary/50'
+                                  }`}
+                              >
+                                  <div className="h-12 w-full flex items-center justify-center p-1">
+                                      <img src={sponsor.imageUrl} alt="" className="max-h-full max-w-full object-contain" />
+                                  </div>
+                                  <span className="text-xs font-bold truncate w-full text-center text-foreground">{sponsor.name}</span>
+
+                                  {selected && (
+                                      <div className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground rounded-full p-1 shadow-lg ring-2 ring-background" aria-hidden="true">
+                                          <Check size={10} strokeWidth={4} />
+                                      </div>
+                                  )}
+                              </button>
+                            );
+                        })}
                     </div>
                     {allSponsors.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-8 bg-muted/30 rounded-2x border border-dashed border-border px-4">
-                             <p className="text-[10px] font-black uppercase text-muted-foreground/50 text-center">Nenhum patrocinador catalogado no ecossistema.</p>
-                             <Button variant="ghost" size="sm" className="mt-2 text-[9px] uppercase font-black tracking-widest" onClick={() => navigate('/admin/parceiros')}>Cadastrar Agora</Button>
+                        <div className="flex flex-col items-center justify-center py-8 bg-muted/30 rounded-2xl border border-dashed border-border px-4">
+                             <p className="text-sm text-muted-foreground text-center">Nenhum patrocinador cadastrado.</p>
+                             <Button type="button" variant="ghost" size="sm" className="mt-2" onClick={() => navigate('/admin/social/sponsors')}>Cadastrar patrocinador</Button>
                         </div>
                     )}
                 </div>
 
-                <div className="flex justify-end gap-3 pt-6 border-t border-border/50 font-black uppercase">
-                    <Button type="button" variant="outline" className="h-11 px-6 rounded-2xl tracking-widest text-[10px]" onClick={() => setIsSettingsOpen(false)}>Cancelar</Button>
-                    <Button type="submit" isLoading={savingSettings} className="h-11 px-8 rounded-2xl tracking-widest text-[10px] shadow-lg shadow-primary/20">
-                         Commit Alterações
+                <div className="flex justify-end gap-3 pt-6 border-t border-border">
+                    <Button type="button" variant="outline" onClick={() => setIsSettingsOpen(false)}>Cancelar</Button>
+                    <Button type="submit" isLoading={savingSettings}>
+                         Salvar
                     </Button>
                 </div>
             </form>

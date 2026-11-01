@@ -15,11 +15,11 @@ export const ModerationGrid: React.FC<ModerationGridProps> = ({ posts, onApprove
   if (posts.length === 0) {
     return (
         <div className="flex flex-col items-center justify-center py-32 text-center animate-in fade-in duration-500">
-            <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center mb-6 ring-8 ring-muted/10">
-                <Instagram className="h-10 w-10 text-muted-foreground/30" />
+            <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center mb-6">
+                <Instagram className="h-10 w-10 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-black text-foreground uppercase tracking-widest mb-2">Vazio Absoluto</h3>
-            <p className="text-sm text-muted-foreground font-medium max-w-xs mt-2">Nenhum post localizado para esta categoria no momento operativo.</p>
+            <h3 className="text-xl font-bold text-foreground mb-2">Nenhuma foto nesta aba</h3>
+            <p className="text-sm text-muted-foreground max-w-xs mt-2">As publicações com a hashtag do mural aparecem aqui.</p>
         </div>
     );
   }

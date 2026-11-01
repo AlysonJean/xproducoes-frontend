@@ -2,13 +2,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  Card, 
-  Button, 
-  Input, 
-  Select, 
+import {
+  Card,
+  Button,
+  Input,
+  Select,
   Badge,
-  Textarea
+  Textarea,
+  Alert
 } from '@/components/ui/StandardComponents';
 import { 
   Plus, 
@@ -30,6 +31,26 @@ import { formatPrice } from '@/utils/formatPrice';
 import { toNumber } from '@/utils/typeSafeFormatters';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+
+const ITEM_TYPE_LABELS: Record<string, string> = {
+  EQUIPMENT: 'Equipamento',
+  KIT: 'Kit',
+  SERVICE: 'Serviço',
+  CUSTOM: 'Personalizado',
+};
+
+const CATALOG_TABS = [
+  { value: 'EQUIPMENT', label: 'Equipamentos' },
+  { value: 'KIT', label: 'Kits' },
+  { value: 'SERVICE', label: 'Serviços' },
+] as const;
+
+const PAGE_TITLE = 'Proposta Rápida';
+const BREADCRUMBS = [
+  { name: 'Admin', href: '/admin/painel' },
+  { name: 'Reservas', href: '/admin/reservas' },
+  { name: 'Nova proposta' },
+];
 
 interface ProposalItem {
   id: string;
@@ -86,11 +107,15 @@ export const AdminQuickProposalPage = () => {
   // Catalog Search
   const [searchType, setSearchType] = useState<'EQUIPMENT' | 'KIT' | 'SERVICE'>('EQUIPMENT');
   const [searchTerm, setSearchTerm] = useState('');
+  // Falha ao carregar o catálogo virava só um toast e a tela seguia com o catálogo vazio.
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setCatalogError(null);
         const [clientsRes, equipsRes, kitsRes, servicesRes] = await Promise.all([
           apiFetch<Client[]>('/admin/clients'),
           apiFetch<Equipment[]>('/equipments'),
@@ -103,13 +128,13 @@ export const AdminQuickProposalPage = () => {
         setServices(Array.isArray(servicesRes) ? servicesRes : []);
       } catch (error: unknown) {
         const err = error as { message?: string } | null;
-        addNotification({ type: 'error', title: 'Erro ao carregar catálogo', message: err?.message || 'Falha ao buscar dados. Recarregue a página.' });
+        setCatalogError(err?.message || 'Não foi possível carregar clientes e catálogo.');
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [addNotification]);
+  }, [reloadKey]);
 
   const subtotal = useMemo(() => {
     return items.reduce((sum, item) => sum + toNumber(item.totalPrice), 0);
@@ -472,35 +497,54 @@ export const AdminQuickProposalPage = () => {
     }
   };
 
-  if (loading) return <BrandLoader fullScreen size="xl" label="Carregando catálogo X Produções..." />;
+  // Carregando dentro do layout (antes: BrandLoader em tela cheia, sem menu nem título).
+  if (loading) {
+    return (
+      <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <BrandLoader size="xl" label="Carregando catálogo…" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
-    <AdminLayout title="Gerador de Proposta Rápida" breadcrumbs={[{ name: 'Admin', href: '/admin/painel' }, { name: 'Novo Orçamento' }]}>
+    <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
       <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+
+        <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
-              <Zap className="h-6 w-6 text-primary" />
+              <Zap className="h-6 w-6 text-primary" aria-hidden="true" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Nova Proposta Comercial</h1>
-              <p className="text-muted-foreground">Crie orçamentos formais e flexíveis em segundos.</p>
+              <h2 className="text-xl font-bold text-foreground">Nova proposta comercial</h2>
+              <p className="text-sm text-muted-foreground">Monte o orçamento e gere o link ou o PDF para o cliente.</p>
             </div>
           </div>
-          <div className="flex gap-2">
-             <Button variant="outline" onClick={() => navigate(-1)}>Cancelar</Button>
-             <Button variant="outline" onClick={handleDownloadPdf} isLoading={generatingPdf} className="gap-2">
+          {/* flex-wrap: os 4 botões em linha estouravam a tela de 375px. */}
+          <div className="flex flex-wrap gap-2">
+             <Button variant="outline" size="sm" onClick={() => navigate(-1)}>Cancelar</Button>
+             <Button variant="outline" size="sm" onClick={handleDownloadPdf} isLoading={generatingPdf}>
               Baixar PDF
              </Button>
-             <Button variant="outline" onClick={handleDownloadAndOpenWhatsApp} isLoading={sendingWhatsApp} className="gap-2">
+             <Button variant="outline" size="sm" onClick={handleDownloadAndOpenWhatsApp} isLoading={sendingWhatsApp}>
               PDF + WhatsApp
              </Button>
-             <Button onClick={() => handleSave('PENDING')} isLoading={saving} className="gap-2 shadow-lg shadow-primary/20">
-                <Send className="h-4 w-4" /> Gerar Link de Proposta
+             <Button size="sm" onClick={() => handleSave('PENDING')} isLoading={saving} leftIcon={<Send className="h-4 w-4" />}>
+                Gerar link da proposta
              </Button>
           </div>
         </header>
+
+        {catalogError && (
+          <Alert
+            variant="error"
+            title="Erro ao carregar o catálogo"
+            description={catalogError}
+            action={<Button variant="outline" size="sm" onClick={() => setReloadKey((k) => k + 1)}>Tentar de novo</Button>}
+          />
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Form Area */}
@@ -508,9 +552,9 @@ export const AdminQuickProposalPage = () => {
             
             {/* Client Card */}
             <Card className="p-6 border-2">
-               <div className="flex items-center gap-2 mb-6 text-primary font-bold uppercase text-[10px] tracking-widest">
-                 <Package className="h-4 w-4" /> Dados do Cliente
-               </div>
+               <h3 className="flex items-center gap-2 mb-6 text-primary font-semibold uppercase text-xs tracking-wider">
+                 <Package className="h-4 w-4" aria-hidden="true" /> Dados do cliente
+               </h3>
                
                <div className="space-y-4">
                   <Select 
@@ -542,12 +586,12 @@ export const AdminQuickProposalPage = () => {
 
             {/* Items Card */}
             <Card className="p-6 border-2 border-primary/10 overflow-hidden">
-               <div className="flex items-center justify-between mb-6">
-                 <div className="flex items-center gap-2 text-primary font-bold uppercase text-[10px] tracking-widest">
-                   <Calculator className="h-4 w-4" /> Composição do Orçamento
-                 </div>
-                 <Button variant="outline" size="sm" onClick={addCustomItem} className="h-8 text-[10px] font-black uppercase tracking-widest gap-2">
-                   <Plus className="h-3 w-3" /> Item Personalizado
+               <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                 <h3 className="flex items-center gap-2 text-primary font-semibold uppercase text-xs tracking-wider">
+                   <Calculator className="h-4 w-4" aria-hidden="true" /> Itens do orçamento
+                 </h3>
+                 <Button variant="outline" size="xs" onClick={addCustomItem} leftIcon={<Plus className="h-3 w-3" />}>
+                   Item personalizado
                  </Button>
                </div>
 
@@ -555,51 +599,52 @@ export const AdminQuickProposalPage = () => {
                  {items.length === 0 ? (
                    <div className="py-12 text-center border-2 border-dashed rounded-2xl border-border bg-muted/20">
                       <p className="text-muted-foreground text-sm">Nenhum item adicionado ainda.</p>
-                      <p className="text-xs text-muted-foreground/60">Use o catálogo ao lado para começar.</p>
+                      <p className="text-sm text-muted-foreground">Use o catálogo ao lado para começar.</p>
                    </div>
                  ) : (
                    <div className="space-y-3">
                      {items.map((item) => (
                        <div key={item.id} className="group relative flex flex-col md:flex-row gap-4 p-4 rounded-xl border border-border bg-card hover:border-primary/30 transition-all hover:shadow-md">
                          <div className="flex-grow space-y-2">
-                           <Input 
-                             className="h-8 font-bold text-sm bg-transparent border-none p-0 focus:ring-0" 
-                             value={item.description} 
+                           <Input
+                             size="xs"
+                             aria-label="Descrição do item"
+                             className="font-bold text-sm bg-transparent"
+                             value={item.description}
                              onChange={e => updateItem(item.id, 'description', e.target.value)}
                            />
                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-[9px] uppercase tracking-tighter">
-                                {item.type}
+                              <Badge variant="outline" size="sm">
+                                {ITEM_TYPE_LABELS[item.type] || item.type}
                               </Badge>
                            </div>
                          </div>
 
-                         <div className="grid grid-cols-3 md:flex items-center gap-3">
-                           <div className="space-y-1">
-                             <label className="text-[10px] font-black text-muted-foreground uppercase">Qtd</label>
-                             <input 
-                               type="number" 
-                               aria-label="Quantidade"
-                               className="w-12 h-8 bg-muted/30 border-none rounded-lg text-sm text-center font-bold"
-                               value={item.quantity} 
+                         <div className="flex flex-wrap items-end gap-3">
+                           <div className="w-20">
+                             <Input
+                               label="Qtd"
+                               size="xs"
+                               type="number"
+                               className="text-center font-bold"
+                               value={item.quantity}
                                onChange={e => updateItem(item.id, 'quantity', Number(e.target.value))}
                              />
                            </div>
-                           <div className="space-y-1">
-                             <label className="text-[10px] font-black text-muted-foreground uppercase">Preço Unit.</label>
-                             <Input 
-                               type="number" 
-                               className="w-24 h-8 text-sm" 
-                               prefix="R$"
-                               value={item.unitPrice} 
+                           <div className="w-36">
+                             {/* `prefix="R$"` não é prop do Input (virava atributo HTML sem efeito). */}
+                             <Input
+                               label="Preço unit."
+                               size="xs"
+                               type="number"
+                               leftIcon={<span className="text-xs font-semibold">R$</span>}
+                               value={item.unitPrice}
                                onChange={e => updateItem(item.id, 'unitPrice', Number(e.target.value))}
                              />
                            </div>
-                           <div className="pt-5">
-                             <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)} className="text-destructive/50 hover:text-destructive hover:bg-destructive/5 h-8 w-8">
-                               <Trash2 className="h-4 w-4" />
-                             </Button>
-                           </div>
+                           <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)} className="text-destructive hover:bg-destructive/10 h-8 w-8" aria-label={`Remover ${item.description || 'item'}`}>
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
                          </div>
                        </div>
                      ))}
@@ -609,16 +654,16 @@ export const AdminQuickProposalPage = () => {
 
                <div className="mt-8 pt-6 border-t space-y-2">
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground font-medium uppercase tracking-widest text-[10px]">Subtotal Estimado</span>
+                    <span className="text-muted-foreground font-medium uppercase tracking-wider text-xs">Subtotal estimado</span>
                     <span className="font-mono font-bold text-lg">{formatPrice(subtotal)}</span>
                   </div>
                </div>
             </Card>
 
             <Card className="p-6">
-               <div className="flex items-center gap-2 mb-6 text-primary font-bold uppercase text-[10px] tracking-widest">
-                 <Settings className="h-4 w-4" /> Detalhes Logísticos
-               </div>
+               <h3 className="flex items-center gap-2 mb-6 text-primary font-semibold uppercase text-xs tracking-wider">
+                 <Settings className="h-4 w-4" aria-hidden="true" /> Evento e local
+               </h3>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <Input label="Título do Evento" value={eventTitle} onChange={e => setEventTitle(e.target.value)} placeholder="Ex: Casamento João & Maria" />
                  <Input label="Local / Salão *" value={location} onChange={e => setLocation(e.target.value)} placeholder="Ex: Espaço VIP" />
@@ -627,9 +672,9 @@ export const AdminQuickProposalPage = () => {
                </div>
 
                <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4 space-y-3">
-                 <div className="flex items-center gap-2 text-muted-foreground font-bold uppercase text-[10px] tracking-widest">
-                   <AlertCircle className="h-3 w-3" /> Endereço do Evento (obrigatório)
-                 </div>
+                 <h4 className="flex items-center gap-2 text-muted-foreground font-semibold uppercase text-xs tracking-wider">
+                   <AlertCircle className="h-3 w-3" aria-hidden="true" /> Endereço do evento (obrigatório)
+                 </h4>
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                    <Input label="CEP *" value={zipCode} onChange={e => setZipCode(e.target.value)} placeholder="00000-000" className="md:col-span-1" error={fieldErrors.zipCode} />
                    <Input label="Rua *" value={street} onChange={e => setStreet(e.target.value)} placeholder="Ex: Av. Brasil" className="md:col-span-2" error={fieldErrors.street} />
@@ -642,7 +687,7 @@ export const AdminQuickProposalPage = () => {
                  </div>
                </div>
                <div className="mt-4">
-                 <Textarea label="Observações Internas (Não aparecem na proposta)" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Ex: Cliente chorou desconto, negociar frete se fechar hoje." />
+                 <Textarea label="Observações Internas (Não aparecem na proposta)" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Ex.: cliente pediu desconto; negociar o frete se fechar hoje." />
                </div>
             </Card>
           </div>
@@ -650,49 +695,61 @@ export const AdminQuickProposalPage = () => {
           {/* Catalog Sidebar */}
           <div className="space-y-6">
              <Card className="p-4 border-primary/20 bg-primary/5 sticky top-24">
-                <div className="flex items-center gap-2 mb-4 text-primary font-black uppercase text-[11px] tracking-widest">
-                  <Search className="h-4 w-4" /> Adicionar do Catálogo
-                </div>
+                <h3 className="flex items-center gap-2 mb-4 text-primary font-semibold uppercase text-xs tracking-wider">
+                  <Search className="h-4 w-4" aria-hidden="true" /> Adicionar do catálogo
+                </h3>
 
-                <div className="flex gap-1 p-1 bg-muted/30 rounded-xl mb-4">
-                   {(['EQUIPMENT', 'KIT', 'SERVICE'] as const).map(type => (
-                     <button
-                       key={type}
-                       onClick={() => setSearchType(type)}
-                       className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${
-                         searchType === type ? 'bg-card shadow-sm text-primary dark:bg-card' : 'text-muted-foreground hover:text-foreground'
-                       }`}
+                <div className="flex gap-1 p-1 bg-muted/30 rounded-xl mb-4" role="group" aria-label="Tipo de item">
+                   {CATALOG_TABS.map(tab => (
+                     <Button
+                       key={tab.value}
+                       size="xs"
+                       variant={searchType === tab.value ? 'primary' : 'ghost'}
+                       aria-pressed={searchType === tab.value}
+                       className="flex-1 px-2"
+                       onClick={() => setSearchType(tab.value)}
                      >
-                       {type === 'EQUIPMENT' ? 'Equips' : type === 'KIT' ? 'Kits' : 'Serviços'}
-                     </button>
+                       {tab.label}
+                     </Button>
                    ))}
                 </div>
 
-                <Input 
-                  placeholder="Pesquisar..." 
-                  className="bg-background border-none h-10 mb-4" 
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                />
+                <div className="mb-4">
+                  <Input
+                    size="sm"
+                    aria-label="Buscar no catálogo"
+                    leftIcon={<Search className="h-4 w-4" />}
+                    placeholder="Buscar..."
+                    className="bg-background"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                  />
+                </div>
 
-                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
                   {filteredCatalogItems.length === 0 && (
                     <p className="text-center text-xs text-muted-foreground py-6">Nenhum item encontrado.</p>
                   )}
                   {filteredCatalogItems.map((item: Equipment | Kit | Service) => (
-                      <div key={item.id} className="group p-3 rounded-xl border border-border bg-card hover:border-primary/40 transition-all cursor-pointer hover:shadow-md" onClick={() => addItemToProposal(searchType, item)}>
+                      <button
+                        type="button"
+                        key={item.id}
+                        aria-label={`Adicionar ${item.name}`}
+                        className="group w-full text-left p-3 rounded-xl border border-border bg-card hover:border-primary/40 transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={() => addItemToProposal(searchType, item)}
+                      >
                         <div className="flex justify-between items-start gap-2">
                            <div className="min-w-0">
-                             <p className="font-bold text-xs truncate group-hover:text-primary transition-colors">{item.name}</p>
-                             <p className="text-[10px] text-muted-foreground font-mono">
+                             <p className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">{item.name}</p>
+                             <p className="text-xs text-muted-foreground font-mono">
                                {formatPrice(Number(((item as Equipment).dailyPrice || (item as Kit | Service).price) || 0))}
                              </p>
                            </div>
-                           <div className="h-6 w-6 rounded-lg bg-primary/5 group-hover:bg-primary group-hover:text-white flex items-center justify-center transition-all">
+                           <div className="h-6 w-6 shrink-0 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground flex items-center justify-center transition-all" aria-hidden="true">
                               <ArrowRight className="h-3 w-3" />
                            </div>
                         </div>
-                      </div>
+                      </button>
                   ))}
                 </div>
              </Card>

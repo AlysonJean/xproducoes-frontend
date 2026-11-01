@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent } from 'react';
 import { apiFetch } from '../../services/api';
-import { Modal, Button, Alert } from '../ui/StandardComponents';
+import { Modal, Button, Alert, Checkbox } from '../ui/StandardComponents';
 import {
   parseHistoryRows,
   readHistoryWorkbook,
@@ -152,19 +152,22 @@ export const HistoryImportModal = ({ isOpen, onClose, onImported }: HistoryImpor
         {!done && (
           <label className="block">
             <span className="sr-only">Planilha do histórico</span>
+            {/* file:text-primary-foreground — com file:text-white o botão ficava branco sobre prata no tema escuro. */}
             <input
               type="file"
               accept=".xlsx"
               onChange={handleFile}
               disabled={!!busy}
               aria-label="Planilha do histórico"
-              className="block w-full text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-white"
+              className="block w-full text-sm text-foreground file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-primary-foreground file:cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
             />
           </label>
         )}
         {fileName && !done && <p className="text-xs text-muted-foreground">Arquivo: {fileName}</p>}
-        {busy === 'reading' && <p>Lendo a planilha…</p>}
-        {progress && <p>{progress}</p>}
+        <div role="status" aria-live="polite">
+          {busy === 'reading' && <p>Lendo a planilha…</p>}
+          {progress && <p>{progress}</p>}
+        </div>
         {error && <Alert variant="error">{error}</Alert>}
 
         {parsed && !done && (
@@ -212,16 +215,18 @@ export const HistoryImportModal = ({ isOpen, onClose, onImported }: HistoryImpor
 
             {sameDay.length > 0 && (
               <div>
-                <p className="text-amber-600 font-medium">
+                <p className="text-warning font-medium">
                   {sameDay.length} eventos caem num dia que já tem reserva na plataforma. Ficam de fora, a menos que você marque:
                 </p>
-                <ul className="mt-1 max-h-40 overflow-y-auto text-xs space-y-1">
+                <ul className="mt-2 max-h-40 overflow-y-auto space-y-2">
                   {sameDay.map((r) => (
                     <li key={r.key}>
-                      <label className="flex items-start gap-2">
-                        <input type="checkbox" checked={include.has(r.key as string)} onChange={() => toggle(r.key as string)} />
-                        <span>{label(r.key)} — já existe: {r.sameDay?.join(', ')}</span>
-                      </label>
+                      <Checkbox
+                        id={`same-day-${r.key}`}
+                        checked={include.has(r.key as string)}
+                        onChange={() => toggle(r.key as string)}
+                        label={`${label(r.key)} — já existe: ${r.sameDay?.join(', ') ?? ''}`}
+                      />
                     </li>
                   ))}
                 </ul>

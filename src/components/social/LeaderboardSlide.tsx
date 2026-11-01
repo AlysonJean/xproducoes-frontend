@@ -19,7 +19,8 @@ export const LeaderboardSlide = memo(({ items }: LeaderboardSlideProps) => {
 
     return (
         <div className="w-full h-full flex flex-col items-center justify-center p-12 text-white/90">
-            <h2 className="text-5xl font-black mb-12 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-200 to-yellow-500 drop-shadow-sm animate-fade-in-down">
+            {/* `animate-fade-in-up/down` não existiam no CSS (sem efeito); agora tw-animate-css. */}
+            <h2 className="text-5xl font-black mb-12 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-200 to-yellow-500 drop-shadow-sm animate-in fade-in slide-in-from-top-4 duration-700">
                 TOP CONTRIBUIDORES 🏆
             </h2>
 
@@ -36,7 +37,10 @@ export const LeaderboardSlide = memo(({ items }: LeaderboardSlideProps) => {
 
             {/* Runners Up */}
             {rest.length > 0 && (
-                <div className="w-full max-w-3xl flex flex-col gap-4 animate-fade-in-up delay-[600ms]">
+                <div
+                    className="w-full max-w-3xl flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
+                    style={{ animationDelay: '600ms' }}
+                >
                     {rest.map((item, idx) => (
                         <div key={item.username} className="flex items-center bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/5 mx-4">
                             <span className="text-2xl font-bold w-12 text-center text-white/50">#{idx + 4}</span>
@@ -62,12 +66,10 @@ const PodiumItem = ({ item, rank, delay }: { item: LeaderboardItem; rank: number
     const colorClass = rank === 1 ? "border-yellow-400 text-yellow-400" : rank === 2 ? "border-slate-300 text-slate-300" : "border-amber-600 text-amber-600";
     const bgColor = rank === 1 ? "bg-gradient-to-b from-yellow-400/20 to-transparent" : "bg-gradient-to-b from-white/10 to-transparent";
     
-    // Map delay to tailwind class
-    const delayClass = delay === 0 ? 'delay-0' : delay === 200 ? 'delay-200' : 'delay-[400ms]';
-
     return (
-        <div 
-            className={`flex flex-col items-center animate-fade-in-up ${delayClass}`}
+        <div
+            className="flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
+            style={{ animationDelay: `${delay}ms` }}
         >
             <div className="relative mb-4">
                 {rank === 1 && <Trophy className="absolute -top-12 left-1/2 -translate-x-1/2 w-10 h-10 text-yellow-400 animate-bounce" fill="currentColor" />}
@@ -83,7 +85,7 @@ const PodiumItem = ({ item, rank, delay }: { item: LeaderboardItem; rank: number
                 <p className="text-sm opacity-70 mb-2">{item.platform === 'INSTAGRAM' ? 'Instagram' : 'Visitante'}</p>
                 <div className="inline-flex items-center gap-2 bg-black/30 px-3 py-1 rounded-full">
                     <Star className={`w-4 h-4 ${colorClass}`} fill="currentColor" />
-                    <span className="font-bold text-white">{item.count} posts</span>
+                    <span className="font-bold text-white">{item.count} {item.count === 1 ? 'foto' : 'fotos'}</span>
                 </div>
             </div>
         </div>
@@ -95,7 +97,7 @@ const Avatar = ({ url }: { url?: string }) => {
     const imgSrc = url ? url.replace('/upload/', '/upload/w_200,h_200,c_fill,q_auto/') : null;
     
     if (!imgSrc) {
-        return <div className="w-full h-full bg-slate-700 flex items-center justify-center text-white/20"><span className="text-4xl">?</span></div>;
+        return <div className="w-full h-full bg-white/10 flex items-center justify-center text-white/40"><span className="text-4xl">?</span></div>;
     }
 
     return (

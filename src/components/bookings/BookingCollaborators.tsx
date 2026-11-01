@@ -10,10 +10,15 @@ import {
   Modal,
   Form,
   Input,
+  Select,
+  Badge,
+  Skeleton,
+  ConfirmModal,
   FormActions
 } from '../ui/StandardComponents';
-import { User, Plus, Trash2, Clock, Euro } from 'lucide-react';
+import { User, Plus, Trash2, Clock, Banknote } from 'lucide-react';
 import { formatPrice } from '../../utils/typeSafeFormatters';
+import { COLLABORATOR_ROLE_OPTIONS, collaboratorRoleLabel } from '../../utils/collaboratorRoles';
 
 // --- Types ---
 interface EventCollaborator {
@@ -74,6 +79,10 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // confirm() nativo → ConfirmModal: atribuição pendente (colaborador ocupado) e remoção pendente.
+  const [pendingAssignment, setPendingAssignment] = useState<AssignmentFormData | null>(null);
+  const [assignmentToRemove, setAssignmentToRemove] = useState<string | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   // Initialize form
   const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<AssignmentFormData>({
@@ -208,13 +217,15 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
   };
 
   const onSubmit = async (data: AssignmentFormData) => {
-    try {
-      if (busyCollaboratorIds.has(data.collaboratorId)) {
-          if (!confirm("ATENÇÃO: Este colaborador consta como indisponível ou ocupado nesta data. Deseja prosseguir mesmo assim?")) {
-              return;
-          }
-      }
+    if (busyCollaboratorIds.has(data.collaboratorId)) {
+      setPendingAssignment(data);
+      return;
+    }
+    await saveAssignment(data);
+  };
 
+  const saveAssignment = async (data: AssignmentFormData) => {
+    try {
       setIsSubmitting(true);
       await apiFetch('/collaborators/event-assignments', {
         method: 'POST',
@@ -235,7 +246,7 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
       fetchCollaborators();
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string; message?: string } }; message?: string };
-      logger.error('Newsletter error', 'BookingCollaborators', err);
+      logger.error('Erro ao atribuir colaborador', 'BookingCollaborators', err);
       addNotification({
         type: 'error',
         title: 'Atenção',
@@ -243,30 +254,41 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
       });
     } finally {
       setIsSubmitting(false);
+      setPendingAssignment(null);
     }
   };
 
-  const handleRemove = async (assignmentId: string) => {
-      if(!confirm("Tem certeza que deseja remover este colaborador?")) return;
-      
+  const handleRemove = async () => {
+      if (!assignmentToRemove) return;
       try {
-        await apiFetch(`/collaborators/event-assignments/${assignmentId}`, { method: 'DELETE' });
+        setIsRemoving(true);
+        await apiFetch(`/collaborators/event-assignments/${assignmentToRemove}`, { method: 'DELETE' });
         addNotification({ type: 'success', title: 'Removido', message: 'Colaborador removido.' });
         fetchCollaborators();
       } catch {
           addNotification({ type: 'error', title: 'Erro', message: 'Erro ao remover.' });
+      } finally {
+        setIsRemoving(false);
+        setAssignmentToRemove(null);
       }
   };
 
-  if (isLoading) return <div className="p-4 text-center">Carregando equipe...</div>;
+  if (isLoading) {
+    return (
+      <div className="space-y-3" role="status" aria-label="Carregando equipe">
+        <Skeleton className="h-16" />
+        <Skeleton className="h-16" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
+      <div className="flex flex-wrap justify-between items-center gap-3">
+        <h4 className="text-base font-semibold text-foreground flex items-center gap-2">
           <User className="w-5 h-5 text-primary" />
-          Equipe / Staff
-        </h3>
+          Colaboradores atribuídos
+        </h4>
         <Button size="sm" onClick={handleOpenModal} leftIcon={<Plus className="w-4 h-4" />}>
           Adicionar
         </Button>
@@ -274,45 +296,45 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
 
       {/* Required Services Badge */}
       {requiredServices.length > 0 && (
-         <div className="flex flex-wrap gap-2 mb-2">
-           <span className="text-xs text-muted-foreground">Sugerido pelo Kit:</span>
+         <div className="flex flex-wrap items-center gap-2 mb-2">
+           <span className="text-sm text-muted-foreground">Serviços da reserva:</span>
            {requiredServices.map(s => (
-             <span key={s} className="text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full font-medium">
+             <Badge key={s} variant="primary" size="sm">
                {s}
-             </span>
+             </Badge>
            ))}
          </div>
       )}
 
       {collaborators.length === 0 ? (
         <div className="text-center py-6 border-2 border-dashed rounded-lg text-muted-foreground bg-muted/20">
-          <User className="w-8 h-8 mx-auto mb-2 opacity-20" />
-          <p>Nenhum colaborador atribuído a este evento.</p>
+          <User className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm">Nenhum colaborador atribuído a este evento.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {collaborators.map((item) => (
-            <div key={item.id} className="p-3 bg-card border rounded-lg shadow-sm flex items-start justify-between group hover:border-primary/50 transition-colors">
-              <div className="flex gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold overflow-hidden">
+            <div key={item.id} className="p-3 bg-card border rounded-lg shadow-sm flex items-start justify-between gap-2 group hover:border-primary/50 transition-colors">
+              <div className="flex gap-3 min-w-0">
+                <div className="w-10 h-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold overflow-hidden">
                   {item.collaborator.user.avatarUrl ? (
                       <img src={item.collaborator.user.avatarUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
                       item.collaborator.user.name.charAt(0).toUpperCase()
                   )}
                 </div>
-                <div>
-                  <p className="font-medium text-foreground">{item.collaborator.user.name}</p>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold text-primary/80">{item.role}</p>
-                  
-                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                <div className="min-w-0">
+                  <p className="font-medium text-foreground truncate">{item.collaborator.user.name}</p>
+                  <p className="text-xs uppercase tracking-wide font-semibold text-primary">{collaboratorRoleLabel(item.role)}</p>
+
+                  <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           {item.startTime} - {item.endTime}
                       </span>
                       {item.fixedRate && (
-                          <span className="flex items-center gap-1 text-green-600 font-medium">
-                              <Euro className="w-3 h-3" />
+                          <span className="flex items-center gap-1 text-success font-medium">
+                              <Banknote className="w-3 h-3" />
                               {formatPrice(item.fixedRate)}
                           </span>
                       )}
@@ -320,13 +342,16 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
                 </div>
               </div>
               
-              <button 
-                onClick={() => handleRemove(item.id)}
-                className="text-muted-foreground hover:text-destructive p-1 rounded transition-colors opacity-0 group-hover:opacity-100"
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setAssignmentToRemove(item.id)}
+                className="shrink-0 text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100"
                 title="Remover"
+                aria-label={`Remover ${item.collaborator.user.name} da equipe`}
               >
                 <Trash2 className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           ))}
         </div>
@@ -339,37 +364,31 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
         title="Atribuir Colaborador"
       >
         <Form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-                <label className="text-sm font-medium">Colaborador</label>
-                <select 
-                    {...register('collaboratorId')}
-                    className="w-full p-2 rounded-md border bg-background"
-                >
-                    <option value="">Selecione...</option>
-                    {sortedOptions.map(c => {
-                       const isSuggested = requiredServices.some(s => 
-                          c.collaboratorRole.toLowerCase().includes(s.toLowerCase()) || 
-                          c.specialties?.some(sp => sp.toLowerCase().includes(s.toLowerCase()))
-                       );
-                       const isBusy = busyCollaboratorIds.has(c.id);
-                       
-                       return (
-                        <option key={c.id} value={c.id} disabled={false} className={isBusy ? 'text-red-500' : ''}>
-                            {isBusy ? '⚠️ [Indisponível] ' : (isSuggested ? '⭐ ' : '')}
-                            {c.user.name} ({c.collaboratorRole})
-                        </option>
-                       );
-                    })}
-                </select>
-                {errors.collaboratorId && <p className="text-sm text-destructive">{errors.collaboratorId.message}</p>}
-                {requiredServices.length > 0 && <p className="text-xs text-muted-foreground">⭐ = Recomendado baseados no Kit</p>}
-            </div>
+            <Select
+                label="Colaborador"
+                {...register('collaboratorId')}
+                error={errors.collaboratorId?.message}
+                description={requiredServices.length > 0 ? '★ = sugerido pelos serviços da reserva' : undefined}
+                options={[
+                  { value: '', label: 'Selecione...' },
+                  ...sortedOptions.map(c => {
+                    const isSuggested = requiredServices.some(s =>
+                      c.collaboratorRole.toLowerCase().includes(s.toLowerCase()) ||
+                      c.specialties?.some(sp => sp.toLowerCase().includes(s.toLowerCase()))
+                    );
+                    const isBusy = busyCollaboratorIds.has(c.id);
+                    const prefix = isBusy ? '(indisponível) ' : (isSuggested ? '★ ' : '');
+                    return { value: c.id, label: `${prefix}${c.user.name} — ${collaboratorRoleLabel(c.collaboratorRole)}` };
+                  }),
+                ]}
+            />
 
-            <Input 
-                label="Função no Evento"
-                placeholder="Ex: DJ Principal"
+            {/* Era texto livre ("Ex: DJ Principal"), mas o campo no banco é o enum CollaboratorRole. */}
+            <Select
+                label="Função no evento"
                 {...register('role')}
                 error={errors.role?.message}
+                options={[{ value: '', label: 'Selecione...' }, ...COLLABORATOR_ROLE_OPTIONS]}
             />
 
             <div className="grid grid-cols-2 gap-4">
@@ -402,6 +421,30 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
             </FormActions>
         </Form>
       </Modal>
+
+      <ConfirmModal
+        isOpen={!!pendingAssignment}
+        onClose={() => setPendingAssignment(null)}
+        onConfirm={() => { if (pendingAssignment) void saveAssignment(pendingAssignment); }}
+        title="Colaborador indisponível"
+        message="Este colaborador consta como indisponível ou ocupado nesta data. Deseja atribuir mesmo assim?"
+        variant="warning"
+        isLoading={isSubmitting}
+        confirmText="Atribuir mesmo assim"
+        cancelText="Voltar"
+      />
+
+      <ConfirmModal
+        isOpen={!!assignmentToRemove}
+        onClose={() => setAssignmentToRemove(null)}
+        onConfirm={handleRemove}
+        title="Remover colaborador?"
+        message="O colaborador deixará de fazer parte da equipe deste evento."
+        variant="danger"
+        isLoading={isRemoving}
+        confirmText="Remover"
+        cancelText="Cancelar"
+      />
     </div>
   );
 };

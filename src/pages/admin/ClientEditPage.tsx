@@ -6,10 +6,18 @@ import { apiFetch } from '../../services/api';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { Alert } from '../../components/ui/Alert';
 import type { User } from '../../types/types';
 import { useNotifications } from '@/contexts/NotificationContext';
 
 import AdminLayout from '@/components/admin/AdminLayout';
+
+const PAGE_TITLE = 'Editar cliente';
+const BREADCRUMBS = [
+  { name: 'Admin', href: '/admin/painel' },
+  { name: 'Clientes', href: '/admin/clientes' },
+  { name: 'Editar' },
+];
 
 export const ClientEditPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -80,18 +88,24 @@ export const ClientEditPage = () => {
     }
   };
 
-  if (loading) return <BrandLoader size={120} label="Carregando dados do cliente..." />;
-  
+  // O loading ficava fora do AdminLayout — a tela perdia sidebar e título enquanto carregava.
+  if (loading) {
+    return (
+      <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <BrandLoader size={120} label="Carregando dados do cliente…" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
-    <AdminLayout 
-      title="Editar Cliente" 
-      breadcrumbs={[{ name: 'Admin' }, { name: 'Clientes', href: '/admin/clientes' }, { name: 'Editar' }]}
-    >
+    <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
       <div className="w-full max-w-xl mx-auto bg-card p-8 rounded-2xl shadow-lg border border-border">
         {error && (
-          <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-4 border border-destructive">
+          <Alert variant="error" className="mb-4">
             {error}
-          </div>
+          </Alert>
         )}
         <form onSubmit={handleSubmit} className="space-y-6">
           <Input

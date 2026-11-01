@@ -2,28 +2,28 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { socialService } from '../../services/socialService';
-import { 
-  Plus, 
-  ExternalLink, 
-  Instagram, 
-  Tv, 
-  Settings, 
-  Trash2, 
-  TrendingUp, 
-  Calendar, 
+import {
+  Plus,
+  ExternalLink,
+  Instagram,
+  Tv,
+  Settings,
+  Trash2,
+  Calendar,
   Search,
   XCircle
 } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { BrandLoader } from '../../components/ui/BrandLoader';
-import { 
-  Button, 
-  Card, 
-  Modal, 
-  ConfirmModal, 
+import {
+  Button,
+  Card,
+  Modal,
+  ConfirmModal,
   Input,
   Badge,
-  Grid
+  Grid,
+  Alert,
 } from '../../components/ui/StandardComponents';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { logger } from '../../utils/logger';
@@ -36,9 +36,14 @@ interface SocialWall {
     bookingId?: string;
 }
 
+// Título e breadcrumb constantes, em português (antes "Social Walls", com breadcrumb diferente no loading).
+const PAGE_TITLE = 'Mural social';
+const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Mural social' }];
+
 const AdminSocialListPage: React.FC = () => {
     const [walls, setWalls] = useState<SocialWall[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [wallToDelete, setWallToDelete] = useState<string | null>(null);
@@ -53,13 +58,15 @@ const AdminSocialListPage: React.FC = () => {
             setLoading(true);
             const response = await socialService.listWalls();
             setWalls((response.data as unknown as SocialWall[]) || []);
+            setLoadError(null);
         } catch (error) {
+            // Antes: só toast, e a tela dizia "Nenhum mural sincronizado".
             logger.error('Failed to fetch walls', 'AdminSocialListPage', error);
-            addNotification({ type: 'error', title: 'Erro', message: 'Falha ao sincronizar murais sociais.' });
+            setLoadError('Não foi possível carregar os murais.');
         } finally {
             setLoading(false);
         }
-    }, [addNotification]);
+    }, []);
 
     useEffect(() => {
         fetchWalls();
@@ -79,7 +86,7 @@ const AdminSocialListPage: React.FC = () => {
               : err instanceof Error ? err.message : 'Erro desconhecido';
             addNotification({
               type: 'error',
-              title: 'Falha na Criação',
+              title: 'Erro ao criar mural',
               message
             });
         }
@@ -95,11 +102,11 @@ const AdminSocialListPage: React.FC = () => {
         try {
             setIsDeleting(true);
             await socialService.deleteWall(wallToDelete);
-            addNotification({ type: 'success', title: 'Mural Removido', message: 'O registro foi apagado permanentemente.' });
+            addNotification({ type: 'success', title: 'Mural excluído', message: 'O mural foi apagado.' });
             fetchWalls();
             setIsDeleteModalOpen(false);
         } catch {
-            addNotification({ type: 'error', title: 'Erro', message: 'Falha ao tentar apagar o mural.' });
+            addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível excluir o mural.' });
         } finally {
             setIsDeleting(false);
             setWallToDelete(null);
@@ -107,152 +114,162 @@ const AdminSocialListPage: React.FC = () => {
     };
 
     const filteredWalls = useMemo(() => {
-        return walls.filter(w => 
+        return walls.filter(w =>
             (w.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             w.hashtag.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [walls, searchTerm]);
 
+    // Achado (auditoria): o 3º card "Tendência hashtag" mostrava "Alta" fixo, e "Display Ativos"
+    // contava todos os murais (não só os ativos). Ficam as duas contagens reais, com rótulo correto.
     const stats = useMemo(() => ({
       total: walls.length,
       withBooking: walls.filter(w => w.bookingId).length,
-      hashtagPopularity: 'Alta'
     }), [walls]);
 
     if (loading && walls.length === 0) {
         return (
-            <AdminLayout title="Social Walls" breadcrumbs={[{ name: 'Admin' }, { name: 'Painel' }]}>
+            <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
                 <div className="flex flex-col items-center justify-center min-h-[400px]">
-                    <BrandLoader size={120} label="Iniciando radar de redes sociais..." />
+                    <BrandLoader size={120} label="Carregando murais…" />
                 </div>
             </AdminLayout>
         );
     }
 
     return (
-        <AdminLayout 
-            title="Social Walls" 
-            breadcrumbs={[{ name: 'Admin' }, { name: 'Painel' }, { name: 'Social Walls' }]}
-        >
+        <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
             <div className="space-y-6">
-                {/* Header Section */}
+                {/* Cabeçalho */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                   <div className="flex items-center gap-3">
                     <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
                       <Instagram className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-foreground">Social Wall Hub</h2>
-                      <p className="text-sm text-muted-foreground">Gerencie o engajamento social em tempo real para seus eventos.</p>
+                      <h2 className="text-xl font-bold text-foreground">Murais sociais</h2>
+                      <p className="text-sm text-muted-foreground">Fotos dos convidados exibidas no telão, com moderação.</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-2">
-                    <Button onClick={() => setIsFormModalOpen(true)} className="gap-2 shadow-lg shadow-primary/20">
-                      <Plus className="h-5 w-5" /> Novo Mural
+                    <Button onClick={() => setIsFormModalOpen(true)} size="sm" leftIcon={<Plus className="h-4 w-4" />}>
+                      Novo mural
                     </Button>
                   </div>
                 </div>
 
-                {/* Stats Grid */}
-                <Grid columns={{ sm: 1, md: 3 }} gap={4}>
+                {/* Indicadores */}
+                <Grid columns={{ sm: 1, md: 2 }} gap={4}>
                   <Card className="p-4 bg-primary/5 border-primary/10">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                         <Tv className="h-5 w-5" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Display Ativos</p>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Murais</p>
                         <p className="text-xl font-black text-foreground">{stats.total}</p>
                       </div>
                     </div>
                   </Card>
-                  
-                  <Card className="p-4 bg-emerald-500/5 border-emerald-500/10">
+
+                  <Card className="p-4 bg-success/5 border-success/10">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                      <div className="h-10 w-10 rounded-xl bg-success/10 flex items-center justify-center text-success">
                         <Calendar className="h-5 w-5" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Vinculados a Evento</p>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Vinculados a reserva</p>
                         <p className="text-xl font-black text-foreground">{stats.withBooking}</p>
-                      </div>
-                    </div>
-                  </Card>
-
-                  <Card className="p-4 bg-pink-500/5 border-pink-500/10">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500">
-                        <TrendingUp className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Tendência hashtag</p>
-                        <p className="text-xl font-black text-foreground">{stats.hashtagPopularity}</p>
                       </div>
                     </div>
                   </Card>
                 </Grid>
 
-                {/* Filters and Search */}
+                {/* Busca */}
                 <Card className="p-4 bg-card/50 border-border">
-                  <div className="flex flex-col md:flex-row gap-4">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <div className="flex gap-2">
+                    <div className="flex-1">
                       <Input
-                        placeholder="Buscar por nome do evento ou hashtag..."
-                        className="pl-10"
+                        placeholder="Buscar por nome ou hashtag..."
+                        aria-label="Buscar murais"
+                        leftIcon={<Search className="h-4 w-4" />}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="icon" onClick={() => setSearchTerm('')} title="Limpar Filtro">
-                        <XCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-12 w-12 shrink-0"
+                      onClick={() => setSearchTerm('')}
+                      title="Limpar busca"
+                      aria-label="Limpar busca"
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </Button>
                   </div>
                 </Card>
 
-                {/* Walls Grid */}
+                {loadError && (
+                  <Alert
+                    variant="error"
+                    title="Erro ao carregar"
+                    description={loadError}
+                    action={<Button size="sm" variant="outline" onClick={fetchWalls}>Tentar de novo</Button>}
+                  />
+                )}
+
+                {/* Grade de murais */}
+                {!(loadError && walls.length === 0) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredWalls.map((wall) => (
                         <Card key={wall.id} className="overflow-hidden flex flex-col group p-0 border-border hover:border-primary/50 transition-all shadow-sm hover:shadow-md">
                              <div className="p-6 flex flex-col h-full">
-                                <div className="flex justify-between items-start mb-6">
+                                <div className="flex justify-between items-start gap-3 mb-6">
                                     <div className="min-w-0">
-                                        <h3 className="text-lg font-bold text-foreground leading-tight truncate">{wall.name || 'Mural Sem Identificação'}</h3>
-                                        <div className="flex items-center gap-1.5 text-pink-500 font-black text-[10px] uppercase tracking-widest mt-2 bg-pink-500/5 py-1 px-2 rounded-lg border border-pink-500/10 self-start">
-                                            <Instagram size={12} /> #{wall.hashtag}
+                                        <h3 className="text-lg font-bold text-foreground leading-tight truncate">{wall.name || 'Mural sem nome'}</h3>
+                                        <div className="inline-flex items-center gap-1.5 text-primary font-bold text-sm mt-2 bg-primary/5 py-1 px-2 rounded-lg border border-primary/10">
+                                            <Instagram size={14} aria-hidden="true" /> #{wall.hashtag}
                                         </div>
                                     </div>
-                                    <Badge variant={wall.bookingId ? 'primary' : 'outline'} className="text-[9px] font-black uppercase tracking-tighter shrink-0">
-                                        {wall.bookingId ? 'EVENTO' : 'LIVRE'}
+                                    <Badge variant={wall.bookingId ? 'primary' : 'outline'} className="shrink-0">
+                                        {wall.bookingId ? 'Reserva' : 'Avulso'}
                                     </Badge>
                                 </div>
 
                                 {wall.slug && (
-                                     <div className="mb-6 bg-muted/30 border border-border/50 p-3 rounded-xl text-[10px] font-medium text-muted-foreground flex items-center justify-between">
-                                        <span className="truncate mr-2 opacity-70 italic">Link público: /tv?slug={wall.slug}</span>
-                                        <a href={`/tv?slug=${wall.slug}`} target="_blank" rel="noreferrer" className="text-primary hover:text-primary/70 transition-colors shrink-0" title="Visualização em tempo real">
-                                          <ExternalLink size={14}/>
+                                     <div className="mb-6 bg-muted/30 border border-border p-3 rounded-xl text-sm text-muted-foreground flex items-center justify-between gap-2">
+                                        <span className="truncate">Endereço público: /tv?slug={wall.slug}</span>
+                                        <a
+                                          href={`/tv?slug=${wall.slug}`}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-primary hover:text-primary/70 transition-colors shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                          title="Abrir o telão em nova aba"
+                                          aria-label={`Abrir o telão de ${wall.name || wall.hashtag} em nova aba`}
+                                        >
+                                          <ExternalLink size={16}/>
                                         </a>
                                      </div>
                                 )}
 
                                 <div className="flex gap-2 mt-auto pt-4 border-t border-border/50">
-                                    <Button 
+                                    <Button
                                         onClick={() => navigate(`/admin/social/${wall.id}`)}
-                                        className="flex-1 h-10 shadow-sm"
+                                        className="flex-1"
                                         size="sm"
+                                        leftIcon={<Settings className="h-4 w-4" />}
                                     >
-                                        <Settings className="h-3.5 w-3.5 mr-2" /> Gerenciar
+                                        Gerenciar
                                     </Button>
-                                     <Button 
+                                     <Button
                                         variant="outline"
                                         size="icon"
                                         onClick={() => window.open(`/tv?slug=${wall.slug || ''}&code=${wall.id.substring(0,4)}`, '_blank')}
-                                        className="h-10 w-10 border-border hover:border-primary hover:text-primary"
-                                        title="Painel TV"
+                                        className="h-10 w-10"
+                                        title="Abrir telão"
+                                        aria-label={`Abrir telão de ${wall.name || wall.hashtag}`}
                                     >
                                         <Tv size={18} />
                                     </Button>
@@ -261,7 +278,8 @@ const AdminSocialListPage: React.FC = () => {
                                         size="icon"
                                         onClick={() => handleDeleteClick(wall.id)}
                                         className="h-10 w-10"
-                                        title="Expurgar Mural"
+                                        title="Excluir mural"
+                                        aria-label={`Excluir mural ${wall.name || wall.hashtag}`}
                                     >
                                         <Trash2 size={18} />
                                     </Button>
@@ -272,75 +290,72 @@ const AdminSocialListPage: React.FC = () => {
 
                     {filteredWalls.length === 0 && !loading && (
                         <div className="col-span-full py-24 text-center border-2 border-dashed border-border rounded-3xl bg-muted/20">
-                             <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-6 text-muted-foreground/20 ring-8 ring-muted/10">
+                             <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-6 text-muted-foreground">
                                 <Instagram className="h-10 w-10" />
                               </div>
-                             <h3 className="text-xl font-bold text-foreground">Nenhum mural sincronizado</h3>
-                             <p className="text-muted-foreground text-sm max-w-sm mx-auto mt-2">Crie seu primeiro Social Wall para capturar e exibir as fotos dos convidados em tempo real.</p>
-                             <Button onClick={() => setIsFormModalOpen(true)} className="mt-6">Criar Primeiro Mural</Button>
+                             <h3 className="text-xl font-bold text-foreground">Nenhum mural encontrado</h3>
+                             <p className="text-muted-foreground text-sm max-w-sm mx-auto mt-2">
+                               {searchTerm ? 'Ajuste a busca.' : 'Crie o primeiro mural para exibir as fotos dos convidados no telão.'}
+                             </p>
+                             {searchTerm ? (
+                               <Button variant="outline" size="sm" onClick={() => setSearchTerm('')} className="mt-6">Limpar busca</Button>
+                             ) : (
+                               <Button size="sm" onClick={() => setIsFormModalOpen(true)} className="mt-6">Criar mural</Button>
+                             )}
                         </div>
                     )}
                 </div>
+                )}
             </div>
 
-            {/* Create Modal */}
             <Modal
               isOpen={isFormModalOpen}
               onClose={() => setIsFormModalOpen(false)}
-              title="Parametrizar Novo Mural Social"
+              title="Novo mural social"
               size="md"
             >
                 <form onSubmit={handleCreate} className="space-y-6">
-                    <div>
-                        <label className="block text-sm font-bold text-foreground mb-2">Identificação do Mural</label>
-                        <Input 
-                            placeholder="Ex: Casamento João & Maria"
-                            value={newWall.name}
-                            onChange={e => setNewWall({...newWall, name: e.target.value})}
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-foreground mb-2">Hashtag de Monitoramento (sem #)</label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-black">#</span>
-                            <Input 
-                                className="pl-8"
-                                placeholder="festa_premium_2024"
-                                value={newWall.hashtag}
-                                onChange={e => setNewWall({...newWall, hashtag: e.target.value.replace('#', '')})}
-                                required
-                            />
-                        </div>
-                        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter mt-1.5">Fotos marcadas com esta tag aparecerão no feed.</p>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-foreground mb-2">Slug da URL (Opcional)</label>
-                        <Input 
-                            placeholder="casamento-joao-maria"
-                            value={newWall.slug}
-                            onChange={e => setNewWall({...newWall, slug: e.target.value})}
-                        />
-                        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter mt-1.5">URL personalizada para acesso rápido (ex: /tv/seu-slug).</p>
-                    </div>
+                    <Input
+                        label="Nome do mural"
+                        placeholder="Ex.: Casamento João e Maria"
+                        value={newWall.name}
+                        onChange={e => setNewWall({...newWall, name: e.target.value})}
+                        required
+                    />
+                    <Input
+                        label="Hashtag monitorada (sem #)"
+                        description="Fotos marcadas com esta hashtag aparecem no mural."
+                        leftIcon={<span className="font-bold" aria-hidden="true">#</span>}
+                        placeholder="festa_ana_2026"
+                        value={newWall.hashtag}
+                        onChange={e => setNewWall({...newWall, hashtag: e.target.value.replace('#', '')})}
+                        required
+                    />
+                    {/* O texto antigo dizia "/tv/seu-slug", mas o endereço real é /tv?slug=… */}
+                    <Input
+                        label="Endereço do telão (opcional)"
+                        description="Endereço curto para abrir o telão: /tv?slug=seu-endereco"
+                        placeholder="casamento-joao-maria"
+                        value={newWall.slug}
+                        onChange={e => setNewWall({...newWall, slug: e.target.value})}
+                    />
                     <div className="flex justify-end gap-3 pt-4 border-t border-border">
                          <Button type="button" variant="outline" onClick={() => setIsFormModalOpen(false)}>Cancelar</Button>
-                         <Button type="submit" className="shadow-lg shadow-primary/20">Instanciar Mural</Button>
+                         <Button type="submit">Criar mural</Button>
                     </div>
                 </form>
             </Modal>
 
-            {/* Delete Confirmation Modal */}
             <ConfirmModal
               isOpen={isDeleteModalOpen}
               onClose={() => setIsDeleteModalOpen(false)}
               onConfirm={confirmDelete}
-              title="Expurgar Mural Social?"
-              message="Esta ação é definitiva. Todas as fotos vinculadas deixarão de ser exibidas no telão e o registro de hashtag será liberado."
+              title="Excluir mural?"
+              message="As fotos vinculadas deixam de aparecer no telão e a hashtag fica livre para outro mural. Esta ação não pode ser desfeita."
               variant="danger"
               isLoading={isDeleting}
-              confirmText="Confirmar Expurgo"
-              cancelText="Manter Registro"
+              confirmText="Excluir"
+              cancelText="Cancelar"
             />
         </AdminLayout>
     );

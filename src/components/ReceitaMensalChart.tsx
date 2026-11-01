@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Select } from './ui/StandardComponents';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Select, Alert, Button, Skeleton } from './ui/StandardComponents';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { apiFetch } from '../services/api';
 
@@ -13,6 +13,9 @@ const monthLabels = [
   '', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
 ];
 
+// Eixos e grade com as cores do tema (o padrão do Recharts é cinza fixo #666/#ccc).
+const AXIS_TICK = { fill: 'hsl(var(--muted-foreground))', fontSize: 12 };
+
 interface ReceitaMensalChartProps {
   year: number;
 }
@@ -23,6 +26,7 @@ export function ReceitaMensalChart({ year }: ReceitaMensalChartProps) {
   const [error, setError] = useState<string | null>(null);
   const [years, setYears] = useState<number[]>([]);
   const [selectedYear, setSelectedYear] = useState<number>(year);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Buscar anos disponíveis ao montar
   useEffect(() => {
@@ -67,97 +71,59 @@ export function ReceitaMensalChart({ year }: ReceitaMensalChartProps) {
       }
     })();
     return () => { cancelled = true; };
-  }, [selectedYear]);
+  }, [selectedYear, reloadKey]);
 
   // Select de anos
   const yearOptions = years.map(y => ({ value: String(y), label: String(y) }));
 
-  if (loading) return (
-    <div className="flex flex-col items-center justify-center h-64 gap-4">
-      <Select
-        label="Ano"
-        options={yearOptions}
-        value={String(selectedYear)}
-        onChange={e => setSelectedYear(Number(e.target.value))}
-        className="max-w-xs"
+  // O seletor de ano fica sempre no topo; só o conteúdo abaixo muda conforme o estado.
+  let content: ReactNode;
+  if (loading) {
+    content = <Skeleton className="h-[300px] w-full" />;
+  } else if (error) {
+    // Antes: texto em `text-destructive-foreground` (branco) sobre o card — invisível no tema claro.
+    content = (
+      <Alert
+        variant="error"
+        title="Erro ao carregar o gráfico"
+        description={error}
+        action={<Button variant="outline" size="sm" onClick={() => setReloadKey((k) => k + 1)}>Tentar de novo</Button>}
       />
-      <div className="text-muted-foreground">Carregando gráfico...</div>
-    </div>
-  );
-
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <Select
-          label="Ano"
-          options={yearOptions}
-          value={String(selectedYear)}
-          onChange={e => setSelectedYear(Number(e.target.value))}
-          className="max-w-xs"
-        />
-        <div className="text-destructive-foreground text-center">
-          Erro ao carregar o gráfico: {error}
-          <br />
-          <span className="text-xs text-muted-foreground">Verifique sua autenticação ou tente novamente.</span>
-        </div>
-      </div>
     );
-  }
-
-
-  if (!data || data.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <Select
-          label="Ano"
-          options={yearOptions}
-          value={String(selectedYear)}
-          onChange={e => setSelectedYear(Number(e.target.value))}
-          className="max-w-xs"
-        />
-        <div className="text-muted-foreground text-center">
-          Nenhum dado de receita mensal encontrado para o período.
-        </div>
-      </div>
+  } else if (!data || data.length === 0) {
+    content = (
+      <p className="h-40 flex items-center justify-center text-sm text-muted-foreground text-center">
+        Nenhuma receita registrada em {selectedYear}.
+      </p>
     );
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      <Select
-        label="Ano"
-        options={yearOptions}
-        value={String(selectedYear)}
-        onChange={e => setSelectedYear(Number(e.target.value))}
-        className="max-w-xs mb-2"
-      />
+  } else {
+    content = (
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data.map(d => ({ ...d, label: monthLabels[d.month] }))}>
-          <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-          <XAxis 
-            dataKey="label" 
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+          <XAxis
+            dataKey="label"
             axisLine={false}
             tickLine={false}
-            className="text-xs fill-muted-foreground"
+            tick={AXIS_TICK}
           />
-          <YAxis 
+          <YAxis
             domain={[0, 'auto']} // mínimo 0, máximo automático
-            tickFormatter={(value: number) => value.toLocaleString('pt-BR', { 
-              style: 'currency', 
+            tickFormatter={(value: number) => value.toLocaleString('pt-BR', {
+              style: 'currency',
               currency: 'BRL',
               minimumFractionDigits: 0,
               maximumFractionDigits: 0
             })}
             axisLine={false}
             tickLine={false}
-            className="text-xs fill-muted-foreground"
+            tick={AXIS_TICK}
           />
-          <Tooltip 
+          <Tooltip
             formatter={(value: number | undefined) => [
-              Number(value || 0).toLocaleString('pt-BR', { 
-                style: 'currency', 
-                currency: 'BRL' 
+              Number(value || 0).toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
               }),
               'Receita'
             ]}
@@ -168,16 +134,31 @@ export function ReceitaMensalChart({ year }: ReceitaMensalChartProps) {
               borderRadius: '8px',
               boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
             }}
+            cursor={{ fill: 'hsl(var(--muted))' }}
           />
-          <Bar 
-            dataKey="total" 
-            name="Receita" 
+          <Bar
+            dataKey="total"
+            name="Receita"
             fill="hsl(var(--primary))"
             radius={[4, 4, 0, 0]}
-            className="hover:opacity-80 transition-opacity"
           />
         </BarChart>
       </ResponsiveContainer>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="max-w-xs">
+        <Select
+          label="Ano"
+          size="sm"
+          options={yearOptions}
+          value={String(selectedYear)}
+          onChange={e => setSelectedYear(Number(e.target.value))}
+        />
+      </div>
+      {content}
     </div>
   );
 }
