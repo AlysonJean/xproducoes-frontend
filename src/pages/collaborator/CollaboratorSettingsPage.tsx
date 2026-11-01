@@ -28,6 +28,8 @@ import { ProfileSettings, SecuritySettings, PrivacySettings, PaymentSettings } f
 
 import { useNotifications } from '@/contexts/NotificationContext';
 import { logger } from '../../utils/logger';
+import { strongPasswordSchema } from '../../validators/userSchema';
+import { PASSWORD_HINT } from '../../components/layouts/AuthLayout';
 
 type SettingsTab = 'profile' | 'security' | 'privacy' | 'payment';
 
@@ -178,8 +180,11 @@ const CollaboratorSettingsPage: React.FC = () => {
           setPasswordError('Digite sua senha atual.');
           return;
         }
-        if (newPassword.length < 6) {
-          setPasswordError('A nova senha deve ter pelo menos 6 caracteres.');
+        // Mesma regra forte das outras telas e do servidor (antes: 6 caracteres, e a API passou
+        // a recusar senha fraca na troca).
+        const passwordCheck = strongPasswordSchema.safeParse(newPassword);
+        if (!passwordCheck.success) {
+          setPasswordError(passwordCheck.error.issues[0]?.message ?? PASSWORD_HINT);
           return;
         }
         if (newPassword !== confirmPassword) {
@@ -509,7 +514,8 @@ const CollaboratorSettingsPage: React.FC = () => {
                   autoComplete="new-password"
                   value={securitySettings.newPassword}
                   onChange={(e) => setSecuritySettings({ ...securitySettings, newPassword: e.target.value })}
-                  placeholder="Mínimo de 6 caracteres"
+                  placeholder="Mínimo de 8 caracteres"
+                  description={PASSWORD_HINT}
                 />
                 <Input
                   size="sm"
