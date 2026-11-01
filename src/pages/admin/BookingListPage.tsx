@@ -22,6 +22,7 @@ import {
   Alert
 } from '../../components/ui/StandardComponents';
 import { AdminBookingForm as BookingForm } from '@/components/forms/AdminBookingForm';
+import { HistoryImportModal } from '../../components/admin/HistoryImportModal';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import type { BookingListItem, BookingStatus } from '../../types/types';
 import type { BookingPaymentStatus } from '../../types/enums';
@@ -40,7 +41,8 @@ import {
   Download,
   Filter,
   Zap,
-  MessageSquare
+  MessageSquare,
+  Upload
 } from 'lucide-react';
 
 // Aux function for safe price parsing
@@ -64,6 +66,7 @@ export const BookingListPage = () => {
   const [endDate, setEndDate] = useState('');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<BookingListItem | null>(null);
   const [initialClientType, setInitialClientType] = useState<'registered' | 'manual'>('registered');
   const [isFormDirty, setIsFormDirty] = useState(false);
@@ -273,6 +276,14 @@ export const BookingListPage = () => {
               title="Exporta para planilha as reservas filtradas (período, status e busca)"
             >
               <Download className="h-4 w-4" /> {exporting ? 'Exportando...' : 'Exportar'}
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setIsImportOpen(true)}
+              title="Lança eventos antigos (agendas) a partir da planilha de revisão"
+            >
+              <Upload className="h-4 w-4" /> Importar histórico
             </Button>
             <Button onClick={handleCreateManual} variant="outline" className="gap-2 border-primary/20 hover:border-primary/40">
               <Plus className="h-4 w-4" /> Reserva Manual
@@ -600,6 +611,12 @@ export const BookingListPage = () => {
           />
         </div>
       </Modal>
+
+      <HistoryImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onImported={fetchBookings}
+      />
 
       <ConfirmModal
         isOpen={isConfirmOpen}

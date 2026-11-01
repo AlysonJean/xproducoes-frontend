@@ -112,6 +112,7 @@ type BookingDetails = BaseBookingDetails & {
   clientContact?: string;
   clientEmail?: string;
   paymentStatus?: string;
+  internalNotes?: string;
   attachments?: Array<{
     id?: string;
     url?: string;
@@ -1137,6 +1138,20 @@ export const BookingDetailPage = () => {
                             {booking.notes || 'Sem anotações críticas de campo para este contrato.'}
                          </p>
                     </div>
+
+                    {/* Observações internas (ex.: histórico importado das agendas — equipe, valor
+                        estimado, texto original). Não havia onde vê-las no painel. */}
+                    {user?.role === 'ADMIN' && booking.internalNotes?.trim() && (
+                        <div className="p-4 rounded-2xl bg-muted/30 border border-border/40">
+                             <div className="flex items-center gap-3 text-muted-foreground">
+                                 <FileText size={16} />
+                                 <span className="text-[10px] font-black uppercase tracking-widest">Observações Internas</span>
+                             </div>
+                             <p className="text-[11px] font-medium text-foreground mt-3 leading-relaxed whitespace-pre-line">
+                                {booking.internalNotes}
+                             </p>
+                        </div>
+                    )}
                 </Card>
 
                 {/* Tactical Help Indicator */}
