@@ -16,7 +16,7 @@ export type BookingExportSource = BookingListItem & Partial<{
   createdAt: string;
 }>;
 
-const DELIVERY_LABELS: Record<string, string> = {
+export const DELIVERY_LABELS: Record<string, string> = {
   PENDING: 'Pendente',
   PREPARING: 'Em preparação',
   ON_THE_WAY: 'A caminho',

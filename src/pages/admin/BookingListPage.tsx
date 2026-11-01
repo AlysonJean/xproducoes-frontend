@@ -3,7 +3,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { fetchAllAdminBookings } from '../../services/adminBookings';
 import { isWithinLocalDateRange } from '../../utils/dateRange';
-import { downloadBookingsSpreadsheet } from '../../utils/bookingExport';
+import { downloadBookingsSpreadsheet, DELIVERY_LABELS } from '../../utils/bookingExport';
 import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
 import { normalizeString } from '../../utils/string';
@@ -44,6 +44,20 @@ import {
   MessageSquare,
   Upload
 } from 'lucide-react';
+
+// Seletores da tabela: todos os valores que o backend aceita. Com uma lista parcial, a reserva cujo
+// valor não estava nela (rascunho, em andamento, entrega concluída — inclusive todo o histórico
+// importado) aparecia como a primeira opção, "Pendente".
+const STATUS_OPTIONS = [
+  { value: 'DRAFT', label: 'Rascunho' },
+  { value: 'PENDING', label: 'Pendente' },
+  { value: 'CONFIRMED', label: 'Confirmada' },
+  { value: 'IN_PROGRESS', label: 'Em andamento' },
+  { value: 'COMPLETED', label: 'Concluída' },
+  { value: 'CANCELLED', label: 'Cancelada' },
+  { value: 'REFUNDED', label: 'Reembolsada' },
+];
+const DELIVERY_OPTIONS = Object.entries(DELIVERY_LABELS).map(([value, label]) => ({ value, label }));
 
 // Aux function for safe price parsing
 const safeParsePrice = (value: string | number | undefined): number => {
@@ -496,12 +510,8 @@ export const BookingListPage = () => {
                           className="h-9 min-w-[130px] border-border text-xs"
                           value={booking.status}
                                                     onChange={(e: ChangeEvent<HTMLSelectElement>) => handleStatusChange(booking.id, 'status', e.target.value)}
-                          options={[
-                            { value: 'PENDING', label: 'Pendente' },
-                            { value: 'CONFIRMED', label: 'Confirmada' },
-                            { value: 'COMPLETED', label: 'Concluída' },
-                            { value: 'CANCELLED', label: 'Cancelada' },
-                          ]}
+                          aria-label={`Status da reserva ${booking.id}`}
+                          options={STATUS_OPTIONS}
                         />
                       </td>
                       <td className="px-6 py-4">
@@ -523,12 +533,8 @@ export const BookingListPage = () => {
                           className="h-9 min-w-[150px] border-border text-xs"
                           value={booking.deliveryStatus || 'PENDING'}
                                                     onChange={(e: ChangeEvent<HTMLSelectElement>) => handleStatusChange(booking.id, 'deliveryStatus', e.target.value)}
-                          options={[
-                            { value: 'PENDING', label: 'Pendente' },
-                            { value: 'ON_THE_WAY', label: 'A caminho' },
-                            { value: 'ARRIVED', label: 'No local' },
-                            { value: 'SETUP_COMPLETE', label: 'Montado' },
-                          ]}
+                          aria-label={`Entrega da reserva ${booking.id}`}
+                          options={DELIVERY_OPTIONS}
                         />
                       </td>
                       <td className="px-6 py-4">

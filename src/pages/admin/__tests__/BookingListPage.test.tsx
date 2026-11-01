@@ -136,3 +136,23 @@ describe('BookingListPage — situação do pagamento', () => {
     await vi.waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/bookings/XP-PAGO', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ paymentStatus: null }) })));
   });
 });
+
+// Os seletores de Status e Entrega da tabela só tinham parte dos valores: reserva em rascunho ou com
+// entrega concluída (todo o histórico importado) aparecia como "Pendente".
+describe('BookingListPage — seletores mostram o valor real', () => {
+  it('rascunho e entrega concluída aparecem como tal', async () => {
+    useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
+    apiFetch.mockReset();
+    apiFetch.mockResolvedValue([
+      { ...booking(1), id: 'XP-HIST', status: 'COMPLETED', deliveryStatus: 'COMPLETED' },
+      { ...booking(2), id: 'XP-CARRINHO', status: 'DRAFT', deliveryStatus: 'PENDING' },
+    ]);
+    render(<MemoryRouter initialEntries={['/admin/reservas']}><BookingListPage /></MemoryRouter>);
+    await screen.findByText(/Mostrando 2 de 2 registros/);
+
+    const value = (label: string) => (screen.getByLabelText(label) as HTMLSelectElement).value;
+    expect(value('Entrega da reserva XP-HIST')).toBe('COMPLETED');
+    expect(value('Status da reserva XP-HIST')).toBe('COMPLETED');
+    expect(value('Status da reserva XP-CARRINHO')).toBe('DRAFT');
+  });
+});
