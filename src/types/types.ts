@@ -354,13 +354,6 @@ export interface AlertModalProps extends BaseModalProps {
   confirmText?: string;
 }
 
-export interface FormModalProps<T = unknown> extends BaseModalProps {
-  onSubmit: (data: T) => void;
-  isLoading?: boolean;
-  submitText?: string;
-  cancelText?: string;
-}
-
 // ================================
 // INTERFACES PARA DADOS DE FORMULÁRIOS
 // ================================
@@ -451,64 +444,6 @@ export interface ContactData {
 // ================================
 // INTERFACES PARA PROPS DE MODAIS
 // ================================
-
-export interface EquipmentModalProps extends BaseModalProps {
-  onSubmit?: (data: EquipmentData) => void;
-  isLoading?: boolean;
-  initialData?: Partial<EquipmentData>;
-  isEditing?: boolean;
-}
-
-export interface KitModalProps extends BaseModalProps {
-  onSubmit?: (data: KitData) => void;
-  isLoading?: boolean;
-  initialData?: Partial<KitData>;
-  isEditing?: boolean;
-  availableEquipment?: Equipment[];
-}
-
-export interface BookingModalProps extends BaseModalProps {
-  onSubmit?: (data: BookingData) => void;
-  isLoading?: boolean;
-  equipment?: Equipment;
-  kit?: Kit;
-  initialData?: Partial<BookingData>;
-}
-
-export interface FilterModalProps extends BaseModalProps {
-  onApplyFilters?: (filters: FilterData) => void;
-  onClearFilters?: () => void;
-  initialFilters?: Partial<FilterData>;
-  availableCategories?: string[];
-  availableLocations?: string[];
-  priceRange?: { min: number; max: number };
-  filterType?: 'equipment' | 'kit' | 'booking' | 'general';
-}
-
-export interface ProfileModalProps extends BaseModalProps {
-  onSubmit?: (data: ProfileData) => void;
-  isLoading?: boolean;
-  initialData?: Partial<ProfileData>;
-  userType?: 'client' | 'admin';
-}
-
-export interface PaymentModalProps extends BaseModalProps {
-  onSubmit?: (data: PaymentData) => void;
-  isLoading?: boolean;
-  bookingId?: string;
-  totalAmount?: number;
-  paymentMethods?: string[];
-  initialData?: Partial<PaymentData>;
-}
-
-export interface ContactModalProps extends BaseModalProps {
-  onSubmit: (data: ContactData) => void;
-  isLoading?: boolean;
-  initialData?: Partial<ContactData>;
-  contactType?: ContactType;
-}
-
-// ReviewModalProps removido
 
 export interface WhatsAppModalProps extends BaseModalProps {
   phoneNumber?: string;
@@ -955,29 +890,15 @@ export interface LoadingContextType {
 // ================================
 
 export type ModalNames =
-  | 'booking'
-  | 'equipment'
-  | 'kit'
-  | 'payment'
-  | 'profile'
-  | 'contact'
   | 'whatsapp'
   | 'imageGallery'
-  | 'filter'
   | 'confirm'
   | 'alert'
   | 'invite';
 
 export type ModalPropsMap = {
-  booking: BookingModalProps;
-  equipment: EquipmentModalProps;
-  kit: KitModalProps;
-  payment: PaymentModalProps;
-  profile: ProfileModalProps;
-  contact: ContactModalProps;
   whatsapp: WhatsAppModalProps;
   imageGallery: ImageGalleryModalProps;
-  filter: FilterModalProps;
   confirm: ConfirmModalProps;
   alert: AlertModalProps;
   invite: {

@@ -4,15 +4,8 @@
 // packages/web/src/shared/modals/ModalContext.tsx
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import type {
-  BookingModalProps,
-  EquipmentModalProps,
-  KitModalProps,
-  PaymentModalProps,
-  ProfileModalProps,
-  ContactModalProps,
   WhatsAppModalProps,
   ImageGalleryModalProps,
-  FilterModalProps,
   ConfirmModalProps,
   AlertModalProps,
   ModalNames,
@@ -110,68 +103,6 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
 };
 
 // Hooks para modais específicos, agora tipados
-export const useBookingModal = () => {
-  const { openModal, closeModal, isModalOpen, getModalProps } = useModal();
-  return {
-    openBookingModal: (props?: BookingModalProps) => openModal('booking', props),
-    closeBookingModal: () => closeModal('booking'),
-    isBookingModalOpen: isModalOpen('booking'),
-    bookingModalProps: getModalProps('booking'),
-  };
-};
-
-export const useEquipmentModal = () => {
-  const { openModal, closeModal, isModalOpen, getModalProps } = useModal();
-  return {
-    openEquipmentModal: (props?: EquipmentModalProps) => openModal('equipment', props),
-    closeEquipmentModal: () => closeModal('equipment'),
-    isEquipmentModalOpen: isModalOpen('equipment'),
-    equipmentModalProps: getModalProps('equipment'),
-  };
-};
-
-export const useKitModal = () => {
-  const { openModal, closeModal, isModalOpen, getModalProps } = useModal();
-  return {
-    openKitModal: (props?: KitModalProps) => openModal('kit', props),
-    closeKitModal: () => closeModal('kit'),
-    isKitModalOpen: isModalOpen('kit'),
-    kitModalProps: getModalProps('kit'),
-  };
-};
-
-export const usePaymentModal = () => {
-  const { openModal, closeModal, isModalOpen, getModalProps } = useModal();
-  return {
-    openPaymentModal: (props?: PaymentModalProps) => openModal('payment', props),
-    closePaymentModal: () => closeModal('payment'),
-    isPaymentModalOpen: isModalOpen('payment'),
-    paymentModalProps: getModalProps('payment'),
-  };
-};
-
-export const useProfileModal = () => {
-  const { openModal, closeModal, isModalOpen, getModalProps } = useModal();
-  return {
-    openProfileModal: (props?: ProfileModalProps) => openModal('profile', props),
-    closeProfileModal: () => closeModal('profile'),
-    isProfileModalOpen: isModalOpen('profile'),
-    profileModalProps: getModalProps('profile'),
-  };
-};
-
-// Review modal removido
-
-export const useContactModal = () => {
-  const { openModal, closeModal, isModalOpen, getModalProps } = useModal();
-  return {
-    openContactModal: (props?: ContactModalProps) => openModal('contact', props),
-    closeContactModal: () => closeModal('contact'),
-    isContactModalOpen: isModalOpen('contact'),
-    contactModalProps: getModalProps('contact'),
-  };
-};
-
 export const useWhatsAppModal = () => {
   const { openModal, closeModal, isModalOpen, getModalProps } = useModal();
   return {
@@ -189,16 +120,6 @@ export const useImageGalleryModal = () => {
     closeImageGalleryModal: () => closeModal('imageGallery'),
     isImageGalleryModalOpen: isModalOpen('imageGallery'),
     imageGalleryModalProps: getModalProps('imageGallery'),
-  };
-};
-
-export const useFilterModal = () => {
-  const { openModal, closeModal, isModalOpen, getModalProps } = useModal();
-  return {
-    openFilterModal: (props?: FilterModalProps) => openModal('filter', props),
-    closeFilterModal: () => closeModal('filter'),
-    isFilterModalOpen: isModalOpen('filter'),
-    filterModalProps: getModalProps('filter'),
   };
 };
 

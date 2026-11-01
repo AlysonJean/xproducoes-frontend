@@ -2,15 +2,8 @@
 import React from 'react';
 import { useModal } from './ModalContext';
 import {
-  BookingModal,
-  EquipmentModal,
-  KitModal,
-  PaymentModal,
-  ProfileModal,
-  ContactModal,
   WhatsAppModal,
   ImageGalleryModal,
-  FilterModal,
   ConfirmModal,
   AlertModal,
 } from './index';
@@ -21,32 +14,6 @@ export const ModalManager: React.FC = () => {
 
   return (
     <>
-      {/* Booking Modal */}
-      {isModalOpen('booking') && <BookingModal isOpen={true} {...getModalProps('booking')} />}
-
-      {/* Equipment Modal */}
-      {isModalOpen('equipment') && <EquipmentModal isOpen={true} {...getModalProps('equipment')} />}
-
-      {/* Kit Modal */}
-      {isModalOpen('kit') && <KitModal isOpen={true} {...getModalProps('kit')} />}
-
-      {/* Payment Modal */}
-      {isModalOpen('payment') && <PaymentModal isOpen={true} {...getModalProps('payment')} />}
-
-      {/* Profile Modal */}
-      {isModalOpen('profile') && <ProfileModal isOpen={true} {...getModalProps('profile')} />}
-
-  {/* Review Modal removido */}
-
-      {/* Contact Modal */}
-      {isModalOpen('contact') &&
-        (() => {
-          const contactProps = getModalProps('contact') || {};
-          type ContactSubmit = { onSubmit?: (data: unknown) => void };
-          const onSubmit = (contactProps as ContactSubmit).onSubmit ?? (() => {});
-          return <ContactModal isOpen={true} onSubmit={onSubmit} {...contactProps} />;
-        })()}
-
       {/* WhatsApp Modal */}
       {isModalOpen('whatsapp') && <WhatsAppModal isOpen={true} {...getModalProps('whatsapp')} />}
 
@@ -54,9 +21,6 @@ export const ModalManager: React.FC = () => {
       {isModalOpen('imageGallery') && (
         <ImageGalleryModal isOpen={true} {...getModalProps('imageGallery')} />
       )}
-
-      {/* Filter Modal */}
-      {isModalOpen('filter') && <FilterModal isOpen={true} {...getModalProps('filter')} />}
 
       {/* Confirm Modal */}
       {isModalOpen('confirm') && <ConfirmModal isOpen={true} {...getModalProps('confirm')} />}
