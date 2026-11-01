@@ -1,24 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Bell,
-  Mail,
   MessageSquare,
   Calendar,
   Settings,
   Check,
-  Eye,
-  Trash2,
-  Filter,
   Search,
-  Volume2,
-  Smartphone
+  X,
 } from 'lucide-react';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
+import { CollaboratorLoading, CollaboratorError } from '../../components/collaborator/CollaboratorStates';
 import { SimpleCard } from '../../components/ui/Cards';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Select } from '../../components/ui/Select';
 import { collaboratorProfileAPI } from '../../services/api';
-import { BrandLoader } from '@/components/ui/BrandLoader';
 import { logger } from '../../utils/logger';
+import { cn } from '../../utils/cn';
 
 interface Notification {
   id: string;
@@ -27,7 +27,7 @@ interface Notification {
   message: string;
   timestamp: string;
   isRead: boolean;
-  priority: 'low' | 'medium' | 'high';
+  important: boolean;
   actionUrl?: string;
 }
 
@@ -42,134 +42,101 @@ interface RawNotification {
   actionUrl?: string;
 }
 
-interface NotificationSettings {
-  email: {
-    newBookings: boolean;
-    paymentReceived: boolean;
-    messageReceived: boolean;
-    systemUpdates: boolean;
-  };
-  push: {
-    newBookings: boolean;
-    paymentReceived: boolean;
-    messageReceived: boolean;
-    systemUpdates: boolean;
-  };
-  sms: {
-    newBookings: boolean;
-    paymentReceived: boolean;
-  };
-  preferences: {
-    quietHours: {
-      enabled: boolean;
-      start: string;
-      end: string;
-    };
-    frequency: 'immediate' | 'hourly' | 'daily';
-  };
-}
+const BREADCRUMBS = [
+  { name: 'Colaborador', href: '/colaborador/painel' },
+  { name: 'Notificações' },
+];
 
+const READ_FILTER_OPTIONS = [
+  { value: 'all', label: 'Todas' },
+  { value: 'unread', label: 'Não lidas' },
+  { value: 'read', label: 'Lidas' },
+];
+
+const TYPE_FILTER_OPTIONS = [
+  { value: 'all', label: 'Todos os tipos' },
+  { value: 'booking', label: 'Agendamentos' },
+  { value: 'payment', label: 'Pagamentos' },
+  { value: 'message', label: 'Mensagens' },
+  { value: 'system', label: 'Sistema' },
+];
+
+// O backend manda o enum NotificationType (BOOKING_CREATED, PAYMENT_DUE, MESSAGE_RECEIVED…). Antes o
+// tipo era só passado para minúsculas ("booking_created") e nunca batia com as categorias da tela:
+// todo filtro por tipo vinha vazio e todo item tinha o ícone de "sistema".
+const categoryOf = (type?: string): Notification['type'] => {
+  const t = (type || '').toUpperCase();
+  if (t.startsWith('BOOKING_')) return 'booking';
+  if (t.startsWith('PAYMENT_') || t === 'REFERRAL_REWARD') return 'payment';
+  if (t.startsWith('MESSAGE_')) return 'message';
+  return 'system';
+};
+
+const TYPE_STYLE: Record<Notification['type'], { icon: React.ReactNode; tile: string }> = {
+  booking: { icon: <Calendar className="h-5 w-5" aria-hidden="true" />, tile: 'bg-primary/10 text-primary' },
+  payment: { icon: <Check className="h-5 w-5" aria-hidden="true" />, tile: 'bg-success/10 text-success' },
+  message: { icon: <MessageSquare className="h-5 w-5" aria-hidden="true" />, tile: 'bg-info/10 text-info' },
+  system: { icon: <Settings className="h-5 w-5" aria-hidden="true" />, tile: 'bg-muted text-muted-foreground' },
+};
+
+const formatTimestamp = (timestamp: string) => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffHours < 1) return 'Agora há pouco';
+  if (diffHours < 24) return `${diffHours}h atrás`;
+  if (diffDays === 1) return 'Ontem';
+  return `${diffDays} dias atrás`;
+};
+
+// Achado (auditoria): a página tinha uma aba "Configurações" com preferências inventadas (valores
+// fixos no código, sem salvar em lugar nenhum) e ações "marcar como lida", "excluir" e "marcar todas"
+// que só mudavam o estado local — tudo voltava ao recarregar. Não há endpoint para nenhuma delas,
+// então foram retiradas; a lista mostra o estado real (lida/não lida) vindo do backend.
 const CollaboratorNotificationsPage: React.FC = () => {
-  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [settings, setSettings] = useState<NotificationSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'booking' | 'payment' | 'message' | 'system'>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'notifications' | 'settings'>('notifications');
 
-  useEffect(() => {
-    loadNotifications();
-  }, []);
-
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     try {
       setLoading(true);
+      setError(false);
       const response = await collaboratorProfileAPI.getMyNotifications();
-      // Ajuste conforme a estrutura real da resposta do backend
       const loadedNotifications = (response.data?.data ?? response.data ?? []) as RawNotification[];
 
-            const mapped = Array.isArray(loadedNotifications) ? loadedNotifications.map((n): Notification => ({
+      const mapped = Array.isArray(loadedNotifications) ? loadedNotifications.map((n): Notification => ({
         id: n.id,
-                type: (n.type || 'system').toLowerCase() as Notification['type'],
+        type: categoryOf(n.type),
         title: n.title,
         message: n.message,
         timestamp: n.createdAt,
         isRead: n.read,
-        priority: (n.important ? 'high' : 'medium') as 'high' | 'medium' | 'low',
+        important: !!n.important,
         actionUrl: n.actionUrl
       })) : [];
-      
-      setNotifications(mapped);
 
-      // Mocks para settings (idealmente viria do backend também)
-      setSettings({
-        email: {
-          newBookings: true,
-          paymentReceived: true,
-          messageReceived: true,
-          systemUpdates: false
-        },
-        push: {
-          newBookings: true,
-          paymentReceived: true,
-          messageReceived: true,
-          systemUpdates: true
-        },
-        sms: {
-          newBookings: true,
-          paymentReceived: false
-        },
-        preferences: {
-          quietHours: {
-            enabled: true,
-            start: '22:00',
-            end: '08:00'
-          },
-          frequency: 'immediate'
-        }
-      });
-    } catch (error) {
-      logger.error('Erro ao carregar notificações:', 'CollaboratorNotificationsPage', error);
+      setNotifications(mapped);
+    } catch (err) {
+      logger.error('Erro ao carregar notificações:', 'CollaboratorNotificationsPage', err);
+      setError(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
-
-  const handleMarkAsRead = (notificationId: string) => {
-    setNotifications(prev =>
-      prev.map(n =>
-        n.id === notificationId ? { ...n, isRead: true } : n
-      )
-    );
-  };
-
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev =>
-      prev.map(n => ({ ...n, isRead: true }))
-    );
-  };
-
-  const handleDeleteNotification = (notificationId: string) => {
-    setNotifications(prev =>
-      prev.filter(n => n.id !== notificationId)
-    );
-  };
-
-  const handleSettingsChange = (category: keyof NotificationSettings, setting: string, value: boolean | string | object) => {
-    if (!settings) return;
-    
-    setSettings(prev => ({
-      ...prev!,
-      [category]: {
-        ...prev![category],
-        [setting]: value
-      }
-    }));
-  };
+  const hasFilters = filter !== 'all' || typeFilter !== 'all' || searchTerm !== '';
 
   const filteredNotifications = notifications
     .filter(n => {
@@ -177,495 +144,137 @@ const CollaboratorNotificationsPage: React.FC = () => {
       if (filter === 'unread') return !n.isRead;
       return true;
     })
-    .filter(n => {
-      if (typeFilter === 'all') return true;
-      return n.type === typeFilter;
-    })
+    .filter(n => typeFilter === 'all' || n.type === typeFilter)
     .filter(n => {
       if (!searchTerm) return true;
-      return n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             n.message.toLowerCase().includes(searchTerm.toLowerCase());
+      const term = searchTerm.toLowerCase();
+      return n.title.toLowerCase().includes(term) || n.message.toLowerCase().includes(term);
     });
 
-  const getNotificationIcon = (type: Notification['type']) => {
-    switch (type) {
-      case 'booking': return <Calendar className="h-5 w-5" />;
-      case 'payment': return <Check className="h-5 w-5" />;
-      case 'message': return <MessageSquare className="h-5 w-5" />;
-      case 'system': return <Settings className="h-5 w-5" />;
-      default: return <Bell className="h-5 w-5" />;
-    }
-  };
-
-  const getPriorityColor = (priority: Notification['priority']) => {
-    switch (priority) {
-      case 'high': return 'border-l-red-500 bg-red-50';
-      case 'medium': return 'border-l-yellow-500 bg-yellow-50';
-      case 'low': return 'border-l-blue-500 bg-blue-50';
-      default: return 'border-l-gray-500 bg-gray-50';
-    }
-  };
-
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffHours < 1) return 'Agora há pouco';
-    if (diffHours < 24) return `${diffHours}h atrás`;
-    if (diffDays === 1) return 'Ontem';
-    return `${diffDays} dias atrás`;
-  };
-
-  if (loading) {
-    return (
-      <CollaboratorLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <BrandLoader size={120} label="Carregando notificações..." />
-        </div>
-      </CollaboratorLayout>
-    );
-  }
-
   return (
-    <CollaboratorLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Notificações</h1>
-            <p className="text-muted-foreground">
-              Gerencie suas notificações e preferências de comunicação
-            </p>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            {unreadCount > 0 && (
-              <button
-                onClick={handleMarkAllAsRead}
-                className="flex items-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-              >
-                <Check className="h-4 w-4" />
-                <span>Marcar todas como lidas</span>
-              </button>
-            )}
-          </div>
-        </div>
+    <CollaboratorLayout title="Notificações" breadcrumbs={BREADCRUMBS}>
+      {loading ? (
+        <CollaboratorLoading label="Carregando notificações…" />
+      ) : error ? (
+        <CollaboratorError message="Não conseguimos carregar suas notificações." onRetry={loadNotifications} />
+      ) : (
+        <div className="space-y-6">
+          <p className="text-muted-foreground">
+            {unreadCount > 0
+              ? `Você tem ${unreadCount} notificaç${unreadCount === 1 ? 'ão não lida' : 'ões não lidas'}.`
+              : 'Você está em dia com suas notificações.'}
+          </p>
 
-        {/* Tabs */}
-        <div className="border-b">
-          <nav className="flex space-x-8">
-            <button
-              onClick={() => setActiveTab('notifications')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'notifications'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <Bell className="h-4 w-4" />
-                <span>Notificações</span>
-                {unreadCount > 0 && (
-                  <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
-                    {unreadCount}
-                  </span>
-                )}
-              </div>
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'settings'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <Settings className="h-4 w-4" />
-                <span>Configurações</span>
-              </div>
-            </button>
-          </nav>
-        </div>
+          {/* Filtros e busca */}
+          <SimpleCard title="Filtros">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:items-end">
+              <Input
+                size="sm"
+                label="Buscar"
+                placeholder="Título ou mensagem"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                leftIcon={<Search className="h-4 w-4" />}
+              />
 
-        {activeTab === 'notifications' && (
-          <div className="space-y-6">
-            {/* Filtros e Busca */}
-            <SimpleCard title="Filtros">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Buscar notificações..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 w-full border rounded-md"
-                  />
-                </div>
-                
-                <select
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value as typeof filter)}
-                  className="px-3 py-2 border rounded-md"
-                  aria-label="Filtrar por status de leitura"
-                >
-                  <option value="all">Todas</option>
-                  <option value="unread">Não lidas</option>
-                  <option value="read">Lidas</option>
-                </select>
+              <Select
+                size="sm"
+                label="Leitura"
+                options={READ_FILTER_OPTIONS}
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as typeof filter)}
+              />
 
-                <select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
-                  className="px-3 py-2 border rounded-md"
-                  aria-label="Filtrar por tipo"
-                >
-                  <option value="all">Todos os tipos</option>
-                  <option value="booking">Agendamentos</option>
-                  <option value="payment">Pagamentos</option>
-                  <option value="message">Mensagens</option>
-                  <option value="system">Sistema</option>
-                </select>
+              <Select
+                size="sm"
+                label="Tipo"
+                options={TYPE_FILTER_OPTIONS}
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+              />
 
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    {filteredNotifications.length} notificação(ões)
-                  </span>
-                  <button
+              <div className="flex items-center justify-between gap-2 md:h-10">
+                <span className="text-sm text-muted-foreground" aria-live="polite">
+                  {filteredNotifications.length} notificaç{filteredNotifications.length === 1 ? 'ão' : 'ões'}
+                </span>
+                {hasFilters && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
                     onClick={() => { setFilter('all'); setTypeFilter('all'); setSearchTerm(''); }}
-                    className="p-2 text-muted-foreground hover:bg-muted rounded-md"
-                    aria-label="Limpar filtros"
-                    title="Limpar filtros"
+                    leftIcon={<X className="h-4 w-4" />}
                   >
-                    <Filter className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </SimpleCard>
-
-            {/* Lista de Notificações */}
-            <SimpleCard title="Notificações Recentes">
-              <div className="space-y-3">
-                {filteredNotifications.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">Nenhuma notificação encontrada</p>
-                  </div>
-                ) : (
-                  filteredNotifications.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`border-l-4 p-4 rounded-lg transition-colors ${
-                        notification.isRead ? 'bg-muted/30' : 'bg-background'
-                      } ${getPriorityColor(notification.priority)}`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-3 flex-1">
-                          <div className={`p-2 rounded-lg ${
-                            notification.type === 'booking' ? 'bg-blue-100 text-blue-600' :
-                            notification.type === 'payment' ? 'bg-green-100 text-green-600' :
-                            notification.type === 'message' ? 'bg-sky-100 text-sky-600' :
-                            'bg-gray-100 text-gray-600'
-                          }`}>
-                            {getNotificationIcon(notification.type)}
-                          </div>
-                          
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <h3 className={`font-medium ${
-                                notification.isRead ? 'text-muted-foreground' : 'text-foreground'
-                              }`}>
-                                {notification.title}
-                              </h3>
-                              {!notification.isRead && (
-                                <div className="w-2 h-2 bg-primary rounded-full"></div>
-                              )}
-                            </div>
-                            
-                            <p className={`text-sm ${
-                              notification.isRead ? 'text-muted-foreground' : 'text-foreground'
-                            }`}>
-                              {notification.message}
-                            </p>
-                            
-                            <div className="flex items-center space-x-4 mt-2">
-                              <span className="text-xs text-muted-foreground">
-                                {formatTimestamp(notification.timestamp)}
-                              </span>
-                              
-                              <span className={`text-xs px-2 py-1 rounded ${
-                                notification.priority === 'high' ? 'bg-red-100 text-red-700' :
-                                notification.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                'bg-blue-100 text-blue-700'
-                              }`}>
-                                {notification.priority === 'high' ? 'Alta' :
-                                 notification.priority === 'medium' ? 'Média' : 'Baixa'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          {!notification.isRead && (
-                            <button
-                              onClick={() => handleMarkAsRead(notification.id)}
-                              className="p-1 text-green-600 hover:bg-green-100 rounded"
-                              aria-label="Marcar como lida"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                          )}
-                          
-                          <button
-                            onClick={() => handleDeleteNotification(notification.id)}
-                            className="p-1 text-red-600 hover:bg-red-100 rounded"
-                            aria-label="Excluir notificação"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      {notification.actionUrl && (
-                        <div className="mt-3">
-                          <button
-                            onClick={() => navigate(notification.actionUrl!)}
-                            className="text-sm text-primary hover:underline"
-                          >
-                            Ver detalhes →
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))
+                    Limpar
+                  </Button>
                 )}
               </div>
-            </SimpleCard>
-          </div>
-        )}
+            </div>
+          </SimpleCard>
 
-        {activeTab === 'settings' && settings && (
-          <div className="space-y-6">
-            {/* Configurações de E-mail */}
-            <SimpleCard title="Notificações por E-mail">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Novos Agendamentos</p>
-                      <p className="text-sm text-muted-foreground">Receber e-mail quando houver novos agendamentos</p>
-                    </div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settings.email.newBookings}
-                      onChange={(e) => handleSettingsChange('email', 'newBookings', e.target.checked)}
-                      className="sr-only peer"
-                      aria-label="Ativar notificações de novos agendamentos por e-mail"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Check className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Pagamentos Recebidos</p>
-                      <p className="text-sm text-muted-foreground">Confirmação de pagamentos por e-mail</p>
-                    </div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settings.email.paymentReceived}
-                      onChange={(e) => handleSettingsChange('email', 'paymentReceived', e.target.checked)}
-                      className="sr-only peer"
-                      aria-label="Ativar notificações de pagamentos recebidos por e-mail"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Novas Mensagens</p>
-                      <p className="text-sm text-muted-foreground">Notificação de mensagens de clientes</p>
-                    </div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settings.email.messageReceived}
-                      onChange={(e) => handleSettingsChange('email', 'messageReceived', e.target.checked)}
-                      className="sr-only peer"
-                      aria-label="Ativar notificações de novas mensagens por e-mail"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
-                </div>
-              </div>
-            </SimpleCard>
-
-            {/* Configurações Push */}
-            <SimpleCard title="Notificações Push">
-              <div className="space-y-4">
-                <div className="flex items-center space-x-3 mb-4">
-                  <Smartphone className="h-5 w-5 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    Receba notificações instantâneas no seu dispositivo
+          {/* Lista de notificações */}
+          <SimpleCard title="Notificações recentes">
+            <div className="space-y-3">
+              {filteredNotifications.length === 0 ? (
+                <div className="text-center py-8">
+                  <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" aria-hidden="true" />
+                  <p className="text-muted-foreground">
+                    {notifications.length === 0 ? 'Você ainda não recebeu notificações.' : 'Nenhuma notificação com esses filtros.'}
                   </p>
                 </div>
+              ) : (
+                filteredNotifications.map((notification) => {
+                  const style = TYPE_STYLE[notification.type] ?? TYPE_STYLE.system;
+                  return (
+                    <article
+                      key={notification.id}
+                      className={cn(
+                        'rounded-lg border border-border border-l-4 p-4 transition-colors',
+                        notification.isRead ? 'bg-muted/30 border-l-border' : 'bg-card border-l-primary'
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={cn('shrink-0 p-2 rounded-lg', style.tile)}>
+                          {style.icon}
+                        </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <span className="text-sm font-medium">Novos Agendamentos</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.push.newBookings}
-                        onChange={(e) => handleSettingsChange('push', 'newBookings', e.target.checked)}
-                        className="sr-only peer"
-                        aria-label="Ativar notificações push para novos agendamentos"
-                      />
-                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
-                  </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <h3 className={cn('font-medium', notification.isRead ? 'text-muted-foreground' : 'text-foreground')}>
+                              {notification.title}
+                            </h3>
+                            {!notification.isRead && (
+                              <span className="w-2 h-2 bg-primary rounded-full" aria-label="Não lida" role="img" />
+                            )}
+                            {notification.important && <Badge variant="destructive" size="sm">Importante</Badge>}
+                          </div>
 
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <span className="text-sm font-medium">Pagamentos</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.push.paymentReceived}
-                        onChange={(e) => handleSettingsChange('push', 'paymentReceived', e.target.checked)}
-                        className="sr-only peer"
-                        aria-label="Ativar notificações push para pagamentos"
-                      />
-                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
-                  </div>
+                          <p className={cn('text-sm', notification.isRead ? 'text-muted-foreground' : 'text-foreground')}>
+                            {notification.message}
+                          </p>
 
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <span className="text-sm font-medium">Mensagens</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.push.messageReceived}
-                        onChange={(e) => handleSettingsChange('push', 'messageReceived', e.target.checked)}
-                        className="sr-only peer"
-                        aria-label="Ativar notificações push para mensagens"
-                      />
-                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <span className="text-sm font-medium">Sistema</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.push.systemUpdates}
-                        onChange={(e) => handleSettingsChange('push', 'systemUpdates', e.target.checked)}
-                        className="sr-only peer"
-                        aria-label="Ativar notificações push para sistema"
-                      />
-                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </SimpleCard>
-
-            {/* Horário Silencioso */}
-            <SimpleCard title="Horário Silencioso">
-              <div className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <Volume2 className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">Ativar Horário Silencioso</p>
-                    <p className="text-sm text-muted-foreground">
-                      Pausar notificações durante determinado período
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer ml-auto">
-                    <input
-                      type="checkbox"
-                      checked={settings.preferences.quietHours.enabled}
-                      onChange={(e) => handleSettingsChange('preferences', 'quietHours', {
-                        ...settings.preferences.quietHours,
-                        enabled: e.target.checked
-                      })}
-                      className="sr-only peer"
-                      aria-label="Ativar horário silencioso"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
-                </div>
-
-                {settings.preferences.quietHours.enabled && (
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Início</label>
-                      <input
-                        type="time"
-                        aria-label="Horário de início"
-                        value={settings.preferences.quietHours.start}
-                        onChange={(e) => handleSettingsChange('preferences', 'quietHours', {
-                          ...settings.preferences.quietHours,
-                          start: e.target.value
-                        })}
-                        className="w-full px-3 py-2 border rounded-md"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Fim</label>
-                      <input
-                        type="time"
-                        aria-label="Horário de fim"
-                        value={settings.preferences.quietHours.end}
-                        onChange={(e) => handleSettingsChange('preferences', 'quietHours', {
-                          ...settings.preferences.quietHours,
-                          end: e.target.value
-                        })}
-                        className="w-full px-3 py-2 border rounded-md"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </SimpleCard>
-
-            {/* Frequência */}
-            <SimpleCard title="Frequência de Notificações">
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Escolha com que frequência deseja receber notificações agrupadas
-                </p>
-                
-                <select
-                  value={settings.preferences.frequency}
-                  onChange={(e) => handleSettingsChange('preferences', 'frequency', e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md"
-                  aria-label="Frequência de notificações"
-                >
-                  <option value="immediate">Imediato</option>
-                  <option value="hourly">A cada hora</option>
-                  <option value="daily">Diário</option>
-                </select>
-              </div>
-            </SimpleCard>
-          </div>
-        )}
-      </div>
+                          <div className="flex flex-wrap items-center gap-4 mt-2">
+                            <span className="text-xs text-muted-foreground">
+                              {formatTimestamp(notification.timestamp)}
+                            </span>
+                            {notification.actionUrl && (
+                              <Link
+                                to={notification.actionUrl}
+                                className="text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                              >
+                                Ver detalhes →
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })
+              )}
+            </div>
+          </SimpleCard>
+        </div>
+      )}
     </CollaboratorLayout>
   );
 };

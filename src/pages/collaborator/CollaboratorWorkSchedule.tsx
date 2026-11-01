@@ -1,12 +1,59 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { Calendar, CheckCircle2, ChevronLeft, ChevronRight, BarChart3, Clock, ArrowRight } from 'lucide-react';
 import type { Booking } from '../../types/types';
 import { collaboratorsAPI, collaboratorProfileAPI } from '../../services/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
+import { CollaboratorLoading, CollaboratorError } from '../../components/collaborator/CollaboratorStates';
+import { StatsCard, SimpleCard } from '../../components/ui/Cards';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { Select } from '../../components/ui/Select';
+import { Modal } from '../../components/ui/Modal';
+import type { StandardVariant } from '../../components/ui/StandardTypes';
 import { formatPrice } from '@/utils/formatPrice';
+import { bookingStatusLabel, bookingStatusVariant } from '@/utils/bookingStatus';
+import { cn } from '../../utils/cn';
 
 import { CalendarDay, WorkStats } from '@/types/types';
 import { logger } from '../../utils/logger';
+
+// "AAAA-MM" → 1º dia do mês no fuso LOCAL. `new Date('AAAA-MM-01')` é meia-noite UTC — no Brasil cai no
+// mês anterior (barra com rótulo errado; janeiro ia para o ano anterior no filtro).
+const monthStart = (month: string) => {
+  const [y, m] = month.split('-').map(Number);
+  return new Date(y, (m || 1) - 1, 1);
+};
+
+const BREADCRUMBS = [
+  { name: 'Colaborador', href: '/colaborador/painel' },
+  { name: 'Agenda' },
+];
+
+const MONTHS = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
+// Fundo sólido do status com o texto do mesmo token. Achado (auditoria): os chips usavam `text-white`
+// sobre bg-muted (rascunho, branco no cinza claro), bg-warning e bg-primary (prata no tema escuro).
+const SOLID_STATUS_CLASS: Record<StandardVariant, string> = {
+  primary: 'bg-primary text-primary-foreground',
+  secondary: 'bg-secondary text-secondary-foreground',
+  success: 'bg-success text-success-foreground',
+  warning: 'bg-warning text-warning-foreground',
+  destructive: 'bg-destructive text-destructive-foreground',
+  info: 'bg-info text-info-foreground',
+  ghost: 'bg-muted text-foreground border border-border',
+  outline: 'bg-card text-foreground border border-border',
+};
+
+const solidStatus = (status?: string) => SOLID_STATUS_CLASS[bookingStatusVariant(status)];
+
+const bookingTitle = (booking: Booking) => booking.eventTitle || booking.client?.name || 'Evento';
+
+const axisTick = { fill: 'hsl(var(--muted-foreground))', fontSize: 12 };
 
 // Componente de Gráfico de Ganhos Mensais usando Recharts
 const MonthlyEarningsChart: React.FC<{ monthlyData: Array<{ month: string; earnings: number; events: number }> }> = ({ monthlyData }) => {
@@ -15,110 +62,129 @@ const MonthlyEarningsChart: React.FC<{ monthlyData: Array<{ month: string; earni
   // Processar dados para o formato do recharts
   const processedData = monthlyData
     .filter(item => {
-      const itemYear = new Date(item.month + '-01').getFullYear();
+      const itemYear = monthStart(item.month).getFullYear();
       return itemYear === selectedYear;
     })
     .map(item => {
-      const date = new Date(item.month + '-01');
+      const date = monthStart(item.month);
       return {
         month: date.getMonth() + 1,
         label: date.toLocaleDateString('pt-BR', { month: 'short' }),
         earnings: item.earnings,
         events: item.events
       };
-    });
+    })
+    .sort((a, b) => a.month - b.month);
 
   // Anos disponíveis nos dados
   const availableYears = Array.from(
-    new Set(monthlyData.map(item => new Date(item.month + '-01').getFullYear()))
+    new Set(monthlyData.map(item => monthStart(item.month).getFullYear()))
   ).sort((a, b) => b - a);
 
-  if (!monthlyData || monthlyData.length === 0) {
-    return (
-      <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-foreground mb-4">Ganhos Mensais</h3>
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">Nenhum dado disponível</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-foreground">Ganhos Mensais</h3>
-
-        {availableYears.length > 1 && (
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-            aria-label="Selecionar ano para gráfico de ganhos"
-            title="Selecionar ano"
-          >
-            {availableYears.map((year) => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
-        )}
-      </div>
-
-      <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={processedData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-            <XAxis
-              dataKey="label"
-              axisLine={false}
-              tickLine={false}
-              className="text-xs fill-muted-foreground"
+    <SimpleCard
+      title="Ganhos mensais"
+      headerRight={
+        availableYears.length > 1 ? (
+          <div className="w-32">
+            <Select
+              size="sm"
+              value={String(selectedYear)}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              aria-label="Ano do gráfico de ganhos"
+              options={availableYears.map((year) => ({ value: String(year), label: String(year) }))}
             />
-            <YAxis
-              domain={[0, 'auto']}
-              tickFormatter={(value: number) => value.toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0
-              })}
-              axisLine={false}
-              tickLine={false}
-              className="text-xs fill-muted-foreground"
-            />
-            <Tooltip
-              formatter={(value: number | undefined, name: string | undefined) => [
-                name === 'earnings'
-                  ? formatPrice(Number(value || 0))
-                  : (value || 0),
-                name === 'earnings' ? 'Ganhos' : 'Eventos'
-              ]}
-              labelStyle={{ color: 'hsl(var(--foreground))' }}
-              contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
-                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-              }}
-            />
-            <Bar
-              dataKey="earnings"
-              name="earnings"
-              fill="hsl(var(--primary))"
-              radius={[4, 4, 0, 0]}
-              className="hover:opacity-80 transition-opacity"
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="flex justify-between mt-4 text-xs text-muted-foreground">
-        <span>Mês</span>
-        <span>Ganhos (R$)</span>
-      </div>
-    </div>
+          </div>
+        ) : undefined
+      }
+    >
+      {!monthlyData || monthlyData.length === 0 || processedData.length === 0 ? (
+        <p className="text-center py-8 text-muted-foreground">Nenhum ganho registrado.</p>
+      ) : (
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={processedData} margin={{ top: 20, right: 16, left: 8, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={axisTick} />
+              <YAxis
+                domain={[0, 'auto']}
+                tickFormatter={(value: number) => value.toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0
+                })}
+                axisLine={false}
+                tickLine={false}
+                tick={axisTick}
+              />
+              <Tooltip
+                formatter={(value: number | undefined, name: string | undefined) => [
+                  name === 'earnings'
+                    ? formatPrice(Number(value || 0))
+                    : (value || 0),
+                  name === 'earnings' ? 'Ganhos' : 'Eventos'
+                ]}
+                cursor={{ fill: 'hsl(var(--muted))' }}
+                labelStyle={{ color: 'hsl(var(--foreground))' }}
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  color: 'hsl(var(--card-foreground))',
+                }}
+              />
+              <Bar dataKey="earnings" name="earnings" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </SimpleCard>
   );
 };
+
+const BookingDetails: React.FC<{ booking: Booking }> = ({ booking }) => (
+  <div className="p-4 bg-muted/40 rounded-lg border border-border">
+    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+      <div className="flex items-center gap-3 min-w-0">
+        <span className={cn('w-3 h-3 shrink-0 rounded-full', solidStatus(booking.status))} aria-hidden="true" />
+        <span className="font-medium text-foreground truncate">{bookingTitle(booking)}</span>
+      </div>
+      <Badge variant={bookingStatusVariant(booking.status)}>{bookingStatusLabel(booking.status)}</Badge>
+    </div>
+    <dl className="text-sm text-muted-foreground space-y-1">
+      <div className="flex gap-1">
+        <dt className="font-medium text-foreground">Data:</dt>
+        <dd>{booking.eventDate ? new Date(booking.eventDate).toLocaleDateString('pt-BR') : 'Data não definida'}</dd>
+      </div>
+      {/* Achado: "Data final" repetia a data de início; agora mostra o término real, se houver. */}
+      {booking.eventEndDate && (
+        <div className="flex gap-1">
+          <dt className="font-medium text-foreground">Término:</dt>
+          <dd>{new Date(booking.eventEndDate).toLocaleDateString('pt-BR')}</dd>
+        </div>
+      )}
+      {booking.client?.name && booking.eventTitle && (
+        <div className="flex gap-1">
+          <dt className="font-medium text-foreground">Cliente:</dt>
+          <dd>{booking.client.name}</dd>
+        </div>
+      )}
+      {typeof booking.venue === 'string' && booking.venue && (
+        <div className="flex gap-1">
+          <dt className="font-medium text-foreground">Local:</dt>
+          <dd>{booking.venue}</dd>
+        </div>
+      )}
+    </dl>
+    <Link
+      to={`/colaborador/evento/${booking.id}/roadmap`}
+      className="mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+    >
+      Ver roteiro do evento <ArrowRight className="h-4 w-4" aria-hidden="true" />
+    </Link>
+  </div>
+);
 
 const CollaboratorWorkSchedule: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -134,46 +200,41 @@ const CollaboratorWorkSchedule: React.FC = () => {
     averageRating: 0,
   });
   const [monthlyEarnings, setMonthlyEarnings] = useState<Array<{ month: string; earnings: number; events: number }>>([]);
-  // const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(false);
+      // Buscar dados do dashboard (ganhos)
+      const dashboardResponse = await collaboratorsAPI.getMyDashboard();
+      const dashboardData = dashboardResponse.data?.data ?? dashboardResponse.data;
+
+      if (dashboardData?.monthlyEarnings) {
+        setMonthlyEarnings(dashboardData.monthlyEarnings);
+      }
+
+      // Buscar todos os eventos (agenda) via endpoint específico
+      const eventsResponse = await collaboratorProfileAPI.getMyEvents();
+      const eventsData = eventsResponse.data?.data ?? eventsResponse.data;
+
+      if (Array.isArray(eventsData)) {
+        // O backend retorna EventCollaborator[]; extrai o booking (ou usa o item, se já for booking).
+        const bookings = (eventsData as Array<{ booking?: Booking } & Partial<Booking>>).map((item) => item.booking || (item as Booking));
+        setCollaboratorBookings(bookings);
+      }
+    } catch (err) {
+      logger.error('Erro ao buscar dados da agenda:', 'CollaboratorWorkSchedule', err);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // setLoading(true);
-        // Buscar dados do dashboard (ganhos)
-        const dashboardResponse = await collaboratorsAPI.getMyDashboard();
-        const dashboardData = dashboardResponse.data?.data ?? dashboardResponse.data;
-
-        if (dashboardData?.monthlyEarnings) {
-          setMonthlyEarnings(dashboardData.monthlyEarnings);
-        }
-
-        // Buscar todos os eventos (agenda) via endpoint específico
-        const eventsResponse = await collaboratorProfileAPI.getMyEvents(); // Usando a nova função adicionada
-        const eventsData = eventsResponse.data?.data ?? eventsResponse.data;
-        
-        if (Array.isArray(eventsData)) {
-            // O backend retorna EventCollaborator[], precisamos extrair o booking
-            // e garantir que o objeto resultante tenha o formato Booking esperado
-            const bookings = (eventsData as Array<{ booking?: Booking } & Partial<Booking>>).map((item) => {
-                // Se item já for booking (caso endpoint mude), usa item.
-                // Se for EventCollaborator, usa item.booking
-                const booking = item.booking || (item as Booking);
-                // Adiciona id do assignment se necessário, mas Booking geralmente tem ID próprio
-                return booking;
-            });
-            setCollaboratorBookings(bookings);
-        }
-
-      } catch (error) {
-        logger.error('Erro ao buscar dados da agenda:', 'CollaboratorWorkSchedule', error);
-      } finally {
-        // setLoading(false);
-      }
-    };
-
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   useEffect(() => {
     const generateCalendar = () => {
@@ -221,16 +282,16 @@ const CollaboratorWorkSchedule: React.FC = () => {
             if (bookingDate.getMonth() === currentDate.getMonth() &&
                 bookingDate.getFullYear() === currentDate.getFullYear()) {
               workingDays.add(bookingDate.toDateString());
-              
-               if (booking.status === 'COMPLETED') {
+
+              if (booking.status === 'COMPLETED') {
                 acc.completedBookings++;
-               }
+              }
             }
           }
           return acc;
         },
         {
-          totalBookings: 0, 
+          totalBookings: 0,
           upcomingBookings: 0,
           completedBookings: 0,
           workingDays: 0,
@@ -238,11 +299,11 @@ const CollaboratorWorkSchedule: React.FC = () => {
           averageRating: 0,
         }
       );
-      
+
       const monthBookings = collaboratorBookings.filter(b => {
-          if (!b.eventDate) return false;
-          const d = new Date(b.eventDate);
-          return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
+        if (!b.eventDate) return false;
+        const d = new Date(b.eventDate);
+        return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
       });
 
       stats.totalBookings = monthBookings.length;
@@ -258,491 +319,200 @@ const CollaboratorWorkSchedule: React.FC = () => {
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);
-    if (direction === 'prev') {
-      newDate.setMonth(newDate.getMonth() - 1);
-    } else {
-      newDate.setMonth(newDate.getMonth() + 1);
-    }
+    newDate.setDate(1);
+    newDate.setMonth(newDate.getMonth() + (direction === 'prev' ? -1 : 1));
     setCurrentDate(newDate);
-  };
-
-  const getBookingStatusColor = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return 'bg-success';
-      case 'CONFIRMED':
-        return 'bg-primary';
-      case 'PENDING':
-        return 'bg-warning';
-      case 'DRAFT':
-        return 'bg-muted';
-      case 'CANCELLED':
-        return 'bg-destructive';
-      default:
-        return 'bg-muted';
-    }
   };
 
   const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const today = new Date();
+  const yearOptions = Array.from({ length: 10 }, (_, i) => currentDate.getFullYear() - 5 + i)
+    .map((year) => ({ value: String(year), label: String(year) }));
 
   return (
-    <CollaboratorLayout 
-      title="Agenda de Trabalho"
-      breadcrumbs={[
-        { name: 'Colaborador', href: '/collaborator' },
-        { name: 'Agenda' }
-      ]}
-    >
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Navigation Controls */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            {/* Navegação de Mês e Ano */}
-            <div className="flex items-center space-x-2">
-              <select
-                value={currentDate.getMonth()}
+    <CollaboratorLayout title="Agenda de Trabalho" breadcrumbs={BREADCRUMBS}>
+      {loading ? (
+        <CollaboratorLoading label="Carregando sua agenda…" />
+      ) : error ? (
+        <CollaboratorError message="Não conseguimos carregar seus eventos e ganhos." onRetry={fetchData} />
+      ) : (
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Navegação de mês e ano */}
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="w-40">
+              <Select
+                size="sm"
+                aria-label="Mês"
+                value={String(currentDate.getMonth())}
+                options={MONTHS.map((m, index) => ({ value: String(index), label: m }))}
                 onChange={(e) => {
                   const newDate = new Date(currentDate);
+                  newDate.setDate(1);
                   newDate.setMonth(parseInt(e.target.value));
                   setCurrentDate(newDate);
                 }}
-                className="px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                title="Selecionar mês"
-                aria-label="Selecionar mês"
-              >
-                {[
-                  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-                  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-                ].map((month, index) => (
-                  <option key={index} value={index}>{month}</option>
-                ))}
-              </select>
-
-              <select
-                value={currentDate.getFullYear()}
+              />
+            </div>
+            <div className="w-28">
+              <Select
+                size="sm"
+                aria-label="Ano"
+                value={String(currentDate.getFullYear())}
+                options={yearOptions}
                 onChange={(e) => {
                   const newDate = new Date(currentDate);
                   newDate.setFullYear(parseInt(e.target.value));
                   setCurrentDate(newDate);
                 }}
-                className="px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                title="Selecionar ano"
-                aria-label="Selecionar ano"
-              >
-                {Array.from({ length: 10 }, (_, i) => currentDate.getFullYear() - 5 + i).map((year) => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
+              />
             </div>
-
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => navigateMonth('prev')}
-                className="p-2 text-muted-foreground hover:text-card-foreground transition-colors"
-                title="Mês anterior"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-              </button>
-
-              <button
-                onClick={() => navigateMonth('next')}
-                className="p-2 text-muted-foreground hover:text-card-foreground transition-colors"
-                title="Próximo mês"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Monthly Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-card rounded-xl p-6 shadow-sm border">
-            <div className="flex items-center">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <svg
-                  className="w-6 h-6 text-primary"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Eventos do Mês</p>
-                <p className="text-2xl font-bold text-foreground">{monthlyStats.totalBookings}</p>
-              </div>
-            </div>
+            <Button variant="ghost" size="icon" onClick={() => navigateMonth('prev')} aria-label="Mês anterior">
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => navigateMonth('next')} aria-label="Próximo mês">
+              <ChevronRight className="w-5 h-5" />
+            </Button>
           </div>
 
-          <div className="bg-card rounded-xl p-6 shadow-sm border">
-            <div className="flex items-center">
-              <div className="p-2 bg-success/10 rounded-lg">
-                <svg
-                  className="w-6 h-6 text-success"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Próximos Eventos</p>
-                <p className="text-2xl font-bold text-success">
-                  {monthlyStats.upcomingBookings}
-                </p>
-              </div>
-            </div>
+          {/* Estatísticas do mês */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatsCard title="Eventos do mês" value={monthlyStats.totalBookings} icon={<Calendar className="h-5 w-5" />} />
+            <StatsCard title="Próximos eventos" value={monthlyStats.upcomingBookings} icon={<Clock className="h-5 w-5" />} />
+            <StatsCard title="Dias de trabalho" value={monthlyStats.workingDays} icon={<BarChart3 className="h-5 w-5" />} />
+            <StatsCard title="Concluídos" value={monthlyStats.completedBookings} icon={<CheckCircle2 className="h-5 w-5" />} />
           </div>
 
-          <div className="bg-card rounded-xl p-6 shadow-sm border">
-            <div className="flex items-center">
-              <div className="p-2 bg-accent rounded-lg">
-                <svg
-                  className="w-6 h-6 text-indigo-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                  />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Dias de Trabalho</p>
-                <p className="text-2xl font-bold text-indigo-600">{monthlyStats.workingDays}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-card rounded-xl p-6 shadow-sm border">
-            <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <svg
-                  className="w-6 h-6 text-yellow-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Concluídos</p>
-                <p className="text-2xl font-bold text-yellow-600">
-                  {monthlyStats.completedBookings}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Gráfico de Ganhos Mensais */}
-        <div className="mb-8">
+          {/* Gráfico de Ganhos Mensais */}
           <MonthlyEarningsChart monthlyData={monthlyEarnings} />
-        </div>
 
-        {/* Layout em Grid: Calendário e Lista lado a lado */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-          {/* Calendário */}
-          <div className="bg-card rounded-xl shadow-sm border overflow-hidden">
-            {/* Calendar Header */}
-            <div className="grid grid-cols-7 bg-muted">
-              {weekDays.map((day) => (
-                <div key={day} className="p-4 text-center text-sm font-medium text-card-foreground">
-                  {day}
-                </div>
-              ))}
-            </div>
+          {/* Calendário e lista lado a lado */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+              <h2 className="sr-only">Calendário de {MONTHS[currentDate.getMonth()]} de {currentDate.getFullYear()}</h2>
+              <div className="grid grid-cols-7 bg-muted" aria-hidden="true">
+                {weekDays.map((day) => (
+                  <div key={day} className="py-3 text-center text-xs sm:text-sm font-medium text-foreground">
+                    {day}
+                  </div>
+                ))}
+              </div>
 
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-7">
-              {calendarDays.map((day, index) => {
-                const isToday = day.date.toDateString() === today.toDateString();
-                const hasEvents = day.bookings.length > 0;
+              <div className="grid grid-cols-7">
+                {calendarDays.map((day, index) => {
+                  const isToday = day.date.toDateString() === today.toDateString();
+                  const count = day.bookings.length;
+                  const label = `${day.date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}${
+                    count > 0 ? `, ${count} evento${count > 1 ? 's' : ''}` : ', sem eventos'
+                  }`;
 
-                return (
-                  <div
-                    key={index}
-                    className={`
-                      min-h-[100px] p-2 border-r border-b border cursor-pointer
-                      hover:bg-muted transition-colors
-                      ${!day.isCurrentMonth ? 'bg-muted text-muted-foreground' : ''}
-                      ${isToday ? 'bg-primary/10' : ''}
-                    `}
-                    onClick={() => setSelectedDay(day)}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span
-                        className={`
-                        text-sm font-medium
-                        ${isToday ? 'bg-blue-600 text-white px-2 py-1 rounded-full' : ''}
-                        ${day.isCurrentMonth ? 'text-foreground' : ''}
-                      `}
-                      >
-                        {day.date.getDate()}
-                      </span>
-
-                      {hasEvents && (
-                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
-                          {day.bookings.length}
-                        </span>
+                  return (
+                    // Achado (auditoria): a célula era um <div onClick> — único acesso ao detalhe do dia,
+                    // inacessível por teclado.
+                    <button
+                      type="button"
+                      key={index}
+                      onClick={() => setSelectedDay(day)}
+                      aria-label={label}
+                      className={cn(
+                        'min-h-14 sm:min-h-[100px] p-1 sm:p-2 border-r border-b border-border text-left align-top transition-colors hover:bg-muted',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+                        !day.isCurrentMonth && 'bg-muted/50 text-muted-foreground',
+                        isToday && 'bg-primary/10'
                       )}
-                    </div>
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-1 mb-1 sm:mb-2">
+                        <span
+                          className={cn(
+                            'inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1 text-sm font-medium',
+                            isToday ? 'bg-primary text-primary-foreground' : day.isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'
+                          )}
+                        >
+                          {day.date.getDate()}
+                        </span>
 
-                    {/* Events preview */}
-                    <div className="space-y-1">
-                      {day.bookings.slice(0, 2).map((booking, bookingIndex) => {
-                        const status = booking.status ?? '';
-                        return (
+                        {count > 0 && (
+                          <span className="hidden sm:inline-flex text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full" aria-hidden="true">
+                            {count}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Celular: só um ponto por evento; a partir de sm, o nome do evento. */}
+                      {count > 0 && (
+                        <div className="flex gap-1 sm:hidden" aria-hidden="true">
+                          {day.bookings.slice(0, 3).map((booking, i) => (
+                            <span key={i} className={cn('h-2 w-2 rounded-full', solidStatus(booking.status))} />
+                          ))}
+                        </div>
+                      )}
+                      <div className="hidden sm:block space-y-1" aria-hidden="true">
+                        {day.bookings.slice(0, 2).map((booking, bookingIndex) => (
                           <div
                             key={bookingIndex}
-                            className={`
-                              text-xs p-1 rounded truncate text-white
-                              ${getBookingStatusColor(status)}
-                            `}
-                            title={`${booking.client?.name || 'Cliente'} - ${status}`}
+                            className={cn('text-xs px-1 py-0.5 rounded truncate', solidStatus(booking.status))}
                           >
-                            {booking.client?.name || 'Evento'}
+                            {bookingTitle(booking)}
                           </div>
-                        );
-                      })}
-
-                      {day.bookings.length > 2 && (
-                        <div className="text-xs text-muted-foreground">+{day.bookings.length - 2} mais</div>
-                      )}
-                    </div>
-
-                    {/* Working day indicator */}
-                    {day.hasWork && (
-                      <div className="mt-2 text-xs font-medium text-primary">Dia de trabalho</div>
-                    )}
-                  </div>
-                );
-              })}
+                        ))}
+                        {count > 2 && (
+                          <div className="text-xs text-muted-foreground">+{count - 2} mais</div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* Lista de Eventos */}
-          <div className="bg-card rounded-xl p-6 shadow-sm border">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Eventos em Lista</h3>
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              {collaboratorBookings.map((booking) => (
-                <div key={booking.id} className="p-4 bg-muted rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-3">
-                      <div
-                        className={`w-3 h-3 rounded-full ${getBookingStatusColor(booking.status ?? '')}`}
-                      ></div>
-                      <span className="font-medium text-foreground">
-                        {booking.client?.name || 'Evento'}
-                      </span>
-                    </div>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        booking.status === 'COMPLETED'
-                          ? 'bg-success/10 text-success'
-                          : booking.status === 'CONFIRMED'
-                            ? 'bg-primary/10 text-primary'
-                            : booking.status === 'PENDING'
-                              ? 'bg-warning/10 text-warning'
-                              : booking.status === 'CANCELLED'
-                                ? 'bg-destructive/10 text-destructive'
-                                : 'bg-muted text-foreground'
-                      }`}
-                    >
-                      {booking.status === 'COMPLETED'
-                        ? 'Concluído'
-                        : booking.status === 'CONFIRMED'
-                          ? 'Confirmado'
-                          : booking.status === 'PENDING'
-                            ? 'Pendente'
-                            : booking.status === 'CANCELLED'
-                              ? 'Cancelado'
-                              : booking.status === 'DRAFT'
-                                ? 'Rascunho'
-                                : booking.status}
-                    </span>
-                  </div>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p>
-                      <span className="font-medium">Data:</span>{' '}
-                      {booking.eventDate ? new Date(booking.eventDate).toLocaleDateString('pt-BR') : 'Data não definida'}
-                    </p>
-                    {typeof booking.venue === 'string' && booking.venue && (
-                      <p>
-                        <span className="font-medium">Local:</span> {booking.venue}
-                      </p>
-                    )}
-                  </div>
+            {/* Lista de eventos */}
+            <SimpleCard title="Todos os eventos">
+              {collaboratorBookings.length === 0 ? (
+                <div className="text-center py-8">
+                  <Calendar className="w-10 h-10 text-muted-foreground mx-auto mb-3" aria-hidden="true" />
+                  <p className="text-muted-foreground">Você ainda não foi escalado para nenhum evento.</p>
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div className="space-y-4 max-h-[32rem] overflow-y-auto pr-1">
+                  {collaboratorBookings.map((booking) => (
+                    <BookingDetails key={booking.id} booking={booking} />
+                  ))}
+                </div>
+              )}
+            </SimpleCard>
           </div>
         </div>
+      )}
 
-        {/* Day Detail Modal */}
+      {/* Detalhe do dia — antes um modal montado à mão (`bg-black bg-opacity-50`, que não existe no
+          Tailwind v4 e deixava o fundo preto sólido; sem Esc, foco preso ou role="dialog"). */}
+      <Modal
+        isOpen={!!selectedDay}
+        onClose={() => setSelectedDay(null)}
+        size="lg"
+        title={selectedDay
+          ? selectedDay.date.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+          : undefined}
+      >
         {selectedDay && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-card rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden m-4">
-              <div className="px-6 py-4 border-b border">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-foreground">
-                    {selectedDay.date.toLocaleDateString('pt-BR', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </h3>
-                  <button
-                    onClick={() => setSelectedDay(null)}
-                    className="text-muted-foreground hover:text-muted-foreground"
-                    title="Fechar"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
+          selectedDay.bookings.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <Calendar className="w-8 h-8 text-muted-foreground" aria-hidden="true" />
               </div>
-
-              <div className="p-6 max-h-96 overflow-y-auto">
-                {selectedDay.bookings.length === 0 ? (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg
-                        className="w-8 h-8 text-muted-foreground"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
-                    </div>
-                    <p className="text-muted-foreground">Nenhum evento neste dia</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-foreground">
-                        {selectedDay.bookings.length} evento(s) agendado(s)
-                      </h4>
-                    </div>
-
-                    {selectedDay.bookings.map((booking, index) => (
-                      <div key={index} className="p-4 bg-muted rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-3">
-                            <div
-                              className={`w-3 h-3 rounded-full ${getBookingStatusColor(booking.status ?? '')}`}
-                            ></div>
-                            <span className="font-medium text-foreground">
-                              {booking.client?.name || 'Evento'}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="text-sm text-muted-foreground space-y-1">
-                          <p>
-                            <span className="font-medium">Data:</span>{' '}
-                            {booking.eventDate ? new Date(booking.eventDate).toLocaleDateString('pt-BR') : 'Data não definida'}
-                          </p>
-                          {booking.eventDate && (
-                            <p>
-                              <span className="font-medium">Data final:</span>{' '}
-                              {new Date(booking.eventDate).toLocaleDateString('pt-BR')}
-                            </p>
-                          )}
-                          {typeof booking.venue === 'string' && booking.venue && (
-                            <p>
-                              <span className="font-medium">Local:</span> {booking.venue}
-                            </p>
-                          )}
-                          <p>
-                            <span className="font-medium">Status:</span>{' '}
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs ${
-                                booking.status === 'COMPLETED'
-                                  ? 'bg-success/10 text-success'
-                                  : booking.status === 'CONFIRMED'
-                                    ? 'bg-primary/10 text-primary'
-                                    : booking.status === 'PENDING'
-                                      ? 'bg-warning/10 text-warning'
-                                      : booking.status === 'CANCELLED'
-                                        ? 'bg-destructive/10 text-destructive'
-                                        : 'bg-muted text-foreground'
-                              }`}
-                            >
-                              {booking.status === 'COMPLETED'
-                                ? 'Concluído'
-                                : booking.status === 'CONFIRMED'
-                                  ? 'Confirmado'
-                                  : booking.status === 'PENDING'
-                                    ? 'Pendente'
-                                    : booking.status === 'CANCELLED'
-                                      ? 'Cancelado'
-                                      : booking.status === 'DRAFT'
-                                        ? 'Rascunho'
-                                        : booking.status}
-                            </span>
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <p className="text-muted-foreground">Nenhum evento neste dia</p>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="font-medium text-foreground">
+                {selectedDay.bookings.length} evento{selectedDay.bookings.length > 1 ? 's' : ''} agendado{selectedDay.bookings.length > 1 ? 's' : ''}
+              </p>
+              {selectedDay.bookings.map((booking, index) => (
+                <BookingDetails key={booking.id || index} booking={booking} />
+              ))}
+            </div>
+          )
         )}
-      </div>
+      </Modal>
     </CollaboratorLayout>
   );
 };

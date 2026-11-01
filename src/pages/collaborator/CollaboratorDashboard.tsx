@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Navigate, Link } from 'react-router-dom';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
-import { BrandLoader } from '../../components/ui/BrandLoader';
+import { CollaboratorLoading, CollaboratorError } from '../../components/collaborator/CollaboratorStates';
 import type { DashboardEvent } from '../../types/domains/dashboard';
 import { collaboratorsAPI } from '../../services/api';
 import { StatsCard, SimpleCard } from '../../components/ui/Cards';
+import { Badge } from '../../components/ui/Badge';
 import { formatPrice } from '@/utils/formatPrice';
+import { bookingStatusLabel, bookingStatusVariant } from '@/utils/bookingStatus';
 import { logger } from '../../utils/logger';
 import {
   Calendar,
@@ -17,7 +19,8 @@ import {
   User,
   Target,
   Clock,
-  MessageSquare
+  MessageSquare,
+  FileText,
 } from 'lucide-react';
 
 interface CollaboratorActivity {
@@ -38,12 +41,17 @@ interface DashboardMetrics {
   recentActivities?: CollaboratorActivity[];
 }
 
+const BREADCRUMBS = [
+  { name: 'Colaborador', href: '/colaborador/painel' },
+  { name: 'Dashboard' },
+];
+
 // Componente de Métricas Profissionais com Dados Reais
 const ProfessionalMetrics: React.FC<{ data: DashboardMetrics | null }> = ({ data }) => {
   if (!data) return null;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       <StatsCard
         title="Receita Total"
         value={formatPrice(data.totalEarnings || 0)}
@@ -54,7 +62,7 @@ const ProfessionalMetrics: React.FC<{ data: DashboardMetrics | null }> = ({ data
           type: data.earningsGrowth > 0 ? 'positive' : data.earningsGrowth < 0 ? 'negative' : 'neutral'
         } : undefined}
       />
-      
+
       <StatsCard
         title="Eventos Realizados"
         value={data.totalEvents || 0}
@@ -79,7 +87,7 @@ const ProfessionalMetrics: React.FC<{ data: DashboardMetrics | null }> = ({ data
 
       <StatsCard
         title="Avaliação Média"
-        value={data.averageRating ? `${data.averageRating.toFixed(1)}⭐` : 'N/A'}
+        value={data.averageRating ? `${data.averageRating.toFixed(1)} / 5` : 'Sem avaliações'}
         description="Feedback dos clientes"
         icon={<Star className="h-5 w-5" />}
         trend={data.averageRating !== undefined && data.averageRating > 4.5 ? {
@@ -91,21 +99,21 @@ const ProfessionalMetrics: React.FC<{ data: DashboardMetrics | null }> = ({ data
   );
 };
 
-// Componente de Próximos Eventos Melhorado
+// Componente de Próximos Eventos
 const UpcomingEvents: React.FC<{ events: DashboardEvent[] }> = ({ events }) => (
-  <SimpleCard 
-    title="Próximos Eventos" 
+  <SimpleCard
+    title="Próximos Eventos"
     headerRight={
-      <Link to="/collaborator/schedule" className="text-sm text-primary hover:text-primary/80 font-medium transition-colors flex items-center gap-2">
-        <ArrowUpRight className="w-4 h-4" />
-        Ver Agenda Completa
+      <Link to="/colaborador/agenda" className="text-sm text-primary hover:text-primary/80 font-medium transition-colors inline-flex items-center gap-1 min-h-10">
+        <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+        Ver agenda
       </Link>
     }
   >
     {events.length === 0 ? (
       <div className="text-center py-8">
         <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-          <Calendar className="w-8 h-8 text-muted-foreground" />
+          <Calendar className="w-8 h-8 text-muted-foreground" aria-hidden="true" />
         </div>
         <p className="text-muted-foreground mb-2">Nenhum evento agendado</p>
         <p className="text-sm text-muted-foreground">Seus próximos eventos aparecerão aqui</p>
@@ -116,56 +124,30 @@ const UpcomingEvents: React.FC<{ events: DashboardEvent[] }> = ({ events }) => (
           <Link
             key={event.id || index}
             to={`/colaborador/evento/${event.id}/roadmap`}
-            className="flex items-center justify-between p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors duration-200 border border-border/30 group cursor-pointer"
+            className="flex flex-col gap-3 p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors duration-200 border border-border group sm:flex-row sm:items-center sm:justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-lg">
-                <svg
-                  className="w-6 h-6 text-white"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="w-12 h-12 shrink-0 bg-primary rounded-lg flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-primary-foreground" aria-hidden="true" />
               </div>
-              <div className="flex-1">
-                <p className="font-medium text-foreground group-hover:text-primary transition-colors">
+              <div className="min-w-0">
+                <p className="font-medium text-foreground group-hover:text-primary transition-colors truncate">
                   {event.title || 'Evento'}
                 </p>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
                   <span className="flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
+                    <Calendar className="w-4 h-4" aria-hidden="true" />
                     {new Date(event.startTime).toLocaleDateString('pt-BR')}
                   </span>
-                  <span className="flex items-center gap-1 text-xs">
-                    <Clock className="w-3.5 h-3.5" />
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" aria-hidden="true" />
                     {new Date(event.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               </div>
             </div>
-            <div className="text-right">
-              <span
-                className={`px-3 py-1 text-xs rounded-full font-medium mb-2 block ${
-                  event.status === 'CONFIRMED'
-                    ? 'bg-success/10 text-success border border-green-200'
-                    : event.status === 'ASSIGNED'
-                      ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
-                      : 'bg-muted text-card-foreground border'
-                }`}
-              >
-                {event.status === 'CONFIRMED'
-                  ? 'Confirmado'
-                  : event.status === 'ASSIGNED'
-                    ? 'Atribuído'
-                    : event.status}
-              </span>
+            <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
+              <Badge variant={bookingStatusVariant(event.status)}>{bookingStatusLabel(event.status)}</Badge>
               <p className="text-sm font-medium text-primary">
                 {formatPrice(event.totalPayment || 0)}
               </p>
@@ -177,12 +159,18 @@ const UpcomingEvents: React.FC<{ events: DashboardEvent[] }> = ({ events }) => (
   </SimpleCard>
 );
 
+const activityIcon = (type?: string) => {
+  if (type === 'payment') return <DollarSign className="w-4 h-4 text-primary" aria-hidden="true" />;
+  if (type === 'event') return <Calendar className="w-4 h-4 text-primary" aria-hidden="true" />;
+  return <FileText className="w-4 h-4 text-primary" aria-hidden="true" />;
+};
+
 // Componente de Atividades Recentes
 const RecentActivities: React.FC<{ activities: CollaboratorActivity[] }> = ({ activities }) => (
-  <SimpleCard 
-    title="Atividades Recentes" 
+  <SimpleCard
+    title="Atividades Recentes"
     headerRight={
-      <Link to="/colaborador/notificacoes" className="text-sm text-primary hover:text-primary/80 font-medium transition-colors">
+      <Link to="/colaborador/notificacoes" className="text-sm text-primary hover:text-primary/80 font-medium transition-colors inline-flex items-center min-h-10">
         Ver todas
       </Link>
     }
@@ -190,9 +178,7 @@ const RecentActivities: React.FC<{ activities: CollaboratorActivity[] }> = ({ ac
     {activities.length === 0 ? (
       <div className="text-center py-8">
         <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
+          <FileText className="w-8 h-8 text-muted-foreground" aria-hidden="true" />
         </div>
         <p className="text-muted-foreground">Nenhuma atividade recente</p>
       </div>
@@ -201,14 +187,11 @@ const RecentActivities: React.FC<{ activities: CollaboratorActivity[] }> = ({ ac
         {activities.slice(0, 5).map((activity, index) => (
           <div key={index} className="flex items-start space-x-3 p-3 bg-muted/30 rounded-lg">
             <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-sm font-medium text-primary">
-                {activity.type === 'payment' ? '💰' :
-                 activity.type === 'event' ? '📅' : '📋'}
-              </span>
+              {activityIcon(activity.type)}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground">{activity.title}</p>
-              <p className="text-xs text-muted-foreground">{activity.description}</p>
+              <p className="text-sm text-muted-foreground">{activity.description}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {new Date(activity.timestamp).toLocaleDateString('pt-BR')}
               </p>
@@ -220,71 +203,68 @@ const RecentActivities: React.FC<{ activities: CollaboratorActivity[] }> = ({ ac
   </SimpleCard>
 );
 
-// Componente principal melhorado
+const quickActionClass =
+  'flex flex-col items-center justify-center min-h-[120px] p-6 rounded-xl border transition-all group active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+
+// Componente principal
 const CollaboratorDashboard: React.FC = () => {
   const { user } = useAuth();
   const [dashboard, setDashboard] = useState<DashboardMetrics | null>(null);
   const [events, setEvents] = useState<DashboardEvent[]>([]);
   const [activities, setActivities] = useState<CollaboratorActivity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const resp = await collaboratorsAPI.getMyDashboard();
+      const payload = (resp.data?.data ?? resp.data) as DashboardMetrics;
+      setDashboard(payload);
+      setEvents(payload.upcomingEvents ?? []);
+      setActivities(payload.recentActivities ?? []);
+    } catch (err) {
+      logger.error('Erro ao carregar dados do dashboard:', 'CollaboratorDashboard', err);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const resp = await collaboratorsAPI.getMyDashboard();
-        const payload = (resp.data?.data ?? resp.data) as DashboardMetrics;
-        setDashboard(payload);
-
-        if (payload.upcomingEvents) {
-          setEvents(payload.upcomingEvents);
-        }
-        if (payload.recentActivities) {
-          setActivities(payload.recentActivities);
-        }
-      } catch (error) {
-        logger.error('Erro ao carregar dados do dashboard:', 'CollaboratorDashboard', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDashboardData();
-  }, []);
+  }, [fetchDashboardData]);
 
   if (user?.role !== 'COLLABORATOR') {
     return <Navigate to="/painel" replace />;
   }
 
+  const firstName = user?.name?.split(' ')[0] || 'Colaborador';
+
   return (
-    <CollaboratorLayout 
-      title="Dashboard do Colaborador"
-      breadcrumbs={[
-        { name: 'Colaborador', href: '/collaborator' },
-        { name: 'Dashboard' }
-      ]}
-    >
+    <CollaboratorLayout title="Dashboard do Colaborador" breadcrumbs={BREADCRUMBS}>
       {loading ? (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in duration-700">
-          <BrandLoader size="xl" />
-          <p className="mt-8 text-muted-foreground font-medium tracking-widest uppercase text-[10px] animate-pulse">
-            Sincronizando Agenda X Produções...
-          </p>
-        </div>
+        <CollaboratorLoading label="Carregando seu painel…" />
+      ) : error ? (
+        <CollaboratorError
+          message="Não conseguimos carregar suas métricas e eventos agora."
+          onRetry={fetchDashboardData}
+        />
       ) : (
         <div className="space-y-8">
           <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-6 rounded-xl">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold mb-2">
-                  Olá, {user?.name?.split(' ')[0] || 'Colaborador'}! 👋
-                </h1>
+                {/* Saudação em <p>: o <h1> da página é o título do layout. */}
+                <p className="text-2xl font-bold mb-2">Olá, {firstName}!</p>
                 <p className="text-primary-foreground/80">
                   Bem-vindo de volta ao seu painel. Aqui está o resumo da sua atividade.
                 </p>
               </div>
               <div className="hidden md:block">
-                <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center">
-                  <User className="w-8 h-8 text-white" />
+                <div className="w-16 h-16 bg-primary-foreground/10 rounded-full flex items-center justify-center">
+                  <User className="w-8 h-8 text-primary-foreground" aria-hidden="true" />
                 </div>
               </div>
             </div>
@@ -298,34 +278,34 @@ const CollaboratorDashboard: React.FC = () => {
           </div>
 
           <SimpleCard title="Ações Rápidas">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Link to="/colaborador/agenda" className="flex flex-col items-center justify-center min-h-[120px] p-6 bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-xl transition-all group active:scale-95">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Link to="/colaborador/agenda" className={`${quickActionClass} bg-primary/5 hover:bg-primary/10 border-primary/20`}>
                 <div className="w-14 h-14 bg-primary/20 rounded-xl flex items-center justify-center mb-3 group-hover:bg-primary/30 transition-colors">
-                  <Calendar className="w-7 h-7 text-primary" />
+                  <Calendar className="w-7 h-7 text-primary" aria-hidden="true" />
                 </div>
                 <span className="font-semibold text-foreground text-sm">Ver Agenda</span>
                 <span className="text-xs text-muted-foreground mt-1 text-center">Calendário completo de eventos</span>
               </Link>
 
-              <Link to="/colaborador/perfil" className="flex flex-col items-center justify-center min-h-[120px] p-6 bg-muted/30 hover:bg-muted/50 border border-border/30 rounded-xl transition-all group active:scale-95">
+              <Link to="/colaborador/perfil" className={`${quickActionClass} bg-muted/30 hover:bg-muted/50 border-border`}>
                 <div className="w-14 h-14 bg-muted rounded-xl flex items-center justify-center mb-3 group-hover:bg-muted/80 transition-colors">
-                  <User className="w-7 h-7 text-muted-foreground" />
+                  <User className="w-7 h-7 text-muted-foreground" aria-hidden="true" />
                 </div>
                 <span className="font-semibold text-foreground text-sm">Meu Perfil</span>
                 <span className="text-xs text-muted-foreground mt-1 text-center">Minhas informações</span>
               </Link>
 
-              <Link to="/colaborador/mensagens" className="flex flex-col items-center justify-center min-h-[120px] p-6 bg-muted/30 hover:bg-muted/50 border border-border/30 rounded-xl transition-all group active:scale-95">
+              <Link to="/colaborador/mensagens" className={`${quickActionClass} bg-muted/30 hover:bg-muted/50 border-border`}>
                 <div className="w-14 h-14 bg-muted rounded-xl flex items-center justify-center mb-3 group-hover:bg-muted/80 transition-colors">
-                  <MessageSquare className="w-7 h-7 text-muted-foreground" />
+                  <MessageSquare className="w-7 h-7 text-muted-foreground" aria-hidden="true" />
                 </div>
                 <span className="font-semibold text-foreground text-sm">Mensagens</span>
                 <span className="text-xs text-muted-foreground mt-1 text-center">Falar com a base</span>
               </Link>
 
-              <Link to="/colaborador/ganhos" className="flex flex-col items-center justify-center min-h-[120px] p-6 bg-muted/30 hover:bg-muted/50 border border-border/30 rounded-xl transition-all group active:scale-95">
+              <Link to="/colaborador/ganhos" className={`${quickActionClass} bg-muted/30 hover:bg-muted/50 border-border`}>
                 <div className="w-14 h-14 bg-muted rounded-xl flex items-center justify-center mb-3 group-hover:bg-muted/80 transition-colors">
-                  <CheckCircle className="w-7 h-7 text-muted-foreground" />
+                  <CheckCircle className="w-7 h-7 text-muted-foreground" aria-hidden="true" />
                 </div>
                 <span className="font-semibold text-foreground text-sm">Financeiro</span>
                 <span className="text-xs text-muted-foreground mt-1 text-center">Ganhos e pagamentos</span>

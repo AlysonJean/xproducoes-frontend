@@ -1,30 +1,79 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  User, 
-  Lock, 
-  CreditCard, 
-  Shield, 
+import {
+  User,
+  Lock,
+  CreditCard,
+  Shield,
   Save,
   Camera,
   Upload,
-  Eye,
-  EyeOff,
   Trash2,
+  X,
+  Plus,
+  Info,
 } from 'lucide-react';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
+import { CollaboratorLoading, CollaboratorError } from '../../components/collaborator/CollaboratorStates';
+import { CollaboratorTabs, CollaboratorTabPanel } from '../../components/collaborator/CollaboratorTabs';
+import { ToggleSwitch } from '../../components/collaborator/ToggleSwitch';
 import { SimpleCard } from '../../components/ui/Cards';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Select } from '../../components/ui/Select';
+import { Textarea } from '../../components/ui/Textarea';
+import { Badge } from '../../components/ui/Badge';
 import { collaboratorProfileAPI, authAPI } from '../../services/api';
-import { BrandLoader } from '@/components/ui/BrandLoader';
 
 import { ProfileSettings, SecuritySettings, PrivacySettings, PaymentSettings } from '@/types/types';
 
 import { useNotifications } from '@/contexts/NotificationContext';
 import { logger } from '../../utils/logger';
 
+type SettingsTab = 'profile' | 'security' | 'privacy' | 'payment';
+
+const BREADCRUMBS = [
+  { name: 'Colaborador', href: '/colaborador/painel' },
+  { name: 'Configurações' },
+];
+
+const TABS = [
+  { id: 'profile' as const, label: 'Perfil', icon: User },
+  { id: 'security' as const, label: 'Segurança', icon: Lock },
+  { id: 'privacy' as const, label: 'Privacidade', icon: Shield },
+  { id: 'payment' as const, label: 'Pagamento', icon: CreditCard },
+];
+
+const VISIBILITY_OPTIONS = [
+  { value: 'public', label: 'Público' },
+  { value: 'clients_only', label: 'Apenas clientes' },
+  { value: 'private', label: 'Privado' },
+];
+
+const PAYMENT_METHOD_OPTIONS = [
+  { value: 'pix', label: 'PIX' },
+  { value: 'bank_transfer', label: 'Transferência bancária' },
+  { value: 'both', label: 'Ambos' },
+];
+
+const ACCOUNT_TYPE_OPTIONS = [
+  { value: 'corrente', label: 'Conta corrente' },
+  { value: 'poupanca', label: 'Poupança' },
+];
+
+// Listas do colaborador que a aba Perfil não edita, mas que precisam ir junto no PUT
+// /collaborators/me/profile — o backend grava [] em toda lista que não for enviada.
+interface PreservedLists {
+  languages: string[];
+  equipment: string[];
+  certifications: string[];
+}
+
 const CollaboratorSettingsPage: React.FC = () => {
   const { addNotification } = useNotifications();
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'privacy' | 'payment'>('profile');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const [profileSettings, setProfileSettings] = useState<ProfileSettings | null>(null);
+  const [originalName, setOriginalName] = useState('');
+  const [preservedLists, setPreservedLists] = useState<PreservedLists>({ languages: [], equipment: [], certifications: [] });
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
     currentPassword: '',
     newPassword: '',
@@ -32,25 +81,35 @@ const CollaboratorSettingsPage: React.FC = () => {
     twoFactorEnabled: false,
     loginNotifications: true
   });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings | null>(null);
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
+  const [newSpecialty, setNewSpecialty] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
-
-
 
   const loadSettings = React.useCallback(async () => {
     try {
       setLoading(true);
-      const response = await collaboratorProfileAPI.getMyProfile();
+      setLoadError(false);
+      // Achado (revisão da auditoria): privacidade/pagamento eram lidos de `user.profileSettings` da
+      // rota de perfil — que não traz esse campo. A tela mostrava sempre os padrões e, ao salvar,
+      // gravava os padrões vazios por cima da chave PIX e dos dados bancários. A rota própria
+      // (GET /collaborators/me/settings) devolve o que está salvo; se ela falhar, a tela mostra erro
+      // em vez de padrões que seriam gravados por cima.
+      const [response, settingsResponse] = await Promise.all([
+        collaboratorProfileAPI.getMyProfile(),
+        collaboratorProfileAPI.getSettings(),
+      ]);
       const data = response?.data?.data ?? response?.data; // Tenta extrair data.data, ou usa data direto
 
       if (data) {
+        const name = data.user?.name || data.name || '';
+        setOriginalName(name);
         setProfileSettings({
-            name: data.user?.name || data.name || '',
+            name,
             email: data.user?.email || data.email || '',
             phone: data.phone || '',
             bio: data.user?.bio || '',
@@ -59,9 +118,18 @@ const CollaboratorSettingsPage: React.FC = () => {
             location: data.user?.location || '',
             website: data.user?.website || ''
         });
+        setPreservedLists({
+          languages: data.languages || [],
+          equipment: data.equipment || [],
+          certifications: data.certifications || [],
+        });
 
-        // Configurações armazenadas em profileSettings (JSON) ou defaults
-        const userSettings = data.user?.profileSettings || {};
+        // Configurações salvas em User.profileSettings (JSON) — vindas da rota de settings — ou padrões
+        const userSettings = (settingsResponse?.data ?? {}) as {
+          security?: { twoFactorEnabled?: boolean; loginNotifications?: boolean };
+          privacy?: Partial<PrivacySettings>;
+          payment?: Partial<PaymentSettings>;
+        };
 
         setSecuritySettings((prev) => ({
           ...prev,
@@ -87,15 +155,11 @@ const CollaboratorSettingsPage: React.FC = () => {
       }
     } catch (error) {
       logger.error('Erro ao carregar configurações:', 'CollaboratorSettingsPage', error);
-      addNotification({
-        type: 'error',
-        title: 'Erro',
-        message: 'Erro ao carregar configurações.'
-      });
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
-  }, [addNotification]);
+  }, []);
 
   useEffect(() => {
     loadSettings();
@@ -103,40 +167,58 @@ const CollaboratorSettingsPage: React.FC = () => {
 
   const handleSave = async () => {
     try {
+      if (activeTab === 'security') {
+        // Validação antes de chamar a API (antes, a confirmação nem era conferida).
+        const { currentPassword, newPassword, confirmPassword } = securitySettings;
+        if (!newPassword) {
+          setPasswordError('Digite a nova senha.');
+          return;
+        }
+        if (!currentPassword) {
+          setPasswordError('Digite sua senha atual.');
+          return;
+        }
+        if (newPassword.length < 6) {
+          setPasswordError('A nova senha deve ter pelo menos 6 caracteres.');
+          return;
+        }
+        if (newPassword !== confirmPassword) {
+          setPasswordError('A confirmação não confere com a nova senha.');
+          return;
+        }
+        setPasswordError(null);
+      }
+
       setSaving(true);
-      
+
       if (activeTab === 'profile') {
-         await collaboratorProfileAPI.updateProfile({
-             phone: profileSettings?.phone,
-             specialties: profileSettings?.specialties,
-             // Outros campos devem ser adicionados ao endpoint updateProfile se necessário
-         });
-         // Para bio/location que estão em user, talvez precise de outro endpoint ou updateProfile manipular User
+        // Achado (auditoria): esta aba editava nome, e-mail, biografia, localização e site, mas só
+        // telefone e especialidades eram enviados — o resto era descartado com "salvo com sucesso".
+        // Agora: nome vai para PUT /auth/profile (único endpoint que grava o nome); telefone e
+        // especialidades para PUT /collaborators/me/profile; os demais campos ficam só leitura.
+        if (profileSettings && profileSettings.name.trim() && profileSettings.name.trim() !== originalName) {
+          await authAPI.updateProfile({ name: profileSettings.name.trim() });
+          setOriginalName(profileSettings.name.trim());
+        }
+        await collaboratorProfileAPI.updateProfile({
+          phone: profileSettings?.phone,
+          specialties: profileSettings?.specialties,
+          ...preservedLists,
+        });
       } else if (activeTab === 'security') {
-         if (securitySettings.newPassword) {
-             await authAPI.changePassword(securitySettings.currentPassword, securitySettings.newPassword);
-         }
-         // 2FA de fato (TOTP/códigos de backup) não existe nesta plataforma ainda — isto só
-         // guarda a preferência do usuário em User.profileSettings, sem fingir aplicar uma
-         // camada de segurança real. Ver getMySettings/updateMySettings no backend.
-         await collaboratorProfileAPI.updateSettings({
-             security: {
-                 twoFactorEnabled: securitySettings.twoFactorEnabled,
-                 loginNotifications: securitySettings.loginNotifications
-             }
-         });
+        await authAPI.changePassword(securitySettings.currentPassword, securitySettings.newPassword);
+        setSecuritySettings((prev) => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
       } else {
-         // Salvar privacy/payment em User.profileSettings
-         await collaboratorProfileAPI.updateSettings({
-             privacy: privacySettings,
-             payment: paymentSettings
-         });
+        // Só a seção da aba ativa: o backend mescla por seção, então enviar as duas regravava a outra.
+        await collaboratorProfileAPI.updateSettings(
+          activeTab === 'privacy' ? { privacy: privacySettings } : { payment: paymentSettings }
+        );
       }
 
       addNotification({
         type: 'success',
         title: 'Sucesso',
-        message: 'Alterações salvas com sucesso!'
+        message: activeTab === 'security' ? 'Senha alterada com sucesso!' : 'Alterações salvas com sucesso!'
       });
     } catch (error) {
       logger.error('Erro ao salvar:', 'CollaboratorSettingsPage', error);
@@ -150,9 +232,9 @@ const CollaboratorSettingsPage: React.FC = () => {
     }
   };
 
-  // ... handleImageUpload (usar uploadAvatar) ...
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
+      event.target.value = '';
       if (file) {
           try {
               const formData = new FormData();
@@ -181,601 +263,420 @@ const CollaboratorSettingsPage: React.FC = () => {
       }
   };
 
-  // ... (manter resto do render, tabs, inputs mapeados para states locais)
+  const addSpecialty = () => {
+    if (!profileSettings) return;
+    const value = newSpecialty.trim();
+    if (value && !profileSettings.specialties.includes(value)) {
+      setProfileSettings({ ...profileSettings, specialties: [...profileSettings.specialties, value] });
+    }
+    setNewSpecialty('');
+  };
 
+  const saveButton = (label: string) => (
+    <div className="flex justify-end">
+      <Button size="sm" onClick={handleSave} isLoading={saving} leftIcon={<Save className="h-4 w-4" />}>
+        {label}
+      </Button>
+    </div>
+  );
 
-  const tabs = [
-    { id: 'profile', label: 'Perfil', icon: User },
-    { id: 'security', label: 'Segurança', icon: Lock },
-    { id: 'privacy', label: 'Privacidade', icon: Shield },
-    { id: 'payment', label: 'Pagamento', icon: CreditCard },
-  ];
+  const renderContent = () => {
+    if (loading) return <CollaboratorLoading label="Carregando configurações…" />;
+    if (loadError) {
+      return <CollaboratorError message="Não conseguimos carregar suas configurações." onRetry={loadSettings} />;
+    }
 
-  if (loading) {
     return (
-      <CollaboratorLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <BrandLoader size={120} label="Carregando configurações..." />
-        </div>
-      </CollaboratorLayout>
-    );
-  }
-
-  return (
-    <CollaboratorLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Configurações</h1>
-            <p className="text-muted-foreground">
-              Gerencie suas configurações de conta e preferências
-            </p>
-          </div>
-          
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
-          >
-            <Save className="h-4 w-4" />
-            <span>{saving ? 'Salvando...' : 'Salvar Alterações'}</span>
-          </button>
-        </div>
+        <p className="text-muted-foreground">Gerencie sua conta e preferências.</p>
 
-        {/* Tabs */}
-        <div className="border-b">
-          <nav className="flex space-x-8">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === tab.id
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2">
-                    <Icon className="h-4 w-4" />
-                    <span>{tab.label}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
+        <CollaboratorTabs
+          tabs={TABS}
+          active={activeTab}
+          onChange={setActiveTab}
+          ariaLabel="Seções das configurações"
+          idBase="config"
+        />
 
-        {/* Profile Tab */}
+        {/* Aba Perfil */}
         {activeTab === 'profile' && profileSettings && (
-          <div className="space-y-6">
-            <SimpleCard title="Informações Pessoais">
+          <CollaboratorTabPanel idBase="config" id="profile" className="space-y-6">
+            <SimpleCard title="Informações pessoais">
               <div className="space-y-6">
-                {/* Photo Upload */}
-                <div className="flex items-center space-x-6">
-                  <div className="relative">
-                    <img
-                      src={profileSettings.profileImage}
-                      alt="Foto do perfil"
-                      className="w-20 h-20 rounded-full object-cover"
-                    />
-                    <button
+                {/* Foto */}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+                  <div className="relative self-start shrink-0">
+                    {profileSettings.profileImage ? (
+                      <img
+                        src={profileSettings.profileImage}
+                        alt="Foto do perfil"
+                        className="w-20 h-20 rounded-full object-cover border border-border"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center" aria-hidden="true">
+                        <span className="text-2xl font-semibold text-muted-foreground">
+                          {(profileSettings.name || '?').charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                    <Button
+                      size="icon"
+                      className="absolute -bottom-1 -right-1 h-11 w-11 rounded-full"
                       onClick={() => avatarInputRef.current?.click()}
-                      className="absolute bottom-0 right-0 p-1 bg-primary text-primary-foreground rounded-full hover:bg-primary/90"
                       aria-label="Alterar foto do perfil"
                     >
-                      <Camera className="h-3 w-3" />
-                    </button>
+                      <Camera className="h-4 w-4" />
+                    </Button>
                   </div>
 
-                  <div className="flex-1">
-                    <h3 className="font-medium mb-1">Foto do Perfil</h3>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-foreground mb-1">Foto do perfil</h3>
                     <p className="text-sm text-muted-foreground mb-3">
                       Escolha uma foto profissional para seu perfil
                     </p>
-                    <div className="flex items-center space-x-3">
-                      <label className="flex items-center space-x-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 cursor-pointer">
-                        <Upload className="h-4 w-4" />
-                        <span>Alterar Foto</span>
-                        <input
-                          ref={avatarInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
-                        />
-                      </label>
-                      <button
-                        onClick={handleRemovePhoto}
-                        className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-md"
-                        aria-label="Remover foto do perfil"
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => avatarInputRef.current?.click()}
+                        leftIcon={<Upload className="h-4 w-4" />}
                       >
-                        <Trash2 className="h-4 w-4" />
-                        <span>Remover</span>
-                      </button>
+                        Alterar foto
+                      </Button>
+                      {profileSettings.profileImage && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleRemovePhoto}
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          leftIcon={<Trash2 className="h-4 w-4" />}
+                        >
+                          Remover
+                        </Button>
+                      )}
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="sr-only"
+                        tabIndex={-1}
+                        aria-hidden="true"
+                      />
                     </div>
                   </div>
                 </div>
 
-                {/* Basic Info */}
+                {/* Dados básicos */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Nome Completo</label>
-                    <input
-                      type="text"
-                      value={profileSettings.name}
-                      onChange={(e) => setProfileSettings({
-                        ...profileSettings,
-                        name: e.target.value
-                      })}
-                      className="w-full px-3 py-2 border rounded-md"
-                      placeholder="Digite seu nome completo"
-                      aria-label="Nome completo"
-                    />
-                  </div>
+                  <Input
+                    size="sm"
+                    label="Nome completo"
+                    value={profileSettings.name}
+                    onChange={(e) => setProfileSettings({ ...profileSettings, name: e.target.value })}
+                    placeholder="Digite seu nome completo"
+                  />
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">E-mail</label>
-                    <input
-                      type="email"
-                      value={profileSettings.email}
-                      onChange={(e) => setProfileSettings({
-                        ...profileSettings,
-                        email: e.target.value
-                      })}
-                      className="w-full px-3 py-2 border rounded-md"
-                      placeholder="seu.email@exemplo.com"
-                      aria-label="Endereço de e-mail"
-                    />
-                  </div>
+                  <Input
+                    size="sm"
+                    type="email"
+                    label="E-mail"
+                    value={profileSettings.email}
+                    disabled
+                    readOnly
+                    description="Para alterar o e-mail, fale com a produção."
+                  />
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Telefone</label>
-                    <input
-                      type="tel"
-                      value={profileSettings.phone}
-                      onChange={(e) => setProfileSettings({
-                        ...profileSettings,
-                        phone: e.target.value
-                      })}
-                      className="w-full px-3 py-2 border rounded-md"
-                      placeholder="(11) 98765-4321"
-                      aria-label="Número de telefone"
-                    />
-                  </div>
+                  <Input
+                    size="sm"
+                    type="tel"
+                    label="Telefone"
+                    value={profileSettings.phone}
+                    onChange={(e) => setProfileSettings({ ...profileSettings, phone: e.target.value })}
+                    placeholder="(11) 98765-4321"
+                  />
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Localização</label>
-                    <input
-                      type="text"
-                      value={profileSettings.location}
-                      onChange={(e) => setProfileSettings({
-                        ...profileSettings,
-                        location: e.target.value
-                      })}
-                      className="w-full px-3 py-2 border rounded-md"
-                      placeholder="Cidade, Estado"
-                    />
-                  </div>
-                </div>
-
-                {/* Bio */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Biografia</label>
-                  <textarea
-                    value={profileSettings.bio}
-                    onChange={(e) => setProfileSettings({
-                      ...profileSettings,
-                      bio: e.target.value
-                    })}
-                    className="w-full px-3 py-2 border rounded-md"
-                    rows={4}
-                    placeholder="Descreva sua experiência e especialidades..."
+                  <Input
+                    size="sm"
+                    label="Localização"
+                    value={profileSettings.location}
+                    disabled
+                    readOnly
+                    placeholder="Não informada"
                   />
                 </div>
 
-                {/* Website */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Website</label>
-                  <input
-                    type="url"
-                    value={profileSettings.website}
-                    onChange={(e) => setProfileSettings({
-                      ...profileSettings,
-                      website: e.target.value
-                    })}
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="www.seusite.com.br"
-                  />
-                </div>
+                <Textarea
+                  label="Biografia"
+                  value={profileSettings.bio}
+                  disabled
+                  readOnly
+                  rows={4}
+                  placeholder="Não informada"
+                />
 
-                {/* Specialties */}
+                <Input
+                  size="sm"
+                  type="url"
+                  label="Site"
+                  value={profileSettings.website}
+                  disabled
+                  readOnly
+                  placeholder="Não informado"
+                />
+
+                <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  <Info className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  Localização, biografia e site ainda não podem ser alterados por aqui.
+                  <Badge variant="ghost" size="sm">Em breve</Badge>
+                </p>
+
+                {/* Especialidades */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Especialidades</label>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {profileSettings.specialties.map((specialty, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-3 py-1 bg-primary/10 text-primary rounded-full text-sm"
-                      >
-                        {specialty}
-                        <button
-                          onClick={() => setProfileSettings({
-                            ...profileSettings,
-                            specialties: profileSettings.specialties.filter((_, i) => i !== index)
-                          })}
-                          className="ml-2 text-primary hover:text-primary/80"
-                          aria-label={`Remover especialidade: ${specialty}`}
+                  <p className="text-sm font-medium text-foreground mb-2" id="specialties-label">Especialidades</p>
+                  {profileSettings.specialties.length > 0 ? (
+                    <ul className="flex flex-wrap gap-2 mb-3" aria-labelledby="specialties-label">
+                      {profileSettings.specialties.map((specialty, index) => (
+                        <li
+                          key={`${specialty}-${index}`}
+                          className="inline-flex items-center gap-1 pl-3 pr-1 py-1 bg-primary/10 text-primary rounded-full text-sm"
                         >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="text"
-                      placeholder="Adicionar especialidade..."
-                      className="flex-1 px-3 py-2 border rounded-md"
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          const target = e.target as HTMLInputElement;
-                          const value = target.value.trim();
-                          if (value && !profileSettings.specialties.includes(value)) {
-                            setProfileSettings({
+                          {specialty}
+                          <button
+                            type="button"
+                            onClick={() => setProfileSettings({
                               ...profileSettings,
-                              specialties: [...profileSettings.specialties, value]
-                            });
-                            target.value = '';
+                              specialties: profileSettings.specialties.filter((_, i) => i !== index)
+                            })}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-full hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            aria-label={`Remover especialidade: ${specialty}`}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mb-3">Nenhuma especialidade cadastrada.</p>
+                  )}
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <Input
+                        size="sm"
+                        aria-label="Nova especialidade"
+                        placeholder="Adicionar especialidade..."
+                        value={newSpecialty}
+                        onChange={(e) => setNewSpecialty(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addSpecialty();
                           }
-                        }
-                      }}
-                    />
+                        }}
+                      />
+                    </div>
+                    <Button size="sm" variant="outline" onClick={addSpecialty} disabled={!newSpecialty.trim()} leftIcon={<Plus className="h-4 w-4" />}>
+                      Adicionar
+                    </Button>
                   </div>
                 </div>
               </div>
             </SimpleCard>
-          </div>
+            {saveButton('Salvar perfil')}
+          </CollaboratorTabPanel>
         )}
 
-        {/* Security Tab */}
-        {activeTab === 'security' && securitySettings && (
-          <div className="space-y-6">
-            <SimpleCard title="Alterar Senha">
+        {/* Aba Segurança */}
+        {activeTab === 'security' && (
+          <CollaboratorTabPanel idBase="config" id="security" className="space-y-6">
+            <SimpleCard title="Alterar senha">
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Senha Atual</label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={securitySettings.currentPassword}
-                      onChange={(e) => setSecuritySettings({
-                        ...securitySettings,
-                        currentPassword: e.target.value
-                      })}
-                      className="w-full px-3 py-2 pr-10 border rounded-md"
-                      placeholder="Digite sua senha atual"
-                      aria-label="Senha atual"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                      aria-label="Mostrar/ocultar senha"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Nova Senha</label>
-                  <div className="relative">
-                    <input
-                      type={showNewPassword ? 'text' : 'password'}
-                      value={securitySettings.newPassword}
-                      onChange={(e) => setSecuritySettings({
-                        ...securitySettings,
-                        newPassword: e.target.value
-                      })}
-                      className="w-full px-3 py-2 pr-10 border rounded-md"
-                      placeholder="Digite sua nova senha"
-                      aria-label="Nova senha"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                      aria-label="Mostrar/ocultar nova senha"
-                    >
-                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Confirmar Nova Senha</label>
-                  <input
-                    type="password"
-                    value={securitySettings.confirmPassword}
-                    onChange={(e) => setSecuritySettings({
-                      ...securitySettings,
-                      confirmPassword: e.target.value
-                    })}
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="Confirme sua nova senha"
-                    aria-label="Confirmar nova senha"
-                  />
-                </div>
+                <Input
+                  size="sm"
+                  type="password"
+                  showPasswordToggle
+                  label="Senha atual"
+                  autoComplete="current-password"
+                  value={securitySettings.currentPassword}
+                  onChange={(e) => setSecuritySettings({ ...securitySettings, currentPassword: e.target.value })}
+                  placeholder="Digite sua senha atual"
+                />
+                <Input
+                  size="sm"
+                  type="password"
+                  showPasswordToggle
+                  label="Nova senha"
+                  autoComplete="new-password"
+                  value={securitySettings.newPassword}
+                  onChange={(e) => setSecuritySettings({ ...securitySettings, newPassword: e.target.value })}
+                  placeholder="Mínimo de 6 caracteres"
+                />
+                <Input
+                  size="sm"
+                  type="password"
+                  label="Confirmar nova senha"
+                  autoComplete="new-password"
+                  value={securitySettings.confirmPassword}
+                  onChange={(e) => setSecuritySettings({ ...securitySettings, confirmPassword: e.target.value })}
+                  placeholder="Repita a nova senha"
+                  error={passwordError ?? undefined}
+                />
               </div>
             </SimpleCard>
 
-            <SimpleCard title="Autenticação de Dois Fatores">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">Ativar 2FA</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Adicione uma camada extra de segurança à sua conta
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={securitySettings.twoFactorEnabled}
-                      onChange={(e) => setSecuritySettings({
-                        ...securitySettings,
-                        twoFactorEnabled: e.target.checked
-                      })}
-                      className="sr-only peer"
-                      aria-label="Ativar autenticação de dois fatores"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">Notificações de Login</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Receber alertas quando alguém acessar sua conta
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={securitySettings.loginNotifications}
-                      onChange={(e) => setSecuritySettings({
-                        ...securitySettings,
-                        loginNotifications: e.target.checked
-                      })}
-                      className="sr-only peer"
-                      aria-label="Ativar notificações de login"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
-                </div>
+            {/* Achado (auditoria): "Ativar 2FA — camada extra de segurança" e "Notificações de login"
+                só gravavam uma preferência; a plataforma não tem 2FA nem envia alerta de login. */}
+            <SimpleCard
+              title="Segurança adicional"
+              headerRight={<Badge variant="ghost">Em breve</Badge>}
+            >
+              <div className="space-y-2">
+                <ToggleSwitch
+                  label="Autenticação de dois fatores"
+                  description="Ainda não disponível na plataforma."
+                  checked={false}
+                  disabled
+                  onChange={() => undefined}
+                />
+                <ToggleSwitch
+                  label="Alertas de login"
+                  description="Ainda não disponível na plataforma."
+                  checked={false}
+                  disabled
+                  onChange={() => undefined}
+                />
               </div>
             </SimpleCard>
-          </div>
+            {saveButton('Alterar senha')}
+          </CollaboratorTabPanel>
         )}
 
-        {/* Privacy Tab */}
+        {/* Aba Privacidade */}
         {activeTab === 'privacy' && privacySettings && (
-          <div className="space-y-6">
-            <SimpleCard title="Visibilidade do Perfil">
+          <CollaboratorTabPanel idBase="config" id="privacy" className="space-y-6">
+            <SimpleCard title="Visibilidade do perfil">
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Quem pode ver seu perfil?</label>
-                  <select
-                    value={privacySettings.profileVisibility}
-                    onChange={(e) => setPrivacySettings({
-                      ...privacySettings,
-                      profileVisibility: e.target.value as 'public' | 'private' | 'clients_only'
-                    })}
-                    className="w-full px-3 py-2 border rounded-md"
-                    aria-label="Visibilidade do perfil"
-                  >
-                    <option value="public">Público</option>
-                    <option value="clients_only">Apenas Clientes</option>
-                    <option value="private">Privado</option>
-                  </select>
-                </div>
+                <Select
+                  size="sm"
+                  label="Quem pode ver seu perfil?"
+                  options={VISIBILITY_OPTIONS}
+                  value={privacySettings.profileVisibility}
+                  onChange={(e) => setPrivacySettings({
+                    ...privacySettings,
+                    profileVisibility: e.target.value as 'public' | 'private' | 'clients_only'
+                  })}
+                />
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Mostrar E-mail</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={privacySettings.showEmail}
-                        onChange={(e) => setPrivacySettings({
-                          ...privacySettings,
-                          showEmail: e.target.checked
-                        })}
-                        className="sr-only peer"
-                        aria-label="Mostrar e-mail no perfil"
-                      />
-                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Mostrar Telefone</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={privacySettings.showPhone}
-                        onChange={(e) => setPrivacySettings({
-                          ...privacySettings,
-                          showPhone: e.target.checked
-                        })}
-                        className="sr-only peer"
-                        aria-label="Mostrar telefone no perfil"
-                      />
-                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Permitir Avaliações</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={privacySettings.allowReviews}
-                        onChange={(e) => setPrivacySettings({
-                          ...privacySettings,
-                          allowReviews: e.target.checked
-                        })}
-                        className="sr-only peer"
-                        aria-label="Permitir avaliações"
-                      />
-                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Permitir Mensagens</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={privacySettings.allowMessages}
-                        onChange={(e) => setPrivacySettings({
-                          ...privacySettings,
-                          allowMessages: e.target.checked
-                        })}
-                        className="sr-only peer"
-                        aria-label="Permitir mensagens"
-                      />
-                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
-                  </div>
+                <div className="divide-y divide-border">
+                  <ToggleSwitch
+                    label="Mostrar e-mail"
+                    checked={privacySettings.showEmail}
+                    onChange={(checked) => setPrivacySettings({ ...privacySettings, showEmail: checked })}
+                  />
+                  <ToggleSwitch
+                    label="Mostrar telefone"
+                    checked={privacySettings.showPhone}
+                    onChange={(checked) => setPrivacySettings({ ...privacySettings, showPhone: checked })}
+                  />
+                  <ToggleSwitch
+                    label="Permitir avaliações"
+                    checked={privacySettings.allowReviews}
+                    onChange={(checked) => setPrivacySettings({ ...privacySettings, allowReviews: checked })}
+                  />
+                  <ToggleSwitch
+                    label="Permitir mensagens"
+                    checked={privacySettings.allowMessages}
+                    onChange={(checked) => setPrivacySettings({ ...privacySettings, allowMessages: checked })}
+                  />
                 </div>
               </div>
             </SimpleCard>
-          </div>
+            {saveButton('Salvar privacidade')}
+          </CollaboratorTabPanel>
         )}
 
-        {/* Payment Tab */}
+        {/* Aba Pagamento */}
         {activeTab === 'payment' && paymentSettings && (
-          <div className="space-y-6">
-            <SimpleCard title="Configurações de Pagamento">
+          <CollaboratorTabPanel idBase="config" id="payment" className="space-y-6">
+            <SimpleCard title="Configurações de pagamento">
               <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Método Preferido</label>
-                  <select
-                    value={paymentSettings.preferredMethod}
-                    onChange={(e) => setPaymentSettings({
-                      ...paymentSettings,
-                      preferredMethod: e.target.value as 'pix' | 'bank_transfer' | 'both'
-                    })}
-                    className="w-full px-3 py-2 border rounded-md"
-                    aria-label="Método de pagamento preferido"
-                  >
-                    <option value="pix">PIX</option>
-                    <option value="bank_transfer">Transferência Bancária</option>
-                    <option value="both">Ambos</option>
-                  </select>
-                </div>
+                <Select
+                  size="sm"
+                  label="Método preferido"
+                  options={PAYMENT_METHOD_OPTIONS}
+                  value={paymentSettings.preferredMethod}
+                  onChange={(e) => setPaymentSettings({
+                    ...paymentSettings,
+                    preferredMethod: e.target.value as 'pix' | 'bank_transfer' | 'both'
+                  })}
+                />
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Chave PIX</label>
-                  <input
-                    type="text"
-                    value={paymentSettings.pixKey}
-                    onChange={(e) => setPaymentSettings({
-                      ...paymentSettings,
-                      pixKey: e.target.value
-                    })}
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="E-mail, CPF, Telefone ou Chave Aleatória"
-                  />
-                </div>
+                <Input
+                  size="sm"
+                  label="Chave PIX"
+                  value={paymentSettings.pixKey}
+                  onChange={(e) => setPaymentSettings({ ...paymentSettings, pixKey: e.target.value })}
+                  placeholder="E-mail, CPF, telefone ou chave aleatória"
+                />
 
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Dados Bancários</h3>
-                  
+                  <h3 className="text-lg font-medium text-foreground">Dados bancários</h3>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Banco</label>
-                      <input
-                        type="text"
-                        value={paymentSettings.bankAccount.bank}
-                        onChange={(e) => setPaymentSettings({
-                          ...paymentSettings,
-                          bankAccount: {
-                            ...paymentSettings.bankAccount,
-                            bank: e.target.value
-                          }
-                        })}
-                        className="w-full px-3 py-2 border rounded-md"
-                        placeholder="Nome do banco"
-                        aria-label="Nome do banco"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Agência</label>
-                      <input
-                        type="text"
-                        value={paymentSettings.bankAccount.agency}
-                        onChange={(e) => setPaymentSettings({
-                          ...paymentSettings,
-                          bankAccount: {
-                            ...paymentSettings.bankAccount,
-                            agency: e.target.value
-                          }
-                        })}
-                        className="w-full px-3 py-2 border rounded-md"
-                        placeholder="Número da agência"
-                        aria-label="Número da agência bancária"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Conta</label>
-                      <input
-                        type="text"
-                        value={paymentSettings.bankAccount.account}
-                        onChange={(e) => setPaymentSettings({
-                          ...paymentSettings,
-                          bankAccount: {
-                            ...paymentSettings.bankAccount,
-                            account: e.target.value
-                          }
-                        })}
-                        className="w-full px-3 py-2 border rounded-md"
-                        placeholder="Número da conta"
-                        aria-label="Número da conta bancária"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Tipo de Conta</label>
-                      <select
-                        value={paymentSettings.bankAccount.accountType}
-                        onChange={(e) => setPaymentSettings({
-                          ...paymentSettings,
-                          bankAccount: {
-                            ...paymentSettings.bankAccount,
-                            accountType: e.target.value as 'corrente' | 'poupanca'
-                          }
-                        })}
-                        className="w-full px-3 py-2 border rounded-md"
-                        aria-label="Tipo de conta bancária"
-                      >
-                        <option value="corrente">Conta Corrente</option>
-                        <option value="poupanca">Poupança</option>
-                      </select>
-                    </div>
+                    <Input
+                      size="sm"
+                      label="Banco"
+                      value={paymentSettings.bankAccount.bank}
+                      onChange={(e) => setPaymentSettings({
+                        ...paymentSettings,
+                        bankAccount: { ...paymentSettings.bankAccount, bank: e.target.value }
+                      })}
+                      placeholder="Nome do banco"
+                    />
+                    <Input
+                      size="sm"
+                      label="Agência"
+                      value={paymentSettings.bankAccount.agency}
+                      onChange={(e) => setPaymentSettings({
+                        ...paymentSettings,
+                        bankAccount: { ...paymentSettings.bankAccount, agency: e.target.value }
+                      })}
+                      placeholder="Número da agência"
+                    />
+                    <Input
+                      size="sm"
+                      label="Conta"
+                      value={paymentSettings.bankAccount.account}
+                      onChange={(e) => setPaymentSettings({
+                        ...paymentSettings,
+                        bankAccount: { ...paymentSettings.bankAccount, account: e.target.value }
+                      })}
+                      placeholder="Número da conta"
+                    />
+                    <Select
+                      size="sm"
+                      label="Tipo de conta"
+                      options={ACCOUNT_TYPE_OPTIONS}
+                      value={paymentSettings.bankAccount.accountType}
+                      onChange={(e) => setPaymentSettings({
+                        ...paymentSettings,
+                        bankAccount: { ...paymentSettings.bankAccount, accountType: e.target.value as 'corrente' | 'poupanca' }
+                      })}
+                    />
                   </div>
                 </div>
               </div>
             </SimpleCard>
-          </div>
+            {saveButton('Salvar pagamento')}
+          </CollaboratorTabPanel>
         )}
       </div>
+    );
+  };
+
+  return (
+    <CollaboratorLayout title="Configurações" breadcrumbs={BREADCRUMBS}>
+      {renderContent()}
     </CollaboratorLayout>
   );
 };

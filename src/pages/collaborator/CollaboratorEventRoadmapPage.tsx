@@ -1,17 +1,23 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
+import { CollaboratorLoading, CollaboratorError } from '../../components/collaborator/CollaboratorStates';
+import { CollaboratorTabs, CollaboratorTabPanel } from '../../components/collaborator/CollaboratorTabs';
 import { collaboratorProfileAPI, collaboratorMessagesAPI, uploadAPI } from '../../services/api';
-import { BrandLoader } from '../../components/ui/BrandLoader';
 import { SimpleCard } from '../../components/ui/Cards';
+import { Badge } from '../../components/ui/Badge';
+import { Button, buttonVariants } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import type { StandardVariant } from '../../components/ui/StandardTypes';
 import { formatPrice } from '@/utils/formatPrice';
-import { 
-  Calendar, 
-  MapPin, 
-  Users, 
-  FileText, 
-  Clock, 
-  MessageSquare, 
+import { bookingStatusLabel } from '@/utils/bookingStatus';
+import {
+  Calendar,
+  MapPin,
+  Users,
+  FileText,
+  Clock,
+  MessageSquare,
   Send,
   ArrowLeft,
   ExternalLink,
@@ -24,13 +30,15 @@ import {
   Plus,
   Camera,
   X,
-  ArrowRight
+  AlertTriangle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useSocket } from '../../hooks/useSocket';
+import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { logger } from '../../utils/logger';
+import { cn } from '../../utils/cn';
 
 interface RoadmapTask {
   id: string;
@@ -63,19 +71,27 @@ interface RoadmapEventCollaborator {
   collaborator: {
     userId?: string;
     user: {
+      id?: string;
       name: string;
       avatarUrl?: string;
     };
   };
   function?: { name?: string };
   totalPayment?: number;
+  status?: string;
+  startTime?: string;
+  endTime?: string;
 }
 
 interface RoadmapBooking {
   id: string;
   userId?: string;
+  status?: string;
   eventTitle?: string;
   eventDate: string;
+  eventEndDate?: string;
+  setupTime?: string | null;
+  pickupTime?: string | null;
   city?: string;
   street?: string;
   addressNumber?: string;
@@ -92,17 +108,59 @@ interface RoadmapBooking {
   chats?: RoadmapChat[];
 }
 
+type RoadmapTab = 'roadmap' | 'checklist' | 'logistics' | 'rider' | 'team' | 'chat';
+
+const LAYOUT_TITLE = 'Roteiro do Evento';
+const BREADCRUMBS = [
+  { name: 'Colaborador', href: '/colaborador/painel' },
+  { name: 'Agenda', href: '/colaborador/agenda' },
+  { name: 'Roteiro' },
+];
+
+// Status da SUA escala no evento (enum EventCollaboratorStatus do backend).
+const ASSIGNMENT_STATUS_LABELS: Record<string, string> = {
+  ASSIGNED: 'Escalado',
+  CONFIRMED: 'Confirmado',
+  IN_PROGRESS: 'Em andamento',
+  COMPLETED: 'Concluído',
+  CANCELLED: 'Cancelado',
+  NO_SHOW: 'Não compareceu',
+};
+
+const EXPENSE_STATUS: Record<RoadmapExpense['status'], { label: string; variant: StandardVariant }> = {
+  PENDING: { label: 'Pendente', variant: 'warning' },
+  APPROVED: { label: 'Aprovado', variant: 'success' },
+  REJECTED: { label: 'Recusado', variant: 'destructive' },
+};
+
+const formatTime = (date: Date) => date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+const formatDate = (date: Date) => date.toLocaleDateString('pt-BR');
+
+const initials = (name?: string) =>
+  (name || '?').split(' ').filter(Boolean).slice(0, 2).map((p) => p.charAt(0).toUpperCase()).join('');
+
+const Avatar: React.FC<{ name?: string; src?: string; className?: string }> = ({ name, src, className }) =>
+  src ? (
+    <img src={src} alt={name ? `Foto de ${name}` : ''} className={cn('rounded-xl object-cover', className)} />
+  ) : (
+    <div className={cn('rounded-xl bg-primary/10 text-primary font-semibold flex items-center justify-center', className)} aria-hidden="true">
+      {initials(name)}
+    </div>
+  );
+
 const CollaboratorEventRoadmapPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const { addNotification } = useNotifications();
   const [booking, setBooking] = useState<RoadmapBooking | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'roadmap' | 'rider' | 'checklist' | 'logistics' | 'team' | 'chat'>('roadmap');
+  const [loadError, setLoadError] = useState(false);
+  const [activeTab, setActiveTab] = useState<RoadmapTab>('roadmap');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [alerting, setAlerting] = useState(false);
 
-  // Expense Form State (Restored)
+  // Expense Form State
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseDesc, setExpenseDesc] = useState('');
@@ -112,7 +170,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Socket.IO Integration
   const { on, emit, isConnected } = useSocket(id ? `event:${id}` : undefined);
 
@@ -159,16 +217,20 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
   const fetchRoadmap = React.useCallback(async () => {
     try {
       if (!id) return;
+      setLoadError(false);
+      // "Tentar de novo" mostrava "Evento não encontrado" até a resposta chegar
+      setLoading(true);
       const resp = await collaboratorProfileAPI.getEventRoadmap(id);
       const data = (resp.data?.data || resp.data) as RoadmapBooking;
       setBooking(data);
-      
+
       // Entrar na sala do chat especificamente se houver chat
       if (data.chats?.[0]?.id) {
         emit('join_chat', data.chats[0].id);
       }
     } catch (error) {
       logger.error('Erro ao carregar roadmap:', 'CollaboratorEventRoadmapPage', error);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -184,6 +246,42 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
     }
   }, [activeTab, booking?.chats]);
 
+  // Achado (auditoria): a "sua" escala e as "suas" mensagens eram identificadas comparando com
+  // booking.userId — o CLIENTE dono da reserva. O cachê aparecia R$ 0,00 e as mensagens do cliente
+  // apareciam como suas. O certo é o usuário logado.
+  const myCollaboratorData = booking?.eventCollaborators?.find(
+    (c) => (c.collaborator.userId ?? c.collaborator.user.id) === user?.id
+  );
+
+  // Achado (auditoria): o cronograma era uma lista fixa (08h chegada … 22h finalização), igual para
+  // todo evento. Agora sai dos horários reais da reserva e da sua escala; só aparece o que existe.
+  const timeline = useMemo(() => {
+    if (!booking) return [];
+    const items: Array<{ date: Date; title: string; desc: string }> = [];
+    const push = (value: string | null | undefined, title: string, desc: string) => {
+      if (!value) return;
+      const d = new Date(value);
+      if (!isNaN(d.getTime())) items.push({ date: d, title, desc });
+    };
+    const atEventDay = (hhmm?: string) => {
+      if (!hhmm || !/^\d{1,2}:\d{2}$/.test(hhmm) || !booking.eventDate) return null;
+      const base = new Date(booking.eventDate);
+      if (isNaN(base.getTime())) return null;
+      const [h, m] = hhmm.split(':').map(Number);
+      base.setHours(h, m, 0, 0);
+      return base.toISOString();
+    };
+
+    push(booking.setupTime, 'Montagem', 'Início da montagem no local');
+    push(atEventDay(myCollaboratorData?.startTime), 'Seu horário de início', 'Início da sua escala');
+    push(booking.eventDate, 'Início do evento', booking.eventTitle || 'Evento');
+    push(booking.eventEndDate, 'Término do evento', 'Encerramento previsto');
+    push(atEventDay(myCollaboratorData?.endTime), 'Seu horário de término', 'Fim da sua escala');
+    push(booking.pickupTime, 'Desmontagem', 'Recolhimento do equipamento');
+
+    return items.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [booking, myCollaboratorData]);
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || !id || !booking?.chats?.[0]?.id) return;
@@ -194,18 +292,17 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
       // Enviamos via API mas o Socket.IO vai emitir para todos na sala
       await collaboratorMessagesAPI.sendMessage(chatId, message);
       setMessage('');
-      // Não precisamos mais de fetchRoadmap() aqui, o socket tratará o update
     } catch (error) {
       logger.error('Erro ao enviar mensagem:', 'CollaboratorEventRoadmapPage', error);
+      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível enviar a mensagem.' });
     } finally {
       setSending(false);
     }
   };
 
   // Achado (auditoria de produto): botão "Alertar Produção" não tinha nenhum onClick.
-  // Reaproveita o chat do evento (mesmo chatId do formulário acima) — os admins agora são
-  // sempre participantes desse chat (ver chatService.getOrCreateEventChat), então uma
-  // mensagem urgente aqui realmente chega até a equipe, sem precisar de um endpoint novo.
+  // Reaproveita o chat do evento — os admins são sempre participantes desse chat (ver
+  // chatService.getOrCreateEventChat), então a mensagem urgente chega até a equipe.
   const handleAlertProduction = async () => {
     if (!booking?.chats?.[0]?.id) return;
 
@@ -240,11 +337,13 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
       });
     } catch (error) {
       logger.error('Erro ao alternar tarefa:', 'CollaboratorEventRoadmapPage', error);
+      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível atualizar a tarefa.' });
     }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
 
     setUploadingReceipt(true);
@@ -255,6 +354,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
       setReceiptUrl(resp.data?.url || resp.data);
     } catch (error) {
       logger.error('Erro no upload do recibo:', 'CollaboratorEventRoadmapPage', error);
+      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível enviar a foto do recibo.' });
     } finally {
       setUploadingReceipt(false);
     }
@@ -275,9 +375,11 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
       setExpenseDesc('');
       setReceiptUrl('');
       setShowExpenseForm(false);
+      addNotification({ type: 'success', title: 'Reembolso solicitado', message: 'A produção vai analisar sua despesa.' });
       await fetchRoadmap();
     } catch (error) {
       logger.error('Erro ao enviar despesa:', 'CollaboratorEventRoadmapPage', error);
+      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível enviar a despesa.' });
     } finally {
       setSubmittingExpense(false);
     }
@@ -285,110 +387,99 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
 
   if (loading) {
     return (
-      <CollaboratorLayout title="Carregando Roadmap...">
-        <div className="flex flex-col items-center justify-center min-h-[60vh]">
-          <BrandLoader size="xl" />
-          <p className="mt-4 text-muted-foreground animate-pulse">Sincronizando dados do evento...</p>
-        </div>
+      <CollaboratorLayout title={LAYOUT_TITLE} breadcrumbs={BREADCRUMBS}>
+        <CollaboratorLoading label="Carregando dados do evento…" />
+      </CollaboratorLayout>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <CollaboratorLayout title={LAYOUT_TITLE} breadcrumbs={BREADCRUMBS}>
+        <CollaboratorError message="Não conseguimos carregar os detalhes deste evento." onRetry={fetchRoadmap} />
       </CollaboratorLayout>
     );
   }
 
   if (!booking) {
     return (
-      <CollaboratorLayout title="Erro">
+      <CollaboratorLayout title={LAYOUT_TITLE} breadcrumbs={BREADCRUMBS}>
         <div className="text-center py-20">
-          <Info className="w-16 h-16 text-destructive mx-auto mb-4" />
-          <h2 className="text-xl font-bold">Evento não encontrado</h2>
+          <Info className="w-16 h-16 text-destructive mx-auto mb-4" aria-hidden="true" />
+          <h2 className="text-xl font-bold text-foreground">Evento não encontrado</h2>
           <p className="text-muted-foreground mt-2">Não conseguimos localizar os detalhes deste evento.</p>
-          <Link to="/collaborator/dashboard" className="mt-6 inline-flex items-center text-primary hover:underline">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Voltar ao Dashboard
+          <Link to="/colaborador/agenda" className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'mt-6')}>
+            <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Voltar à agenda
           </Link>
         </div>
       </CollaboratorLayout>
     );
   }
 
-  // const eventChat = booking.chats?.find((c: any) => c.type === 'EVENT'); // Variável não utilizada
-  const myCollaboratorData = booking.eventCollaborators?.find((c) => c.collaborator.userId === booking.userId);
+  const eventDate = new Date(booking.eventDate);
+  const pendingTasks = booking.tasks?.filter((t) => !t.isCompleted).length ?? 0;
+  const statusText = myCollaboratorData?.status
+    ? ASSIGNMENT_STATUS_LABELS[myCollaboratorData.status] ?? myCollaboratorData.status
+    : bookingStatusLabel(booking.status);
+  const streetLine = [booking.street, booking.addressNumber].filter(Boolean).join(', ');
+  const cityLine = [booking.city, booking.state].filter(Boolean).join('/');
+  const address = [streetLine, cityLine].filter(Boolean).join(' – ') || booking.location || 'Endereço a definir';
+  const mapsQuery = [booking.location, streetLine, booking.city, booking.state].filter(Boolean).join(' ');
+  const mapsUrl = booking.locationUrl || (mapsQuery ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}` : '');
+  const chatMessages = booking.chats?.[0]?.messages ?? [];
+
+  const tabs = [
+    { id: 'roadmap' as const, label: 'Cronograma', icon: Clock },
+    { id: 'checklist' as const, label: 'Tarefas', icon: CheckCircle2, count: pendingTasks },
+    { id: 'logistics' as const, label: 'Logística', icon: MapPin },
+    { id: 'rider' as const, label: 'Rider técnico', icon: FileText },
+    { id: 'team' as const, label: 'Equipe', icon: Users },
+    { id: 'chat' as const, label: 'Chat', icon: MessageSquare },
+  ];
 
   return (
-    <CollaboratorLayout 
-      title={booking.eventTitle || 'Roadmap do Evento'}
-      breadcrumbs={[
-        { name: 'Colaborador', href: '/collaborator' },
-        { name: 'Dashboard', href: '/collaborator' },
-        { name: 'Roadmap' }
-      ]}
-    >
+    <CollaboratorLayout title={LAYOUT_TITLE} breadcrumbs={BREADCRUMBS}>
       <div className="space-y-6">
-        {/* Banner de Info Rápida */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-primary/95 to-primary text-primary-foreground p-8 rounded-2xl shadow-xl">
+        {/* Banner de informações rápidas */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-primary/95 to-primary text-primary-foreground p-5 sm:p-8 rounded-2xl shadow-xl">
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-white/20 uppercase tracking-wider text-white">
+            <div className="space-y-2 min-w-0">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-primary-foreground/15 uppercase tracking-wider">
                 Reserva #{booking.id.substring(0, 8)}
               </span>
-              <h1 className="text-3xl font-black tracking-tight">{booking.eventTitle || 'Evento X Produções'}</h1>
-              <div className="flex flex-wrap gap-3 text-primary-foreground/90 text-sm">
-                <span className="flex items-center gap-1.5 backdrop-blur-sm bg-white/10 px-3 py-1 rounded-full border border-white/10">
-                  <Calendar className="w-3.5 h-3.5" />
-                  {new Date(booking.eventDate).toLocaleDateString('pt-BR')}
+              {/* <h2>: o <h1> da página é o título do layout. */}
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight break-words">{booking.eventTitle || 'Evento X Produções'}</h2>
+              <div className="flex flex-wrap gap-2 text-primary-foreground/90 text-sm">
+                <span className="flex items-center gap-1.5 bg-primary-foreground/10 px-3 py-1 rounded-full border border-primary-foreground/10">
+                  <Calendar className="w-4 h-4" aria-hidden="true" />
+                  {formatDate(eventDate)}
                 </span>
-                <span className="flex items-center gap-1.5 backdrop-blur-sm bg-white/10 px-3 py-1 rounded-full border border-white/10">
-                  <MapPin className="w-3.5 h-3.5" />
-                  {booking.city || 'Local definir'}
+                <span className="flex items-center gap-1.5 bg-primary-foreground/10 px-3 py-1 rounded-full border border-primary-foreground/10">
+                  <MapPin className="w-4 h-4" aria-hidden="true" />
+                  {booking.city || 'Local a definir'}
                 </span>
-                <span className="flex items-center gap-1.5 backdrop-blur-sm bg-white/10 px-3 py-1 rounded-full border border-white/10">
-                  <Clock className="w-3.5 h-3.5" />
-                  {new Date(booking.eventDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                <span className="flex items-center gap-1.5 bg-primary-foreground/10 px-3 py-1 rounded-full border border-primary-foreground/10">
+                  <Clock className="w-4 h-4" aria-hidden="true" />
+                  {formatTime(eventDate)}
                 </span>
               </div>
             </div>
-            
-            <div className="flex flex-col items-end gap-2 shrink-0">
-               <div className="bg-white/10 backdrop-blur-xl px-6 py-3 rounded-2xl border border-white/20 text-right shadow-inner">
-                  <p className="text-[10px] uppercase opacity-70 font-black tracking-widest">Cache Estimado</p>
-                  <p className="text-3xl font-black">{formatPrice(myCollaboratorData?.totalPayment || 0)}</p>
-               </div>
-               <span className="text-[10px] font-black uppercase tracking-tighter px-3 py-1 rounded-full bg-success/30 text-white border border-white/20 backdrop-blur-sm">
-                  Status: Confirmado
-               </span>
+
+            <div className="flex flex-col items-start md:items-end gap-2 shrink-0">
+              <div className="bg-primary-foreground/10 px-5 py-3 rounded-2xl border border-primary-foreground/20 md:text-right">
+                <p className="text-xs uppercase opacity-80 font-bold tracking-wider">Cachê estimado</p>
+                <p className="text-2xl sm:text-3xl font-black">{formatPrice(myCollaboratorData?.totalPayment || 0)}</p>
+              </div>
+              {/* Achado: era "Status: Confirmado" fixo para todo evento. */}
+              <span className="text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full bg-primary-foreground/15 border border-primary-foreground/20">
+                {myCollaboratorData ? 'Sua escala' : 'Reserva'}: {statusText}
+              </span>
             </div>
           </div>
-          <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-[-20%] left-[-10%] w-48 h-48 bg-black/5 rounded-full blur-2xl" />
-        </div>
+          <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-primary-foreground/5 rounded-full blur-3xl" aria-hidden="true" />
+        </section>
 
-        {/* Navegação por Abas */}
-        <div className="flex items-center p-1.5 bg-muted/50 backdrop-blur-sm rounded-2xl gap-1 overflow-x-auto max-w-full no-scrollbar border border-border/50 shadow-inner">
-          {([
-            { id: 'roadmap', label: 'Timeline', icon: Clock },
-            { id: 'checklist', label: 'Checklist', icon: CheckCircle2 },
-            { id: 'logistics', label: 'Logística', icon: MapPin },
-            { id: 'rider', label: 'Rider Técnico', icon: FileText },
-            { id: 'team', label: 'Equipe', icon: Users },
-            { id: 'chat', label: 'Chat', icon: MessageSquare }
-          ] as const).map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                activeTab === tab.id 
-                  ? 'bg-white text-primary shadow-sm border border-border/10' 
-                  : 'text-muted-foreground hover:bg-white/50 hover:text-foreground'
-              }`}
-            >
-              <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'animate-bounce text-primary' : ''}`} />
-              {tab.label}
-              {tab.id === 'checklist' && (booking.tasks?.filter((t)=>!t.isCompleted).length ?? 0) > 0 && (
-                <span className="bg-primary text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
-                  {booking.tasks?.filter((t)=>!t.isCompleted).length}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        <CollaboratorTabs tabs={tabs} active={activeTab} onChange={setActiveTab} ariaLabel="Seções do evento" idBase="roteiro" />
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -397,454 +488,453 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.02 }}
             transition={{ duration: 0.15 }}
-            className="min-h-[450px]"
           >
-            {activeTab === 'roadmap' && (
-              <SimpleCard title="Cronograma Operacional">
-                <div className="space-y-6 relative before:absolute before:inset-0 before:left-[19px] before:w-[2px] before:bg-muted before:h-full py-2 px-1">
-                   {/* Cronograma Fixo para Dashboard */}
-                  {[
-                    { time: '08:00', title: 'Chegada da Equipe', desc: 'Descarregamento e montagem inicial' },
-                    { time: '10:00', title: 'Montagem Final', desc: 'Ajustes finos e testes de som/luz' },
-                    { time: '12:00', title: 'Almoço Equipe', desc: 'Intervalo técnico' },
-                    { time: '14:00', title: 'Passagem de Som', desc: 'Alinhamento com artistas' },
-                    { time: '16:00', title: 'Portões Abertos', desc: 'Início da operação' },
-                    { time: '22:00', title: 'Finalização', desc: 'Desmontagem e checkout' },
-                  ].map((item, i) => (
-                    <div key={i} className="flex gap-6 relative group">
-                      <div className="relative z-10 w-9 h-9 rounded-full bg-muted flex items-center justify-center border-4 border-white shrink-0 group-hover:bg-primary transition-colors shadow-sm">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary group-hover:bg-white transition-colors" />
-                      </div>
-                      <div className="bg-muted/20 p-4 rounded-2xl flex-1 border border-border/20 group-hover:border-primary/20 group-hover:bg-primary/5 transition-all">
-                        <span className="text-[10px] font-black text-primary mb-1 block tracking-wider uppercase">{item.time}</span>
-                        <h4 className="font-extrabold text-foreground text-sm">{item.title}</h4>
-                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{item.desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </SimpleCard>
-            )}
+            <CollaboratorTabPanel idBase="roteiro" id={activeTab}>
+              {activeTab === 'roadmap' && (
+                <SimpleCard title="Cronograma operacional" description="Horários da reserva e da sua escala">
+                  {timeline.length === 0 ? (
+                    <p className="py-8 text-center text-muted-foreground">Nenhum horário definido para este evento.</p>
+                  ) : (
+                    <ol className="space-y-4 relative before:absolute before:top-0 before:bottom-0 before:left-[17px] before:w-0.5 before:bg-border py-2">
+                      {timeline.map((item, i) => {
+                        const sameDay = item.date.toDateString() === eventDate.toDateString();
+                        return (
+                          <li key={i} className="flex gap-4 relative">
+                            <div className="relative z-10 w-9 h-9 rounded-full bg-muted flex items-center justify-center border-4 border-card shrink-0">
+                              <div className="w-2 h-2 rounded-full bg-primary" />
+                            </div>
+                            <div className="bg-muted/30 p-4 rounded-2xl flex-1 border border-border">
+                              <span className="text-sm font-bold text-primary block">
+                                {formatTime(item.date)}{!sameDay && ` · ${formatDate(item.date)}`}
+                              </span>
+                              <h3 className="font-bold text-foreground">{item.title}</h3>
+                              <p className="text-sm text-muted-foreground mt-1">{item.desc}</p>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  )}
+                </SimpleCard>
+              )}
 
-            {activeTab === 'checklist' && (
-              <SimpleCard 
-                title="Status em Tempo Real" 
-                description="Marque as etapas conforme forem concluídas (Opcional)"
-              >
-                <div className="space-y-3">
-                  {booking.tasks && booking.tasks.length > 0 ? (
-                    booking.tasks.map((task) => (
-                      <button
-                        key={task.id}
-                        onClick={() => handleToggleTask(task.id, task.isCompleted)}
-                        className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                          task.isCompleted 
-                            ? 'bg-success/5 border-success/20 opacity-70' 
-                            : 'bg-muted/30 border-border/50 hover:border-primary/30 hover:bg-primary/5'
-                        }`}
-                      >
-                        <div className="flex items-center gap-4">
-                          {task.isCompleted ? (
-                            <CheckCircle2 className="w-6 h-6 text-success fill-success/10" />
-                          ) : (
-                            <Circle className="w-6 h-6 text-muted-foreground" />
+              {activeTab === 'checklist' && (
+                <SimpleCard
+                  title="Tarefas do evento"
+                  description="Marque as etapas conforme forem concluídas (opcional)"
+                >
+                  <div className="space-y-3">
+                    {booking.tasks && booking.tasks.length > 0 ? (
+                      booking.tasks.map((task) => (
+                        <button
+                          type="button"
+                          key={task.id}
+                          onClick={() => handleToggleTask(task.id, task.isCompleted)}
+                          aria-pressed={task.isCompleted}
+                          className={cn(
+                            'w-full flex items-center justify-between gap-3 p-4 rounded-2xl border transition-all text-left',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                            task.isCompleted
+                              ? 'bg-success/5 border-success/20'
+                              : 'bg-muted/30 border-border hover:border-primary/30 hover:bg-primary/5'
                           )}
-                          <div className="text-left">
-                            <h4 className={`text-sm font-bold ${task.isCompleted ? 'line-through text-muted-foreground' : ''}`}>
-                              {task.title}
-                            </h4>
-                            {task.description && (
-                              <p className="text-xs text-muted-foreground">{task.description}</p>
+                        >
+                          <div className="flex items-center gap-4 min-w-0">
+                            {task.isCompleted ? (
+                              <CheckCircle2 className="w-6 h-6 shrink-0 text-success" aria-hidden="true" />
+                            ) : (
+                              <Circle className="w-6 h-6 shrink-0 text-muted-foreground" aria-hidden="true" />
+                            )}
+                            <div className="min-w-0">
+                              <span className={cn('block text-sm font-bold', task.isCompleted ? 'line-through text-muted-foreground' : 'text-foreground')}>
+                                {task.title}
+                              </span>
+                              {task.description && (
+                                <span className="block text-sm text-muted-foreground">{task.description}</span>
+                              )}
+                            </div>
+                          </div>
+                          {task.isCompleted && <Badge variant="success" size="sm">Concluída</Badge>}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="text-center py-12 bg-muted/20 rounded-2xl border-2 border-dashed border-border">
+                        <CheckCircle2 className="w-10 h-10 text-muted-foreground mx-auto mb-3" aria-hidden="true" />
+                        <p className="text-sm text-muted-foreground">Nenhuma tarefa definida para este evento.</p>
+                        <p className="text-sm text-muted-foreground mt-1">As tarefas são configuradas pela produção.</p>
+                      </div>
+                    )}
+                  </div>
+                </SimpleCard>
+              )}
+
+              {activeTab === 'logistics' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <SimpleCard title="Local e contato">
+                    <div className="space-y-6">
+                      <div className="flex items-start gap-4 p-4 bg-muted/30 rounded-2xl border border-border">
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                          <MapPin className="w-6 h-6 text-primary" aria-hidden="true" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-sm text-foreground mb-1">Localização do evento</h3>
+                          <p className="text-sm text-muted-foreground break-words">{address}</p>
+                          {mapsUrl && (
+                            <a
+                              href={mapsUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={cn(buttonVariants({ size: 'sm' }), 'mt-4')}
+                            >
+                              <Navigation className="w-4 h-4" aria-hidden="true" /> Abrir no mapa
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-4 p-4 bg-muted/30 rounded-2xl border border-border">
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                          <Phone className="w-6 h-6 text-primary" aria-hidden="true" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-sm text-foreground mb-1">Contato no local</h3>
+                          <p className="text-sm text-muted-foreground">Responsável/equipe do local</p>
+                          <div className="flex items-center justify-between gap-3 mt-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-foreground">{booking.venueContactName || 'Equipe do local'}</p>
+                              <p className="text-sm text-muted-foreground">{booking.venueContactPhone || 'Fale com a produção'}</p>
+                            </div>
+                            {booking.venueContactPhone && (
+                              <a
+                                href={`tel:${booking.venueContactPhone.replace(/\D/g, '')}`}
+                                className={buttonVariants({ size: 'icon' })}
+                                aria-label={`Ligar para ${booking.venueContactName || 'a equipe do local'}`}
+                              >
+                                <Phone className="w-4 h-4" />
+                              </a>
                             )}
                           </div>
                         </div>
-                        {task.isCompleted && (
-                          <span className="text-[10px] font-bold text-success uppercase">Concluído</span>
-                        )}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="text-center py-12 bg-muted/20 rounded-2xl border-2 border-dashed border-border/50">
-                       <CheckCircle2 className="w-10 h-10 text-muted-foreground mx-auto opacity-20 mb-3" />
-                       <p className="text-sm text-muted-foreground">Nenhuma tarefa operativa definida para este evento.</p>
-                       <p className="text-xs text-muted-foreground mt-1">Isso geralmente é configurado pela administração para grandes eventos.</p>
-                    </div>
-                  )}
-                </div>
-              </SimpleCard>
-            )}
-
-            {activeTab === 'logistics' && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <SimpleCard title="Local e Contato">
-                  <div className="space-y-6">
-                    <div className="flex items-start gap-4 p-4 bg-muted/30 rounded-2xl border border-border/30">
-                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                        <MapPin className="w-6 h-6 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-bold text-sm mb-1">Localização do Evento</h4>
-                        <p className="text-xs text-muted-foreground font-medium">
-                          {booking.street}, {booking.addressNumber} - {booking.city}/{booking.state}
-                        </p>
-                        <div className="flex gap-2 mt-4">
-                          <a 
-                            href={booking.locationUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${booking.location} ${booking.street} ${booking.city}`)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 bg-primary text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-primary/90 transition-all shadow-md active:scale-95"
-                            aria-label="Abrir localização no Google Maps"
-                          >
-                            <Navigation className="w-3.5 h-3.5" /> Abrir GPS
-                          </a>
-                        </div>
                       </div>
                     </div>
+                  </SimpleCard>
 
-                    <div className="flex items-start gap-4 p-4 bg-muted/30 rounded-2xl border border-border/30">
-                      <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-                        <Phone className="w-6 h-6 text-accent" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-bold text-sm mb-1">Contato no Local</h4>
-                        <p className="text-xs text-muted-foreground">Responsável/Staff do Local</p>
-                        <div className="flex items-center justify-between mt-3">
-                           <div>
-                              <p className="text-sm font-black text-foreground">{booking.venueContactName || 'Staff Local'}</p>
-                              <p className="text-xs text-muted-foreground font-mono">{booking.venueContactPhone || '(Contatar Produção)'}</p>
-                           </div>
-                           {booking.venueContactPhone && (
-                             <a 
-                               href={`tel:${booking.venueContactPhone.replace(/\D/g,'')}`}
-                               className="p-2.5 bg-accent text-accent-light rounded-xl shadow-md active:scale-90"
-                               aria-label={`Ligar para ${booking.venueContactName || 'Staff Local'}`}
-                             >
-                               <Phone className="w-4 h-4" />
-                             </a>
-                           )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </SimpleCard>
-
-                <SimpleCard title="Sua Logística (Reembolsos)" description="Envie comprovantes de despesas pagas por você">
-                  <div className="space-y-4">
-                     <AnimatePresence>
+                  <SimpleCard title="Sua logística (reembolsos)" description="Envie comprovantes de despesas pagas por você">
+                    <div className="space-y-4">
+                      <AnimatePresence>
                         {showExpenseForm ? (
-                          <motion.form 
+                          <motion.form
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             onSubmit={handleSubmitExpense}
-                            className="p-5 bg-primary/5 border border-primary/20 rounded-2xl space-y-4 overflow-hidden"
+                            className="p-4 sm:p-5 bg-primary/5 border border-primary/20 rounded-2xl space-y-4 overflow-hidden"
                           >
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-primary">Valor Total</label>
-                                <input 
-                                  type="number" 
-                                  step="0.01"
-                                  value={expenseAmount}
-                                  onChange={(e)=>setExpenseAmount(e.target.value)}
-                                  placeholder="0.00"
-                                  className="w-full bg-white border border-border rounded-xl px-3 py-2.5 text-sm focus:ring-2 ring-primary/20 outline-none"
-                                  required
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-primary">Descrição</label>
-                                <input 
-                                  type="text" 
-                                  value={expenseDesc}
-                                  onChange={(e)=>setExpenseDesc(e.target.value)}
-                                  placeholder="Gasolina, alimentação..."
-                                  className="w-full bg-white border border-border rounded-xl px-3 py-2.5 text-sm focus:ring-2 ring-primary/20 outline-none"
-                                  required
-                                />
-                              </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <Input
+                                size="sm"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                inputMode="decimal"
+                                label="Valor total (R$)"
+                                value={expenseAmount}
+                                onChange={(e) => setExpenseAmount(e.target.value)}
+                                placeholder="0,00"
+                                required
+                              />
+                              <Input
+                                size="sm"
+                                label="Descrição"
+                                value={expenseDesc}
+                                onChange={(e) => setExpenseDesc(e.target.value)}
+                                placeholder="Gasolina, alimentação..."
+                                required
+                              />
                             </div>
 
                             <div className="space-y-2">
-                               <label className="text-[10px] font-black uppercase text-primary">Anexar Recibo</label>
-                               <div className="flex items-center gap-3">
-                                  {receiptUrl ? (
-                                    <div className="flex-1 flex items-center justify-between p-2 bg-success/10 border border-success/30 rounded-xl">
-                                       <span className="text-[10px] font-bold text-success uppercase ml-2 truncate max-w-[150px]">Recibo Carregado</span>
-                                       <button 
-                                          type="button" 
-                                          onClick={()=>setReceiptUrl('')}
-                                          className="p-1.5 bg-success/20 rounded-lg text-success hover:bg-success/30"
-                                          aria-label="Remover recibo carregado"
-                                       >
-                                          <X className="w-3.5 h-3.5" />
-                                       </button>
-                                    </div>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => fileInputRef.current?.click()}
-                                      disabled={uploadingReceipt}
-                                      className="flex-1 flex items-center justify-center gap-2 p-3 bg-white border border-dashed border-primary/30 rounded-xl text-primary hover:bg-primary/5 transition-all text-xs font-bold"
-                                      aria-label="Tirar Foto ou Upload de Recibo"
-                                    >
-                                      {uploadingReceipt ? <BrandLoader size="sm" /> : <><Camera className="w-4 h-4" /> Tirar Foto / Upload</>}
-                                    </button>
-                                  )}
-                                  <input 
-                                    type="file" 
-                                    className="hidden" 
-                                    ref={fileInputRef} 
-                                    accept="image/*" 
-                                    onChange={handleFileUpload}
-                                    aria-label="Selecionar foto do recibo"
-                                  />
-                               </div>
+                              <p className="text-sm font-medium text-foreground">Recibo</p>
+                              {receiptUrl ? (
+                                <div className="flex items-center justify-between gap-2 p-2 bg-success/10 border border-success/30 rounded-xl">
+                                  <span className="text-sm font-medium text-success ml-2">Recibo anexado</span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setReceiptUrl('')}
+                                    aria-label="Remover recibo anexado"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  fullWidth
+                                  onClick={() => fileInputRef.current?.click()}
+                                  isLoading={uploadingReceipt}
+                                  leftIcon={<Camera className="w-4 h-4" />}
+                                >
+                                  Tirar foto ou enviar arquivo
+                                </Button>
+                              )}
+                              <input
+                                type="file"
+                                className="sr-only"
+                                ref={fileInputRef}
+                                accept="image/*"
+                                onChange={handleFileUpload}
+                                tabIndex={-1}
+                                aria-hidden="true"
+                              />
                             </div>
 
-                            <div className="flex gap-2 pt-2">
-                              <button 
-                                type="submit" 
-                                disabled={submittingExpense || uploadingReceipt}
-                                className="flex-1 bg-primary text-white text-xs font-black py-3 rounded-xl shadow-lg active:scale-95 disabled:opacity-50"
+                            <div className="flex flex-wrap gap-2 pt-2">
+                              <Button
+                                type="submit"
+                                size="sm"
+                                className="flex-1"
+                                isLoading={submittingExpense}
+                                disabled={uploadingReceipt}
                               >
-                                {submittingExpense ? 'Enviando...' : 'Pedir Reembolso'}
-                              </button>
-                              <button 
-                                type="button" 
-                                onClick={()=>setShowExpenseForm(false)}
-                                className="px-5 py-3 bg-muted text-muted-foreground text-xs font-bold rounded-xl"
-                              >
+                                Pedir reembolso
+                              </Button>
+                              <Button type="button" size="sm" variant="ghost" onClick={() => setShowExpenseForm(false)}>
                                 Voltar
-                              </button>
+                              </Button>
                             </div>
                           </motion.form>
                         ) : (
-                          <button 
-                            onClick={()=>setShowExpenseForm(true)}
-                            className="w-full p-6 border-2 border-dashed border-primary/20 rounded-2xl text-primary hover:bg-primary/5 transition-all group lg:min-h-[140px] flex items-center justify-center"
+                          <button
+                            type="button"
+                            onClick={() => setShowExpenseForm(true)}
+                            className="w-full p-6 border-2 border-dashed border-primary/30 rounded-2xl text-primary hover:bg-primary/5 transition-all lg:min-h-[140px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
-                            <div className="text-center font-black uppercase text-xs">
-                               <Plus className="w-8 h-8 mx-auto mb-2 text-primary/40 group-hover:rotate-90 group-hover:text-primary transition-all" /> 
-                               Solicitar Novo Reembolso
-                            </div>
+                            <span className="text-center font-bold text-sm">
+                              <Plus className="w-8 h-8 mx-auto mb-2" aria-hidden="true" />
+                              Solicitar novo reembolso
+                            </span>
                           </button>
                         )}
-                     </AnimatePresence>
+                      </AnimatePresence>
 
-                     <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                      <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
                         {(booking.expenses?.length ?? 0) > 0 ? (
-                          booking.expenses!.map((expense) => (
-                            <div key={expense.id} className="flex items-center justify-between p-3.5 bg-muted/20 border border-border/40 rounded-2xl hover:border-primary/20 transition-all">
-                               <div className="flex items-center gap-4">
-                                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shadow-inner">
-                                     <Receipt className="w-5 h-5 text-primary" />
+                          booking.expenses!.map((expense) => {
+                            const status = EXPENSE_STATUS[expense.status] ?? { label: expense.status, variant: 'ghost' as StandardVariant };
+                            return (
+                              <div key={expense.id} className="flex items-center justify-between gap-3 p-3.5 bg-muted/20 border border-border rounded-2xl">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="w-10 h-10 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center">
+                                    <Receipt className="w-5 h-5 text-primary" aria-hidden="true" />
                                   </div>
-                                  <div>
-                                     <p className="text-sm font-bold text-foreground leading-tight">{expense.description}</p>
-                                     <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{new Date(expense.createdAt).toLocaleDateString('pt-BR')}</p>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-bold text-foreground truncate">{expense.description}</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">{formatDate(new Date(expense.createdAt))}</p>
                                   </div>
-                               </div>
-                               <div className="text-right">
+                                </div>
+                                <div className="text-right shrink-0">
                                   <p className="text-sm font-black text-foreground">{formatPrice(expense.amount)}</p>
-                                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full mt-1 inline-block ${
-                                    expense.status === 'APPROVED' ? 'bg-success/15 text-success' : 
-                                    expense.status === 'REJECTED' ? 'bg-destructive/15 text-destructive' : 'bg-warning/15 text-warning'
-                                  }`}>
-                                    {expense.status === 'PENDING' ? 'Pendente' : 
-                                     expense.status === 'APPROVED' ? 'Aprovado' : 'Rejeitado'}
-                                  </span>
-                               </div>
-                            </div>
-                          ))
+                                  <Badge variant={status.variant} size="sm" className="mt-1">{status.label}</Badge>
+                                </div>
+                              </div>
+                            );
+                          })
                         ) : (
-                          <div className="py-8 text-center bg-muted/10 rounded-2xl border border-dashed border-border/30">
-                             <Receipt className="w-8 h-8 text-muted-foreground mx-auto opacity-10 mb-2" />
-                             <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Nenhuma despesa enviada</p>
+                          <div className="py-8 text-center bg-muted/10 rounded-2xl border border-dashed border-border">
+                            <Receipt className="w-8 h-8 text-muted-foreground mx-auto mb-2" aria-hidden="true" />
+                            <p className="text-sm text-muted-foreground">Nenhuma despesa enviada</p>
                           </div>
                         )}
-                     </div>
-                  </div>
-                </SimpleCard>
-              </div>
-            )}
+                      </div>
+                    </div>
+                  </SimpleCard>
+                </div>
+              )}
 
-            {activeTab === 'rider' && (
-              <SimpleCard title="Especificações Técnicas" description="Atenção aos detalhes solicitados pelo cliente">
-                <div className="space-y-8">
-                   <div className="p-6 bg-primary/5 border border-primary/20 rounded-2xl relative overflow-hidden group">
+              {activeTab === 'rider' && (
+                <SimpleCard title="Especificações técnicas" description="Atenção aos detalhes solicitados pelo cliente">
+                  <div className="space-y-6">
+                    <div className="p-4 sm:p-6 bg-primary/5 border border-primary/20 rounded-2xl">
                       <div className="flex items-start gap-4">
                         <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                          <FileText className="w-6 h-6 text-primary" />
+                          <FileText className="w-6 h-6 text-primary" aria-hidden="true" />
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-extrabold text-lg mb-2">Orientações Técnicas</h4>
-                          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-extrabold text-lg text-foreground mb-2">Orientações técnicas</h3>
+                          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap break-words">
                             {booking.technicalRider || 'Nenhuma especificação em texto fornecida.'}
                           </p>
                         </div>
                       </div>
-                   </div>
-
-                   {booking.technicalRiderUrl && (
-                    <div className="p-6 border-2 border-dashed border-border/50 rounded-2xl flex items-center justify-between hover:bg-muted/30 transition-all group">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center group-hover:bg-destructive/20 transition-colors shadow-sm">
-                          <FileText className="w-7 h-7 text-destructive" />
-                        </div>
-                        <div>
-                          <p className="text-base font-black text-foreground">Arquivo de Rider Oficial</p>
-                          <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mt-0.5">Clique para baixar e ver anexos</p>
-                        </div>
-                      </div>
-                      <a 
-                        href={booking.technicalRiderUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="w-12 h-12 flex items-center justify-center bg-destructive text-white rounded-2xl hover:bg-destructive/90 transition-all shadow-xl active:scale-95"
-                        title="Baixar Rider Técnico"
-                      >
-                         <ExternalLink className="w-5 h-5" />
-                      </a>
                     </div>
-                   )}
-                </div>
-              </SimpleCard>
-            )}
 
-            {activeTab === 'team' && (
-              <SimpleCard title="Equipe Operacional" description="Colaboradores escalados para este evento">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 py-2">
-                  {(booking.eventCollaborators || []).map((member, i) => (
-                    <motion.div 
-                      key={i}
-                      whileHover={{ scale: 1.02, y: -4 }}
-                      className="p-5 bg-muted/20 border border-border/30 rounded-3xl flex items-center gap-5 group transition-shadow hover:shadow-lg"
-                    >
-                      <img 
-                        src={member.collaborator.user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.collaborator.user.name}`} 
-                        alt={member.collaborator.user.name}
-                        className="w-16 h-16 rounded-2xl object-cover ring-4 ring-primary/10 group-hover:ring-primary/30 transition-all shadow-md"
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-extrabold text-sm leading-tight text-foreground">{member.collaborator.user.name}</h4>
-                        <div className="flex items-center gap-2 mt-2">
-                           <span className="text-[10px] font-black text-primary px-2.5 py-1 bg-primary/10 rounded-full uppercase tracking-tighter shadow-sm whitespace-nowrap">
-                             {member.function?.name || 'Colaborador'}
-                           </span>
+                    {booking.technicalRiderUrl && (
+                      <div className="p-4 sm:p-6 border-2 border-dashed border-border rounded-2xl flex flex-wrap items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="w-14 h-14 shrink-0 rounded-2xl bg-primary/10 flex items-center justify-center">
+                            <FileText className="w-7 h-7 text-primary" aria-hidden="true" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-base font-black text-foreground">Arquivo do rider oficial</p>
+                            <p className="text-sm text-muted-foreground mt-0.5">Abra para baixar e ver os anexos</p>
+                          </div>
                         </div>
+                        <a
+                          href={booking.technicalRiderUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                        >
+                          <ExternalLink className="w-4 h-4" aria-hidden="true" /> Abrir rider
+                        </a>
                       </div>
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity pr-2">
-                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                            <ArrowRight className="w-4 h-4 text-primary" />
-                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </SimpleCard>
-            )}
+                    )}
+                  </div>
+                </SimpleCard>
+              )}
 
-            {activeTab === 'chat' && (
-              <div className="h-[650px] flex flex-col bg-card border border-border/50 rounded-3xl overflow-hidden shadow-2xl relative">
-                <div className="p-5 bg-primary text-primary-foreground flex items-center justify-between border-b border-white/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md">
-                        <MessageSquare className="w-6 h-6" />
+              {activeTab === 'team' && (
+                <SimpleCard title="Equipe operacional" description="Colaboradores escalados para este evento">
+                  {(booking.eventCollaborators || []).length === 0 ? (
+                    <p className="py-8 text-center text-muted-foreground">Nenhum colaborador escalado ainda.</p>
+                  ) : (
+                    <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 py-2">
+                      {(booking.eventCollaborators || []).map((member, i) => (
+                        <li key={i} className="p-4 bg-muted/20 border border-border rounded-3xl flex items-center gap-4">
+                          <Avatar
+                            name={member.collaborator.user.name}
+                            src={member.collaborator.user.avatarUrl}
+                            className="w-14 h-14 shrink-0 text-lg"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-extrabold text-sm leading-tight text-foreground truncate">{member.collaborator.user.name}</p>
+                            <Badge variant="primary" size="sm" className="mt-2">
+                              {member.function?.name || 'Colaborador'}
+                            </Badge>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </SimpleCard>
+              )}
+
+              {activeTab === 'chat' && (
+                <div className="h-[min(650px,calc(100dvh-14rem))] min-h-[420px] flex flex-col bg-card border border-border rounded-3xl overflow-hidden shadow-xl">
+                  <div className="p-4 sm:p-5 bg-primary text-primary-foreground flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-2xl bg-primary-foreground/15 flex items-center justify-center">
+                        <MessageSquare className="w-6 h-6" aria-hidden="true" />
+                      </div>
+                      <div>
+                        <h3 className="font-black text-sm uppercase tracking-wider">Chat da equipe</h3>
+                        <p className="text-xs opacity-80 font-bold">Reserva: {booking.id.substring(0, 8)}</p>
+                      </div>
                     </div>
-                    <div>
-                        <h4 className="font-black text-sm uppercase tracking-widest">Chat da Equipe</h4>
-                        <p className="text-[10px] opacity-80 font-bold">Reserva: {booking.id.substring(0, 8)}</p>
+                    {/* Achado: era "Equipe Online" com um ponto piscando fixo. Agora mostra o estado real
+                        da conexão em tempo real (useSocket). */}
+                    <div className="flex items-center gap-2 bg-primary-foreground/10 px-3 py-1 rounded-full" role="status">
+                      <span className={cn('w-2 h-2 rounded-full', isConnected ? 'bg-success' : 'bg-primary-foreground/50')} aria-hidden="true" />
+                      <span className="text-xs font-bold">{isConnected ? 'Tempo real ativo' : 'Sem conexão em tempo real'}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 bg-success/20 px-3 py-1 rounded-full border border-success/30">
-                     <div className="w-2 h-2 rounded-full bg-success animate-ping" />
-                     <span className="text-[10px] font-black uppercase text-success-foreground">Equipe Online</span>
-                  </div>
-                </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/70">
-                  {(booking.chats?.[0]?.messages?.length ?? 0) > 0 ? (
-                    booking.chats![0].messages!.map((msg, i) => {
-                      const isMe = msg.senderId === booking.userId;
-                      return (
-                        <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[85%] ${isMe ? 'flex flex-row-reverse' : 'flex'} gap-3 items-end`}>
-                            <img 
-                               src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.senderId}`} 
-                               className="w-10 h-10 rounded-xl shrink-0 border-2 border-white shadow-md mb-1"
-                               alt="avatar"
-                            />
-                            <div className={`shadow-sm text-sm p-4 relative ${
-                              isMe 
-                                ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-none' 
-                                : 'bg-white border border-border/50 rounded-2xl rounded-bl-none'
-                            }`}>
-                              <p className="leading-relaxed font-semibold">{msg.content}</p>
-                              <div className={`flex items-center gap-1 mt-2 opacity-50 text-[9px] ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                <Clock className="w-3 h-3" />
-                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-muted/30" aria-live="polite">
+                    {chatMessages.length > 0 ? (
+                      chatMessages.map((msg, i) => {
+                        const isMe = msg.senderId === user?.id;
+                        const sender = booking.eventCollaborators?.find(
+                          (c) => (c.collaborator.userId ?? c.collaborator.user.id) === msg.senderId
+                        )?.collaborator.user;
+                        return (
+                          <div key={msg.id || i} className={cn('flex', isMe ? 'justify-end' : 'justify-start')}>
+                            <div className={cn('max-w-[85%] flex gap-3 items-end', isMe && 'flex-row-reverse')}>
+                              <Avatar
+                                name={isMe ? user?.name : sender?.name || 'Produção'}
+                                src={isMe ? user?.avatarUrl : sender?.avatarUrl}
+                                className="w-9 h-9 shrink-0 text-xs mb-1"
+                              />
+                              <div className={cn(
+                                'shadow-sm text-sm p-3 sm:p-4',
+                                isMe
+                                  ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-none'
+                                  : 'bg-card text-card-foreground border border-border rounded-2xl rounded-bl-none'
+                              )}>
+                                {!isMe && (
+                                  <p className="text-xs font-bold text-muted-foreground mb-1">{sender?.name || 'Produção'}</p>
+                                )}
+                                <p className="leading-relaxed break-words">{msg.content}</p>
+                                <p className={cn('flex items-center gap-1 mt-2 text-xs opacity-80', isMe ? 'justify-end' : 'justify-start')}>
+                                  <Clock className="w-3 h-3" aria-hidden="true" />
+                                  {formatTime(new Date(msg.createdAt))}
+                                </p>
                               </div>
                             </div>
                           </div>
+                        );
+                      })
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-center">
+                        <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4">
+                          <MessageSquare className="w-10 h-10 text-muted-foreground" aria-hidden="true" />
                         </div>
-                      );
-                    })
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center">
-                       <div className="w-24 h-24 bg-muted/20 rounded-full flex items-center justify-center mb-6">
-                          <MessageSquare className="w-10 h-10 text-muted-foreground opacity-30" />
-                       </div>
-                       <p className="text-sm font-black text-foreground uppercase tracking-widest">Sem conversas operacionais</p>
-                       <p className="text-xs text-muted-foreground mt-2 max-w-[250px] leading-relaxed">Combine horários, trajes e ajustes técnicos diretamente com o time escalado aqui.</p>
-                    </div>
-                  )}
-                  <div ref={chatEndRef} />
-                </div>
-
-                <form onSubmit={handleSendMessage} className="p-5 bg-white border-t border-border/50 flex gap-4 shadow-inner">
-                  <div className="flex-1">
-                    <input 
-                      type="text" 
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Combine tudo com a equipe aqui..."
-                      className="w-full bg-muted/40 border-2 border-transparent focus:border-primary/20 focus:bg-white rounded-2xl px-6 py-4 text-sm font-bold outline-none transition-all placeholder:text-muted-foreground/50 shadow-inner"
-                    />
+                        <p className="text-sm font-bold text-foreground">Nenhuma mensagem ainda</p>
+                        <p className="text-sm text-muted-foreground mt-2 max-w-[260px]">Combine horários, trajes e ajustes técnicos diretamente com o time escalado aqui.</p>
+                      </div>
+                    )}
+                    <div ref={chatEndRef} />
                   </div>
-                  <button 
-                    type="submit" 
-                    className="aspect-square w-16 flex items-center justify-center bg-primary text-white rounded-2xl hover:bg-primary/90 transition-all shadow-xl active:scale-90 disabled:opacity-50 group shrink-0"
-                    disabled={sending || !message.trim()}
-                    aria-label="Enviar Mensagem"
-                  >
-                    {sending ? <BrandLoader size="sm" /> : <Send className="w-7 h-7 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />}
-                  </button>
-                </form>
-              </div>
-            )}
+
+                  <form onSubmit={handleSendMessage} className="p-3 sm:p-4 bg-card border-t border-border flex items-center gap-3">
+                    <div className="flex-1">
+                      <Input
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        placeholder="Combine tudo com a equipe aqui..."
+                        aria-label="Mensagem para a equipe"
+                        disabled={!booking.chats?.[0]?.id}
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      size="icon"
+                      className="h-12 w-12 shrink-0"
+                      disabled={!message.trim() || !booking.chats?.[0]?.id}
+                      isLoading={sending}
+                      aria-label="Enviar mensagem"
+                    >
+                      {!sending && <Send className="w-5 h-5" />}
+                    </Button>
+                  </form>
+                </div>
+              )}
+            </CollaboratorTabPanel>
           </motion.div>
         </AnimatePresence>
 
-        {/* Footer de Ações Rápidas */}
-        <div className="flex flex-col md:flex-row gap-4 pt-6">
-           <Link 
-             to="/collaborator" 
-             className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white border border-border/50 rounded-2xl text-xs font-black uppercase text-muted-foreground hover:bg-muted/30 transition-all shadow-sm group"
-           >
-              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Dashboard do Colaborador
-           </Link>
-           <div className="flex-1" />
-           <div className="flex items-center gap-3 p-2.5 bg-muted/40 rounded-3xl border border-border/30">
-              <span className="text-[10px] font-black uppercase text-muted-foreground/60 px-4">Centro de Apoio</span>
-              <button
-                onClick={handleAlertProduction}
-                disabled={alerting || !booking?.chats?.[0]?.id}
-                className="px-6 py-2.5 bg-accent text-accent-light text-xs font-black rounded-2xl shadow-lg border border-accent-light/10 hover:shadow-accent/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {alerting ? 'Enviando...' : 'Alertar Produção'}
-              </button>
-           </div>
+        {/* Ações rápidas */}
+        <div className="flex flex-col md:flex-row md:items-center gap-4 pt-2">
+          <Link to="/colaborador/agenda" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+            <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Voltar à agenda
+          </Link>
+          <div className="flex-1" />
+          <div className="flex flex-wrap items-center gap-3 p-3 bg-muted/40 rounded-2xl border border-border">
+            <span className="text-sm font-medium text-muted-foreground px-2">Precisa de ajuda agora?</span>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleAlertProduction}
+              isLoading={alerting}
+              disabled={!booking?.chats?.[0]?.id}
+              leftIcon={<AlertTriangle className="w-4 h-4" />}
+            >
+              Alertar produção
+            </Button>
+          </div>
         </div>
       </div>
     </CollaboratorLayout>

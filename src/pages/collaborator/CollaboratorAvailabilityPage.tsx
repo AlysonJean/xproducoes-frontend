@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Calendar, 
-  Plus, 
+import {
+  Calendar,
+  Plus,
   Clock,
 } from 'lucide-react';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
+import { CollaboratorError } from '../../components/collaborator/CollaboratorStates';
 import { SimpleCard } from '../../components/ui/Cards';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Select } from '../../components/ui/Select';
+import { Badge } from '../../components/ui/Badge';
+import { Skeleton } from '../../components/ui/Skeleton';
+import type { StandardVariant } from '../../components/ui/StandardTypes';
 import { collaboratorProfileAPI } from '../../services/api';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { logger } from '../../utils/logger';
@@ -15,17 +22,56 @@ interface Availability {
   date: string;
   startTime: string;
   endTime: string;
-  status: 'AVAILABLE' | 'BUSY' | 'OFF_DUTY';
+  status: 'AVAILABLE' | 'BUSY' | 'OFF_DUTY' | 'VACATION';
   notes?: string;
 }
+
+const BREADCRUMBS = [
+  { name: 'Colaborador', href: '/colaborador/painel' },
+  { name: 'Disponibilidade' },
+];
+
+const STATUS_OPTIONS = [
+  { value: 'AVAILABLE', label: 'Disponível' },
+  { value: 'BUSY', label: 'Ocupado' },
+  { value: 'OFF_DUTY', label: 'Folga' },
+];
+
+const statusLabels: Record<string, string> = {
+  AVAILABLE: 'Disponível',
+  BUSY: 'Ocupado',
+  OFF_DUTY: 'Folga',
+  VACATION: 'Férias',
+};
+
+const statusVariants: Record<string, StandardVariant> = {
+  AVAILABLE: 'success',
+  BUSY: 'destructive',
+  OFF_DUTY: 'ghost',
+  VACATION: 'info',
+};
+
+// Data de hoje no fuso local (toISOString() devolve a data em UTC — depois das 21h no horário de
+// Brasília já seria "amanhã").
+const todayLocal = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+// A data da disponibilidade é gravada como meia-noite UTC (new Date('AAAA-MM-DD') no backend).
+// Formatar no fuso local mostrava o dia anterior no Brasil (UTC-3).
+const formatAvailabilityDate = (value: string) =>
+  new Date(value).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 
 const CollaboratorAvailabilityPage: React.FC = () => {
   const { addNotification } = useNotifications();
   const [availabilities, setAvailabilities] = useState<Availability[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newAvailability, setNewAvailability] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: todayLocal(),
     startTime: '09:00',
     endTime: '17:00',
     status: 'AVAILABLE' as Availability['status'],
@@ -35,22 +81,17 @@ const CollaboratorAvailabilityPage: React.FC = () => {
   const loadAvailabilities = React.useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError(false);
       const response = await collaboratorProfileAPI.getAvailability();
       const data = response.data?.data ?? response.data;
-      if (Array.isArray(data)) {
-        setAvailabilities(data);
-      }
+      setAvailabilities(Array.isArray(data) ? data : []);
     } catch (error) {
       logger.error('Erro ao carregar disponibilidades:', 'CollaboratorAvailabilityPage', error);
-      addNotification({
-        type: 'error',
-        title: 'Erro',
-        message: 'Erro ao carregar disponibilidades.'
-      });
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
-  }, [addNotification]);
+  }, []);
 
   useEffect(() => {
     loadAvailabilities();
@@ -67,14 +108,17 @@ const CollaboratorAvailabilityPage: React.FC = () => {
         return;
       }
 
+      setSaving(true);
       await collaboratorProfileAPI.updateAvailability({
-        startDate: newAvailability.date, // O controller espera startDate ou date
+        // Achado: o front mandava só `startDate`, mas a validação do backend (availabilityCreateSchema)
+        // exige `date` — toda tentativa de cadastrar voltava 400.
+        date: newAvailability.date,
         startTime: newAvailability.startTime,
         endTime: newAvailability.endTime,
         status: newAvailability.status,
         notes: newAvailability.notes
       });
-      
+
       addNotification({
         type: 'success',
         title: 'Sucesso',
@@ -89,158 +133,129 @@ const CollaboratorAvailabilityPage: React.FC = () => {
         title: 'Erro',
         message: 'Erro ao adicionar disponibilidade.'
       });
+    } finally {
+      setSaving(false);
     }
-  };
-
-  const statusColors: Record<string, string> = {
-    AVAILABLE: 'text-green-600 bg-green-100',
-    BUSY: 'text-red-600 bg-red-100',
-    OFF_DUTY: 'text-gray-600 bg-gray-100'
-  };
-
-  const statusLabels: Record<string, string> = {
-    AVAILABLE: 'Disponível',
-    BUSY: 'Ocupado',
-    OFF_DUTY: 'Folga'
   };
 
   return (
     <CollaboratorLayout
       title="Disponibilidade"
-      breadcrumbs={[
-        { name: 'Colaborador', href: '/collaborator' },
-        { name: 'Disponibilidade' }
-      ]}
+      breadcrumbs={BREADCRUMBS}
+      actions={
+        !showAddForm && (
+          <Button size="sm" onClick={() => setShowAddForm(true)} leftIcon={<Plus className="w-4 h-4" />}>
+            Nova data
+          </Button>
+        )
+      }
     >
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Gerenciar Disponibilidade</h2>
-            <button 
-                onClick={() => setShowAddForm(true)}
-                className="flex items-center space-x-2 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90"
-            >
-                <Plus className="w-4 h-4" />
-                <span>Nova Data</span>
-            </button>
-        </div>
-
         {showAddForm && (
-            <SimpleCard title="Adicionar Disponibilidade">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Data</label>
-                        <input 
-                            type="date"
-                            aria-label="Data da disponibilidade"
-                            value={newAvailability.date}
-                            onChange={(e) => setNewAvailability({...newAvailability, date: e.target.value})}
-                            className="w-full border rounded-md px-3 py-2"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Status</label>
-                        <select
-                            aria-label="Status da disponibilidade"
-                            value={newAvailability.status}
-                                                        onChange={(e) => setNewAvailability({...newAvailability, status: e.target.value as Availability['status']})}
-                            className="w-full border rounded-md px-3 py-2"
-                        >
-                            <option value="AVAILABLE">Disponível</option>
-                            <option value="BUSY">Ocupado</option>
-                            <option value="OFF_DUTY">Folga</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Início</label>
-                        <input
-                            type="time"
-                            aria-label="Hora de início"
-                            value={newAvailability.startTime}
-                            onChange={(e) => setNewAvailability({...newAvailability, startTime: e.target.value})}
-                            className="w-full border rounded-md px-3 py-2"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Fim</label>
-                        <input
-                            type="time"
-                            aria-label="Hora de fim"
-                            value={newAvailability.endTime}
-                            onChange={(e) => setNewAvailability({...newAvailability, endTime: e.target.value})}
-                            className="w-full border rounded-md px-3 py-2"
-                        />
-                    </div>
-                    <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-1">Notas</label>
-                        <input 
-                            type="text"
-                            value={newAvailability.notes}
-                            onChange={(e) => setNewAvailability({...newAvailability, notes: e.target.value})}
-                            className="w-full border rounded-md px-3 py-2"
-                            placeholder="Ex: Disponível apenas tarde"
-                        />
-                    </div>
-                </div>
-                <div className="mt-4 flex space-x-2">
-                    <button 
-                        onClick={handleAddAvailability}
-                        className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90"
-                    >
-                        Salvar
-                    </button>
-                    <button 
-                        onClick={() => setShowAddForm(false)}
-                        className="bg-muted text-muted-foreground px-4 py-2 rounded-md hover:bg-muted/80"
-                    >
-                        Cancelar
-                    </button>
-                </div>
-            </SimpleCard>
+          <SimpleCard title="Adicionar disponibilidade">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                type="date"
+                label="Data"
+                size="sm"
+                value={newAvailability.date}
+                onChange={(e) => setNewAvailability({ ...newAvailability, date: e.target.value })}
+              />
+              <Select
+                label="Status"
+                size="sm"
+                options={STATUS_OPTIONS}
+                value={newAvailability.status}
+                onChange={(e) => setNewAvailability({ ...newAvailability, status: e.target.value as Availability['status'] })}
+              />
+              <Input
+                type="time"
+                label="Início"
+                size="sm"
+                value={newAvailability.startTime}
+                onChange={(e) => setNewAvailability({ ...newAvailability, startTime: e.target.value })}
+              />
+              <Input
+                type="time"
+                label="Fim"
+                size="sm"
+                value={newAvailability.endTime}
+                onChange={(e) => setNewAvailability({ ...newAvailability, endTime: e.target.value })}
+              />
+              <div className="md:col-span-2">
+                <Input
+                  type="text"
+                  label="Observações"
+                  size="sm"
+                  value={newAvailability.notes}
+                  onChange={(e) => setNewAvailability({ ...newAvailability, notes: e.target.value })}
+                  placeholder="Ex.: disponível apenas à tarde"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Button size="sm" onClick={handleAddAvailability} isLoading={saving}>
+                Salvar
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setShowAddForm(false)} disabled={saving}>
+                Cancelar
+              </Button>
+            </div>
+          </SimpleCard>
         )}
 
-        <SimpleCard title="Próximas Disponibilidades">
-            {loading ? (
-                <div className="text-center py-8 text-muted-foreground">Carregando...</div>
-            ) : availabilities.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">Nenhuma disponibilidade cadastrada.</div>
-            ) : (
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b text-left text-sm font-medium text-muted-foreground">
-                                <th className="py-3 px-4">Data</th>
-                                <th className="py-3 px-4">Horário</th>
-                                <th className="py-3 px-4">Status</th>
-                                <th className="py-3 px-4">Notas</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {availabilities.map((item) => (
-                                <tr key={item.id} className="border-b last:border-0 hover:bg-muted/50">
-                                    <td className="py-3 px-4">
-                                        <div className="flex items-center space-x-2">
-                                            <Calendar className="w-4 h-4 text-muted-foreground" />
-                                            <span>{new Date(item.date).toLocaleDateString()}</span>
-                                        </div>
-                                    </td>
-                                    <td className="py-3 px-4">
-                                        <div className="flex items-center space-x-2 text-sm">
-                                            <Clock className="w-4 h-4 text-muted-foreground" />
-                                            <span>{item.startTime} - {item.endTime}</span>
-                                        </div>
-                                    </td>
-                                    <td className="py-3 px-4">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[item.status]}`}>
-                                            {statusLabels[item.status]}
-                                        </span>
-                                    </td>
-                                    <td className="py-3 px-4 text-sm text-muted-foreground">{item.notes || '-'}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+        <SimpleCard title="Próximas disponibilidades">
+          {loading ? (
+            <div className="space-y-3" role="status" aria-label="Carregando disponibilidades">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : loadError ? (
+            <CollaboratorError
+              message="Não conseguimos carregar suas disponibilidades."
+              onRetry={loadAvailabilities}
+            />
+          ) : availabilities.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">Nenhuma disponibilidade cadastrada.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[480px]">
+                <thead>
+                  <tr className="border-b border-border text-left text-sm font-medium text-muted-foreground">
+                    <th scope="col" className="py-3 px-4">Data</th>
+                    <th scope="col" className="py-3 px-4">Horário</th>
+                    <th scope="col" className="py-3 px-4">Status</th>
+                    <th scope="col" className="py-3 px-4">Observações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {availabilities.map((item) => (
+                    <tr key={item.id} className="border-b border-border last:border-0 hover:bg-muted/50">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2 text-sm text-foreground">
+                          <Calendar className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                          <span>{formatAvailabilityDate(item.date)}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2 text-sm text-foreground">
+                          <Clock className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                          <span>{item.startTime} – {item.endTime}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge variant={statusVariants[item.status] ?? 'ghost'}>
+                          {statusLabels[item.status] ?? item.status}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4 text-sm text-muted-foreground">{item.notes || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </SimpleCard>
       </div>
     </CollaboratorLayout>

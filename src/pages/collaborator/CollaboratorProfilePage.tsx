@@ -1,24 +1,26 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import {
-  User,
   Edit,
   Star,
   MapPin,
   Settings,
   Award,
-  Upload,
   Camera,
-  Loader2
+  Loader2,
+  Info,
 } from 'lucide-react';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
-import { Button } from '../../components/ui/Button';
+import { CollaboratorLoading, CollaboratorError } from '../../components/collaborator/CollaboratorStates';
+import { CollaboratorTabs, CollaboratorTabPanel } from '../../components/collaborator/CollaboratorTabs';
+import { Button, buttonVariants } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Textarea } from '../../components/ui/Textarea';
+import { Badge } from '../../components/ui/Badge';
 import { collaboratorProfileAPI } from '../../services/api';
-import { BrandLoader } from '@/components/ui/BrandLoader';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { GoogleCalendarIntegration } from '../../components/GoogleCalendarIntegration';
+import { formatPrice } from '@/utils/formatPrice';
+import { collaboratorRoleLabel } from '@/utils/collaboratorRoles';
 import { logger } from '../../utils/logger';
 
 interface CollaboratorProfileData {
@@ -28,6 +30,7 @@ interface CollaboratorProfileData {
     bio?: string;
     email?: string;
     website?: string;
+    avatarUrl?: string;
     googleCalendarEmail?: string;
   };
   collaboratorRole?: string;
@@ -45,75 +48,121 @@ interface CollaboratorProfileData {
   workingRadius?: number;
 }
 
+// Só os campos que PUT /collaborators/me/profile realmente grava (collaboratorController.updateMyProfile
+// + collaboratorUpdateSchema). Achado (auditoria): o formulário também editava biografia, localização,
+// site e experiência — o backend descartava esses campos e a tela dizia "Perfil atualizado".
 interface CollaboratorFormData {
   phone: string;
-  experience: string;
   hourlyRate: number | string;
   workingRadius: number | string;
   languages: string[];
   specialties: string[];
   equipment: string[];
   certifications: string[];
-  bio: string;
-  location: string;
-  website: string;
 }
 
+type ProfileTab = 'overview' | 'professional';
+
+const BREADCRUMBS = [
+  { name: 'Colaborador', href: '/colaborador/painel' },
+  { name: 'Perfil' },
+];
+
+const TABS = [
+  { id: 'overview' as const, label: 'Visão geral' },
+  { id: 'professional' as const, label: 'Dados profissionais' },
+];
+
+const toFormData = (data: CollaboratorProfileData | null): CollaboratorFormData => ({
+  phone: data?.phone || '',
+  hourlyRate: data?.hourlyRate ?? '',
+  workingRadius: data?.workingRadius ?? '',
+  languages: data?.languages || [],
+  specialties: data?.specialties || [],
+  equipment: data?.equipment || [],
+  certifications: data?.certifications || [],
+});
+
+const splitList = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
+type ListField = 'languages' | 'equipment' | 'certifications';
+
+const ChipList: React.FC<{ items?: string[]; empty?: string }> = ({ items, empty = 'Não informado' }) =>
+  items && items.length > 0 ? (
+    <div className="flex flex-wrap gap-2 mt-1">
+      {items.map((item, index) => (
+        <Badge key={`${item}-${index}`} variant="ghost" size="lg">{item}</Badge>
+      ))}
+    </div>
+  ) : (
+    <p className="mt-1 text-sm text-muted-foreground">{empty}</p>
+  );
+
+const InfoRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div className="text-sm">
+    <dt className="font-medium text-foreground">{label}</dt>
+    <dd className="mt-0.5 text-muted-foreground break-words">{children}</dd>
+  </div>
+);
+
 const CollaboratorProfilePage: React.FC = () => {
-  const navigate = useNavigate();
   const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
-    const [profile, setProfile] = useState<CollaboratorProfileData | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'portfolio' | 'reviews' | 'settings'>('overview');
+  const [profile, setProfile] = useState<CollaboratorProfileData | null>(null);
+  const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
   const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form states
   const [editMode, setEditMode] = useState(false);
-    const [formData, setFormData] = useState<Partial<CollaboratorFormData>>({});
+  const [formData, setFormData] = useState<CollaboratorFormData>(toFormData(null));
+  // Texto digitado nos campos de lista. Antes o campo mostrava `lista.join(', ')` e cada tecla
+  // reformatava: a vírgula/espaço recém-digitados sumiam e não dava para escrever o 2º item.
+  const [listDraft, setListDraft] = useState<Partial<Record<ListField, string>>>({});
+  const changeList = (field: ListField, text: string) => {
+    setListDraft((d) => ({ ...d, [field]: text }));
+    setFormData((f) => ({ ...f, [field]: splitList(text) }));
+  };
 
   const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError(false);
       const response = await collaboratorProfileAPI.getMyProfile();
       const data = (response?.data || null) as CollaboratorProfileData | null;
       setProfile(data);
-
-      // Initialize form data with safe defaults
-      setFormData({
-        phone: data?.phone || '',
-        experience: data?.experience || '',
-        hourlyRate: data?.hourlyRate ?? '',
-        workingRadius: data?.workingRadius ?? '',
-        languages: data?.languages || [],
-        specialties: data?.specialties || [],
-        equipment: data?.equipment || [],
-        certifications: data?.certifications || [],
-        bio: data?.user?.bio || '',
-        location: data?.user?.location || '',
-        website: data?.user?.website || ''
-      });
+      setFormData(toFormData(data));
+      setListDraft({});
     } catch (error) {
       logger.error('Erro ao carregar perfil:', 'CollaboratorProfilePage', error);
-      // manter UX leve: mostra alerta mínimo
-      addNotification({
-        type: 'error',
-        title: 'Erro',
-        message: 'Não foi possível carregar o perfil.'
-      });
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
-  }, [addNotification]);
+  }, []);
 
   useEffect(() => {
     loadProfile();
-      }, [loadProfile]);
+  }, [loadProfile]);
 
   const handleSaveProfile = async () => {
     try {
       setSaving(true);
-      await collaboratorProfileAPI.updateProfile(formData);
+      const hourlyRate = Number(formData.hourlyRate);
+      const workingRadius = Number(formData.workingRadius);
+      await collaboratorProfileAPI.updateProfile({
+        phone: formData.phone,
+        // O schema do backend exige valor positivo: vazio/zero vai como "não alterar" (antes, um
+        // campo vazio virava 0 e a validação recusava o formulário inteiro).
+        hourlyRate: hourlyRate > 0 ? hourlyRate : undefined,
+        workingRadius: workingRadius > 0 ? Math.round(workingRadius) : undefined,
+        // Listas vão sempre: o backend grava [] quando a lista não é enviada.
+        languages: formData.languages,
+        specialties: formData.specialties,
+        equipment: formData.equipment,
+        certifications: formData.certifications,
+      });
       await loadProfile();
       setEditMode(false);
       addNotification({
@@ -133,16 +182,24 @@ const CollaboratorProfilePage: React.FC = () => {
     }
   };
 
+  const handleCancelEdit = () => {
+    setFormData(toFormData(profile));
+    setListDraft({});
+    setEditMode(false);
+  };
+
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (file) {
       setUploading(true);
       try {
-        const formData = new FormData();
-        formData.append('avatar', file);
-        
-        await collaboratorProfileAPI.uploadAvatar(formData);
+        const data = new FormData();
+        data.append('avatar', file);
+
+        await collaboratorProfileAPI.uploadAvatar(data);
         await loadProfile(); // Recarrega o perfil para mostrar a nova foto
+        addNotification({ type: 'success', title: 'Sucesso', message: 'Foto do perfil atualizada.' });
       } catch (error) {
         logger.error('Erro no upload:', 'CollaboratorProfilePage', error);
         addNotification({
@@ -156,400 +213,314 @@ const CollaboratorProfilePage: React.FC = () => {
     }
   };
 
-  const renderStars = (rating: number = 0) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star
-        key={i}
-        className={`w-4 h-4 ${i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
-      />
-    ));
-  };
+  const renderContent = () => {
+    if (loading) return <CollaboratorLoading label="Carregando perfil…" />;
 
-  // Loading state
-  if (loading) {
-    return (
-      <CollaboratorLayout
-        title="Perfil do Colaborador"
-        breadcrumbs={[{ name: 'Colaborador', href: '/colaborador' }, { name: 'Perfil' }]}
-      >
-        <div className="flex items-center justify-center min-h-96">
-          <BrandLoader size={120} label="Carregando perfil..." />
-        </div>
-      </CollaboratorLayout>
-    );
-  }
+    if (loadError) {
+      return <CollaboratorError message="Não conseguimos carregar seu perfil de colaborador." onRetry={loadProfile} />;
+    }
 
-  // If profile is missing
-  if (!profile || !profile.user) {
-    return (
-      <CollaboratorLayout
-        title="Perfil do Colaborador"
-        breadcrumbs={[{ name: 'Colaborador', href: '/colaborador' }, { name: 'Perfil' }]}
-      >
+    if (!profile || !profile.user) {
+      return (
         <div className="text-center py-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Perfil não encontrado</h2>
-          <p className="text-gray-600 mb-6">Não foi possível carregar seu perfil de colaborador.</p>
-          <Button onClick={() => navigate('/painel')}>Voltar ao Painel</Button>
+          <h2 className="text-2xl font-bold text-foreground mb-4">Perfil não encontrado</h2>
+          <p className="text-muted-foreground mb-6">Não foi possível carregar seu perfil de colaborador.</p>
+          <Link to="/colaborador/painel" className={buttonVariants({ size: 'sm' })}>Voltar ao painel</Link>
         </div>
-      </CollaboratorLayout>
-    );
-  }
+      );
+    }
 
-  // Main render
-  return (
-    <CollaboratorLayout
-      title="Perfil do Colaborador"
-      breadcrumbs={[{ name: 'Colaborador', href: '/colaborador' }, { name: 'Perfil' }]}
-    >
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <div className="flex items-start space-x-6">
-          <div className="relative">
-            <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center">
-              <User className="w-12 h-12 text-gray-400" />
-            </div>
-            <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
-              <input type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
-              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-            </label>
-          </div>
+    // averageRating é Decimal no banco e chega no JSON como string ("4.5") — `.toFixed` em string
+    // quebrava a página inteira ao abrir o perfil.
+    const rating = Number(profile.averageRating) || 0;
+    const roundedRating = Math.round(rating);
+    const name = profile.user.name || 'Nome não disponível';
 
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-2">
-              <h1 className="text-3xl font-bold text-gray-900">{profile.user?.name || 'Nome não disponível'}</h1>
+    return (
+      <div className="space-y-6">
+        {/* Cabeçalho do perfil */}
+        <section className="bg-card rounded-xl shadow-sm border border-border p-4 sm:p-6" aria-label="Resumo do perfil">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+            <div className="relative self-center sm:self-start shrink-0">
+              {profile.user.avatarUrl ? (
+                <img
+                  src={profile.user.avatarUrl}
+                  alt={`Foto de ${name}`}
+                  className="w-24 h-24 rounded-full object-cover border border-border"
+                />
+              ) : (
+                <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center" aria-hidden="true">
+                  <span className="text-3xl font-semibold text-muted-foreground">{name.charAt(0).toUpperCase()}</span>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden="true"
+              />
               <Button
-                variant={editMode ? 'primary' : 'outline'}
-                onClick={() => {
-                  if (editMode) handleSaveProfile();
-                  else setEditMode(true);
-                }}
-                disabled={saving}
+                size="icon"
+                className="absolute -bottom-1 -right-1 rounded-full h-11 w-11"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                aria-label="Alterar foto do perfil"
               >
-                {saving ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : editMode ? (
-                  'Salvar'
-                ) : (
-                  <>
-                    <Edit className="w-4 h-4 mr-2" />
-                    Editar Perfil
-                  </>
-                )}
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
               </Button>
             </div>
 
-            <div className="flex items-center space-x-4 mb-4">
-              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm capitalize">
-                {String(profile.collaboratorRole || '').toLowerCase().replace('_', ' ')}
-              </span>
-
-              <div className="flex items-center space-x-1">
-                {renderStars(Math.round(profile.averageRating || 0))}
-                <span className="text-sm text-gray-600 ml-1">({(profile.averageRating ?? 0).toFixed(1)})</span>
-              </div>
-
-              <div className="flex items-center text-sm text-gray-600">
-                <MapPin className="w-4 h-4 mr-1" />
-                {profile.user?.location || 'Localização não informada'}
-              </div>
-            </div>
-
-              <div className="bg-white rounded-lg p-6 border shadow-sm space-y-4">
-                <h3 className="text-lg font-medium text-gray-900 mb-4 text-center">Estatísticas</h3>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">{profile.totalEvents ?? 0}</div>
-                    <div className="text-sm font-medium text-gray-600 mt-1">Eventos Totais</div>
-                  </div>
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">{profile.completedEvents ?? 0}</div>
-                    <div className="text-sm font-medium text-gray-600 mt-1">Concluídos</div>
-                  </div>
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <div className="text-2xl font-bold text-indigo-600">R$ {(Number(profile.totalEarnings) || 0).toFixed(2)}</div>
-                    <div className="text-sm font-medium text-gray-600 mt-1">Total Ganho</div>
-                  </div>
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <div className="text-2xl font-bold text-orange-600">R$ {(Number(profile.hourlyRate) || 0).toFixed(2)}/h</div>
-                    <div className="text-sm font-medium text-gray-600 mt-1">Valor/Hora</div>
-                  </div>
+            <div className="flex-1 min-w-0 space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                {/* <h2>: o <h1> da página é o título do layout. */}
+                <h2 className="text-2xl font-bold text-foreground break-words">{name}</h2>
+                <div className="flex flex-wrap gap-2">
+                  {editMode ? (
+                    <>
+                      <Button size="sm" onClick={handleSaveProfile} isLoading={saving}>Salvar</Button>
+                      <Button size="sm" variant="ghost" onClick={handleCancelEdit} disabled={saving}>Cancelar</Button>
+                    </>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={() => setEditMode(true)} leftIcon={<Edit className="w-4 h-4" />}>
+                      Editar perfil
+                    </Button>
+                  )}
                 </div>
               </div>
 
-            {profile.user?.bio && <p className="text-gray-700">{profile.user.bio}</p>}
-          </div>
-        </div>
-      </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <Badge variant="primary" size="lg">{collaboratorRoleLabel(profile.collaboratorRole)}</Badge>
 
-      {/* Tabs Navigation */}
-      <div className="bg-white rounded-lg shadow-sm border mt-6">
-        <div className="border-b border-gray-200">
-          <nav className="flex">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 ${
-                activeTab === 'overview' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Visão Geral
-            </button>
-            <button
-              onClick={() => setActiveTab('portfolio')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 ${
-                activeTab === 'portfolio' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Portfólio
-            </button>
-            <button
-              onClick={() => setActiveTab('reviews')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 ${
-                activeTab === 'reviews' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Avaliações
-            </button>
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 ${
-                activeTab === 'settings' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Configurações
-            </button>
-          </nav>
-        </div>
+                <div className="flex items-center gap-1" role="img" aria-label={`Avaliação ${rating.toFixed(1)} de 5`}>
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Star
+                      key={i}
+                      className={`w-4 h-4 ${i < roundedRating ? 'text-warning fill-current' : 'text-muted-foreground'}`}
+                      aria-hidden="true"
+                    />
+                  ))}
+                  <span className="text-sm text-muted-foreground ml-1">({rating.toFixed(1)})</span>
+                </div>
 
-        <div className="p-6">
-          {activeTab === 'overview' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Informações Pessoais */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                    <Settings className="w-5 h-5 mr-2" /> Informações Pessoais
-                  </h3>
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <MapPin className="w-4 h-4 mr-1 shrink-0" aria-hidden="true" />
+                  {profile.user.location || 'Localização não informada'}
+                </div>
+              </div>
 
-                  {editMode ? (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Biografia</label>
-                        <Textarea value={formData.bio || ''} onChange={(e) => setFormData({ ...formData, bio: e.target.value })} placeholder="Conte um pouco sobre você..." rows={3} />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Localização</label>
-                        <Input value={formData.location || ''} onChange={(e) => setFormData({ ...formData, location: e.target.value })} placeholder="Cidade, Estado" />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
-                        <Input value={formData.website || ''} onChange={(e) => setFormData({ ...formData, website: e.target.value })} placeholder="https://seu-site.com" />
-                      </div>
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <h3 className="sr-only">Estatísticas</h3>
+                <dl className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Eventos totais', value: String(profile.totalEvents ?? 0), tone: 'text-primary' },
+                    { label: 'Concluídos', value: String(profile.completedEvents ?? 0), tone: 'text-success' },
+                    { label: 'Total ganho', value: formatPrice(Number(profile.totalEarnings) || 0), tone: 'text-foreground' },
+                    { label: 'Valor/hora', value: `${formatPrice(Number(profile.hourlyRate) || 0)}/h`, tone: 'text-foreground' },
+                  ].map((stat) => (
+                    <div key={stat.label} className="flex flex-col-reverse gap-1 text-center p-3 bg-card rounded-lg border border-border min-w-0">
+                      <dt className="text-sm font-medium text-muted-foreground">{stat.label}</dt>
+                      <dd className={`text-lg sm:text-2xl font-bold break-words ${stat.tone}`}>{stat.value}</dd>
                     </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div>
-                        <span className="font-medium">Email:</span> {profile.user?.email}
+                  ))}
+                </dl>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Abas */}
+        <section className="bg-card rounded-xl shadow-sm border border-border">
+          <CollaboratorTabs
+            tabs={TABS}
+            active={activeTab}
+            onChange={setActiveTab}
+            ariaLabel="Seções do perfil"
+            idBase="perfil"
+            className="px-2 sm:px-4"
+          />
+
+          <div className="p-4 sm:p-6">
+            {activeTab === 'overview' && (
+              <CollaboratorTabPanel idBase="perfil" id="overview">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Informações pessoais */}
+                  <div className="bg-muted/40 rounded-lg p-4 sm:p-6">
+                    <h3 className="text-lg font-medium text-foreground mb-4 flex items-center">
+                      <Settings className="w-5 h-5 mr-2" aria-hidden="true" /> Informações pessoais
+                    </h3>
+
+                    {editMode && (
+                      <div className="mb-4">
+                        <Input
+                          size="sm"
+                          label="Telefone"
+                          type="tel"
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          placeholder="(11) 98765-4321"
+                        />
                       </div>
-                      <div>
-                        <span className="font-medium">Telefone:</span> {profile.phone || 'Não informado'}
-                      </div>
-                      <div>
-                        <span className="font-medium">Localização:</span> {profile.user?.location || 'Não informada'}
-                      </div>
-                      <div>
-                        <span className="font-medium">Website:</span>{' '}
-                        {profile.user?.website ? (
-                          <a href={profile.user.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                    )}
+
+                    <dl className="space-y-3">
+                      <InfoRow label="E-mail">{profile.user.email || 'Não informado'}</InfoRow>
+                      {!editMode && <InfoRow label="Telefone">{profile.phone || 'Não informado'}</InfoRow>}
+                      <InfoRow label="Localização">{profile.user.location || 'Não informada'}</InfoRow>
+                      <InfoRow label="Site">
+                        {profile.user.website ? (
+                          <a href={profile.user.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                             {profile.user.website}
                           </a>
                         ) : (
                           'Não informado'
                         )}
+                      </InfoRow>
+                      <InfoRow label="Biografia">{profile.user.bio || 'Não informada'}</InfoRow>
+                    </dl>
 
-                        {profile.user?.bio && (
-                          <div>
-                            <span className="font-medium">Biografia:</span>
-                            <p className="mt-1 text-gray-700">{profile.user.bio}</p>
-                          </div>
-                        )}
+                    {editMode && (
+                      <p className="mt-4 flex items-start gap-2 text-sm text-muted-foreground">
+                        <Info className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+                        E-mail, localização, site e biografia ainda não podem ser alterados por aqui.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Especialidades e habilidades */}
+                  <div className="bg-muted/40 rounded-lg p-4 sm:p-6">
+                    <h3 className="text-lg font-medium text-foreground mb-4 flex items-center">
+                      <Award className="w-5 h-5 mr-2" aria-hidden="true" /> Especialidades e habilidades
+                    </h3>
+
+                    <dl className="space-y-4 text-sm">
+                      <div>
+                        <dt className="font-medium text-foreground">Função</dt>
+                        <dd className="mt-1"><Badge variant="primary">{collaboratorRoleLabel(profile.collaboratorRole)}</Badge></dd>
                       </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Especialidades e Habilidades */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                    <Award className="w-5 h-5 mr-2" /> Especialidades e Habilidades
-                  </h3>
-
-                  <div className="space-y-3">
-                    <div>
-                      <span className="font-medium">Função:</span>
-                      <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm capitalize">{String(profile.collaboratorRole || '').toLowerCase().replace('_', ' ')}</span>
-                    </div>
-
-                    <div>
-                      <span className="font-medium">Especialidades:</span>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {(profile.specialties || []).map((specialty: string, index: number) => (
-                          <span key={index} className="px-2 py-1 bg-gray-200 text-gray-800 rounded text-sm">{specialty}</span>
-                        ))}
+                      <div>
+                        <dt className="font-medium text-foreground">Especialidades</dt>
+                        <dd><ChipList items={profile.specialties} /></dd>
                       </div>
-                    </div>
-
-                    <div>
-                      <span className="font-medium">Equipamentos:</span>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {(profile.equipment || []).map((item: string, index: number) => (
-                          <span key={index} className="px-2 py-1 bg-gray-200 text-gray-800 rounded text-sm">{item}</span>
-                        ))}
+                      <div>
+                        <dt className="font-medium text-foreground">Equipamentos</dt>
+                        <dd><ChipList items={profile.equipment} /></dd>
                       </div>
-                    </div>
-
-                    <div>
-                      <span className="font-medium">Certificações:</span>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {(profile.certifications || []).map((cert: string, index: number) => (
-                          <span key={index} className="px-2 py-1 bg-gray-200 text-gray-800 rounded text-sm">{cert}</span>
-                        ))}
+                      <div>
+                        <dt className="font-medium text-foreground">Certificações</dt>
+                        <dd><ChipList items={profile.certifications} /></dd>
                       </div>
-                    </div>
-
-                    <div>
-                      <span className="font-medium">Idiomas:</span>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {(profile.languages || []).map((lang: string, index: number) => (
-                          <span key={index} className="px-2 py-1 bg-gray-200 text-gray-800 rounded text-sm">{lang}</span>
-                        ))}
+                      <div>
+                        <dt className="font-medium text-foreground">Idiomas</dt>
+                        <dd><ChipList items={profile.languages} /></dd>
                       </div>
-                    </div>
+                    </dl>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
+              </CollaboratorTabPanel>
+            )}
 
-          {activeTab === 'portfolio' && (
-            <div className="text-center py-12">
-              <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Portfólio em Desenvolvimento</h3>
-              <p className="text-gray-600 mb-4">Esta funcionalidade estará disponível em breve.</p>
-              <Button>
-                <Upload className="w-4 h-4 mr-2" /> Adicionar Projeto
-              </Button>
-            </div>
-          )}
-
-          {activeTab === 'reviews' && (
-            <div className="text-center py-12">
-              <Star className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Avaliações em Desenvolvimento</h3>
-              <p className="text-gray-600">Suas avaliações aparecerão aqui após concluir eventos.</p>
-            </div>
-          )}
-
-          {activeTab === 'settings' && (
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-6">Configurações Profissionais</h3>
-
-              {/* Integrações */}
-              {!editMode && profile && (
-                 <div className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden">
-                    <GoogleCalendarIntegration googleCalendarEmail={profile.user?.googleCalendarEmail} />
-                 </div>
-              )}
-
-              {editMode ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Valor por Hora (R$)</label>
-                      <Input type="number" value={formData.hourlyRate || ''} onChange={(e) => setFormData({ ...formData, hourlyRate: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+            {activeTab === 'professional' && (
+              <CollaboratorTabPanel idBase="perfil" id="professional">
+                <div className="space-y-6">
+                  {!editMode && (
+                    <div className="bg-card rounded-lg border border-border overflow-hidden">
+                      <GoogleCalendarIntegration googleCalendarEmail={profile.user.googleCalendarEmail} />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Raio de Atuação (km)</label>
-                      <Input type="number" value={formData.workingRadius || ''} onChange={(e) => setFormData({ ...formData, workingRadius: parseInt(e.target.value) || 0 })} placeholder="50" />
-                    </div>
-                  </div>
+                  )}
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Experiência</label>
-                    <Textarea value={formData.experience || ''} onChange={(e) => setFormData({ ...formData, experience: e.target.value })} placeholder="Descreva sua experiência profissional..." rows={3} />
-                  </div>
+                  <div className="bg-muted/40 rounded-lg p-4 sm:p-6">
+                    <h3 className="text-lg font-semibold text-foreground mb-6">Dados profissionais</h3>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Idiomas (separados por vírgula)</label>
-                    <Input value={formData.languages?.join(', ') || ''} onChange={(e) => setFormData({ ...formData, languages: e.target.value.split(',').map((lang: string) => lang.trim()).filter(Boolean) })} placeholder="Português, Inglês, Espanhol" />
-                  </div>
+                    {editMode ? (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <Input
+                            size="sm"
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            label="Valor por hora (R$)"
+                            value={formData.hourlyRate}
+                            onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
+                            placeholder="0,00"
+                          />
+                          <Input
+                            size="sm"
+                            type="number"
+                            min={0}
+                            label="Raio de atuação (km)"
+                            value={formData.workingRadius}
+                            onChange={(e) => setFormData({ ...formData, workingRadius: e.target.value })}
+                            placeholder="50"
+                          />
+                        </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Equipamentos (separados por vírgula)</label>
-                    <Input value={formData.equipment?.join(', ') || ''} onChange={(e) => setFormData({ ...formData, equipment: e.target.value.split(',').map((item: string) => item.trim()).filter(Boolean) })} placeholder="Câmera DSLR, Microfone, Luz LED" />
-                  </div>
+                        <Input
+                          size="sm"
+                          label="Idiomas (separados por vírgula)"
+                          value={listDraft.languages ?? formData.languages.join(', ')}
+                          onChange={(e) => changeList('languages', e.target.value)}
+                          placeholder="Português, Inglês, Espanhol"
+                        />
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Certificações (separadas por vírgula)</label>
-                    <Input value={formData.certifications?.join(', ') || ''} onChange={(e) => setFormData({ ...formData, certifications: e.target.value.split(',').map((cert: string) => cert.trim()).filter(Boolean) })} placeholder="Curso de Fotografia, Técnico em Áudio" />
+                        <Input
+                          size="sm"
+                          label="Equipamentos (separados por vírgula)"
+                          value={listDraft.equipment ?? formData.equipment.join(', ')}
+                          onChange={(e) => changeList('equipment', e.target.value)}
+                          placeholder="Câmera DSLR, Microfone, Luz LED"
+                        />
+
+                        <Input
+                          size="sm"
+                          label="Certificações (separadas por vírgula)"
+                          value={listDraft.certifications ?? formData.certifications.join(', ')}
+                          onChange={(e) => changeList('certifications', e.target.value)}
+                          placeholder="Curso de Fotografia, Técnico em Áudio"
+                        />
+
+                        <p className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <Info className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+                          O campo "Experiência" ainda não pode ser alterado por aqui. Especialidades ficam em Configurações.
+                        </p>
+                      </div>
+                    ) : (
+                      <dl className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <InfoRow label="Valor por hora">{formatPrice(profile.hourlyRate ?? 0)}</InfoRow>
+                          <InfoRow label="Raio de atuação">{profile.workingRadius ? `${profile.workingRadius} km` : 'Não informado'}</InfoRow>
+                        </div>
+                        {profile.experience && <InfoRow label="Experiência">{profile.experience}</InfoRow>}
+                        <div>
+                          <dt className="text-sm font-medium text-foreground">Idiomas</dt>
+                          <dd><ChipList items={profile.languages} /></dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-foreground">Equipamentos</dt>
+                          <dd><ChipList items={profile.equipment} /></dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm font-medium text-foreground">Certificações</dt>
+                          <dd><ChipList items={profile.certifications} /></dd>
+                        </div>
+                      </dl>
+                    )}
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <span className="font-medium">Valor por Hora:</span> R$ {(profile.hourlyRate ?? 0).toFixed(2)}
-                    </div>
-                    <div>
-                      <span className="font-medium">Raio de Atuação:</span> {profile.workingRadius ? `${profile.workingRadius} km` : 'Não informado'}
-                    </div>
-                  </div>
-
-                  {profile.experience && (
-                    <div>
-                      <span className="font-medium">Experiência:</span>
-                      <p className="mt-1 text-gray-700">{profile.experience}</p>
-                    </div>
-                  )}
-
-                  {Array.isArray(profile.languages) && profile.languages.length > 0 && (
-                    <div>
-                      <span className="font-medium">Idiomas:</span>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {profile.languages.map((lang: string, index: number) => (
-                          <span key={index} className="px-2 py-1 bg-gray-200 text-gray-800 rounded text-sm">{lang}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {Array.isArray(profile.equipment) && profile.equipment.length > 0 && (
-                    <div>
-                      <span className="font-medium">Equipamentos:</span>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {profile.equipment.map((item: string, index: number) => (
-                          <span key={index} className="px-2 py-1 bg-gray-200 text-gray-800 rounded text-sm">{item}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {Array.isArray(profile.certifications) && profile.certifications.length > 0 && (
-                    <div>
-                      <span className="font-medium">Certificações:</span>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {profile.certifications.map((cert: string, index: number) => (
-                          <span key={index} className="px-2 py-1 bg-gray-200 text-gray-800 rounded text-sm">{cert}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+              </CollaboratorTabPanel>
+            )}
+          </div>
+        </section>
       </div>
+    );
+  };
+
+  return (
+    <CollaboratorLayout title="Perfil do Colaborador" breadcrumbs={BREADCRUMBS}>
+      {renderContent()}
     </CollaboratorLayout>
   );
 };

@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
-import BrandLoader from '../../components/ui/BrandLoader';
+import { CollaboratorLoading, CollaboratorError } from '../../components/collaborator/CollaboratorStates';
 import { StatsCard, SimpleCard } from '../../components/ui/Cards';
+import { Button } from '../../components/ui/Button';
+import { Select } from '../../components/ui/Select';
 import {
   Clock,
   Target,
@@ -10,7 +12,7 @@ import {
   Download,
   Calendar
 } from 'lucide-react';
-import { LineChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { ComposedChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { collaboratorProfileAPI } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 
@@ -27,6 +29,32 @@ interface CollaboratorStatsResponse {
   averageEventDuration?: number;
   workingDaysPerMonth?: number;
 }
+
+type Period = '3' | '6' | '12';
+
+const BREADCRUMBS = [
+  { name: 'Colaborador', href: '/colaborador/painel' },
+  { name: 'Relatórios' },
+];
+
+const PERIOD_OPTIONS = [
+  { value: '3', label: 'Últimos 3 meses' },
+  { value: '6', label: 'Últimos 6 meses' },
+  { value: '12', label: 'Últimos 12 meses' },
+];
+
+// "AAAA-MM" de N meses atrás (inclusive o mês atual).
+const monthCutoff = (months: number) => {
+  const d = new Date();
+  d.setMonth(d.getMonth() - (months - 1));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
+const formatMonth = (month: string) => {
+  const [y, m] = month.split('-').map(Number);
+  if (!y || !m) return month;
+  return new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+};
 
 // Baixa os dados mensais já carregados como CSV — substitui os 3 cards de "exportar" que
 // não tinham nenhum handler (achado de auditoria: eram apenas divs decorativas com ícone
@@ -46,212 +74,201 @@ function downloadMonthlyReportCsv(rows: Array<{ month: string; events: number; r
   URL.revokeObjectURL(url);
 }
 
+const axisTick = { fill: 'hsl(var(--muted-foreground))', fontSize: 12 };
+
 const CollaboratorReportsPage: React.FC = () => {
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<'3months' | '6months' | '1year'>('6months');
+  const [error, setError] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<Period>('6');
+
+  const fetchReportData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(false);
+      // Buscar dados reais da API
+      const response = await collaboratorProfileAPI.getStats();
+      const apiStats = (response.data?.data ?? response.data) as CollaboratorStatsResponse;
+
+      // Mapa mês -> avaliação média real (histórico mensal, ver collaboratorRepository.getMonthlyRatings)
+      const ratingsByMonth = new Map<string, number>(
+        asArray<{ month: string; averageRating: number }>(apiStats?.monthlyRatings).map((r) => [r.month, Number(r.averageRating)])
+      );
+
+      const report: ReportData = {
+        performance: {
+          eventsCompleted: Number(apiStats.totalEvents || 0),
+          completionRate: Number(apiStats.completionRate || 0),
+          averageRating: Number(apiStats.averageRating || 0),
+        },
+        // Ganhos mensais do backend (últimos 12 meses) — avaliação mensal real quando existir para o
+        // mês, senão cai na média geral (ex.: mês sem nenhuma avaliação registrada ainda).
+        monthly: asArray<{ month: string; events: number; earnings: number }>(apiStats?.monthlyEarnings)
+          .map((m) => ({
+            month: m.month,
+            events: Number(m.events),
+            rating: ratingsByMonth.get(m.month) ?? Number(apiStats.averageRating || 0),
+            earnings: Number(m.earnings)
+          }))
+          .sort((a, b) => a.month.localeCompare(b.month)),
+        timeAnalysis: {
+          mostProductiveHour: apiStats.mostProductiveHour != null ? `${apiStats.mostProductiveHour}h` : 'Sem dados',
+          averageEventDuration: apiStats.averageEventDuration ? `${apiStats.averageEventDuration.toFixed(1)}h` : 'Sem dados',
+          workingDaysPerMonth: Math.round((apiStats.workingDaysPerMonth || 0) * 10) / 10
+        }
+      };
+
+      setReportData(report);
+    } catch (err) {
+      logger.error('Erro ao buscar dados de relatórios:', 'CollaboratorReportsPage', err);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchReportData = async () => {
-      try {
-        setLoading(true);
-        // Buscar dados reais da API
-        const response = await collaboratorProfileAPI.getStats();
-        const apiStats = (response.data?.data ?? response.data) as CollaboratorStatsResponse;
-
-        // Mapa mês -> avaliação média real (histórico mensal, ver collaboratorRepository.getMonthlyRatings)
-        const ratingsByMonth = new Map<string, number>(
-          asArray<{ month: string; averageRating: number }>(apiStats?.monthlyRatings).map((r) => [r.month, Number(r.averageRating)])
-        );
-
-        // Mapear dados da API para o formato do relatório
-        const report: ReportData = {
-          performance: {
-            eventsCompleted: Number(apiStats.totalEvents || 0),
-            completionRate: Number(apiStats.completionRate || 0),
-            averageRating: Number(apiStats.averageRating || 0),
-          },
-           // Mapear ganhos mensais do backend — avaliação mensal real quando existir para o mês,
-           // senão cai na média geral (ex.: mês sem nenhuma avaliação registrada ainda).
-                  monthly: asArray<{ month: string; events: number; earnings: number }>(apiStats?.monthlyEarnings).map((m) => ({
-             month: m.month,
-             events: Number(m.events),
-             rating: ratingsByMonth.get(m.month) ?? Number(apiStats.averageRating || 0),
-             earnings: Number(m.earnings)
-           })).slice(0, 6),
-          timeAnalysis: {
-            mostProductiveHour: apiStats.mostProductiveHour != null ? `${apiStats.mostProductiveHour}h` : 'N/A',
-            averageEventDuration: apiStats.averageEventDuration ? `${apiStats.averageEventDuration.toFixed(1)}h` : 'N/A',
-            workingDaysPerMonth: Math.round((apiStats.workingDaysPerMonth || 0) * 10) / 10
-          }
-        };
-        
-        setReportData(report);
-      } catch (error) {
-        logger.error('Erro ao buscar dados de relatórios:', 'CollaboratorReportsPage', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchReportData();
-  }, [selectedPeriod]);
+  }, [fetchReportData]);
 
-  if (loading) {
-    return (
-      <CollaboratorLayout 
-        title="Relatórios de Performance"
-        breadcrumbs={[
-          { name: 'Colaborador', href: '/collaborator' },
-          { name: 'Relatórios' }
-        ]}
-      >
-        <BrandLoader size={120} label="Carregando relatórios..." />
-      </CollaboratorLayout>
-    );
-  }
+  // Achado (auditoria): o seletor de período refazia a mesma busca e o gráfico mostrava sempre
+  // os mesmos 6 registros. Agora filtra os meses já carregados pelo período escolhido.
+  const monthly = useMemo(() => {
+    const cutoff = monthCutoff(Number(selectedPeriod));
+    return (reportData?.monthly || [])
+      .filter((m) => m.month >= cutoff)
+      .map((m) => ({ ...m, label: formatMonth(m.month) }));
+  }, [reportData, selectedPeriod]);
+
+  const averageRating = reportData?.performance?.averageRating || 0;
 
   return (
-    <CollaboratorLayout 
-      title="Relatórios de Performance"
-      breadcrumbs={[
-        { name: 'Colaborador', href: '/collaborator' },
-        { name: 'Relatórios' }
-      ]}
-    >
-      <div className="space-y-8">
-        {/* Métricas de Performance */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatsCard
-            title="Eventos Concluídos"
-            value={reportData?.performance?.eventsCompleted || 0}
-            description="Total de eventos finalizados"
-            icon={<Calendar className="h-5 w-5" />}
-          />
+    <CollaboratorLayout title="Relatórios de Performance" breadcrumbs={BREADCRUMBS}>
+      {loading ? (
+        <CollaboratorLoading label="Carregando relatórios…" />
+      ) : error || !reportData ? (
+        <CollaboratorError message="Não conseguimos carregar seus relatórios de performance." onRetry={fetchReportData} />
+      ) : (
+        <div className="space-y-8">
+          {/* Métricas de Performance */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <StatsCard
+              title="Eventos Concluídos"
+              value={reportData.performance?.eventsCompleted || 0}
+              description="Total de eventos finalizados"
+              icon={<Calendar className="h-5 w-5" />}
+            />
 
-          <StatsCard
-            title="Taxa de Conclusão"
-            value={`${reportData?.performance?.completionRate || 0}%`}
-            description="Eventos finalizados com sucesso"
-            icon={<Target className="h-5 w-5" />}
-          />
+            <StatsCard
+              title="Taxa de Conclusão"
+              value={`${reportData.performance?.completionRate || 0}%`}
+              description="Eventos finalizados com sucesso"
+              icon={<Target className="h-5 w-5" />}
+            />
 
-          <StatsCard
-            title="Avaliação Média"
-            value={`${reportData?.performance?.averageRating || 0}★`}
-            description="Nota média dos clientes"
-            icon={<Star className="h-5 w-5" />}
-          />
-        </div>
-
-        {/* Performance Mensal */}
-        <SimpleCard
-          title="Performance Mensal"
-          headerRight={
-            <div className="flex items-center space-x-4">
-              <select
-                value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value as '3months' | '6months' | '1year')}
-                className="px-3 py-1 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                aria-label="Selecionar período do relatório"
-              >
-                <option value="3months">Últimos 3 meses</option>
-                <option value="6months">Últimos 6 meses</option>
-                <option value="1year">Último ano</option>
-              </select>
-            </div>
-          }
-        >
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={reportData?.monthly || []}>
-                <XAxis dataKey="month" />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip
-                  formatter={(value, name) => {
-                    if (name === 'events') return [value, 'Eventos'];
-                    if (name === 'rating') return [`${value}★`, 'Avaliação'];
-                    return [value, name];
-                  }}
-                />
-                <Bar yAxisId="left" dataKey="events" fill="#3b82f6" name="events" />
-                <Line yAxisId="right" type="monotone" dataKey="rating" stroke="#10b981" strokeWidth={3} name="rating" />
-              </LineChart>
-            </ResponsiveContainer>
+            <StatsCard
+              title="Avaliação Média"
+              value={averageRating ? `${averageRating.toFixed(1)} / 5` : 'Sem avaliações'}
+              description="Nota média dos clientes"
+              icon={<Star className="h-5 w-5" />}
+            />
           </div>
-        </SimpleCard>
 
-        {/* Análises Detalhadas */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Análise de Tempo */}
-          <SimpleCard title="Análise de Produtividade">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-blue-900">Horário Mais Produtivo</p>
-                    <p className="text-sm text-blue-700">Período de melhor performance</p>
-                  </div>
-                </div>
-                <p className="text-lg font-bold text-blue-900">
-                  {reportData?.timeAnalysis?.mostProductiveHour || 'N/A'}
-                </p>
+          {/* Performance Mensal */}
+          <SimpleCard
+            title="Performance Mensal"
+            headerRight={
+              <div className="w-44">
+                <Select
+                  size="sm"
+                  options={PERIOD_OPTIONS}
+                  value={selectedPeriod}
+                  onChange={(e) => setSelectedPeriod(e.target.value as Period)}
+                  aria-label="Período do relatório"
+                />
               </div>
-
-              <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-green-900">Duração Média</p>
-                    <p className="text-sm text-green-700">Tempo médio por evento</p>
-                  </div>
-                </div>
-                <p className="text-lg font-bold text-green-900">
-                  {reportData?.timeAnalysis?.averageEventDuration || 'N/A'}
-                </p>
+            }
+          >
+            {monthly.length === 0 ? (
+              <p className="py-12 text-center text-muted-foreground">Nenhum evento concluído neste período.</p>
+            ) : (
+              <div className="h-80">
+                {/* Achado: era um <LineChart> com <Bar> dentro — o Recharts não desenha barras num
+                    LineChart, então a contagem de eventos nunca aparecia. */}
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={monthly}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                    <XAxis dataKey="label" tick={axisTick} stroke="hsl(var(--border))" />
+                    <YAxis yAxisId="left" allowDecimals={false} tick={axisTick} stroke="hsl(var(--border))" />
+                    <YAxis yAxisId="right" orientation="right" domain={[0, 5]} tick={axisTick} stroke="hsl(var(--border))" />
+                    <Tooltip
+                      formatter={(value, name) => {
+                        if (name === 'events') return [value, 'Eventos'];
+                        if (name === 'rating') return [`${Number(value).toFixed(1)} / 5`, 'Avaliação'];
+                        return [value, name];
+                      }}
+                      cursor={{ fill: 'hsl(var(--muted))' }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        color: 'hsl(var(--card-foreground))',
+                      }}
+                    />
+                    <Bar yAxisId="left" dataKey="events" fill="hsl(var(--primary))" name="events" radius={[4, 4, 0, 0]} />
+                    <Line yAxisId="right" type="monotone" dataKey="rating" stroke="hsl(var(--success))" strokeWidth={3} name="rating" />
+                  </ComposedChart>
+                </ResponsiveContainer>
               </div>
-
-              <div className="flex items-center justify-between p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-indigo-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-indigo-900">Dias Trabalhados</p>
-                    <p className="text-sm text-indigo-700">Média mensal</p>
-                  </div>
-                </div>
-                <p className="text-lg font-bold text-indigo-900">
-                  {reportData?.timeAnalysis?.workingDaysPerMonth || 0} dias
-                </p>
-              </div>
-            </div>
+            )}
           </SimpleCard>
 
-          {/* Exportar dados */}
-          <SimpleCard title="Exportar Dados">
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Baixe os dados mensais de eventos, avaliação e ganhos exibidos acima em uma planilha CSV.
-              </p>
-              <button
-                onClick={() => downloadMonthlyReportCsv(reportData?.monthly || [])}
-                disabled={!reportData?.monthly?.length}
-                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download className="w-4 h-4" />
-                Exportar Dados de Performance (CSV)
-              </button>
-            </div>
-          </SimpleCard>
+          {/* Análises Detalhadas */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <SimpleCard title="Análise de Produtividade">
+              <div className="space-y-4">
+                {[
+                  { icon: Clock, title: 'Horário mais produtivo', subtitle: 'Hora de início mais frequente', value: reportData.timeAnalysis?.mostProductiveHour || 'Sem dados' },
+                  { icon: TrendingUp, title: 'Duração média', subtitle: 'Tempo médio por evento', value: reportData.timeAnalysis?.averageEventDuration || 'Sem dados' },
+                  { icon: Calendar, title: 'Dias trabalhados', subtitle: 'Média mensal', value: `${reportData.timeAnalysis?.workingDaysPerMonth || 0} dias` },
+                ].map(({ icon: Icon, title, subtitle, value }) => (
+                  <div key={title} className="flex flex-wrap items-center justify-between gap-3 p-4 bg-muted/40 rounded-lg border border-border">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <Icon className="w-5 h-5 text-primary" aria-hidden="true" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">{title}</p>
+                        <p className="text-sm text-muted-foreground">{subtitle}</p>
+                      </div>
+                    </div>
+                    <p className="text-lg font-bold text-foreground">{value}</p>
+                  </div>
+                ))}
+              </div>
+            </SimpleCard>
+
+            {/* Exportar dados */}
+            <SimpleCard title="Exportar Dados">
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Baixe os dados mensais de eventos, avaliação e ganhos do período selecionado em uma planilha CSV.
+                </p>
+                <Button
+                  size="sm"
+                  fullWidth
+                  onClick={() => downloadMonthlyReportCsv(monthly)}
+                  disabled={!monthly.length}
+                  leftIcon={<Download className="w-4 h-4" />}
+                >
+                  Exportar dados de performance (CSV)
+                </Button>
+              </div>
+            </SimpleCard>
+          </div>
         </div>
-      </div>
+      )}
     </CollaboratorLayout>
   );
 };
