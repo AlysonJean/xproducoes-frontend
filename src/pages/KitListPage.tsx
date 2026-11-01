@@ -4,16 +4,20 @@ import { asArray } from '../utils/normalize';
 import { normalizeString } from '../utils/string';
 import type { Kit, KitFilters } from '@/types/types';
 import { KitCard } from '../components/ui/KitCard';
-import { PageLayout, PageEmpty } from '../components/layouts/PageLayout';
+import { PageLayout, PageEmpty, PageError } from '../components/layouts/PageLayout';
 import { SearchAndFilters, FilterSelect, FilterPriceRange, Grid } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
 import { SEO } from '../components/SEO';
 import { transformKit } from '../utils/transformKit';
 import { logger } from '../utils/logger';
 
+const PAGE_TITLE = 'Kits Completos';
+const PAGE_DESCRIPTION = 'Soluções prontas com o melhor custo-benefício para seu evento.';
+
 export const KitListPage = () => {
   const [kits, setKits] = useState<Kit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<KitFilters>({
       sortBy: 'name',
       sortOrder: 'asc'
@@ -21,23 +25,28 @@ export const KitListPage = () => {
   const [priceMinInput, setPriceMinInput] = useState('');
   const [priceMaxInput, setPriceMaxInput] = useState('');
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const kitsData = await apiFetch('/kits');
-        const rawKits = asArray<Kit>(kitsData);
-        setKits(rawKits.map(transformKit));
-      } catch (err) {
-        logger.error('Erro ao carregar dados:', 'KitListPage', err);
-        setKits([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+  // Achado: o erro de API caía em setKits([]) e a tela mostrava "Nenhum kit encontrado" com
+  // "Limpar filtros" — o mesmo texto de uma busca vazia. Agora há estado de erro com retry,
+  // como em EquipmentListPage.
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const kitsData = await apiFetch('/kits');
+      const rawKits = asArray<Kit>(kitsData);
+      setKits(rawKits.map(transformKit));
+    } catch (err) {
+      logger.error('Erro ao carregar dados:', 'KitListPage', err);
+      setError('Erro ao carregar kits. Tente novamente.');
+      setKits([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const filteredAndSortedKits = useMemo(() => {
     let result = [...kits];
@@ -114,29 +123,34 @@ export const KitListPage = () => {
 
   if (loading) {
     return (
-      <PageLayout
-        title="Carregando kits..."
-        description="Preparando as melhores ofertas para você."
-      >
+      <PageLayout title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
         {/* Achado: useEffect nunca roda durante o SSR, então o servidor SEMPRE renderiza este
-            branch de loading — sem o <SEO> real aqui, crawlers/robôs de preview recebiam
-            título/descrição genéricos de "carregando" em vez do conteúdo real da página. */}
+            branch de loading — por isso o título/h1 e o <SEO> aqui são os reais da página. */}
         <SEO
           title="Kits de Som e Iluminação"
           description="Economize com nossos kits completos de som, luz e audiovisual em BH."
         />
         <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <BrandLoader size={120} label="Preparando ofertas..." />
+          <BrandLoader size={120} label="Carregando kits..." />
         </div>
       </PageLayout>
     );
   }
 
+  if (error) {
+    return (
+      <PageLayout title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
+        <SEO
+          title="Kits de Som e Iluminação"
+          description="Economize com nossos kits completos de som, luz e audiovisual em BH."
+        />
+        <PageError message={error} onRetry={fetchData} />
+      </PageLayout>
+    );
+  }
+
   return (
-    <PageLayout
-      title="Kits Completos"
-      description="Soluções prontas com o melhor custo-benefício para seu evento."
-    >
+    <PageLayout title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
       <SEO 
         title="Kits de Som e Iluminação" 
         description="Economize com nossos kits completos de som, luz e audiovisual em BH."

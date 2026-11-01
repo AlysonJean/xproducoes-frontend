@@ -21,7 +21,7 @@ export const AboutPage: React.FC = () => {
           <section>
             <h2 className="text-2xl font-bold text-foreground mb-3">Nossa História</h2>
             <p className="text-muted-foreground mb-4">
-              A X Produçoes e Eventos nasceu de uma visão clara: oferecer excelência técnica sem concessões no mercado audiovisual. 
+              A X Produções e Eventos nasceu de uma visão clara: oferecer excelência técnica sem concessões no mercado audiovisual. 
               Com uma trajetória marcada pela evolução constante, passamos de uma empresa de locação para nos tornarmos referência 
               em engenharia de eventos. Nossa experiência foi forjada nos bastidores das mais exigentes produções, onde aprendemos 
               que o domínio técnico e a precisão são o que separam um bom evento de uma experiência inesquecível.
@@ -29,7 +29,7 @@ export const AboutPage: React.FC = () => {
           </section>
 
           <section>
-            <h3 className="text-xl font-semibold text-foreground mb-3">Excelência Técnica e Profissionalismo</h3>
+            <h2 className="text-xl font-semibold text-foreground mb-3">Excelência Técnica e Profissionalismo</h2>
             <p className="text-muted-foreground">
               Nosso diferencial não está apenas no que fazemos, mas em como fazemos. Construímos nossa reputação sobre pilares 
               sólidos de conhecimento técnico e rigor operacional. Cada equipamento do nosso acervo passa por verificações 
@@ -40,7 +40,7 @@ export const AboutPage: React.FC = () => {
           </section>
 
           <section>
-            <h3 className="text-xl font-semibold text-foreground mb-3">Nossa Missão</h3>
+            <h2 className="text-xl font-semibold text-foreground mb-3">Nossa Missão</h2>
             <p className="text-muted-foreground">
               Proporcionar experiências únicas através de tecnologia de ponta e atendimento personalizado,
               garantindo que cada evento seja inesquecível.
@@ -48,7 +48,7 @@ export const AboutPage: React.FC = () => {
           </section>
 
           <section>
-            <h3 className="text-xl font-semibold text-foreground mb-3">Nossos Valores</h3>
+            <h2 className="text-xl font-semibold text-foreground mb-3">Nossos Valores</h2>
             <ul className="list-disc list-inside text-muted-foreground space-y-2">
               <li>Excelência em atendimento</li>
               <li>Qualidade dos equipamentos</li>

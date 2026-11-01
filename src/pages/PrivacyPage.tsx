@@ -1,12 +1,20 @@
 import { PageLayout } from '../components/layouts/PageLayout';
+import { getWhatsAppPhone } from '../utils/whatsapp';
+import { COMPANY_ADDRESS_LINE, COMPANY_CITY_LINE, LEGAL_SUPPORT_EMAIL, formatPhoneDisplay } from '../data/site';
+
+// Data da última revisão do TEXTO desta política. Atualize sempre que o conteúdo mudar.
+// Achado: antes era `new Date()` — a página dizia ter sido atualizada "hoje" em todo acesso.
+const LAST_UPDATED = '01/11/2026';
+
 export const PrivacyPage = () => {
+  const phone = getWhatsAppPhone();
   return (
     <PageLayout
       title="Política de Privacidade"
-      description={`Última atualização: ${new Date().toLocaleDateString('pt-BR')}`}
+      description={`Última atualização: ${LAST_UPDATED}`}
     >
       <div className="max-w-4xl mx-auto">
-        <div className="bg-card rounded-2xl p-8 space-y-8 border border-border">
+        <div className="bg-card rounded-xl p-8 space-y-8 border border-border">
           <section>
             <h2 className="text-2xl font-semibold text-foreground mb-4">1. Informações que Coletamos</h2>
             <p className="text-muted-foreground leading-relaxed mb-4">
@@ -72,9 +80,19 @@ export const PrivacyPage = () => {
               Para exercer seus direitos ou esclarecer dúvidas, entre em contato:
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4 mt-2">
-              <li>E-mail: <span className="text-primary">suporte@xproducoeseeventos.com.br</span></li>
-              <li>Telefone: <span className="text-primary">(31) 98925-2272</span></li>
-              <li>Endereço: Rua flor d'agua 407 Jardim Alvorada Belo Horizonte MG</li>
+              <li>
+                E-mail:{' '}
+                <a href={`mailto:${LEGAL_SUPPORT_EMAIL}`} className="text-primary hover:underline underline-offset-4 break-all">
+                  {LEGAL_SUPPORT_EMAIL}
+                </a>
+              </li>
+              <li>
+                Telefone:{' '}
+                <a href={`tel:+${phone}`} className="text-primary hover:underline underline-offset-4">
+                  {formatPhoneDisplay(phone)}
+                </a>
+              </li>
+              <li>Endereço: {COMPANY_ADDRESS_LINE}, {COMPANY_CITY_LINE}</li>
             </ul>
           </section>
         </div>

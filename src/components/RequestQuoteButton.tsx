@@ -1,13 +1,17 @@
 import React from 'react';
+import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import { Button } from './ui/StandardComponents';
 import { useWhatsAppModal } from './modals/ModalContext';
+import { getWhatsAppPhone } from '../utils/whatsapp';
 
+// Achados (auditoria do design system): o telefone estava fixo aqui (e repetido no Header) em vez
+// de vir de getWhatsAppPhone(), e o ícone era um envelope para uma ação que abre o WhatsApp.
 export const RequestQuoteButton: React.FC<{ className?: string }> = ({ className }) => {
   const { openWhatsAppModal } = useWhatsAppModal();
 
   const handleOpenQuote = () => {
     openWhatsAppModal({
-      phoneNumber: '+55 31 98925 2272',
+      phoneNumber: getWhatsAppPhone(),
       title: 'Pedir Orçamento',
       subject: 'Pedido de Orçamento',
       message:
@@ -24,9 +28,7 @@ export const RequestQuoteButton: React.FC<{ className?: string }> = ({ className
       aria-label="Solicitar orçamento"
     >
       <span className="flex items-center gap-2">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
+        <ChatBubbleLeftRightIcon className="w-4 h-4" strokeWidth={2} aria-hidden="true" />
         <span className="hidden lg:inline">Solicitar Orçamento</span>
         <span className="lg:hidden">Orçamento</span>
       </span>

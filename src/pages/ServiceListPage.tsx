@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ServiceCard } from '../components/ui/ServiceCard';
 import { apiFetch } from '../services/api';
 import { asArray } from '../utils/normalize';
 import { normalizeString } from '../utils/string';
 import type { Service } from '@/types/types';
-import { PageLayout, PageEmpty } from '../components/layouts/PageLayout';
+import { PageLayout, PageEmpty, PageError } from '../components/layouts/PageLayout';
 import { SearchAndFilters, FilterPriceRange, Grid } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
 
@@ -18,32 +18,40 @@ interface ServiceFilters {
   status?: string;
 }
 
+const PAGE_TITLE = 'Serviços Especializados';
+const PAGE_DESCRIPTION = 'Conheça nossos serviços de DJ, iluminação, sonorização e produção de eventos.';
+
 export const ServiceListPage: React.FC = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ServiceFilters>({
     status: 'ACTIVE'
   });
   const [priceMinInput, setPriceMinInput] = useState('');
   const [priceMaxInput, setPriceMaxInput] = useState('');
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const servicesData = await apiFetch('/services');
-        const rawServices = asArray<Service>(servicesData);
-        setServices(rawServices.map(transformService));
-      } catch (err) {
-        logger.error('Erro ao carregar serviços:', 'ServiceListPage', err);
-        setServices([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+  // Achado: o erro de API virava lista vazia ("Nenhum serviço encontrado"). Agora tem estado
+  // de erro com retry, como em EquipmentListPage.
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const servicesData = await apiFetch('/services');
+      const rawServices = asArray<Service>(servicesData);
+      setServices(rawServices.map(transformService));
+    } catch (err) {
+      logger.error('Erro ao carregar serviços:', 'ServiceListPage', err);
+      setError('Erro ao carregar serviços. Tente novamente.');
+      setServices([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const filteredServices = useMemo(() => {
     let result = services;
@@ -97,13 +105,9 @@ export const ServiceListPage: React.FC = () => {
 
   if (loading) {
     return (
-      <PageLayout
-        title="Carregando serviços..."
-        description="Preparando as melhores opções de DJ, Som e Luz para você."
-      >
+      <PageLayout title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
         {/* Achado: useEffect nunca roda durante o SSR, então o servidor SEMPRE renderiza este
-            branch de loading — sem o <SEO> real aqui, crawlers/robôs de preview recebiam
-            título/descrição genéricos de "carregando" em vez do conteúdo real da página. */}
+            branch de loading — por isso o título/h1 e o <SEO> aqui são os reais da página. */}
         <SEO
           title="Serviços para Eventos"
           description="DJs, Técnicos de Som, Iluminadores e Produtores para seu evento em Belo Horizonte."
@@ -115,11 +119,20 @@ export const ServiceListPage: React.FC = () => {
     );
   }
 
+  if (error) {
+    return (
+      <PageLayout title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
+        <SEO
+          title="Serviços para Eventos"
+          description="DJs, Técnicos de Som, Iluminadores e Produtores para seu evento em Belo Horizonte."
+        />
+        <PageError message={error} onRetry={fetchData} />
+      </PageLayout>
+    );
+  }
+
   return (
-    <PageLayout
-      title="Serviços Especializados"
-      description="Conheça nossos serviços de DJ, iluminação, sonorização e produção de eventos."
-    >
+    <PageLayout title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
       <SEO 
         title="Serviços para Eventos" 
         description="DJs, Técnicos de Som, Iluminadores e Produtores para seu evento em Belo Horizonte."
@@ -160,7 +173,7 @@ export const ServiceListPage: React.FC = () => {
           actionLabel="Limpar filtros"
           onAction={clearFilters}
           icon={
-            <svg className="h-24 w-24 mx-auto mb-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+            <svg className="h-24 w-24 mx-auto mb-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1} aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
           }

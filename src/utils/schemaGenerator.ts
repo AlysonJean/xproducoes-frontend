@@ -138,11 +138,9 @@ export function generateProductSchema({
         name: COMPANY_INFO.name
       }
     },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      "ratingValue": "5.0",
-      "reviewCount": "10"
-    }
+    // Achado (auditoria): havia um aggregateRating fixo ("5.0" / 10 avaliações) em TODO produto —
+    // avaliação inventada nos dados estruturados (o Google trata como spam de review). Removido; só
+    // deve voltar com a média real das avaliações.
   };
 }
 

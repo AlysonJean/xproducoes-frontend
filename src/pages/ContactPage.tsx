@@ -1,12 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ReactGA from 'react-ga4';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Mail, Phone, MapPin, Send, HelpCircle, CheckCircle2, MessageSquare } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useRevealOnView } from '../hooks/useRevealOnView';
 import { apiFetch } from '../services/api';
+import { getWhatsAppPhone } from '../utils/whatsapp';
+import {
+  COMPANY_ADDRESS_LINE,
+  COMPANY_CITY_LINE,
+  COMPANY_CNPJ,
+  SUPPORT_EMAIL,
+  formatPhoneDisplay,
+} from '../data/site';
 import { useNotifications } from '../contexts/NotificationContext';
 import { PageLayout } from '../components/layouts/PageLayout';
 import { 
@@ -17,7 +24,6 @@ import {
   Card, 
   Form, 
 } from '../components/ui/StandardComponents';
-import { BrandLoader } from '../components/ui/BrandLoader';
 import { SEO } from '../components/SEO';
 
 const contactSchema = z.object({
@@ -34,12 +40,8 @@ const contactSchema = z.object({
 type ContactFormData = z.infer<typeof contactSchema>;
 
 export const ContactPage = () => {
-  const { ref: infoTitleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
-  const { ref: formTitleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
-  const { ref: faqTitleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
-  
-  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const whatsAppPhone = getWhatsAppPhone();
   const { addNotification } = useNotifications();
 
   const {
@@ -63,11 +65,6 @@ export const ContactPage = () => {
   });
 
   const messageValue = watch('message');
-
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
 
   const onSubmit = async (data: ContactFormData) => {
     setIsSubmitting(true);
@@ -101,16 +98,8 @@ export const ContactPage = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <PageLayout title="Contato" description="Preparando canais de atendimento.">
-        <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <BrandLoader size={120} label="Preparando contato..." />
-        </div>
-      </PageLayout>
-    );
-  }
-
+  // Achado: havia um "carregamento" falso de 800ms (sem dado nenhum para buscar). No SSR a página
+  // saía sempre como "Contato / Preparando canais de atendimento", sem o formulário e sem <SEO>.
   return (
     <PageLayout
       title="Entre em Contato"
@@ -125,64 +114,66 @@ export const ContactPage = () => {
         {/* Informações de Contato */}
         <div className="lg:col-span-1 space-y-6">
           <Card className="p-8 h-full shadow-sm hover:shadow-md transition-shadow">
-            <h2 ref={infoTitleRef} className="text-2xl font-bold mb-8 text-foreground heading-elegant flex items-center gap-2">
-              <MessageSquare className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl font-bold mb-8 text-foreground flex items-center gap-2">
+              <MessageSquare className="h-6 w-6 text-primary" aria-hidden="true" />
               Canais de Contato
             </h2>
 
+            {/* Achado: e-mail, telefone, endereço e CNPJ estavam escritos à mão aqui e em outros
+                10 arquivos (com divergências) — agora vêm de src/data/site.ts e getWhatsAppPhone(). */}
             <div className="space-y-8">
               {/* Email */}
               <div className="flex items-start space-x-4 group">
                 <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 shadow-sm border border-primary/20">
-                  <Mail className="w-6 h-6 text-primary" />
+                  <Mail className="w-6 h-6 text-primary" aria-hidden="true" />
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-semibold text-foreground mb-1">Email</h3>
-                  <a href="mailto:suporte@xproducoeseventos.com.br" className="text-muted-foreground text-sm hover:text-primary transition-colors truncate block">
-                    suporte@xproducoeseventos.com.br
+                  <a href={`mailto:${SUPPORT_EMAIL}`} className="text-muted-foreground text-sm hover:text-primary transition-colors break-all block">
+                    {SUPPORT_EMAIL}
                   </a>
-                  <p className="text-xs text-muted-foreground/70 mt-1">Respondemos em até 24h</p>
+                  <p className="text-xs text-muted-foreground mt-1">Respondemos em até 24h</p>
                 </div>
               </div>
 
-              {/* WhatsApp */}
+              {/* WhatsApp (ícone na cor da marca WhatsApp — exceção de terceiros do guia) */}
               <div className="flex items-start space-x-4 group">
-                <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 shadow-sm border border-green-500/20">
-                  <Phone className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 bg-[#25D366]/10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 shadow-sm border border-[#25D366]/20">
+                  <Phone className="w-6 h-6 text-[#25D366]" aria-hidden="true" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground mb-1">WhatsApp / Telefone</h3>
-                  <a href="https://wa.me/5531989252272" target="_blank" rel="noopener noreferrer" className="text-muted-foreground text-sm hover:text-green-600 transition-colors">
-                    (31) 98925-2272
+                  <a href={`https://wa.me/${whatsAppPhone}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground text-sm hover:text-primary transition-colors">
+                    {formatPhoneDisplay(whatsAppPhone)}
                   </a>
-                  <p className="text-xs text-muted-foreground/70 mt-1">Seg-Sex, 9h às 18h | Plantão FDS</p>
+                  <p className="text-xs text-muted-foreground mt-1">Seg-Sex, 9h às 18h | Plantão FDS</p>
                 </div>
               </div>
 
               {/* Endereço */}
               <div className="flex items-start space-x-4 group">
                 <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 shadow-sm border border-primary/20">
-                  <MapPin className="w-6 h-6 text-primary" />
+                  <MapPin className="w-6 h-6 text-primary" aria-hidden="true" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground mb-1">Localização</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    Rua Flor d'Água, 407, Jardim Alvorada<br />
-                    Belo Horizonte - MG
+                    {COMPANY_ADDRESS_LINE}<br />
+                    {COMPANY_CITY_LINE}
                   </p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">Atendemos toda a região</p>
+                  <p className="text-xs text-muted-foreground mt-1">Atendemos toda a região</p>
                 </div>
               </div>
 
               {/* CNPJ */}
               <div className="flex items-start space-x-4 group">
-                <div className="w-12 h-12 bg-green-600/10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm border border-green-600/20">
-                  <CheckCircle2 className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 bg-success/10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm border border-success/20">
+                  <CheckCircle2 className="w-6 h-6 text-success" aria-hidden="true" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground mb-1">Empresa Registrada</h3>
-                  <p className="text-muted-foreground text-sm font-mono">55.343.824/0001-56</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1 line-clamp-2">
+                  <p className="text-muted-foreground text-sm font-mono">{COMPANY_CNPJ}</p>
+                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                     Mais de 10 anos de experiência no mercado de eventos
                   </p>
                 </div>
@@ -191,7 +182,7 @@ export const ContactPage = () => {
 
             {/* Horários */}
             <div className="mt-8 p-6 bg-muted/50 rounded-2xl border border-border/50">
-              <h3 className="text-sm font-bold uppercase tracking-wider mb-4 text-foreground/70">Horários</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider mb-4 text-muted-foreground">Horários</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex justify-between border-b border-border/50 pb-2">
                   <span>Segunda a Sexta</span>
@@ -213,7 +204,7 @@ export const ContactPage = () => {
         {/* Formulário */}
         <div className="lg:col-span-2">
           <Card className="p-8 shadow-sm">
-            <h2 ref={formTitleRef} className="text-2xl font-bold mb-8 text-foreground heading-elegant">Envie sua Mensagem</h2>
+            <h2 className="text-2xl font-bold mb-8 text-foreground">Envie sua Mensagem</h2>
 
             <Form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -239,7 +230,7 @@ export const ContactPage = () => {
                   type="tel"
                   {...register('phone')}
                   error={errors.phone?.message}
-                  placeholder="(31) 98925-2272"
+                  placeholder="(31) 90000-0000"
                 />
 
                 <Select
@@ -260,7 +251,7 @@ export const ContactPage = () => {
               {/* Informações do Evento */}
               <div className="p-6 bg-muted/30 rounded-2xl border border-border/50 space-y-6">
                 <h3 className="text-foreground font-semibold text-lg flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <CheckCircle2 className="h-5 w-5 text-primary" aria-hidden="true" />
                   Detalhes do Evento (Opcional)
                 </h3>
 
@@ -310,8 +301,8 @@ export const ContactPage = () => {
                 />
                 <div className="flex justify-end pr-2">
                   <span className={clsx(
-                    "text-[10px] font-medium transition-colors",
-                    (messageValue?.length || 0) > 480 ? "text-destructive" : "text-muted-foreground/50"
+                    "text-xs font-medium transition-colors",
+                    (messageValue?.length || 0) > 480 ? "text-destructive" : "text-muted-foreground"
                   )}>
                     {messageValue?.length || 0} / 500
                   </span>
@@ -323,7 +314,7 @@ export const ContactPage = () => {
                   type="submit"
                   size="lg"
                   isLoading={isSubmitting}
-                  leftIcon={!isSubmitting && <Send className="h-4 w-4" />}
+                  leftIcon={!isSubmitting && <Send className="h-4 w-4" aria-hidden="true" />}
                   className="min-w-[220px]"
                 >
                   Enviar Mensagem
@@ -336,8 +327,8 @@ export const ContactPage = () => {
 
       {/* FAQ Rápido */}
       <div className="mt-12 p-8 bg-card border border-border rounded-2xl shadow-sm">
-        <h2 ref={faqTitleRef} className="text-2xl font-bold mb-10 text-center text-foreground heading-elegant flex items-center justify-center gap-2">
-          <HelpCircle className="h-6 w-6 text-primary" />
+        <h2 className="text-2xl font-bold mb-10 text-center text-foreground flex items-center justify-center gap-2">
+          <HelpCircle className="h-6 w-6 text-primary" aria-hidden="true" />
           Dúvidas Frequentes
         </h2>
 

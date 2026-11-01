@@ -1,22 +1,21 @@
 import React from 'react';
 import { PageLayout } from '../components/layouts/PageLayout';
+import { SUPPORT_EMAIL } from '../data/site';
 
+// Achados (auditoria do design system): 2º <h1> duplicando o do PageLayout, classe `text-md`
+// (não existe), um "Kit de imprensa" listado sem nenhum arquivo para baixar e um parágrafo de
+// enchimento ("padrões de grandes players") — removidos. O pedido de materiais vai por e-mail.
 export const PressPage: React.FC = () => {
   return (
     <PageLayout title="Imprensa" description="Materiais e contato para a imprensa">
-      <div className="max-w-4xl mx-auto bg-card rounded-xl p-8 border border-border">
-        <h1 className="text-2xl font-bold mb-4">Imprensa</h1>
-        <p className="text-muted-foreground mb-4">Solicitações de imprensa, kits de mídia e imagens. Entre em contato: <strong>suporte@xproducoeseventos.com.br</strong></p>
-
-        <h2 className="text-xl font-semibold mt-6 mb-2">Recursos</h2>
-        <ul className="list-disc list-inside text-muted-foreground">
-          <li>Kit de imprensa (logotipos, fotos)</li>
-          <li>Declarações oficiais e releases</li>
-        </ul>
-        <section className="mt-6">
-          <h3 className="text-md font-medium">Nossa abordagem de comunicação</h3>
-          <p className="text-muted-foreground">Priorizamos transparência e velocidade de comunicação, seguindo padrões de grandes players para liberação de materiais e respostas rápidas a solicitações de mídia.</p>
-        </section>
+      <div className="max-w-4xl mx-auto bg-card rounded-xl p-8 border border-border space-y-6">
+        <p className="text-muted-foreground">
+          Solicitações de imprensa, entrevistas, logotipos e imagens: entre em contato por{' '}
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-primary hover:underline underline-offset-4 break-all">
+            {SUPPORT_EMAIL}
+          </a>
+          . Enviamos os materiais conforme a pauta.
+        </p>
       </div>
     </PageLayout>
   );

@@ -1,31 +1,38 @@
 // src/components/SentryErrorFallback.tsx
 import React from 'react';
+import { AlertTriangle } from 'lucide-react';
+import { Button } from './ui/Button';
 
 interface SentryErrorFallbackProps {
   error: Error;
   resetError: () => void;
 }
 
+// Achados (auditoria do design system): `bg-surface` (token inexistente), cinzas fixos com dark:
+// manual, `bg-primary text-white` (ilegível no tema escuro, onde o primary é prata),
+// `hover:bg-primary-dark` (não existe) e botões feitos à mão. Agora: tokens do tema e <Button>.
 export const SentryErrorFallback: React.FC<SentryErrorFallbackProps> = ({ error, resetError }) => {
   const isDevelopment = import.meta.env.VITE_SENTRY_ENVIRONMENT === 'development' || import.meta.env.MODE === 'development';
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-surface p-4">
-      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6">
+    <div className="flex items-center justify-center min-h-screen bg-background p-4">
+      <div className="max-w-md w-full bg-card text-card-foreground border border-border rounded-xl shadow-xl p-6">
         <div className="text-center">
-          <div className="text-6xl mb-4">😱</div>
-          <h1 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+            <AlertTriangle className="h-8 w-8 text-destructive" aria-hidden="true" />
+          </div>
+          <h1 className="text-2xl font-bold mb-2 text-foreground">
             Algo deu errado!
           </h1>
-          <p className="text-gray-600 dark:text-gray-300 mb-4">
+          <p className="text-muted-foreground mb-4">
             Desculpe, ocorreu um erro inesperado. Nossa equipe foi notificada automaticamente.
           </p>
           {isDevelopment && (
             <details className="text-left mb-4">
-              <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+              <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
                 Detalhes do erro (apenas em desenvolvimento)
               </summary>
-              <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-900 rounded text-xs overflow-auto max-h-40">
+              <pre className="mt-2 p-2 bg-muted text-foreground rounded-md text-xs overflow-auto max-h-40">
                 {error?.toString()}
                 {error?.stack && (
                   <>
@@ -36,19 +43,13 @@ export const SentryErrorFallback: React.FC<SentryErrorFallbackProps> = ({ error,
               </pre>
             </details>
           )}
-          <div className="flex gap-2 justify-center">
-            <button
-              onClick={resetError}
-              className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark transition-colors"
-            >
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <Button size="sm" onClick={resetError}>
               Tentar novamente
-            </button>
-            <button
-              onClick={() => (window.location.href = '/')}
-              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-            >
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => (window.location.href = '/')}>
               Voltar ao início
-            </button>
+            </Button>
           </div>
         </div>
       </div>

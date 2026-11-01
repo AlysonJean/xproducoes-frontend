@@ -4,40 +4,37 @@ import ReactMarkdown from 'react-markdown';
 import { PageLayout } from '../components/layouts/PageLayout';
 import { SEO } from '../components/SEO';
 import { TARGET_CITIES, parseServiceCitySlug } from '../utils/localSeoConfig';
-import { Button } from '../components/ui/StandardComponents';
+import { Card, buttonVariants } from '../components/ui/StandardComponents';
 import { RecommendationSection } from '../components/ui/RecommendationSection';
 import { useRecommendations } from '../hooks/useRecommendations';
 import { MapPinIcon, StarIcon, CheckCircleIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 import { TestimonialCarousel } from '../components/TestimonialCarousel';
 import { apiFetch } from '../services/api';
-import { useState, useEffect } from 'react';
-import { BrandLoader } from '../components/ui/BrandLoader';
+import { useState, useEffect, useId } from 'react';
 import { logger } from '../utils/logger';
-
-
+import { getWhatsAppPhone } from '../utils/whatsapp';
+import { formatPhoneDisplay } from '../data/site';
 
 export const CityLandingPage = () => {
   const { seoSlug } = useParams<{ seoSlug: string }>();
   const [reviewStats, setReviewStats] = useState<{ total: number; averageRating: number } | null>(null);
-  const [loading, setLoading] = useState(true);
 
   const combo = seoSlug ? parseServiceCitySlug(seoSlug) : null;
   const city = combo?.city;
   const service = combo?.service;
 
+  // Achado: a página inteira esperava as estatísticas de avaliação + um temporizador mínimo de
+  // 800ms antes de aparecer — e, como o useEffect não roda no SSR, as ~20 landings de SEO local
+  // saíam do servidor com o h1 "Carregando...". Agora o conteúdo (100% estático) renderiza
+  // direto e só o selo de avaliações aparece quando os números chegam.
   useEffect(() => {
-    const statsPromise = apiFetch<{ total: number; averageRating: number }>('/reviews/stats')
-            .then((data) => setReviewStats(data))
+    apiFetch<{ total: number; averageRating: number }>('/reviews/stats')
+      .then((data) => setReviewStats(data))
       .catch(err => logger.error('Failed to fetch stats', 'CityLandingPage', err));
-
-    const minTimer = new Promise(resolve => setTimeout(resolve, 800));
-
-    Promise.all([statsPromise, minTimer]).finally(() => setLoading(false));
   }, []);
 
-  // If invalid service or city, redirect to 404
   const recommendations = useRecommendations({
     type: 'similar',
     itemType: 'equipment',
@@ -45,30 +42,15 @@ export const CityLandingPage = () => {
     autoFetch: true
   });
 
+  // If invalid service or city, redirect to 404
   if (!city || !service) {
     return <Navigate to="/404" replace />;
   }
 
-  if (loading) {
-    // Achado: título/descrição da página já são conhecidos de forma síncrona (city/service
-    // vêm de config estática) — não faz sentido esconder o <SEO> real atrás do fetch de
-    // reviewStats/temporizador mínimo. Sem isso, useEffect nunca roda durante o SSR, então o
-    // servidor SEMPRE renderizava este branch com título genérico de "carregando" — as ~20
-    // páginas de SEO local nunca tinham o título/descrição corretos no HTML gerado no servidor.
-    const loadingTitle = `${service.name} em ${city.name}, ${city.uf} | X-Produções`;
-    const loadingDescription = `${service.name} profissional para eventos em ${city.name}. ${service.description}`;
-    return (
-      <PageLayout title="Carregando..." description={`Sincronizando serviços locais em ${city.name}.`}>
-        <SEO title={loadingTitle} description={loadingDescription} />
-        <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <BrandLoader size={120} label={`Chegando em ${city.name}...`} />
-        </div>
-      </PageLayout>
-    );
-  }
-
-  const title = `${service.name} em ${city.name}, ${city.uf} | X-Produções`;
+  // Sem "| X-Produções" aqui: o <SEO>/PageLayout já acrescentam o nome do site (saía duplicado).
+  const title = `${service.name} em ${city.name}, ${city.uf}`;
   const description = `${service.name} profissional para eventos em ${city.name}. ${service.description} Entrega e montagem rápida em ${city.name} e região. Peça seu orçamento!`;
+  const whatsAppPhone = getWhatsAppPhone();
 
   // Base FAQ Schema
   const faqSchema = service.faq ? {
@@ -83,7 +65,7 @@ export const CityLandingPage = () => {
     }))
   } : {};
 
-  // Aggregate Rating Schema
+  // Aggregate Rating Schema (números reais de /reviews/stats)
   const reviewSchema = reviewStats && reviewStats.total > 0 ? {
     "aggregateRating": {
       "@type": "AggregateRating",
@@ -95,7 +77,6 @@ export const CityLandingPage = () => {
   } : {};
 
   // Combine Schemas (LocalBusiness + FAQ + Reviews)
-  // We pass this to SEO component which merges it with base LocalBusiness schema
   const combinedJsonLd = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
@@ -106,8 +87,9 @@ export const CityLandingPage = () => {
   };
 
   return (
-    <PageLayout title={title} description={description}>
-      <SEO 
+    // hideTitle: o hero abaixo tem o h1 da página (antes saíam dois h1).
+    <PageLayout title={title} description={description} hideTitle>
+      <SEO
         title={title}
         description={description}
         keywords={`${service.keywords.join(', ')}, ${service.name} ${city.name}, eventos ${city.name}`}
@@ -118,22 +100,22 @@ export const CityLandingPage = () => {
       <section className="relative overflow-hidden rounded-3xl bg-primary/5 border border-primary/10 px-6 py-16 md:py-24 mb-16">
         <div className="relative z-10 max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-1.5 rounded-full text-sm font-semibold mb-6">
-            <MapPinIcon className="w-4 h-4" />
+            <MapPinIcon className="w-4 h-4" aria-hidden="true" />
             Atendendo {city.name} e Região
           </div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 heading-elegant leading-tight">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-foreground">
             {service.name} em <span className="text-primary">{city.name}</span>
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
-            {service.description} Transforme seu evento em {city.name} com a qualidade X-Produções.
+            {service.description} Transforme seu evento em {city.name} com a qualidade X Produções.
           </p>
-          
-          {/* Trust Badge (Review Stats) */}
+
+          {/* Selo de avaliações (números reais) */}
           {reviewStats && reviewStats.total > 0 && (
             <div className="flex items-center justify-center gap-2 mb-8 text-sm font-medium bg-background/50 inline-flex px-4 py-2 rounded-full border border-border/50 backdrop-blur-sm">
-               <div className="flex text-amber-500">
+               <div className="flex text-warning" aria-hidden="true">
                  {[...Array(5)].map((_,i) => (
-                   <StarIcon key={i} className={`w-4 h-4 ${i < Math.round(reviewStats.averageRating) ? 'fill-current' : 'text-gray-300'}`} />
+                   <StarIcon key={i} className={`w-4 h-4 ${i < Math.round(reviewStats.averageRating) ? 'fill-current' : 'text-muted-foreground'}`} />
                  ))}
                </div>
                <span className="text-foreground">
@@ -142,22 +124,20 @@ export const CityLandingPage = () => {
             </div>
           )}
 
+          {/* Achado: eram <Link><Button> aninhados (botão dentro de link). Agora o próprio link
+              tem a aparência de botão. */}
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link to="/contato">
-              <Button size="lg" className="w-full sm:w-auto px-8 py-6 text-lg shadow-lg hover:shadow-primary/25 transition-all">
-                Solicitar Orçamento Grátis
-              </Button>
+            <Link to="/contato" className={buttonVariants({ size: 'lg', className: 'w-full sm:w-auto' })}>
+              Solicitar Orçamento Grátis
             </Link>
-            <Link to="/portfolio">
-              <Button variant="outline" size="lg" className="w-full sm:w-auto px-8 py-6 text-lg">
-                Ver Eventos Realizados
-              </Button>
+            <Link to="/portfolio" className={buttonVariants({ variant: 'outline', size: 'lg', className: 'w-full sm:w-auto' })}>
+              Ver Eventos Realizados
             </Link>
           </div>
         </div>
-        
+
         {/* Background decorative elements */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-0 opacity-10 pointer-events-none">
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-0 opacity-10 pointer-events-none" aria-hidden="true">
            <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-primary/40 rounded-full blur-3xl" />
            <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-secondary/40 rounded-full blur-3xl" />
         </div>
@@ -165,7 +145,7 @@ export const CityLandingPage = () => {
 
       {/* Rich Content - Benefits & Description */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-20">
-        
+
         {/* Main Content Area */}
         <div className="lg:col-span-8">
           {/* Benefits Grid */}
@@ -174,7 +154,7 @@ export const CityLandingPage = () => {
                {service.benefits.map((benefit, idx) => (
                  <div key={idx} className="flex items-start gap-4 p-4 rounded-xl bg-card border border-border/50 hover:border-primary/20 transition-colors">
                    <div className="p-2 bg-success/10 rounded-lg text-success">
-                     <CheckCircleIcon className="w-6 h-6" />
+                     <CheckCircleIcon className="w-6 h-6" aria-hidden="true" />
                    </div>
                    <p className="font-medium text-foreground pt-1">{benefit}</p>
                  </div>
@@ -183,21 +163,21 @@ export const CityLandingPage = () => {
           ) : (
             // Fallback default benefits if none provided
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-              <div className="card p-6 bg-card border border-border/50">
-                <CheckCircleIcon className="w-10 h-10 text-success mb-3" />
-                <h3 className="text-lg font-bold mb-2">Entrega em {city.name}</h3>
+              <Card className="p-6 border-border/50">
+                <CheckCircleIcon className="w-10 h-10 text-success mb-3" aria-hidden="true" />
+                <h2 className="text-lg font-bold mb-2 text-foreground">Entrega em {city.name}</h2>
                 <p className="text-sm text-muted-foreground">Logística otimizada para sua região.</p>
-              </div>
-              <div className="card p-6 bg-card border border-border/50">
-                <StarIcon className="w-10 h-10 text-warning mb-3" />
-                <h3 className="text-lg font-bold mb-2">Qualidade Premium</h3>
+              </Card>
+              <Card className="p-6 border-border/50">
+                <StarIcon className="w-10 h-10 text-warning mb-3" aria-hidden="true" />
+                <h2 className="text-lg font-bold mb-2 text-foreground">Qualidade Premium</h2>
                 <p className="text-sm text-muted-foreground">Equipamentos das melhores marcas.</p>
-              </div>
-              <div className="card p-6 bg-card border border-border/50">
-                <MapPinIcon className="w-10 h-10 text-primary mb-3" />
-                <h3 className="text-lg font-bold mb-2">Suporte Local</h3>
+              </Card>
+              <Card className="p-6 border-border/50">
+                <MapPinIcon className="w-10 h-10 text-primary mb-3" aria-hidden="true" />
+                <h2 className="text-lg font-bold mb-2 text-foreground">Suporte Local</h2>
                 <p className="text-sm text-muted-foreground">Conhecemos os locais de {city.name}.</p>
-              </div>
+              </Card>
             </div>
           )}
 
@@ -211,8 +191,8 @@ export const CityLandingPage = () => {
           {/* FAQ Section */}
           {(service.faq && service.faq.length > 0) && (
             <section className="mb-12">
-              <h2 className="text-3xl font-bold mb-6 flex items-center gap-2">
-                <QuestionMarkCircleIcon className="w-8 h-8 text-primary" />
+              <h2 className="text-3xl font-bold mb-6 flex items-center gap-2 text-foreground">
+                <QuestionMarkCircleIcon className="w-8 h-8 text-primary" aria-hidden="true" />
                 Perguntas Frequentes
               </h2>
               <div className="space-y-4">
@@ -228,22 +208,31 @@ export const CityLandingPage = () => {
         <div className="lg:col-span-4 space-y-8">
            <div className="sticky top-24">
              <div className="bg-card border border-border rounded-xl p-6 shadow-lg mb-6">
-                <h3 className="text-xl font-bold mb-4">Pronto para reservar?</h3>
+                <h2 className="text-xl font-bold mb-4 text-foreground">Pronto para reservar?</h2>
                 <p className="text-muted-foreground mb-6">
                   Garanta a data do seu evento em {city.name} hoje mesmo. A agenda costuma lotar rápido!
                 </p>
-                <Link to="/contato" className="block mb-3">
-                  <Button className="w-full text-lg py-6">Solicitar Cotação</Button>
+                <Link to="/contato" className={buttonVariants({ fullWidth: true, className: 'mb-3' })}>
+                  Solicitar Cotação
                 </Link>
+                {/* Achado: aqui aparecia "(31) 97580-8477" — o telefone do desenvolvedor (crédito do
+                    rodapé), sem link. Agora é o WhatsApp comercial do site (getWhatsAppPhone). */}
                 <div className="text-center text-sm text-muted-foreground">
                   <span className="block mb-1">Ou chame no WhatsApp:</span>
-                  <strong className="text-foreground">(31) 97580-8477</strong>
+                  <a
+                    href={`https://wa.me/${whatsAppPhone}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-foreground hover:text-primary underline-offset-4 hover:underline"
+                  >
+                    {formatPhoneDisplay(whatsAppPhone)}
+                  </a>
                 </div>
              </div>
-             
+
              {/* Local Keywords Cloud (SEO) */}
              <div className="bg-muted/20 border border-border/50 rounded-xl p-6">
-               <h4 className="text-sm font-semibold uppercase text-muted-foreground mb-4 tracking-wider">Serviços em Destaque</h4>
+               <h3 className="text-sm font-semibold uppercase text-muted-foreground mb-4 tracking-wider">Serviços em Destaque</h3>
                <div className="flex flex-wrap gap-2">
                  {service.keywords.map((k, i) => (
                    <span key={i} className="text-xs bg-background border border-border px-2 py-1 rounded-md text-muted-foreground">
@@ -262,16 +251,16 @@ export const CityLandingPage = () => {
 
       {/* Featured Equipment */}
       <section className="mb-20">
-        <div className="flex justify-between items-end mb-8">
+        <div className="flex flex-wrap justify-between items-end gap-4 mb-8">
           <div>
-            <h2 className="text-3xl font-bold heading-elegant mb-2">Equipamentos Disponíveis</h2>
+            <h2 className="text-3xl font-bold mb-2 text-foreground">Equipamentos Disponíveis</h2>
             <p className="text-muted-foreground">Confira algumas opções para seu evento em {city.name}</p>
           </div>
-          <Link to="/equipamentos" className="text-primary hover:underline hidden md:inline-block">
+          <Link to="/equipamentos" className="text-primary hover:underline underline-offset-4 hidden md:inline-block">
             Ver catálogo completo →
           </Link>
         </div>
-        
+
         <RecommendationSection
           type="similar"
           items={recommendations.recommendations}
@@ -279,9 +268,9 @@ export const CityLandingPage = () => {
           maxItems={4}
           columns={{ sm: 1, md: 2, lg: 4 }}
         />
-        
+
         <div className="mt-8 text-center md:hidden">
-          <Link to="/equipamentos" className="text-primary hover:underline">
+          <Link to="/equipamentos" className="text-primary hover:underline underline-offset-4">
             Ver catálogo completo →
           </Link>
         </div>
@@ -289,7 +278,7 @@ export const CityLandingPage = () => {
 
       {/* Other Cities Links (Internal Linking) */}
       <section className="bg-muted/30 rounded-2xl p-8 border border-border/50">
-        <h3 className="text-lg font-semibold mb-4">Atendemos também em:</h3>
+        <h2 className="text-lg font-semibold mb-4 text-foreground">Atendemos também em:</h2>
         <div className="flex flex-wrap gap-3">
           {TARGET_CITIES.filter(c => c.slug !== city.slug).map(c => (
              <Link
@@ -307,20 +296,26 @@ export const CityLandingPage = () => {
 };
 
 // Simple Accordion Component for FAQs
+// Achado: o botão não informava se estava aberto (sem aria-expanded/aria-controls) e a resposta
+// usava animate-accordion-down, que depende de uma variável do Radix que não existe aqui.
 const FAQAccordion = ({ question, answer }: { question: string, answer: string }) => {
   const [isOpen, setIsOpen] = React.useState(false);
-  
+  const answerId = useId();
+
   return (
     <div className="border border-border rounded-lg bg-card overflow-hidden">
-      <button 
+      <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex justify-between items-center p-4 text-left font-medium hover:bg-muted/50 transition-colors"
+        aria-expanded={isOpen}
+        aria-controls={answerId}
+        className="w-full flex justify-between items-center gap-4 p-4 text-left font-medium text-foreground hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       >
         <span>{question}</span>
-        {isOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
+        <ChevronDown className={`w-5 h-5 flex-shrink-0 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
       {isOpen && (
-        <div className="p-4 pt-0 text-muted-foreground leading-relaxed animate-accordion-down border-t border-border/50 bg-muted/20">
+        <div id={answerId} className="p-4 pt-0 text-muted-foreground leading-relaxed animate-in fade-in border-t border-border/50 bg-muted/20">
           <p className="mt-4">{answer}</p>
         </div>
       )}

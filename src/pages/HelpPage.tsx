@@ -1,21 +1,42 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { PageLayout } from '../components/layouts/PageLayout';
+import { SUPPORT_EMAIL } from '../data/site';
+
+// Achados (auditoria do design system): 2º <h1> duplicando o do PageLayout, classe `text-md`
+// (não existe), "Guias Rápidos" que não levavam a lugar nenhum, menção a um "chat" que não
+// existe e um parágrafo de enchimento sobre "autoatendimento inteligente" — corrigidos. Os guias
+// agora apontam para as páginas reais.
+const helpLinks = [
+  { to: '/faq', label: 'Perguntas frequentes (reservas, pagamento, entrega)' },
+  { to: '/guias', label: 'Guias e dicas técnicas para eventos' },
+  { to: '/garantia', label: 'Garantia dos equipamentos' },
+  { to: '/contato', label: 'Fale com a equipe' },
+];
 
 export const HelpPage: React.FC = () => (
   <PageLayout title="Central de Ajuda" description="Perguntas frequentes e guias">
-    <div className="max-w-4xl mx-auto bg-card rounded-xl p-8 border border-border">
-      <h1 className="text-2xl font-bold mb-4">Central de Ajuda</h1>
-      <p className="text-muted-foreground mb-4">Encontre respostas rápidas sobre reservas, pagamentos, cancelamentos e suporte técnico. Se não encontrar o que precisa, entre em contato pelo chat ou email <strong>suporte@xproducoeseventos.com.br</strong>.</p>
+    <div className="max-w-4xl mx-auto bg-card rounded-xl p-8 border border-border space-y-6">
+      <p className="text-muted-foreground">
+        Encontre respostas rápidas sobre reservas, pagamentos, cancelamentos e suporte técnico. Se não encontrar o que
+        precisa, escreva para{' '}
+        <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-primary hover:underline underline-offset-4 break-all">
+          {SUPPORT_EMAIL}
+        </a>
+        .
+      </p>
 
-      <h2 className="text-lg font-semibold mt-6">Guias Rápidos</h2>
-      <ul className="list-disc list-inside text-muted-foreground">
-        <li>Como reservar equipamentos</li>
-        <li>Política de cancelamento</li>
-        <li>Requisitos técnicos para eventos</li>
-      </ul>
-      <section className="mt-6">
-        <h3 className="text-md font-medium">Suporte ágil e eficiente</h3>
-        <p className="text-muted-foreground">Oferecemos um sistema de autoatendimento inteligente e descomplicado, desenvolvido para que você encontre as respostas que precisa em instantes, garantindo mais autonomia e agilidade para sua experiência.</p>
+      <section>
+        <h2 className="text-lg font-semibold text-foreground mb-2">Guias Rápidos</h2>
+        <ul className="list-disc list-inside text-muted-foreground space-y-1">
+          {helpLinks.map((link) => (
+            <li key={link.to}>
+              <Link to={link.to} className="text-primary hover:underline underline-offset-4">
+                {link.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
     </div>
   </PageLayout>

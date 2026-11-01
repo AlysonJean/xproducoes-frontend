@@ -5,6 +5,7 @@ import { PageLayout } from '../components/layouts/PageLayout';
 import { TestimonialCard } from '../components/ui/TestimonialCard';
 import { SEO } from '../components/SEO';
 import { BrandLoader } from '../components/ui/BrandLoader';
+import { buttonVariants } from '../components/ui/StandardComponents';
 import type { Review } from '../types/types';
 import { logger } from '../utils/logger';
 
@@ -34,9 +35,10 @@ export const ReviewDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <PageLayout title="Carregando..." description="Lendo avaliação sobre a X Produções.">
+      // Achado: title="Carregando..." virava o <h1>/<title> no SSR (o useEffect não roda no servidor).
+      <PageLayout title="Depoimento de cliente" hideTitle>
         <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <BrandLoader size="lg" />
+          <BrandLoader size={120} label="Carregando avaliação..." />
         </div>
       </PageLayout>
     );
@@ -47,7 +49,7 @@ export const ReviewDetailPage: React.FC = () => {
       <PageLayout title="Avaliação não encontrada">
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-6">{error || 'A avaliação que você procura não existe ou foi removida.'}</p>
-          <Link to="/" className="text-primary hover:underline">Voltar para o início</Link>
+          <Link to="/" className={buttonVariants({ variant: 'outline', size: 'sm' })}>Voltar para o início</Link>
         </div>
       </PageLayout>
     );
@@ -60,10 +62,11 @@ export const ReviewDetailPage: React.FC = () => {
         description={`"${review.comment?.substring(0, 150)}..." - Confira esta avaliação sobre a X Produções.`} 
       />
       <div className="max-w-2xl mx-auto py-12 px-4">
-        <TestimonialCard review={review} className="transform scale-110" />
-        
+        {/* scale-110 removido: o card ampliado passava da largura da tela em 375px. */}
+        <TestimonialCard review={review} />
+
         <div className="mt-12 text-center">
-          <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
+          <Link to="/" className="text-muted-foreground hover:text-primary transition-colors underline-offset-4 hover:underline">
             ← Ver mais avaliações na página inicial
           </Link>
         </div>

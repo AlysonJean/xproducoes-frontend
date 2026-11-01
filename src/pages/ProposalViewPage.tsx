@@ -1,25 +1,30 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { apiFetch } from '@/services/api';
 import { BrandLoader } from '@/components/ui/BrandLoader';
-import { 
-  Card, 
-  Button, 
+import {
+  Card,
+  Button,
   Badge,
-  Grid
+  Grid,
+  buttonVariants,
 } from '@/components/ui/StandardComponents';
-import { 
-  Calendar, 
-  MapPin, 
-  CheckCircle2, 
-  Download, 
+import {
+  ArrowRight,
+  Calendar,
+  MapPin,
+  CheckCircle2,
+  Download,
   MessageSquare,
   FileText,
   ShieldCheck,
   Star
 } from 'lucide-react';
 import { formatPrice } from '@/utils/formatPrice';
+import { getWhatsAppPhone } from '@/utils/whatsapp';
 import { SEO } from '@/components/SEO';
+import { PageLayout } from '@/components/layouts/PageLayout';
+import { COMPANY_CITY_LINE, COMPANY_CNPJ, COMPANY_LEGAL_NAME, SITE_NAME } from '@/data/site';
 import { logger } from '../utils/logger';
 
 interface ProposalItem {
@@ -40,6 +45,14 @@ interface Proposal {
   items: ProposalItem[];
   clientId?: string;
 }
+
+// O tipo do item vinha cru do backend ("Item equipment").
+const ITEM_TYPE_LABELS: Record<string, string> = {
+  EQUIPMENT: 'Equipamento',
+  SERVICE: 'Serviço',
+  KIT: 'Kit',
+};
+const itemTypeLabel = (type?: string) => (type ? ITEM_TYPE_LABELS[type.toUpperCase()] ?? type : 'Item');
 
 export default function ProposalViewPage() {
   const { id } = useParams<{ id: string }>();
@@ -69,11 +82,28 @@ export default function ProposalViewPage() {
   const handleWhatsApp = () => {
     if (!proposal) return;
     const text = `Olá! Acabei de visualizar a proposta comercial *#${proposal.id}* para o evento *${proposal.eventTitle}*. Gostaria de confirmar alguns detalhes.`;
-    window.open(`https://wa.me/5531989252272?text=${encodeURIComponent(text)}`, '_blank');
+    window.open(`https://wa.me/${getWhatsAppPhone()}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  if (loading) return <BrandLoader fullScreen size="xl" label="Preparando sua proposta exclusiva..." />;
-  if (!proposal) return <div className="p-20 text-center">Proposta não encontrada ou expirada.</div>;
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center bg-background">
+        <BrandLoader size={120} label="Carregando sua proposta..." />
+      </div>
+    );
+  }
+
+  if (!proposal) {
+    return (
+      <PageLayout title="Proposta não encontrada" description="Esta proposta não existe, expirou ou o link está incompleto.">
+        <div className="text-center">
+          <Link to="/contato" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+            Falar com a equipe
+          </Link>
+        </div>
+      </PageLayout>
+    );
+  }
 
   const eventDate = proposal.eventDate ? new Date(proposal.eventDate).toLocaleDateString('pt-BR', {
     day: '2-digit',
@@ -82,113 +112,114 @@ export default function ProposalViewPage() {
   }) : 'Data não informada';
 
   return (
-    <div className="min-h-screen bg-surface py-12 px-4 print:bg-white print:py-0">
-      <SEO 
-        title={`Proposta Comercial - ${proposal.eventTitle} | X Produções`}
+    // print-color-adjust: imprime os fundos coloridos (antes vinha de um <style> inline).
+    <div className="min-h-screen bg-background py-12 px-4 print:bg-white print:py-0 [print-color-adjust:exact] [-webkit-print-color-adjust:exact]">
+      <SEO
+        title={`Proposta Comercial - ${proposal.eventTitle}`}
         description={`Visualização oficial da proposta #${proposal.id} para locação de equipamentos audiovisual.`}
       />
-      
+
       <div className="max-w-4xl mx-auto space-y-8">
-        
-        {/* Actions Bar - Hidden on print */}
-        <div className="flex justify-between items-center print:hidden">
-          <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-bold px-4 py-1.5 rounded-full">
-            PROPOSTA EXCLUSIVA
+
+        {/* Barra de ações — oculta na impressão */}
+        <div className="flex flex-wrap justify-between items-center gap-3 print:hidden">
+          <Badge variant="primary" size="lg" className="font-bold uppercase tracking-wide">
+            Proposta exclusiva
           </Badge>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
-              <Download className="h-4 w-4" /> PDF
+            <Button variant="outline" size="sm" onClick={handlePrint} leftIcon={<Download className="h-4 w-4" aria-hidden="true" />}>
+              Imprimir / PDF
             </Button>
-            <Button size="sm" onClick={handleWhatsApp} className="bg-green-600 hover:bg-green-700 text-white gap-2 border-none">
-              <MessageSquare className="h-4 w-4" /> WhatsApp
+            <Button variant="success" size="sm" onClick={handleWhatsApp} leftIcon={<MessageSquare className="h-4 w-4" aria-hidden="true" />}>
+              WhatsApp
             </Button>
           </div>
         </div>
 
-        {/* Header Hero */}
+        {/* Cabeçalho.
+            Achado: era `bg-primary text-white` — no tema escuro o primary é prata e o texto branco
+            sumia. Agora o texto usa text-primary-foreground. A "caixa de logo" de enfeite saiu. */}
         <Card className="p-0 border-none overflow-hidden shadow-2xl relative">
-          <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+          <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none text-primary-foreground" aria-hidden="true">
             <FileText size={200} />
           </div>
-          
-          <div className="bg-primary p-12 text-white">
+
+          <div className="bg-primary p-8 md:p-12 text-primary-foreground">
              <div className="flex flex-col md:flex-row justify-between gap-8">
                <div className="space-y-4">
-                 <div className="h-12 w-48 bg-white/10 rounded-lg flex items-center justify-center font-black tracking-tighter text-2xl uppercase">
-                   X PRODUÇÕES
-                 </div>
+                 <p className="font-black tracking-tighter text-2xl uppercase">{SITE_NAME}</p>
                  <div>
-                   <h1 className="text-4xl font-extrabold tracking-tight">{proposal.eventTitle}</h1>
-                   <p className="text-primary-foreground/80 mt-2 font-medium">Orçamento ID: <span className="font-mono text-white">#{proposal.id}</span></p>
+                   <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">{proposal.eventTitle}</h1>
+                   <p className="text-primary-foreground/80 mt-2 font-medium">Orçamento ID: <span className="font-mono text-primary-foreground">#{proposal.id}</span></p>
                  </div>
                </div>
-               
-               <div className="flex flex-col items-end justify-end space-y-2">
-                  <div className="text-right">
-                    <p className="text-xs font-black uppercase tracking-widest opacity-60">Total da Proposta</p>
-                    <p className="text-5xl font-black">{formatPrice(Number(proposal.totalPrice))}</p>
+
+               <div className="flex flex-col md:items-end justify-end space-y-2">
+                  <div className="md:text-right">
+                    <p className="text-xs font-black uppercase tracking-widest text-primary-foreground/80">Total da Proposta</p>
+                    <p className="text-4xl md:text-5xl font-black">{formatPrice(Number(proposal.totalPrice))}</p>
                   </div>
                </div>
              </div>
           </div>
-          
-          <div className="p-8 bg-card flex flex-wrap gap-8 border-b">
+
+          <div className="p-8 bg-card flex flex-wrap gap-8 border-b border-border">
              <div className="flex items-center gap-3">
-               <div className="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary">
-                 <Calendar className="h-5 w-5" />
+               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                 <Calendar className="h-5 w-5" aria-hidden="true" />
                </div>
                <div>
-                 <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Data do Evento</p>
-                 <p className="font-bold">{eventDate}</p>
-               </div>
-             </div>
-             
-             <div className="flex items-center gap-3">
-               <div className="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary">
-                 <MapPin className="h-5 w-5" />
-               </div>
-               <div>
-                 <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Local</p>
-                 <p className="font-bold">{proposal.location}</p>
+                 <p className="text-xs font-black uppercase text-muted-foreground tracking-widest">Data do Evento</p>
+                 <p className="font-bold text-foreground">{eventDate}</p>
                </div>
              </div>
 
              <div className="flex items-center gap-3">
-               <div className="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary">
-                 <ShieldCheck className="h-5 w-5" />
+               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                 <MapPin className="h-5 w-5" aria-hidden="true" />
                </div>
                <div>
-                 <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Válido até</p>
-                 <p className="font-bold">7 dias após emissão</p>
+                 <p className="text-xs font-black uppercase text-muted-foreground tracking-widest">Local</p>
+                 <p className="font-bold text-foreground">{proposal.location}</p>
+               </div>
+             </div>
+
+             <div className="flex items-center gap-3">
+               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                 <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+               </div>
+               <div>
+                 <p className="text-xs font-black uppercase text-muted-foreground tracking-widest">Válido até</p>
+                 <p className="font-bold text-foreground">7 dias após emissão</p>
                </div>
              </div>
           </div>
         </Card>
 
-        {/* Item List */}
+        {/* Itens */}
         <section className="space-y-6">
-           <h2 className="text-xl font-bold flex items-center gap-2">
-             <CheckCircle2 className="h-6 w-6 text-primary" />
+           <h2 className="text-xl font-bold flex items-center gap-2 text-foreground">
+             <CheckCircle2 className="h-6 w-6 text-primary" aria-hidden="true" />
              Itens e Serviços Inclusos
            </h2>
-           
+
            <div className="space-y-4">
               {proposal.items && proposal.items.length > 0 ? (
                 proposal.items.map((item: ProposalItem, idx: number) => (
-                  <div key={idx} className="flex justify-between items-center p-6 bg-card border rounded-2xl hover:shadow-lg transition-all duration-300">
+                  <div key={idx} className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 p-6 bg-card border border-border rounded-2xl hover:shadow-lg transition-all duration-300">
                     <div className="flex items-center gap-6">
-                       <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center font-bold text-muted-foreground">
+                       <div className="h-12 w-12 flex-shrink-0 rounded-full bg-muted flex items-center justify-center font-bold text-muted-foreground">
                          {item.quantity}x
                        </div>
                        <div>
-                         <h3 className="font-bold text-lg">{item.description}</h3>
-                         <p className="text-sm text-muted-foreground">Item {item.itemType?.toLowerCase()}</p>
+                         <h3 className="font-bold text-lg text-foreground">{item.description}</h3>
+                         <p className="text-sm text-muted-foreground">{itemTypeLabel(item.itemType)}</p>
                        </div>
                     </div>
-                    <div className="text-right">
-                       <p className="font-mono font-bold text-xl">{formatPrice(Number(item.totalPrice))}</p>
+                    <div className="sm:text-right">
+                       <p className="font-mono font-bold text-xl text-foreground">{formatPrice(Number(item.totalPrice))}</p>
                        {item.discount > 0 && (
-                         <p className="text-xs text-emerald-500 font-bold italic">Desconto aplicado</p>
+                         <p className="text-xs text-success font-bold italic">Desconto aplicado</p>
                        )}
                     </div>
                   </div>
@@ -201,87 +232,70 @@ export default function ProposalViewPage() {
            </div>
         </section>
 
-        {/* Comparison/Trust section */}
+        {/* Diferencial + próximo passo.
+            Achado: o botão "Aprovar Proposta Agora" não fazia nada (sem onClick). Trocado pela ação
+            que já existe na página: confirmar pelo WhatsApp. */}
         <Grid columns={{ sm: 1, md: 2 }} gap={8}>
           <div className="bg-primary/5 p-8 rounded-3xl space-y-4">
              <div className="flex items-center gap-2 text-primary font-bold">
-                <Star className="h-5 w-5 fill-primary" />
+                <Star className="h-5 w-5 fill-current" aria-hidden="true" />
                 Diferencial X Produções
              </div>
              <p className="text-sm leading-relaxed text-muted-foreground">
                Todos os equipamentos passam por manutenção rigorosa antes de cada evento. Nossa equipe técnica estará de prontidão para garantir que seu evento seja um sucesso absoluto.
              </p>
           </div>
-          <div className="flex flex-col justify-center items-center space-y-4 text-center">
+          <div className="flex flex-col justify-center items-center space-y-4 text-center print:hidden">
              <p className="text-sm font-medium text-muted-foreground">Pronto para fechar?</p>
-             <Button className="w-full h-14 text-lg rounded-2xl shadow-xl shadow-primary/30 gap-2">
-               Aprovar Proposta Agora <ArrowRight className="h-5 w-5" />
+             <Button
+               variant="success"
+               size="lg"
+               fullWidth
+               onClick={handleWhatsApp}
+               rightIcon={<ArrowRight className="h-5 w-5" aria-hidden="true" />}
+             >
+               Confirmar pelo WhatsApp
              </Button>
           </div>
         </Grid>
 
-        {/* Registration Nudge */}
+        {/* Convite para criar conta */}
         {!proposal.clientId && (
-          <div className="relative group overflow-hidden rounded-[2rem] bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-8 text-white shadow-2xl shadow-primary/20 animate-in fade-in slide-in-from-top-4 duration-700">
-            <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12 transition-transform group-hover:rotate-45 duration-500">
+          <div className="relative group overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-8 text-primary-foreground shadow-2xl shadow-primary/20 animate-in fade-in slide-in-from-top-4 duration-700 print:hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12 transition-transform group-hover:rotate-45 duration-500" aria-hidden="true">
                <Star size={120} />
             </div>
-            
+
             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
                <div className="space-y-3">
-                 <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm px-3 py-1">BENEFÍCIO EXCLUSIVO</Badge>
+                 <Badge className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 backdrop-blur-sm uppercase">Benefício exclusivo</Badge>
                  <h2 className="text-2xl md:text-3xl font-black tracking-tight">Rastreie este orçamento em tempo real</h2>
                  <p className="text-primary-foreground/80 max-w-lg font-medium">
                    Crie sua conta agora para receber notificações de status, baixar notas fiscais e gerenciar todo o seu histórico de eventos em um só lugar.
                  </p>
                </div>
                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                 <Button 
+                 <Button
                    onClick={() => navigate(`/cadastro?bookingId=${id}`)}
-                   className="h-14 px-8 bg-white text-primary hover:bg-white/90 font-black rounded-2xl shadow-lg ring-4 ring-white/10"
+                   size="lg"
+                   className="px-8 bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-black rounded-2xl shadow-lg ring-4 ring-primary-foreground/10"
+                   rightIcon={<ArrowRight className="h-5 w-5" aria-hidden="true" />}
                  >
-                   Criar Minha Conta <ArrowRight className="ml-2 h-5 w-5" />
+                   Criar minha conta
                  </Button>
                </div>
             </div>
           </div>
         )}
 
-        {/* Footer info */}
-        <footer className="pt-20 pb-12 text-center space-y-4 border-t opacity-50">
-           <p className="text-[10px] font-black uppercase tracking-[0.3em]">X Produções e Eventos Audiovisual</p>
-           <p className="text-xs">CNPJ 00.000.000/0001-00 • São Paulo, SP</p>
+        {/* Rodapé.
+            Achado: mostrava "CNPJ 00.000.000/0001-00 • São Paulo, SP" (placeholder). Agora usa os
+            dados reais da empresa (src/data/site.ts). */}
+        <footer className="pt-20 pb-12 text-center space-y-2 border-t border-border text-muted-foreground">
+           <p className="text-xs font-black uppercase tracking-[0.3em]">{COMPANY_LEGAL_NAME}</p>
+           <p className="text-xs">CNPJ {COMPANY_CNPJ} • {COMPANY_CITY_LINE}</p>
         </footer>
       </div>
-      
-      {/* Dynamic CSS for print */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          body { -webkit-print-color-adjust: exact; }
-          .print\\:hidden { display: none !important; }
-          .print\\:bg-white { background: white !important; }
-        }
-      `}} />
     </div>
-  );
-}
-
-function ArrowRight(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 12h14" />
-      <path d="m12 5 7 7-7 7" />
-    </svg>
   );
 }

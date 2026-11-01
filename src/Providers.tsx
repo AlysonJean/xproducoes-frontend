@@ -8,8 +8,6 @@ import './index.css'
 const sentry = typeof window !== 'undefined' ? initSentry() : null
 if (typeof window !== 'undefined' && sentry) {
   (window as unknown as { __SENTRY__?: typeof sentry }).__SENTRY__ = sentry
-  // Load heading reveal only on client side
-  import('./styles/headingReveal');
 }
 const SentryErrorBoundary = (sentry && sentry.ErrorBoundary) || (({ children }: { children: React.ReactNode }) => children)
 

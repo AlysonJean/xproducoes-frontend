@@ -3,6 +3,13 @@ import { PageLayout } from '../components/layouts/PageLayout';
 import { GUIDES } from '../data/guides';
 import { SEO } from '../components/SEO';
 import { ClockIcon } from 'lucide-react';
+import { Badge } from '../components/ui/StandardComponents';
+
+/** "2024-02-01" → "01/02/2024" (a data era exibida crua, no formato ISO). */
+const formatGuideDate = (date: string) => {
+  const parsed = new Date(`${date}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString('pt-BR');
+};
 
 // Achado: existia um `setTimeout` de 600ms fingindo um "carregamento inicial" — GUIDES é um
 // import estático (../data/guides), sem busca de dado real nenhuma por trás. Além do atraso
@@ -10,11 +17,11 @@ import { ClockIcon } from 'lucide-react';
 // rodam durante o SSR, então o servidor sempre renderizava o branch de loading).
 export const GuideListPage = () => {
   return (
-    <PageLayout 
+    <PageLayout
       title="Guias & Dicas para Eventos"
       description="Artigos de especialistas sobre som, iluminação e organização de eventos."
     >
-      <SEO 
+      <SEO
         title="Guias de Eventos e Dicas Técnicas"
         description="Aprenda como organizar eventos inesquecíveis com nossos guias sobre som, iluminação e estrutura."
       />
@@ -22,27 +29,31 @@ export const GuideListPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {GUIDES.map((guide) => (
           <article key={guide.slug} className="group bg-card border border-border rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300">
-             <Link to={`/guias/${guide.slug}`}>
+             <Link
+               to={`/guias/${guide.slug}`}
+               className="block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+             >
                <div className="relative h-48 overflow-hidden">
-                 <img 
-                   src={guide.coverImage} 
+                 <img
+                   src={guide.coverImage}
                    alt={guide.title}
                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                  />
+                 {/* Selo sobre a foto: texto branco com scrim (exceção do guia). */}
                  <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm flex items-center gap-1">
-                   <ClockIcon className="w-3 h-3" />
+                   <ClockIcon className="w-3 h-3" aria-hidden="true" />
                    {guide.readTime}
                  </div>
                </div>
                <div className="p-6">
-                 <div className="flex gap-2 mb-3">
+                 <div className="flex flex-wrap gap-2 mb-3">
                    {guide.tags.map(tag => (
-                     <span key={tag} className="text-xs font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                     <Badge key={tag} variant="primary" size="sm">
                        {tag}
-                     </span>
+                     </Badge>
                    ))}
                  </div>
-                 <h2 className="text-xl font-bold mb-3 group-hover:text-primary transition-colors line-clamp-2">
+                 <h2 className="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors line-clamp-2">
                    {guide.title}
                  </h2>
                  <p className="text-muted-foreground text-sm line-clamp-3 mb-4">
@@ -50,10 +61,14 @@ export const GuideListPage = () => {
                  </p>
                  <div className="flex items-center justify-between border-t border-border pt-4 mt-auto">
                     <div className="flex items-center gap-2">
-                      <img src={guide.author.avatar} alt={guide.author.name} className="w-8 h-8 rounded-full" />
+                      {/* Achado: o avatar vinha de i.pravatar.cc (banco de rostos aleatórios) —
+                          trocado pela inicial do autor. */}
+                      <span className="w-8 h-8 rounded-full bg-primary/10 text-primary text-sm font-bold flex items-center justify-center" aria-hidden="true">
+                        {guide.author.name.charAt(0)}
+                      </span>
                       <div className="text-xs">
-                        <p className="font-semibold">{guide.author.name}</p>
-                        <p className="text-muted-foreground">{guide.date}</p>
+                        <p className="font-semibold text-foreground">{guide.author.name}</p>
+                        <p className="text-muted-foreground">{formatGuideDate(guide.date)}</p>
                       </div>
                     </div>
                  </div>

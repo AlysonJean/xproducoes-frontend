@@ -8,12 +8,17 @@ import {
   ShoppingCartIcon,
   Bars3Icon,
   XMarkIcon,
-  ClipboardDocumentListIcon,
+  SpeakerWaveIcon,
+  UserGroupIcon,
   CubeIcon,
   PhotoIcon,
   PhoneIcon,
   BookOpenIcon,
+  ChatBubbleLeftRightIcon,
+  ArrowRightStartOnRectangleIcon,
+  ArrowLeftEndOnRectangleIcon,
 } from '@heroicons/react/24/outline';
+import { getWhatsAppPhone } from '@/utils/whatsapp';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/hooks/useCart';
 import { useCompare } from '@/contexts/CompareContext';
@@ -33,7 +38,7 @@ export const Header = () => {
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const userDisplayName = user?.name?.trim() || 'Usuario';
+  const userDisplayName = user?.name?.trim() || 'Usuário';
   const userDashboardRoute = user ? getDashboardRoute(user.role) : '/painel';
 
   // Formata contador para badges (padrão grandes e-commerces)
@@ -48,6 +53,28 @@ export const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Menu mobile: Esc fecha e a página de trás não rola enquanto ele está aberto
+  // (antes o overlay não tinha nenhum dos dois).
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMobileMenuOpen(false);
+    };
+    // Em lg o overlay some (lg:hidden): passar para lg com o menu aberto fecha o menu, senão a
+    // trava de rolagem ficava presa sem botão para soltar.
+    const desktop = typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 1024px)') : null;
+    const onDesktop = (e: MediaQueryListEvent) => { if (e.matches) setIsMobileMenuOpen(false); };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onKeyDown);
+    desktop?.addEventListener('change', onDesktop);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      desktop?.removeEventListener('change', onDesktop);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMobileMenuOpen]);
+
   // logout() encerra a sessão no servidor e redireciona para /login.
   const handleLogout = () => {
     void logout();
@@ -55,9 +82,10 @@ export const Header = () => {
 
   type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
   const navItems: { href: string; label: string; Icon: IconType }[] = [
-    { href: '/equipamentos', label: 'Equipamentos', Icon: ClipboardDocumentListIcon },
+    // Equipamentos e Serviços usavam o mesmo ícone.
+    { href: '/equipamentos', label: 'Equipamentos', Icon: SpeakerWaveIcon },
     { href: '/kits', label: 'Kits', Icon: CubeIcon },
-    { href: '/servicos', label: 'Serviços', Icon: ClipboardDocumentListIcon },
+    { href: '/servicos', label: 'Serviços', Icon: UserGroupIcon },
     { href: '/portfolio', label: 'Portfólio', Icon: PhotoIcon },
     { href: '/guias', label: 'Dicas', Icon: BookOpenIcon },
     { href: '/contato', label: 'Contato', Icon: PhoneIcon },
@@ -78,9 +106,12 @@ export const Header = () => {
             to="/"
             className="group flex items-center transition-transform duration-300 hover:scale-105"
           >
+            {/* Achado: em 375px, logo (até 200px) + 3 ícones + Entrar + menu somavam ~485px para
+                343px úteis — o botão de menu ficava fora da tela. Logo menor no celular e
+                Favoritos/Comparar só a partir de sm (no celular eles estão no menu). */}
             <ThemedLogo
               title={companyName || 'Logo'}
-              className="h-11 w-auto sm:h-[50px] lg:h-14 max-w-[200px] sm:max-w-[250px] lg:max-w-[315px] transition-all duration-300 group-hover:brightness-110"
+              className="h-11 w-auto sm:h-[50px] lg:h-14 max-w-[150px] sm:max-w-[250px] lg:max-w-[315px] transition-all duration-300 group-hover:brightness-110"
             />
           </Link>
 
@@ -123,7 +154,7 @@ export const Header = () => {
             <Link
               to="/favoritos"
               aria-label="Favoritos"
-              className="group relative icon-btn"
+              className="group relative icon-btn hidden sm:inline-grid"
               title="Favoritos"
             >
               <HeartIcon className="w-6 h-6" strokeWidth={1.75} />
@@ -133,7 +164,7 @@ export const Header = () => {
             <Link
               to="/comparar"
               aria-label="Comparar"
-              className="group relative icon-btn"
+              className="group relative icon-btn hidden sm:inline-grid"
               title="Comparar"
             >
               <ChartBarSquareIcon className="w-6 h-6" strokeWidth={1.75} />
@@ -183,10 +214,11 @@ export const Header = () => {
                     {userDisplayName}
                   </span>
                 </Link>
+                {/* aria-label="Logout" (inglês) sobrescrevia o texto visível "Sair" — removido. */}
                 <button
+                  type="button"
                   onClick={handleLogout}
-                  className="bg-destructive/10 hover:bg-destructive text-destructive hover:text-destructive-foreground px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105"
-                  aria-label="Logout"
+                  className="bg-destructive/10 hover:bg-destructive text-destructive hover:text-destructive-foreground px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   Sair
                 </button>
@@ -194,7 +226,7 @@ export const Header = () => {
             ) : (
               <Link
                 to="/login"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 lg:px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary/25"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 lg:px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 Entrar
               </Link>
@@ -204,8 +236,10 @@ export const Header = () => {
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden touch-target text-foreground/80 hover:text-primary transition-colors"
+              className="lg:hidden touch-target text-foreground/80 hover:text-primary transition-colors rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={isMobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-menu"
               title={isMobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
             >
               {isMobileMenuOpen ? (
@@ -220,7 +254,13 @@ export const Header = () => {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-background/95 backdrop-blur-xl">
+        // <nav> e não role="dialog" aria-modal: o botão de fechar fica no <header> (fora do overlay)
+        // e um diálogo modal o esconderia de leitores de tela.
+        <nav
+          id="mobile-menu"
+          aria-label="Menu principal"
+          className="lg:hidden fixed inset-0 z-40 bg-background/95 backdrop-blur-xl"
+        >
           <div className="flex flex-col h-full pt-20 pb-6 px-6 space-y-4 overflow-y-auto">
             {/* Links de Navegação */}
             <div className="space-y-2">
@@ -249,9 +289,10 @@ export const Header = () => {
             <div className="space-y-2">
                 {/* Solicitar Orçamento (mobile) */}
                 <button
+                  type="button"
                   onClick={() => {
                     openWhatsAppModal({
-                      phoneNumber: '+55 31 98925 2272',
+                      phoneNumber: getWhatsAppPhone(),
                       title: 'Pedir Orçamento',
                       subject: 'Pedido de Orçamento',
                       message:
@@ -261,9 +302,8 @@ export const Header = () => {
                   }}
                   className="flex items-center space-x-4 p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
+                  {/* Ícone de conversa (era um envelope, mas a ação abre o WhatsApp). */}
+                  <ChatBubbleLeftRightIcon className="w-6 h-6" strokeWidth={1.75} aria-hidden="true" />
                   <span>Solicitar Orçamento</span>
                 </button>
 
@@ -273,7 +313,7 @@ export const Header = () => {
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center space-x-4 p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
                 >
-                  <HeartIcon className="w-6 h-6" strokeWidth={1.75} />
+                  <HeartIcon className="w-6 h-6" strokeWidth={1.75} aria-hidden="true" />
                   <span>Favoritos</span>
                 </Link>
 
@@ -284,7 +324,7 @@ export const Header = () => {
                 className="flex items-center justify-between p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
               >
                 <div className="flex items-center space-x-4">
-                  <ChartBarSquareIcon className="w-6 h-6" strokeWidth={1.75} />
+                  <ChartBarSquareIcon className="w-6 h-6" strokeWidth={1.75} aria-hidden="true" />
                   <span>Comparar</span>
                 </div>
                 {compareItems.length > 0 && (
@@ -301,7 +341,7 @@ export const Header = () => {
                 className="flex items-center justify-between p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
               >
                 <div className="flex items-center space-x-4">
-                  <ShoppingCartIcon className="w-6 h-6" strokeWidth={1.75} />
+                  <ShoppingCartIcon className="w-6 h-6" strokeWidth={1.75} aria-hidden="true" />
                   <span>Carrinho</span>
                 </div>
                 {itemCount > 0 && (
@@ -345,13 +385,15 @@ export const Header = () => {
 
                 {/* Logout */}
                 <button
+                  type="button"
                   onClick={() => {
                     handleLogout();
                     setIsMobileMenuOpen(false);
                   }}
                   className="w-full flex items-center space-x-4 p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-destructive/10 text-destructive"
                 >
-                  <span className="text-2xl">🚪</span>
+                  {/* Ícones do design system no lugar dos emojis 🚪/🔐 */}
+                  <ArrowRightStartOnRectangleIcon className="w-6 h-6" strokeWidth={1.75} aria-hidden="true" />
                   <span>Sair</span>
                 </button>
               </div>
@@ -361,7 +403,7 @@ export const Header = () => {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="flex items-center justify-center space-x-2 p-4 rounded-2xl text-lg font-medium transition-all duration-300 bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                <span>🔐</span>
+                <ArrowLeftEndOnRectangleIcon className="w-6 h-6" strokeWidth={1.75} aria-hidden="true" />
                 <span>Entrar</span>
               </Link>
             )}
@@ -371,7 +413,7 @@ export const Header = () => {
               <ThemeToggle showLabel={true} className="justify-start" />
             </div>
           </div>
-        </div>
+        </nav>
       )}
     </>
   );

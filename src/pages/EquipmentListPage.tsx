@@ -8,7 +8,7 @@ import { normalizeString } from '../utils/string';
 import type { Equipment, Category, EquipmentFilters } from '@/types/types';
 import { PageLayout, PageEmpty, PageError } from '../components/layouts/PageLayout';
 import { SEO } from '../components/SEO';
-import { SearchAndFilters, FilterSelect, FilterPriceRange, Grid } from '../components/ui/StandardComponents';
+import { SearchAndFilters, FilterSelect, FilterPriceRange, Grid, Badge } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
 import { logger } from '../utils/logger';
 
@@ -107,11 +107,13 @@ export const EquipmentListPage: React.FC = () => {
     setPriceMaxInput('');
   };
 
+  // Achado: o loading usava title="Carregando catálogo..." — como o useEffect não roda no SSR,
+  // esse era o <h1> entregue a crawlers. O título real é estático, então vale desde o início.
   if (loading) {
     return (
       <PageLayout
-        title="Carregando catálogo..."
-        description="Preparando os melhores equipamentos para você."
+        title="Equipamentos Profissionais"
+        description="Descubra nossa coleção completa de equipamentos profissionais para eventos de alta qualidade."
       >
         {/* Achado: useEffect nunca roda durante o SSR, então o servidor SEMPRE renderiza este
             branch de loading — sem o <SEO> real aqui, toda visita de crawler/robô de preview
@@ -130,8 +132,8 @@ export const EquipmentListPage: React.FC = () => {
   if (error) {
     return (
       <PageLayout
-        title="Erro ao carregar catálogo"
-        description="Não foi possível carregar os equipamentos no momento."
+        title="Equipamentos Profissionais"
+        description="Descubra nossa coleção completa de equipamentos profissionais para eventos de alta qualidade."
       >
         <PageError message={error} onRetry={fetchData} />
       </PageLayout>
@@ -203,12 +205,12 @@ export const EquipmentListPage: React.FC = () => {
             return (
               <section key={category.id} className="space-y-6">
                 <div className="flex items-center gap-3 border-b border-border/50 pb-4">
-                  <h2 className="text-2xl font-bold heading-elegant text-foreground">
+                  <h2 className="text-2xl font-bold text-foreground">
                     {category.name}
                   </h2>
-                  <span className="text-sm font-medium px-2.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                  <Badge variant="primary" size="lg">
                     {categoryEquipments.length}
-                  </span>
+                  </Badge>
                 </div>
                 
                 <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={8}>
@@ -227,12 +229,12 @@ export const EquipmentListPage: React.FC = () => {
           {filteredEquipments.some(eq => !eq.categoryId || !categories.find(c => c.id === eq.categoryId)) && (
             <section className="space-y-6">
                <div className="flex items-center gap-3 border-b border-border/50 pb-4">
-                  <h2 className="text-2xl font-bold heading-elegant text-foreground">
+                  <h2 className="text-2xl font-bold text-foreground">
                     Outros
                   </h2>
-                  <span className="text-sm font-medium px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                  <Badge variant="ghost" size="lg">
                     {filteredEquipments.filter(eq => !eq.categoryId || !categories.find(c => c.id === eq.categoryId)).length}
-                  </span>
+                  </Badge>
                 </div>
                 <Grid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={8}>
                   {filteredEquipments
@@ -254,7 +256,7 @@ export const EquipmentListPage: React.FC = () => {
           actionLabel="Limpar filtros"
           onAction={clearFilters}
           icon={
-            <svg className="h-24 w-24 mx-auto mb-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+            <svg className="h-24 w-24 mx-auto mb-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1} aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
             </svg>
           }

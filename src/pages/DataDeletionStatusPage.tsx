@@ -1,23 +1,38 @@
 import { useSearchParams } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
+import { PageLayout } from '../components/layouts/PageLayout';
+import { Alert, Card } from '../components/ui/StandardComponents';
+import { PRIVACY_CONTACT_EMAIL } from '../data/site';
 
 /**
  * Página de Status de Exclusão de Dados
  * Exibida quando um usuário solicita exclusão de dados via Facebook
+ *
+ * Achado (auditoria do design system): a página inteira era fixa no tema claro (bg-gray-100,
+ * bg-white, text-gray-900…), com azul/verde do Tailwind e fora do PageLayout (sem título da aba
+ * nem noindex). Agora usa o PageLayout, tokens do tema, <Card> e <Alert>.
  */
 export function DataDeletionStatusPage() {
   const [searchParams] = useSearchParams();
   const confirmationCode = searchParams.get('code');
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+    <PageLayout
+      title="Solicitação de Exclusão de Dados"
+      description="Sua solicitação de exclusão de dados foi recebida e está sendo processada."
+    >
+      <Helmet>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
+      <Card className="max-w-md w-full mx-auto p-8">
         <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-success/10 mb-6">
             <svg
-              className="h-8 w-8 text-green-600"
+              className="h-8 w-8 text-success"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -27,45 +42,36 @@ export function DataDeletionStatusPage() {
               />
             </svg>
           </div>
-          
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Solicitação de Exclusão de Dados
-          </h1>
-          
-          <p className="text-gray-600 mb-6">
-            Sua solicitação de exclusão de dados foi recebida e está sendo processada.
-          </p>
 
           {confirmationCode && (
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <p className="text-sm text-gray-500 mb-1">Código de Confirmação:</p>
-              <p className="font-mono text-lg font-semibold text-gray-900">
+            <div className="bg-muted rounded-lg p-4 mb-6">
+              <p className="text-sm text-muted-foreground mb-1">Código de Confirmação:</p>
+              <p className="font-mono text-lg font-semibold text-foreground break-all">
                 {confirmationCode}
               </p>
             </div>
           )}
 
-          <div className="text-left bg-blue-50 rounded-lg p-4 mb-6">
-            <h2 className="font-semibold text-blue-900 mb-2">O que acontece agora?</h2>
-            <ul className="text-sm text-blue-800 space-y-2">
+          <Alert variant="info" title="O que acontece agora?" className="text-left mb-6">
+            <ul className="text-sm space-y-2 mt-2">
               <li>• Seus dados pessoais serão removidos do nosso sistema</li>
               <li>• Este processo pode levar até 30 dias para ser concluído</li>
               <li>• Você receberá um email de confirmação quando a exclusão for finalizada</li>
             </ul>
-          </div>
+          </Alert>
 
-          <p className="text-xs text-gray-500">
+          <p className="text-sm text-muted-foreground">
             Se você tiver dúvidas, entre em contato conosco através do email{' '}
-            <a 
-              href="mailto:contato@xproducoeseeventos.com.br" 
-              className="text-blue-600 hover:underline"
+            <a
+              href={`mailto:${PRIVACY_CONTACT_EMAIL}`}
+              className="text-primary hover:underline underline-offset-4 break-all"
             >
-              contato@xproducoeseeventos.com.br
+              {PRIVACY_CONTACT_EMAIL}
             </a>
           </p>
         </div>
-      </div>
-    </div>
+      </Card>
+    </PageLayout>
   );
 }
 

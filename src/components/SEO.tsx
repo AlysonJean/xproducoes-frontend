@@ -1,5 +1,6 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
+import { SITE_NAME, buildPageTitle } from '../data/site';
 
 interface SEOProps {
   title: string;
@@ -20,8 +21,10 @@ export const SEO: React.FC<SEOProps> = ({
   type = 'website',
   jsonLd
 }) => {
-  const siteTitle = "X Produções";
-  const fullTitle = `${title} | ${siteTitle}`;
+  const siteTitle = SITE_NAME;
+  // Achado: páginas que já passavam "… | X-Produções" ganhavam o sufixo duas vezes
+  // ("Comparar Itens | X-Produções | X Produções"). buildPageTitle não duplica.
+  const fullTitle = buildPageTitle(title);
   const safeUrl = typeof url === 'string' ? url : '';
   
   // Canonical URL logic: remove query params to avoid duplicate content issues

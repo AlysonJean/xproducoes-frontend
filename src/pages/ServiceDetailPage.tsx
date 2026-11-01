@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useRevealOnView } from '../hooks/useRevealOnView';
 import { useParams, Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, User, Shield, Zap, Clock } from 'lucide-react';
 import { TrustBenefits } from '../components/ui/TrustBenefits';
@@ -16,16 +15,25 @@ import { FavoriteButton } from '../components/ui/FavoriteButton';
 import CompareButton from '../components/ui/CompareButton';
 import { RecommendationSection } from '../components/ui/RecommendationSection';
 import { useRecommendations } from '../hooks/useRecommendations';
+import { OptimizedImage } from '@/components/ui/OptimizedImage';
+import { PageLayout, PageError } from '../components/layouts/PageLayout';
+import { Badge, Button, buttonVariants } from '../components/ui/StandardComponents';
+
+const LIST_CRUMB = { label: 'Serviços', path: '/servicos' };
+
+const sideArrowClass =
+  'fixed top-1/2 -translate-y-1/2 bg-background/80 hover:bg-primary hover:text-primary-foreground p-3 rounded-full shadow-lg border border-border backdrop-blur-sm transition-all z-50 hidden lg:flex items-center justify-center group text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+const compactArrowClass =
+  'p-2.5 bg-muted/80 backdrop-blur-sm rounded-full border border-border shadow-sm active:scale-95 transition-all text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 export const ServiceDetailPage = () => {
-  const { ref: titleRef } = useRevealOnView<HTMLHeadingElement>({ threshold: 0.2 });
   const { slug } = useParams<{ slug: string }>();
   const { addItem, cart } = useCart();
   const [service, setService] = useState<(Service & { prevSlug?: string | null; nextSlug?: string | null }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  
+
   const { addNotification } = useNotifications();
 
   // Recommendations
@@ -54,17 +62,17 @@ export const ServiceDetailPage = () => {
         const data = await apiFetch<Service & { prevSlug?: string | null; nextSlug?: string | null }>(`/services/${slug}`);
         const transformed = transformService(data);
         setService({
-            ...transformed,
-                        prevSlug: data.prevSlug,
-                        nextSlug: data.nextSlug
+          ...transformed,
+          prevSlug: data.prevSlug,
+          nextSlug: data.nextSlug
         });
 
         if (data) {
           ReactGA.event({
             category: "ecommerce",
             action: "view_item",
-                        label: data.name,
-                        value: Number(data.price || 0)
+            label: data.name,
+            value: Number(data.price || 0)
           });
         }
 
@@ -82,13 +90,13 @@ export const ServiceDetailPage = () => {
     if (!service) return;
     setAdding(true);
     try {
-      await addItem(service, 'service'); 
+      await addItem(service, 'service');
       addNotification({
         type: 'success',
         title: 'Adicionado ao Orçamento',
         message: `${service.name} foi adicionado ao seu orçamento.`
       });
-        } catch (e: unknown) {
+    } catch (e: unknown) {
       addNotification({
         type: 'error',
         title: 'Erro',
@@ -101,25 +109,39 @@ export const ServiceDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] bg-background">
-        <BrandLoader size={120} label="Carregando serviço..." />
-      </div>
+      <PageLayout title="Serviços" hideTitle breadcrumbs={[LIST_CRUMB]}>
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <BrandLoader size={120} label="Carregando serviço..." />
+        </div>
+      </PageLayout>
     );
   }
 
   if (error || !service) {
     return (
-      <div className="max-w-2xl mx-auto my-20 p-8 text-center bg-card border border-border rounded-xl shadow-lg">
-        <h2 className="text-2xl font-bold text-destructive mb-4">{error || 'Serviço não encontrado'}</h2>
-        <Link to="/servicos" className="text-primary hover:underline">Voltar para serviços</Link>
-      </div>
+      <PageLayout title={error ? 'Erro ao carregar o serviço' : 'Serviço não encontrado'} breadcrumbs={[LIST_CRUMB]}>
+        <PageError
+          title="Não foi possível abrir este serviço"
+          message={error || 'O serviço que você procura não existe ou foi removido.'}
+        />
+        <div className="text-center">
+          <Link to="/servicos" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+            Voltar para serviços
+          </Link>
+        </div>
+      </PageLayout>
     );
   }
 
   const isAlreadyInCart = cart?.services?.some(s => s.id === service.id);
 
+  const status =
+    service.status === 'MAINTENANCE' ? { label: 'Em Manutenção', variant: 'warning' as const } :
+    service.status === 'COMING_SOON' ? { label: 'Em Breve', variant: 'info' as const } :
+    { label: 'Disponível', variant: 'success' as const };
+
   return (
-    <div className="bg-card p-6 md:p-8 rounded-lg shadow-2xl border border-border">
+    <PageLayout title={service.name} hideTitle breadcrumbs={[LIST_CRUMB, { label: service.name }]}>
       <SEO
         title={service.name}
         description={service.description || `Contrate ${service.name} para seu evento.`}
@@ -143,164 +165,161 @@ export const ServiceDetailPage = () => {
         }}
       />
 
-      {/* Navigation Arrows (Sidebar) */}
-      {service.prevSlug && (
-        <Link
-          to={`/servicos/${service.prevSlug}`}
-          className="fixed left-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-primary hover:text-primary-foreground p-3 rounded-full shadow-lg border border-border backdrop-blur-sm transition-all z-50 hidden lg:flex items-center justify-center group text-foreground"
-          title="Serviço Anterior"
-        >
-          <ChevronLeft className="w-8 h-8 group-hover:-translate-x-0.5 transition-transform" />
-        </Link>
-      )}
-      {service.nextSlug && (
-        <Link
-          to={`/servicos/${service.nextSlug}`}
-          className="fixed right-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-primary hover:text-primary-foreground p-3 rounded-full shadow-lg border border-border backdrop-blur-sm transition-all z-50 hidden lg:flex items-center justify-center group text-foreground"
-          title="Próximo Serviço"
-        >
-          <ChevronRight className="w-8 h-8 group-hover:translate-x-0.5 transition-transform" />
-        </Link>
-      )}
+      <div className="bg-card p-6 md:p-8 rounded-2xl shadow-2xl border border-border">
+        {/* Setas laterais (desktop) */}
+        {service.prevSlug && (
+          <Link
+            to={`/servicos/${service.prevSlug}`}
+            className={`${sideArrowClass} left-4`}
+            aria-label="Serviço anterior"
+            title="Serviço anterior"
+          >
+            <ChevronLeft className="w-8 h-8 group-hover:-translate-x-0.5 transition-transform" aria-hidden="true" />
+          </Link>
+        )}
+        {service.nextSlug && (
+          <Link
+            to={`/servicos/${service.nextSlug}`}
+            className={`${sideArrowClass} right-4`}
+            aria-label="Próximo serviço"
+            title="Próximo serviço"
+          >
+            <ChevronRight className="w-8 h-8 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
+          </Link>
+        )}
 
-      {/* Breadcrumb & Navigation */}
-      <div className="flex justify-between items-center mb-6 lg:mb-8">
-        <nav className="text-sm text-muted-foreground">
-          <Link to="/" className="hover:text-primary transition-colors">Início</Link>
-          <span className="mx-2 text-border">&gt;</span>
-          <Link to="/servicos" className="hover:text-primary transition-colors">Serviços</Link>
-          <span className="mx-2 text-border">&gt;</span>
-          <span className="text-primary font-medium">{service.name}</span>
-        </nav>
-        
-        <div className="flex lg:hidden gap-3">
-           {service.prevSlug && (
-             <Link to={`/servicos/${service.prevSlug}`} className="p-2.5 bg-muted/80 backdrop-blur-sm rounded-full border border-border shadow-sm active:scale-95 transition-all">
-               <ChevronLeft className="w-6 h-6 text-primary" />
-             </Link>
-           )}
-           {service.nextSlug && (
-             <Link to={`/servicos/${service.nextSlug}`} className="p-2.5 bg-muted/80 backdrop-blur-sm rounded-full border border-border shadow-sm active:scale-95 transition-all">
-               <ChevronRight className="w-6 h-6 text-primary" />
-             </Link>
-           )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative mb-12">
-        {/* Image Section */}
-        <div className="relative group">
-          <img
-            src={service.imageUrl || `https://placehold.co/800x600/1f2937/ffffff?text=${service.name.replace(/\s/g, '+')}`}
-            alt={service.name}
-            className="w-full h-auto rounded-xl object-cover shadow-lg border border-border"
-          />
-          <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="lg" isService={true} />
-                        <CompareButton equipment={service} size="lg" itemType="service" />
+        {/* Setas compactas (celular/tablet) */}
+        {(service.prevSlug || service.nextSlug) && (
+          <div className="flex lg:hidden justify-end gap-3 mb-6">
+            {service.prevSlug && (
+              <Link to={`/servicos/${service.prevSlug}`} className={compactArrowClass} aria-label="Serviço anterior">
+                <ChevronLeft className="w-6 h-6" aria-hidden="true" />
+              </Link>
+            )}
+            {service.nextSlug && (
+              <Link to={`/servicos/${service.nextSlug}`} className={compactArrowClass} aria-label="Próximo serviço">
+                <ChevronRight className="w-6 h-6" aria-hidden="true" />
+              </Link>
+            )}
           </div>
-        </div>
+        )}
 
-        {/* Info Section */}
-        <div className="flex flex-col">
-          <div className="flex justify-between items-start mb-4">
-            <h1 ref={titleRef} className="text-4xl lg:text-5xl font-bold text-primary heading-elegant leading-tight">
-              {service.name}
-            </h1>
-            <div className="hidden lg:flex space-x-2">
-                <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="lg" isService={true} />
-                                <CompareButton equipment={service} size="lg" itemType="service" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative mb-12">
+          {/* Imagem */}
+          <div className="relative">
+            {service.imageUrl ? (
+              <OptimizedImage
+                src={service.imageUrl}
+                alt={service.name}
+                priority={true}
+                className="w-full h-auto rounded-xl object-cover shadow-lg border border-border"
+              />
+            ) : (
+              <div className="w-full aspect-[4/3] rounded-xl border border-border bg-muted flex items-center justify-center" role="img" aria-label={`${service.name} (sem foto)`}>
+                <User className="w-16 h-16 text-muted-foreground" aria-hidden="true" />
+              </div>
+            )}
+            {/* Ações sempre visíveis abaixo de lg (antes só no hover); no desktop ficam ao lado do título. */}
+            <div className="absolute top-4 right-4 flex lg:hidden flex-col gap-2">
+              <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="lg" isService={true} />
+              <CompareButton equipment={service} size="lg" itemType="service" />
             </div>
           </div>
-          
-          <p className="text-muted-foreground text-lg mb-8 leading-relaxed whitespace-pre-wrap">
-            {service.description}
-          </p>
 
-          <div className="bg-muted/30 p-6 rounded-2xl mb-8 border border-border shadow-inner">
-            <div className="flex justify-between items-baseline mb-4">
-              <span className="text-muted-foreground font-semibold">Valor Estimado</span>
-              <div className="text-right">
-                <div className="text-4xl font-black text-foreground">
-                    {formatPrice(service.price)}
-                    <span className="text-sm font-normal ml-1">/ serviço</span>
-                </div>
+          {/* Informações */}
+          <div className="flex flex-col">
+            <div className="flex justify-between items-start gap-4 mb-4">
+              <h1 className="text-4xl lg:text-5xl font-bold text-primary leading-tight">
+                {service.name}
+              </h1>
+              <div className="hidden lg:flex space-x-2">
+                <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="lg" isService={true} />
+                <CompareButton equipment={service} size="lg" itemType="service" />
               </div>
             </div>
-            
-            <div className="flex justify-between items-center mb-2">
-                <span className="text-muted-foreground flex items-center gap-2"><Clock className="w-4 h-4" /> Duração</span>
-                <span className="font-bold">
-                    {service.duration ? `${(service.duration / 60).toFixed(1).replace('.0', '')}h` : 'A combinar'}
+
+            <p className="text-muted-foreground text-lg mb-8 leading-relaxed whitespace-pre-wrap">
+              {service.description}
+            </p>
+
+            <div className="bg-muted/30 p-6 rounded-2xl mb-8 border border-border shadow-inner">
+              <div className="flex flex-wrap justify-between items-baseline gap-2 mb-4">
+                <span className="text-muted-foreground font-semibold">Valor Estimado</span>
+                <div className="text-right">
+                  <div className="text-4xl font-black text-foreground">
+                    {formatPrice(service.price)}
+                    <span className="text-sm font-normal ml-1">/ serviço</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-muted-foreground flex items-center gap-2"><Clock className="w-4 h-4" aria-hidden="true" /> Duração</span>
+                <span className="font-bold text-foreground">
+                  {service.duration ? `${(service.duration / 60).toFixed(1).replace('.0', '')}h` : 'A combinar'}
                 </span>
+              </div>
+
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Status:</span>
+                <Badge variant={status.variant} size="lg">{status.label}</Badge>
+              </div>
             </div>
 
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">Status:</span>
-              <span className={`font-bold ${
-                service.status === 'MAINTENANCE' ? 'text-orange-500' : 
-                service.status === 'COMING_SOON' ? 'text-blue-500' : 
-                'text-success'
-              }`}>
-                {service.status === 'MAINTENANCE' ? 'Em Manutenção' : 
-                 service.status === 'COMING_SOON' ? 'Em Breve' : 
-                 'Disponível'}
-              </span>
-            </div>
+            <Button
+              size="xl"
+              fullWidth
+              onClick={handleAddToCart}
+              isLoading={adding}
+              disabled={service.status === 'MAINTENANCE' || isAlreadyInCart}
+            >
+              {adding ? 'Adicionando...' : (isAlreadyInCart ? 'Já no orçamento' : 'Adicionar ao orçamento')}
+            </Button>
           </div>
-
-          <button
-            onClick={handleAddToCart}
-            disabled={adding || service.status === 'MAINTENANCE' || isAlreadyInCart}
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-black py-5 px-8 rounded-2xl transition-all duration-300 transform shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 text-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-          >
-            {adding ? 'ADICIONANDO...' : (isAlreadyInCart ? 'JÁ NO ORÇAMENTO' : 'ADICIONAR AO ORÇAMENTO')}
-          </button>
         </div>
+
+        {/* Benefícios */}
+        <TrustBenefits
+          items={[
+            { icon: User, iconColor: 'success', title: 'Equipe Profissional', description: 'Técnicos especializados e experientes para garantir o sucesso absoluto do seu evento.' },
+            { icon: Shield, iconColor: 'info', title: 'Garantia de Qualidade', description: 'Comprometimento total com a entrega do serviço conforme o planejado.' },
+            { icon: Zap, iconColor: 'primary', title: 'Suporte Integrado', description: 'Serviços pensados para trabalhar em harmonia perfeita com nossos equipamentos.' },
+          ]}
+        />
+
+        {/* Recomendações */}
+        {similarRecommendations.recommendations.length > 0 && (
+          <div className="mt-12 pt-12 border-t border-border">
+            <RecommendationSection
+              type="similar"
+              title="Serviços Similares"
+              items={similarRecommendations.recommendations}
+              maxItems={4}
+              loading={similarRecommendations.loading}
+              viewAllLink="/servicos"
+              viewAllText="Ver Mais Serviços"
+              columns={{ sm: 1, md: 2, lg: 4 }}
+            />
+          </div>
+        )}
+
+        {frequentlyBoughtRecommendations.recommendations.length > 0 && (
+          <div className="mt-8">
+            <RecommendationSection
+              type="frequently-bought"
+              title="Geralmente Contratados Juntos"
+              items={frequentlyBoughtRecommendations.recommendations}
+              maxItems={4}
+              loading={frequentlyBoughtRecommendations.loading}
+              viewAllLink="/servicos"
+              viewAllText="Explorar Mais"
+              columns={{ sm: 1, md: 2, lg: 4 }}
+            />
+          </div>
+        )}
       </div>
-
-      {/* Benefits Section (Premium styling) */}
-      <TrustBenefits
-        items={[
-          { icon: User, iconColor: 'success', title: 'Equipe Profissional', description: 'Técnicos especializados e experientes para garantir o sucesso absoluto do seu evento.' },
-          { icon: Shield, iconColor: 'blue-500', title: 'Garantia de Qualidade', description: 'Comprometimento total com a entrega do serviço conforme o planejado.' },
-          { icon: Zap, iconColor: 'primary', title: 'Suporte Integrado', description: 'Serviços pensados para trabalhar em harmonia perfeita com nossos equipamentos.' },
-        ]}
-      />
-
-      {/* Recommendations */}
-      {similarRecommendations.recommendations.length > 0 && (
-        <div className="mt-12 pt-12 border-t border-border">
-          <RecommendationSection
-            type="similar"
-            title="Serviços Similares"
-            items={similarRecommendations.recommendations}
-            maxItems={4}
-            loading={similarRecommendations.loading}
-            viewAllLink="/servicos"
-            viewAllText="Ver Mais Serviços"
-            columns={{ sm: 1, md: 2, lg: 4 }}
-          />
-        </div>
-      )}
-
-      {frequentlyBoughtRecommendations.recommendations.length > 0 && (
-        <div className="mt-8">
-          <RecommendationSection
-            type="frequently-bought"
-            title="Geralmente Contratados Juntos"
-            items={frequentlyBoughtRecommendations.recommendations}
-            maxItems={4}
-            loading={frequentlyBoughtRecommendations.loading}
-            viewAllLink="/servicos"
-            viewAllText="Explorar Mais"
-            columns={{ sm: 1, md: 2, lg: 4 }}
-          />
-        </div>
-      )}
-    </div>
+    </PageLayout>
   );
 };
 
 export default ServiceDetailPage;
-

@@ -5,6 +5,7 @@ import { Alert } from '../components/ui/Alert';
 import { ConfirmModal } from '../components/modals/ConfirmModal';
 import { apiFetch } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { LEGAL_SUPPORT_EMAIL } from '../data/site';
 
 function downloadJson(data: unknown, filename: string) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -54,16 +55,16 @@ export const LGPDPage: React.FC = () => {
   return (
     <PageLayout title="LGPD" description="Informações sobre tratamento de dados">
       <div className="max-w-4xl mx-auto bg-card rounded-xl p-8 border border-border space-y-6">
+        {/* Achados: havia um 2º <h1> "LGPD" (o PageLayout já renderiza o título) e um parágrafo de
+            enchimento ("melhores práticas observadas em grandes empresas") — removidos. */}
         <div>
-          <h1 className="text-2xl font-bold mb-4">LGPD</h1>
           <p className="text-muted-foreground">
             Informamos como tratamos dados pessoais, direitos dos titulares e canais de contato para solicitações.
             Para dúvidas fora do que pode ser feito diretamente aqui, envie email para{' '}
-            <strong>suporte@xproducoeseeventos.com.br</strong>.
-          </p>
-          <p className="text-muted-foreground mt-4">
-            Nossa abordagem se inspira nas melhores práticas de privacidade observadas em grandes empresas:
-            minimizamos dados, auditamos acessos e oferecemos caminhos claros para solicitações.
+            <a href={`mailto:${LEGAL_SUPPORT_EMAIL}`} className="font-semibold text-primary hover:underline underline-offset-4 break-all">
+              {LEGAL_SUPPORT_EMAIL}
+            </a>
+            .
           </p>
         </div>
 
@@ -77,7 +78,7 @@ export const LGPDPage: React.FC = () => {
 
         {isAuthenticated ? (
           <div className="border-t border-border pt-6 space-y-4">
-            <h2 className="text-lg font-semibold">Exercer seus direitos</h2>
+            <h2 className="text-lg font-semibold text-foreground">Exercer seus direitos</h2>
 
             <div className="flex flex-col sm:flex-row gap-3">
               <Button onClick={handleExport} isLoading={isExporting} variant="outline">

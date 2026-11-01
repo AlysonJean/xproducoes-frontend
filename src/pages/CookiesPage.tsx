@@ -18,8 +18,8 @@ export const CookiesPage: React.FC = () => {
 
   return (
     <PageLayout title="Política de Cookies" description="Como usamos cookies e tecnologias semelhantes">
+      {/* Achado: havia um 2º <h1> "Política de Cookies" (o PageLayout já renderiza o título). */}
       <div className="max-w-4xl mx-auto bg-card rounded-xl p-8 border border-border space-y-6">
-        <h1 className="text-2xl font-bold">Política de Cookies</h1>
 
         <section>
           <h2 className="text-lg font-semibold text-foreground mb-2">Cookies essenciais</h2>
@@ -39,9 +39,9 @@ export const CookiesPage: React.FC = () => {
           </p>
         </section>
 
-        <section className="rounded-lg border border-border bg-surface p-4">
+        <section className="rounded-lg border border-border bg-muted p-4">
           <p className="text-sm text-muted-foreground mb-3">
-            Sua preferência atual de cookies de análise: <strong>{statusLabel[consent]}</strong>.
+            Sua preferência atual de cookies de análise: <strong className="text-foreground">{statusLabel[consent]}</strong>.
           </p>
           <Button variant="outline" size="sm" onClick={reset}>
             Gerenciar preferências
