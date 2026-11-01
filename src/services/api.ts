@@ -279,6 +279,23 @@ export const apiFetch = async <T = unknown>(
     throw lastError || new Error('Network request failed');
   }
 
+  // Achado (produção): o cookie CSRF do backend expira após 1h sem uso e a próxima requisição
+  // recebe outro token, mas `csrfToken` fica guardado aqui para sempre — toda gravação voltava
+  // 403 "CSRF token validation failed" até recarregar a página. O interceptor do axios já
+  // renovava; o apiFetch não. Renova o token e tenta de novo, uma vez (o 403 do CSRF acontece
+  // antes de qualquer gravação, então repetir é seguro).
+  const method = (config.method || 'GET').toUpperCase();
+  if (response.status === 403 && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    const body = await response.clone().text().catch(() => '');
+    if (/csrf/i.test(body)) {
+      csrfToken = null;
+      const fresh = await getCsrfToken();
+      if (fresh) {
+        response = await makeRequest(url, { ...config, headers: { ...config.headers, 'X-CSRF-Token': fresh } });
+      }
+    }
+  }
+
   if (!response.ok) {
     // Tentar extrair mensagem detalhada do servidor
     let message = `HTTP ${response.status}: ${response.statusText}`;
