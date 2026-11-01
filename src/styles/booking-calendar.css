@@ -441,3 +441,10 @@
   max-height: 100%;
   overflow: hidden;
 }
+
+/* Dias de fora do mês: o react-big-calendar usa #999 (2,85:1 no branco — reprovado na medição de
+   contraste de nov/2026). O cinza de texto secundário do tema passa nos dois temas. */
+.rbc-off-range,
+.rbc-off-range .rbc-button-link {
+  color: hsl(var(--muted-foreground));
+}
