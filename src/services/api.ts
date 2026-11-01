@@ -446,8 +446,10 @@ export const authAPI = {
   getFavorites: () => api.get('/user/favorites'),
   getReferral: () => api.get('/user/referral'),
   updateProfile: (data: Record<string, unknown>) => api.put('/auth/profile', data),
+  // Achado (auditoria): apontava para /auth/change-password, rota inexistente — a troca de senha do
+  // painel do colaborador falhava sempre. A rota real é POST /users/change-password.
   changePassword: (currentPassword: string, newPassword: string) =>
-    api.post('/auth/change-password', { currentPassword, newPassword }),
+    api.post('/users/change-password', { currentPassword, newPassword }),
   requestPasswordReset: (email: string) => api.post('/auth/request-reset', { email }),
   resetPassword: (token: string, newPassword: string) =>
     api.post('/auth/reset-password', { token, newPassword }),
