@@ -171,6 +171,8 @@ export interface Kit {
   equipments?: Equipment[]; // Deprecated, kept for compatibility check
   experienceLevels?: KitExperienceLevel[];
   imageUrl?: string;
+  /** Fotos extras do kit (Kit.images no backend). */
+  images?: string[];
   description?: string;
   price?: number;
   hourlyRate?: number;

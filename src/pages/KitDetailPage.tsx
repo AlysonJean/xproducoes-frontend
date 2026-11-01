@@ -19,6 +19,8 @@ import { RecommendationSection } from '../components/ui/RecommendationSection';
 import { useRecommendations } from '../hooks/useRecommendations';
 import { PageLayout, PageError } from '../components/layouts/PageLayout';
 import { OptimizedImage } from '@/components/ui/OptimizedImage';
+import { ZoomableProductPhoto } from '@/components/ui/ZoomableProductPhoto';
+import { AskOnWhatsAppButton } from '@/components/ui/AskOnWhatsAppButton';
 import { Badge, Button, buttonVariants } from '../components/ui/StandardComponents';
 
 const LIST_CRUMB = { label: 'Kits', path: '/kits' };
@@ -247,12 +249,7 @@ export const KitDetailPage = () => {
           {/* Imagem */}
           <div className="relative">
             {kit.imageUrl ? (
-              <OptimizedImage
-                src={kit.imageUrl}
-                alt={kit.name}
-                priority={true}
-                className="w-full h-auto rounded-xl object-cover shadow-lg border border-border"
-              />
+              <ZoomableProductPhoto src={kit.imageUrl} alt={kit.name} extraImages={kit.images} />
             ) : (
               <div className="w-full aspect-[4/3] rounded-xl border border-border bg-muted flex items-center justify-center" role="img" aria-label={`${kit.name} (sem foto)`}>
                 <Package className="w-16 h-16 text-muted-foreground" aria-hidden="true" />
@@ -330,6 +327,9 @@ export const KitDetailPage = () => {
             >
               {adding ? 'Adicionando...' : (isKitInCart ? 'Kit já no orçamento' : 'Adicionar combo ao orçamento')}
             </Button>
+            <div className="mt-3">
+              <AskOnWhatsAppButton kind="Kit" itemName={kit.name} />
+            </div>
           </div>
         </div>
 

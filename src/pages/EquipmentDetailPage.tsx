@@ -16,7 +16,8 @@ import { useNotifications } from '../contexts/NotificationContext';
 import { generateProductSchema } from '../utils/schemaGenerator';
 import { FavoriteButton } from '../components/ui/FavoriteButton';
 import CompareButton from '../components/ui/CompareButton';
-import { OptimizedImage } from '@/components/ui/OptimizedImage';
+import { ZoomableProductPhoto } from '@/components/ui/ZoomableProductPhoto';
+import { AskOnWhatsAppButton } from '@/components/ui/AskOnWhatsAppButton';
 import { PageLayout, PageError } from '../components/layouts/PageLayout';
 import { Badge, Button, buttonVariants } from '../components/ui/StandardComponents';
 
@@ -208,12 +209,7 @@ export const EquipmentDetailPage = () => {
           {/* Imagem */}
           <div className="relative">
             {equipment.imageUrl ? (
-              <OptimizedImage
-                src={equipment.imageUrl}
-                alt={equipment.name}
-                priority={true}
-                className="w-full h-auto rounded-xl object-cover shadow-lg border border-border"
-              />
+              <ZoomableProductPhoto src={equipment.imageUrl} alt={equipment.name} />
             ) : (
               <div className="w-full aspect-[4/3] rounded-xl border border-border bg-muted flex items-center justify-center" role="img" aria-label={`${equipment.name} (sem foto)`}>
                 <Package className="w-16 h-16 text-muted-foreground" aria-hidden="true" />
@@ -269,6 +265,9 @@ export const EquipmentDetailPage = () => {
             >
               {adding ? 'Adicionando...' : (isAlreadyInCart ? 'Já no orçamento' : 'Adicionar ao orçamento')}
             </Button>
+            <div className="mt-3">
+              <AskOnWhatsAppButton kind="Equipamento" itemName={equipment.name} />
+            </div>
           </div>
         </div>
 
