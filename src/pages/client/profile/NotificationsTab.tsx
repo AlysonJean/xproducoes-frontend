@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { Card, Button, Checkbox } from '../../../components/ui/StandardComponents';
 import { ProfileNotificationPreferences } from '../../../types/types';
 
@@ -24,12 +24,14 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({
     setNotificationPreferences(prev => ({ ...prev, [`${id}${type}`]: checked }));
   };
 
+  // Achado (auditoria): "Monitoramento de Carga", "Alertas de estoque" e "Segurança e Operação
+  // Técnica" prometiam avisos que o sistema não envia (não há rastreio de entrega, alerta de
+  // estoque nem envio de manuais). Fica só o que o servidor consulta: Status de Reserva.
   const sections = [
     {
-      title: 'Movimentação e Logística',
+      title: 'Reservas',
       items: [
-        { id: 'bookingUpdates', label: 'Status de Reserva', sub: 'Confirmações e alterações' },
-        { id: 'logisticsUpdates', label: 'Monitoramento de Carga', sub: 'Rastreio de motorista e montagem' }
+        { id: 'bookingUpdates', label: 'Status de Reserva', sub: 'Recebimento do pedido, confirmação e lembrete da véspera' }
       ]
     }
   ];
@@ -69,50 +71,6 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({
             </div>
           </div>
         ))}
-
-        {/* Seção 2: Alertas de Inventário */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Disponibilidade</h4>
-          <fieldset className="min-w-0 p-5 border rounded-lg bg-primary/5 border-primary/20">
-            <legend className="float-left w-full font-medium text-foreground">Alertas de estoque</legend>
-            <div className="clear-left flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex-1">
-                <p className="text-sm text-muted-foreground mt-1">
-                  Avisar quando equipamentos em falta retornarem ou novos kits forem lançados.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-6">
-                <Checkbox
-                  label={CHANNEL_LABEL.Email}
-                  checked={notificationPreferences.inventoryAlertsEmail}
-                  onChange={(e) => setNotificationPreferences(prev => ({ ...prev, inventoryAlertsEmail: e.target.checked }))}
-                />
-                <Checkbox
-                  label={CHANNEL_LABEL.Push}
-                  checked={notificationPreferences.inventoryAlertsPush}
-                  onChange={(e) => setNotificationPreferences(prev => ({ ...prev, inventoryAlertsPush: e.target.checked }))}
-                />
-              </div>
-            </div>
-          </fieldset>
-        </div>
-
-        {/* Seção 3: Suporte Técnico */}
-        <div className="p-4 border rounded-lg border-warning/30 bg-warning/5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center space-x-3">
-            <Shield className="h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
-            <div>
-              <p className="font-semibold text-sm text-foreground">Segurança e Operação Técnica</p>
-              <p className="text-sm text-muted-foreground">Manuais, recalls e avisos críticos de uso</p>
-            </div>
-          </div>
-          {/* Antes sem rótulo: o leitor de tela anunciava só "caixa de seleção". */}
-          <Checkbox
-            label="Receber por e-mail"
-            checked={notificationPreferences.technicalUpdatesEmail}
-            onChange={(e) => setNotificationPreferences(prev => ({ ...prev, technicalUpdatesEmail: e.target.checked }))}
-          />
-        </div>
 
         <div className="pt-6 border-t border-border flex justify-end">
           <Button
