@@ -2,7 +2,8 @@
 // linhas para POST /admin/bookings/import-history. Regras combinadas com o usuário:
 // - coluna "Importar" = Não → linha ignorada;
 // - sem horário → 20:00–23:00; só início → término 3h depois; término ≤ início → dia seguinte;
-// - sem valor → "Valor sugerido" com a nota "valor estimado"; sem os dois → R$ 0;
+// - sem valor → "Valor sugerido" com a nota "valor estimado"; sem os dois → R$ 600 (média
+//   informada pelo usuário), também anotado como estimado;
 // - Pago / Parcial / Pendente → situação do pagamento; Dúvida, Problema, Não marcado → só nota.
 // Horário de Brasília fixo (-03:00): o Brasil não tem horário de verão desde 2019.
 
@@ -36,6 +37,7 @@ export const HISTORY_SHEET = 'Eventos';
 export const DEFAULT_START = '20:00';
 export const DEFAULT_END = '23:00';
 const DEFAULT_DURATION_MIN = 180;
+export const DEFAULT_PRICE = 600;
 const OFFSET = '-03:00';
 
 const PAYMENT: Record<string, HistoryImportRow['paymentStatus']> = {
@@ -156,12 +158,12 @@ export function parseHistoryRows(rows: HistorySheetRow[]): { rows: ParsedHistory
     }
 
     // Valor
-    let totalPrice = value ?? 0;
+    let totalPrice = value ?? DEFAULT_PRICE;
     if (value === null && suggested !== null) {
       totalPrice = suggested;
       notesForAdmin.push(`Valor estimado: ${brl(suggested)} — não anotado na agenda; sugestão pelo valor mais comum do cliente nos 12 meses anteriores. Confirmar.`);
     } else if (value === null) {
-      notesForAdmin.push('Valor não anotado na agenda.');
+      notesForAdmin.push(`Valor estimado: ${brl(DEFAULT_PRICE)} — não anotado na agenda; valor médio. Confirmar.`);
     }
 
     // Pagamento

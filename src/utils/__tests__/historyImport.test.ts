@@ -3,7 +3,8 @@ import { parseHistoryRows, parseSheetDate, parseSheetMoney, parseSheetTime } fro
 
 // Conversão da aba "Eventos" (planilha de revisão das agendas 2022–2026) nas linhas da
 // importação. Regras combinadas com o usuário: sem horário → 20h–23h; só início → +3h; sem
-// valor → sugestão marcada como estimada; Pago/Parcial/Pendente → situação do pagamento.
+// valor → sugestão marcada como estimada (sem sugestão → R$ 600, a média); Pago/Parcial/Pendente
+// → situação do pagamento.
 const base = {
   Importar: 'Sim', 'Código': 'HIST-20250308-01', Data: '08/03/2025', 'Início': '', 'Término': '', Montagem: '',
   Cliente: 'Resenha do Morro', Evento: 'Yago Resenha do Morro', Local: '', Detalhes: '',
@@ -43,15 +44,15 @@ describe('parseHistoryRows', () => {
     });
   });
 
-  it('sem valor → usa a sugestão e anota "Valor estimado"; sem os dois → R$ 0 com nota', () => {
+  it('sem valor → usa a sugestão e anota "Valor estimado"; sem os dois → R$ 600 (média) com nota', () => {
     const { rows } = parseHistoryRows([
       { ...base, 'Valor (R$)': '', 'Valor sugerido (R$)': 450 },
       { ...base, 'Código': 'HIST-20250308-02', 'Valor (R$)': '', 'Valor sugerido (R$)': '' },
     ]);
     expect(rows[0].row?.totalPrice).toBe(450);
     expect(rows[0].row?.internalNotes).toMatch(/Valor estimado: R\$\s450,00 .*Confirmar\./);
-    expect(rows[1].row?.totalPrice).toBe(0);
-    expect(rows[1].row?.internalNotes).toContain('Valor não anotado na agenda.');
+    expect(rows[1].row?.totalPrice).toBe(600);
+    expect(rows[1].row?.internalNotes).toMatch(/Valor estimado: R\$\s600,00 .*valor médio\. Confirmar\./);
   });
 
   it('Dúvida / Não marcado não viram situação de pagamento — ficam na nota', () => {
