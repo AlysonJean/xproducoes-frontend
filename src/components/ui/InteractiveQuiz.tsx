@@ -158,7 +158,7 @@ export const InteractiveQuiz = () => {
             </button>
           ) : <div className="w-16" />}
 
-          <div className="px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-black uppercase tracking-[0.2em] text-primary animate-pulse">
+          <div className="px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-black uppercase tracking-[0.2em] text-primary">
             Passo {currentStep === 'event_type' ? '01' : currentStep === 'audience_size' ? '02' : currentStep === 'environment' ? '03' : 'Concluído'} / 03
           </div>
           

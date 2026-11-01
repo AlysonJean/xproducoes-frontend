@@ -182,7 +182,7 @@ export const ContactSubmissionsListPage = () => {
                 <div className="flex items-baseline gap-2">
                   <p className="text-2xl font-black text-foreground">{stats.pending}</p>
                   {stats.pending > 0 && (
-                    <span className="text-xs text-warning font-bold flex items-center animate-pulse">
+                    <span className="text-xs text-warning font-bold flex items-center">
                       <AlertCircle className="h-3 w-3 mr-1" /> Requer atenção
                     </span>
                   )}
