@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 import { logger } from '../../utils/logger';
+import { AuthLayout } from '../../components/layouts/AuthLayout';
 
 // Page opened by backend redirect with fragment #token=...
 // ✅ REFACTORED: No longer storing token in localStorage
@@ -31,5 +33,14 @@ export default function OAuthComplete() {
     }
   }, []);
 
-  return <div>Processando autenticação...</div>;
+  return (
+    <AuthLayout
+      icon={<Loader2 className="h-6 w-6 animate-spin" />}
+      title="Processando autenticação..."
+    >
+      <p className="text-center text-sm text-muted-foreground" role="status">
+        Só um instante.
+      </p>
+    </AuthLayout>
+  );
 }

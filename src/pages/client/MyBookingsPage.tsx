@@ -1,14 +1,16 @@
 // src/pages/MyBookingsPage.tsx
 
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ClipboardList } from 'lucide-react';
 import { apiFetch } from '@/services/api';
 import { asArray } from '@/utils/normalize';
 import type { SafeBooking } from '@/types/types';
 import { BookingListItem } from '@/components/ui/BookingListItem';
-import { Link } from 'react-router-dom';
 import { ReviewModal } from '@/components/modals/ReviewModal';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { Card, buttonVariants } from '@/components/ui/StandardComponents';
+import { ClientPage, ClientPageError, ClientPageLoading } from '@/components/client/ClientPage';
 
 export const MyBookingsPage = () => {
   const [bookings, setBookings] = useState<SafeBooking[]>([]);
@@ -18,11 +20,12 @@ export const MyBookingsPage = () => {
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
 
-  const fetchMyBookings = async () => {
+  const fetchMyBookings = useCallback(async () => {
     try {
       setLoading(true);
-  const data = await apiFetch('/bookings/user');
-  setBookings(asArray<SafeBooking>(data));
+      setError(null);
+      const data = await apiFetch('/bookings/user');
+      setBookings(asArray<SafeBooking>(data));
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -32,66 +35,53 @@ export const MyBookingsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchMyBookings();
-  }, []);
+  }, [fetchMyBookings]);
 
   const handleReviewSuccess = async () => {
-    addNotification({ type: 'success', title: 'Obrigado!', message: 'A sua avaliação foi enviada com sucesso.' });
+    addNotification({ type: 'success', title: 'Obrigado!', message: 'Sua avaliação foi enviada com sucesso.' });
     setReviewBookingId(null);
     await fetchMyBookings();
   };
 
-  if (loading)
-    return (
-      <div className="text-center text-xl text-foreground">
-        A carregar as suas reservas...
-      </div>
-    );
-  if (error)
-    return (
-      <div className="text-center text-destructive bg-destructive/10 p-4 rounded-md border border-destructive">
-        {error}
-      </div>
-    );
-
   return (
-    <>
-      <div className="max-w-4xl mx-auto">
-  <h1 className="text-3xl font-bold mb-6 text-foreground">Minhas Reservas</h1>
-    {Array.isArray(bookings) && bookings.length > 0 ? (
-          <div className="space-y-4">
-      {bookings.map((booking) => (
-              <div key={booking.id}>
-                <BookingListItem
-                  booking={booking}
-                  onReviewClick={(id) => setReviewBookingId(id)}
-                  onViewDetails={(id) => {
-                    navigate(`/cliente/reservas/${id}`);
-                  }}
-                />
-              </div>
-            ))}
+    <ClientPage width="4xl" title="Minhas Reservas">
+      {loading ? (
+        <ClientPageLoading label="Carregando suas reservas..." />
+      ) : error ? (
+        <ClientPageError message={error} onRetry={fetchMyBookings} />
+      ) : bookings.length > 0 ? (
+        <div className="space-y-4">
+          {bookings.map((booking) => (
+            <BookingListItem
+              key={booking.id}
+              booking={booking}
+              onReviewClick={(id) => setReviewBookingId(id)}
+              onViewDetails={(id) => {
+                navigate(`/cliente/reservas/${id}`);
+              }}
+            />
+          ))}
+        </div>
+      ) : (
+        <Card className="p-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground" aria-hidden="true">
+            <ClipboardList className="h-7 w-7" />
           </div>
-        ) : (
-          <div className="text-center bg-card p-8 rounded-lg border border-border">
-            <h2 className="text-2xl font-bold mb-4 text-foreground">
-              Nenhuma reserva encontrada
-            </h2>
-            <p className="text-muted-foreground mb-6">
-              Parece que ainda não fez nenhuma reserva.
-            </p>
-            <Link
-              to="/"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-2 px-6 rounded-lg"
-            >
-              Ver Equipamentos
-            </Link>
-          </div>
-        )}
-      </div>
+          <h2 className="mb-2 text-xl font-bold text-foreground">
+            Nenhuma reserva encontrada
+          </h2>
+          <p className="mb-6 text-muted-foreground">
+            Parece que você ainda não fez nenhuma reserva.
+          </p>
+          <Link to="/" className={buttonVariants()}>
+            Ver Equipamentos
+          </Link>
+        </Card>
+      )}
       {reviewBookingId && (
         <ReviewModal
           bookingId={reviewBookingId}
@@ -99,6 +89,6 @@ export const MyBookingsPage = () => {
           onSuccess={handleReviewSuccess}
         />
       )}
-    </>
+    </ClientPage>
   );
 };

@@ -85,7 +85,7 @@ test.describe('Sanity Check - Auth Flow', () => {
     await page.goto('/login');
     
     // Check "Criar conta" link
-    const registerLink = page.getByRole('link', { name: /Registe-se/i });
+    const registerLink = page.getByRole('link', { name: /Cadastre-se/i });
     await expect(registerLink).toBeVisible();
     await expect(registerLink).toHaveAttribute('href', '/cadastro');
 

@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '@/services/api';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Card } from '@/components/ui/StandardComponents';
-import { Phone, User, Globe, MapPin } from 'lucide-react';
-import { BrandLoader } from '@/components/ui/BrandLoader';
+import { Alert, Button, Form, Input } from '@/components/ui/StandardComponents';
+import { AuthLayout } from '@/components/layouts/AuthLayout';
+import { Phone, Globe, MapPin, Building2, UserCheck } from 'lucide-react';
 
 const profileSchema = z.object({
   phone: z.string().min(10, 'Telefone inválido'),
@@ -24,6 +22,7 @@ export const CompleteProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const {
     register,
@@ -41,6 +40,7 @@ export const CompleteProfilePage: React.FC = () => {
 
   const onSubmit = async (data: ProfileFormData) => {
     setLoading(true);
+    setError(null);
     try {
       await apiFetch('/user/profile', {
         method: 'PUT',
@@ -54,11 +54,13 @@ export const CompleteProfilePage: React.FC = () => {
       });
 
       navigate('/cliente/painel');
-    } catch (error) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Não foi possível salvar seus dados.';
+      setError(message);
       addNotification({
         type: 'error',
         title: 'Erro ao salvar',
-        message: error instanceof Error ? error.message : 'Não foi possível salvar seus dados.'
+        message
       });
     } finally {
       setLoading(false);
@@ -66,76 +68,64 @@ export const CompleteProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-lg">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Quase lá! 🚀</h1>
-          <p className="text-muted-foreground mt-2">
-            Complete seu cadastro para ter acesso total à plataforma.
-          </p>
-        </div>
+    <AuthLayout
+      icon={<UserCheck className="h-6 w-6" />}
+      title="Quase lá!"
+      subtitle="Complete seu cadastro para ter acesso total à plataforma."
+      footer={
+        <p className="text-xs">
+          Ao continuar, você concorda com nossos{' '}
+          <Link to="/termos" className="text-primary hover:underline">Termos de Serviço</Link>
+          {' '}e{' '}
+          <Link to="/privacidade" className="text-primary hover:underline">Política de Privacidade</Link>.
+        </p>
+      }
+    >
+      {error && <Alert variant="error">{error}</Alert>}
 
-        <Card className="p-8 shadow-xl border-primary/10">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Phone className="w-4 h-4 text-primary" /> Telefone / WhatsApp
-              </label>
-              <Input
-                {...register('phone')}
-                placeholder="(00) 00000-0000"
-                error={errors.phone?.message}
-              />
-            </div>
+      <Form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <Input
+          label="Telefone / WhatsApp"
+          type="tel"
+          autoComplete="tel"
+          leftIcon={<Phone className="h-4 w-4" />}
+          {...register('phone')}
+          placeholder="(00) 00000-0000"
+          error={errors.phone?.message}
+        />
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-primary" /> Localização (Cidade/Estado)
-              </label>
-              <Input
-                {...register('location')}
-                placeholder="Ex: Belo Horizonte, MG"
-                error={errors.location?.message}
-              />
-            </div>
+        <Input
+          label="Localização (cidade/estado)"
+          autoComplete="address-level2"
+          leftIcon={<MapPin className="h-4 w-4" />}
+          {...register('location')}
+          placeholder="Ex.: Belo Horizonte, MG"
+          error={errors.location?.message}
+        />
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <User className="w-4 h-4 text-primary" /> Empresa (Opcional)
-              </label>
-              <Input
-                {...register('companyName')}
-                placeholder="Nome da sua empresa ou marca"
-              />
-            </div>
+        <Input
+          label="Empresa (opcional)"
+          autoComplete="organization"
+          leftIcon={<Building2 className="h-4 w-4" />}
+          {...register('companyName')}
+          placeholder="Nome da sua empresa ou marca"
+        />
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Globe className="w-4 h-4 text-primary" /> Website / Redes Sociais (Opcional)
-              </label>
-              <Input
-                {...register('website')}
-                placeholder="https://seu-site.com.br"
-                error={errors.website?.message}
-              />
-            </div>
+        <Input
+          label="Site / redes sociais (opcional)"
+          inputMode="url"
+          autoComplete="url"
+          leftIcon={<Globe className="h-4 w-4" />}
+          {...register('website')}
+          placeholder="https://seu-site.com.br"
+          error={errors.website?.message}
+        />
 
-            <Button
-              type="submit"
-              variant="primary"
-              className="w-full py-6 text-lg"
-              disabled={loading}
-            >
-              {loading ? <BrandLoader size={24} /> : 'Concluir Cadastro'}
-            </Button>
-            
-            <p className="text-center text-xs text-muted-foreground mt-4">
-              Ao continuar, você concorda com nossos termos de uso e privacidade.
-            </p>
-          </form>
-        </Card>
-      </div>
-    </div>
+        <Button type="submit" fullWidth isLoading={loading}>
+          Concluir cadastro
+        </Button>
+      </Form>
+    </AuthLayout>
   );
 };
 

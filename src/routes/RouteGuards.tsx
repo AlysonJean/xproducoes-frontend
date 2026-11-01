@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getDashboardRoute } from '../utils/authUtils';
-import BrandLoader from '../components/ui/BrandLoader';
+import { PageLoadingSpinner } from '../components/ui/PageLoadingSpinner';
 
 // Extraído de App.tsx (achado: peso de bundle vazando pra home pública, ver
 // AdminRoutes.tsx/CollaboratorRoutes.tsx/ClientRoutes.tsx) para ser compartilhado pelos
@@ -14,8 +14,11 @@ export const ProtectedRoute: React.FC<{
 }> = ({ children, adminOnly = false, role }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
 
+  // Mesmo loader de página do Suspense das rotas (PageLoadingSpinner): inline, abaixo do header.
+  // Antes era `fullScreen size="xl"` cobrindo o header — 3 loaders diferentes em sequência ao abrir
+  // uma página da área do cliente (Suspense → guarda → página).
   if (isLoading) {
-    return <BrandLoader fullScreen size="xl" />;
+    return <PageLoadingSpinner />;
   }
 
   if (!isAuthenticated) {
@@ -51,11 +54,12 @@ export const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children
   const location = useLocation();
 
   if (isLoading) {
-    return <BrandLoader fullScreen size="xl" />;
+    return <PageLoadingSpinner />;
   }
 
-  // Só redireciona se estiver na página de login ou registro
-  if (isAuthenticated && user && (location.pathname === '/login' || location.pathname === '/register')) {
+  // Só redireciona se estiver na página de login ou de cadastro. Achado: comparava com '/register',
+  // mas a rota do cadastro é '/cadastro' — usuário já logado via o formulário de cadastro.
+  if (isAuthenticated && user && (location.pathname === '/login' || location.pathname === '/cadastro')) {
     const dashboardRoute = getDashboardRoute(user.role);
     return <Navigate to={dashboardRoute} replace />;
   }

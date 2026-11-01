@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Send, Loader2, MessageSquare } from 'lucide-react';
 import { collaboratorMessagesAPI } from '../../services/api';
 import { logger } from '../../utils/logger';
+import { Alert, Button, Card, Input } from '../ui/StandardComponents';
 
 interface ChatMessage {
   id: string;
@@ -22,6 +23,7 @@ export function BookingChatPanel({ bookingId, currentUserId }: { bookingId: stri
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const loadMessages = useCallback(async (id: string) => {
@@ -72,32 +74,45 @@ export function BookingChatPanel({ bookingId, currentUserId }: { bookingId: stri
     if (!chatId || !newMessage.trim() || sending) return;
     try {
       setSending(true);
+      setSendError(null);
       await collaboratorMessagesAPI.sendMessage(chatId, newMessage.trim());
       setNewMessage('');
       await loadMessages(chatId);
     } catch (err) {
       logger.error('Erro ao enviar mensagem', 'BookingChatPanel', err);
+      // Antes a falha era silenciosa: a mensagem ficava no campo sem explicação.
+      setSendError('Não foi possível enviar a mensagem. Tente novamente.');
     } finally {
       setSending(false);
     }
   };
 
   return (
-    <div className="bg-card rounded-xl p-6 border border-border">
+    <Card padding>
       <h2 className="text-xl font-semibold mb-4 text-foreground flex items-center gap-2">
-        <MessageSquare className="w-5 h-5 text-primary" />
+        <MessageSquare className="w-5 h-5 text-primary" aria-hidden="true" />
         Mensagens sobre esta reserva
       </h2>
 
       {loading ? (
-        <div className="flex justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        <div className="flex justify-center py-8" role="status">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" aria-hidden="true" />
+          <span className="sr-only">Carregando mensagens…</span>
         </div>
       ) : error ? (
-        <p className="text-sm text-destructive">{error}</p>
+        <Alert
+          variant="error"
+          action={
+            <Button size="sm" variant="outline" onClick={initChat}>
+              Tentar de novo
+            </Button>
+          }
+        >
+          <p className="text-sm">{error}</p>
+        </Alert>
       ) : (
         <>
-          <div className="space-y-3 max-h-80 overflow-y-auto mb-4 pr-1">
+          <div className="space-y-3 max-h-80 overflow-y-auto mb-4 pr-1" aria-live="polite">
             {messages.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">
                 Nenhuma mensagem ainda. Envie uma pergunta sobre seu evento para nossa equipe.
@@ -120,26 +135,33 @@ export function BookingChatPanel({ bookingId, currentUserId }: { bookingId: stri
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="flex gap-2">
-            <input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Digite sua mensagem..."
-              className="flex-1 px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
-            <button
+          {sendError && (
+            <p className="mb-2 text-sm text-destructive" role="alert">{sendError}</p>
+          )}
+          <div className="flex items-start gap-2">
+            <div className="flex-1">
+              <Input
+                size="sm"
+                aria-label="Mensagem"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                placeholder="Digite sua mensagem..."
+              />
+            </div>
+            <Button
+              size="icon"
               onClick={handleSend}
-              disabled={!newMessage.trim() || sending}
-              className="px-3 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground rounded-lg transition-colors"
+              disabled={!newMessage.trim()}
+              isLoading={sending}
               aria-label="Enviar mensagem"
             >
-              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            </button>
+              {!sending && <Send className="w-4 h-4" aria-hidden="true" />}
+            </Button>
           </div>
         </>
       )}
-    </div>
+    </Card>
   );
 }
 

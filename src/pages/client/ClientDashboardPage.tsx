@@ -1,24 +1,29 @@
 // Caminho: frontend/src/pages/client/ClientDashboardPage.tsx
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { bookingAPI, authAPI, kitAPI } from '../../services/api';
 import { asArray } from '../../utils/normalize';
+import { formatPrice } from '../../utils/formatPrice';
+import { bookingStatusLabel, bookingStatusVariant } from '../../utils/bookingStatus';
 import { clsx } from 'clsx';
 import {
   Button,
   Card,
-  Alert,
   Grid,
-  Badge
+  Badge,
+  StatsCard,
+  buttonVariants
 } from '../../components/ui/StandardComponents';
-import { BrandLoader } from '../../components/ui/BrandLoader';
+import { ClientPage, ClientPageError, ClientPageLoading } from '../../components/client/ClientPage';
 import { BookingListItem } from '../../components/ui/BookingListItem';
 import { ReviewModal } from '../../components/modals/ReviewModal';
 import type { SafeBooking, Kit } from '../../types/types';
 import {
   Calendar,
+  CalendarDays,
+  ClipboardList,
   TrendingUp,
   Clock,
   CheckCircle,
@@ -54,7 +59,8 @@ export const ClientDashboardPage = () => {
   const { personalized, trending, newItems } = useMultipleRecommendations();
 
 
-  // Quick Actions
+  // Quick Actions. Sem os selos fixos "Popular"/"Novo" (não vinham de dado nenhum); o único selo
+  // que fica é a contagem real de favoritos.
   const quickActions: QuickAction[] = [
     {
       id: 'new-booking',
@@ -62,14 +68,13 @@ export const ClientDashboardPage = () => {
       description: 'Faça uma nova reserva de equipamentos',
       icon: <Plus className="h-6 w-6" />,
       href: '/',
-      color: 'primary',
-      badge: 'Popular'
+      color: 'primary'
     },
     {
       id: 'my-bookings',
       title: 'Minhas Reservas',
       description: 'Veja e gerencie suas reservas',
-      icon: <Calendar className="h-6 w-6" />,
+      icon: <ClipboardList className="h-6 w-6" />,
       href: '/minhas-reservas',
       color: 'success'
     },
@@ -77,10 +82,9 @@ export const ClientDashboardPage = () => {
       id: 'my-calendar',
       title: 'Minha Agenda',
       description: 'Veja suas reservas no calendário',
-      icon: <Calendar className="h-6 w-6" />,
+      icon: <CalendarDays className="h-6 w-6" />,
       href: '/cliente/agenda',
-      color: 'info',
-      badge: 'Novo'
+      color: 'info'
     },
     {
       id: 'favorites',
@@ -101,9 +105,8 @@ export const ClientDashboardPage = () => {
     }
   ];
 
-  // Carregar dados do dashboard
-  useEffect(() => {
-    const loadDashboardData = async () => {
+  // Carregar dados do dashboard (useCallback: reaproveitado pelo "Tentar de novo" do estado de erro)
+  const loadDashboardData = useCallback(async () => {
       try {
         setLoading(true);
         setError(null);
@@ -203,144 +206,74 @@ export const ClientDashboardPage = () => {
       } finally {
         setLoading(false);
       }
-    };
+  }, []);
 
+  useEffect(() => {
     loadDashboardData();
-    }, []);
+  }, [loadDashboardData]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-PT', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
+  const formatCurrency = (value: number) => formatPrice(value);
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-PT', {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'short',
       year: 'numeric'
     });
   };
 
-  const getStatusColor = (status: string): 'success' | 'primary' | 'warning' | 'destructive' | 'secondary' => {
-    switch (status) {
-      case 'COMPLETED': return 'success';
-      case 'CONFIRMED': return 'primary';
-      case 'PENDING': return 'warning';
-      case 'CANCELLED': return 'destructive';
-      default: return 'secondary';
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center animate-in fade-in duration-700">
-          <BrandLoader size="xl" />
-          <p className="mt-8 text-muted-foreground font-medium tracking-widest uppercase text-[10px] animate-pulse">
-            Preparando seu painel personalizado X Produções...
-          </p>
-      </div>
+      <ClientPage>
+        <ClientPageLoading label="Preparando seu painel..." />
+      </ClientPage>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Alert variant="error" title="Erro">
-            {error && error.trim() ? error : 'Erro desconhecido ao carregar dashboard. Verifique sua conexão ou tente novamente.'}
-          </Alert>
-        </div>
-      </div>
+      <ClientPage title="Meu painel">
+        <ClientPageError
+          message={error.trim() ? error : 'Erro desconhecido ao carregar o painel. Verifique sua conexão.'}
+          onRetry={loadDashboardData}
+        />
+      </ClientPage>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        {/* Header com Saudação */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">
-              Olá, {user?.name?.split(' ')[0] || 'Cliente'}! 👋
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Gerencie suas reservas e descubra novos equipamentos
-            </p>
-          </div>
-          <div className="mt-4 sm:mt-0">
-            <Button
-              variant="primary"
-              size="lg"
-              leftIcon={<Plus className="h-5 w-5" />}
-              onClick={() => navigate('/')}
-            >
-              Nova Reserva
-            </Button>
-          </div>
-        </div>
-
+    <ClientPage
+      title={`Olá, ${user?.name?.split(' ')[0] || 'Cliente'}! 👋`}
+      description="Gerencie suas reservas e descubra novos equipamentos"
+      actions={
+        <Link to="/" className={buttonVariants({ size: 'lg' })}>
+          <Plus className="h-5 w-5" aria-hidden="true" />
+          Nova Reserva
+        </Link>
+      }
+    >
         {/* Cards de Estatísticas */}
         <Grid columns={{ sm: 1, md: 2, lg: 4 }} gap={6} className="mb-8">
-          <Card>
-            <div className="flex items-center p-6">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <BarChart3 className="h-6 w-6 text-primary" />
-                </div>
-              </div>
-              <div className="ml-4 flex-1">
-                <p className="text-sm font-medium text-muted-foreground">Total de Reservas</p>
-                <p className="text-2xl font-bold text-foreground">{stats?.totalBookings || 0}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-center p-6">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-warning/10 rounded-lg flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-warning" />
-                </div>
-              </div>
-              <div className="ml-4 flex-1">
-                <p className="text-sm font-medium text-muted-foreground">Reservas Ativas</p>
-                <p className="text-2xl font-bold text-foreground">{stats?.activeBookings || 0}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-center p-6">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-success/10 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="h-6 w-6 text-success" />
-                </div>
-              </div>
-              <div className="ml-4 flex-1">
-                <p className="text-sm font-medium text-muted-foreground">Concluídas</p>
-                <p className="text-2xl font-bold text-foreground">{stats?.completedBookings || 0}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-center p-6">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-info/10 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="h-6 w-6 text-info" />
-                </div>
-              </div>
-              <div className="ml-4 flex-1">
-                <p className="text-sm font-medium text-muted-foreground">Total Gasto</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {formatCurrency(stats?.totalSpent || 0)}
-                </p>
-              </div>
-            </div>
-          </Card>
+          <StatsCard
+            title="Total de Reservas"
+            value={stats?.totalBookings || 0}
+            icon={<BarChart3 className="h-6 w-6 text-primary" />}
+          />
+          <StatsCard
+            title="Reservas Ativas"
+            value={stats?.activeBookings || 0}
+            icon={<Clock className="h-6 w-6 text-warning" />}
+          />
+          <StatsCard
+            title="Concluídas"
+            value={stats?.completedBookings || 0}
+            icon={<CheckCircle className="h-6 w-6 text-success" />}
+          />
+          <StatsCard
+            title="Total Gasto"
+            value={formatCurrency(stats?.totalSpent || 0)}
+            icon={<TrendingUp className="h-6 w-6 text-info" />}
+          />
         </Grid>
 
         {/* Ações Rápidas */}
@@ -349,7 +282,11 @@ export const ClientDashboardPage = () => {
             <h2 className="text-xl font-semibold text-foreground mb-6">Ações Rápidas</h2>
             <Grid columns={{ sm: 1, md: 2, lg: 4 }} gap={4}>
               {quickActions.map((action) => (
-                <Link key={action.id} to={action.href} className="group">
+                <Link
+                  key={action.id}
+                  to={action.href}
+                  className="group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
                   <div className="relative p-4 rounded-lg border border-border hover:border-primary/50 transition-all duration-200 hover:shadow-md">
                     <div className="flex items-start space-x-3">
                       <div className={clsx(
@@ -367,7 +304,7 @@ export const ClientDashboardPage = () => {
                             {action.title}
                           </h3>
                           {action.badge && (
-                            <Badge variant="secondary" size="sm">
+                            <Badge variant="ghost" size="sm">
                               {action.badge}
                             </Badge>
                           )}
@@ -376,7 +313,7 @@ export const ClientDashboardPage = () => {
                           {action.description}
                         </p>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200" />
+                      <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200" aria-hidden="true" />
                     </div>
                   </div>
                 </Link>
@@ -395,40 +332,40 @@ export const ClientDashboardPage = () => {
           <div className="lg:col-span-2">
             <Card>
               <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                   <h2 className="text-xl font-semibold text-foreground">Próximas Reservas</h2>
-                  <Link to="/minhas-reservas">
-                    <Button variant="outline" size="sm">
-                      Ver Todas
-                    </Button>
+                  <Link to="/minhas-reservas" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                    Ver Todas
                   </Link>
                 </div>
 
                 {upcomingBookings.length > 0 ? (
                   <div className="space-y-4">
                     {upcomingBookings.slice(0, 3).map((booking) => (
-                      <div key={booking.id} className="p-4 border border-border rounded-lg hover:border-primary/50 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3">
-                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                      // Achado: a linha tinha seta e hover de link, mas não levava a lugar nenhum.
+                      <Link
+                        key={booking.id}
+                        to={`/cliente/reservas/${booking.id}`}
+                        className="group block p-4 border border-border rounded-lg hover:border-primary/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                              <Calendar className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                               <span className="font-medium text-foreground">
                                 {formatDate(booking.eventDate)}
                               </span>
-                              <Badge
-                                variant={getStatusColor(booking.status)}
-                                size="sm"
-                              >
-                                {booking.status}
+                              <Badge variant={bookingStatusVariant(booking.status)} size="sm">
+                                {bookingStatusLabel(booking.status)}
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
                               {booking.equipments.length} equipamento(s) - {formatCurrency(booking.totalPrice)}
                             </p>
                           </div>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                          <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" aria-hidden="true" />
                         </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 ) : (
@@ -481,16 +418,16 @@ export const ClientDashboardPage = () => {
 
               <div className="mt-6 pt-6 border-t border-border">
                 <h3 className="font-medium text-foreground mb-4">Informações da Conta</h3>
-                <div className="space-y-3">
+                <dl className="space-y-3">
                   <div>
-                    <label className="text-xs text-muted-foreground">Email</label>
-                    <p className="text-sm text-foreground">{user?.email}</p>
+                    <dt className="text-xs text-muted-foreground">E-mail</dt>
+                    <dd className="text-sm text-foreground break-all">{user?.email}</dd>
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">Telefone</label>
-                    <p className="text-sm text-foreground">{user?.phone || 'Não informado'}</p>
+                    <dt className="text-xs text-muted-foreground">Telefone</dt>
+                    <dd className="text-sm text-foreground">{user?.phone || 'Não informado'}</dd>
                   </div>
-                </div>
+                </dl>
 
                 <Button
                   variant="outline"
@@ -511,12 +448,10 @@ export const ClientDashboardPage = () => {
         {recentBookings.length > 0 && (
           <Card className="mt-8">
             <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                 <h2 className="text-xl font-semibold text-foreground">Reservas Recentes</h2>
-                <Link to="/minhas-reservas">
-                  <Button variant="outline" size="sm">
-                    Ver Histórico Completo
-                  </Button>
+                <Link to="/minhas-reservas" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                  Ver Histórico Completo
                 </Link>
               </div>
 
@@ -537,18 +472,20 @@ export const ClientDashboardPage = () => {
         {recommendedKits.length > 0 && (
           <Card className="mt-8">
             <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                 <h2 className="text-xl font-semibold text-foreground">Kits Recomendados</h2>
-                <Link to="/kits">
-                  <Button variant="outline" size="sm">
-                    Ver Todos os Kits
-                  </Button>
+                <Link to="/kits" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                  Ver Todos os Kits
                 </Link>
               </div>
 
               <Grid columns={{ sm: 1, md: 2, lg: 3 }} gap={6}>
                 {recommendedKits.map((kit) => (
-                  <Link key={kit.id} to={`/kits/${kit.id}`} className="group">
+                    <Link
+                    key={kit.id}
+                    to={`/kits/${kit.id}`}
+                    className="group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
                     <div className="border border-border rounded-lg overflow-hidden hover:border-primary/50 transition-colors">
                       {kit.imageUrl && (
                         <div className="aspect-video bg-muted">
@@ -663,7 +600,6 @@ export const ClientDashboardPage = () => {
             />
           </div>
         )}
-      </div>
       {reviewBookingId && (
         <ReviewModal
           bookingId={reviewBookingId}
@@ -673,6 +609,6 @@ export const ClientDashboardPage = () => {
           }}
         />
       )}
-    </div>
+    </ClientPage>
   );
 };

@@ -53,6 +53,8 @@ describe('ResetPasswordPage', () => {
     await submit('abcdefgh');
 
     expect(apiFetch).not.toHaveBeenCalled();
-    expect(await screen.findAllByText(/maiúscula/i)).not.toHaveLength(0);
+    // A dica da regra agora aparece sempre abaixo do campo (AuthLayout/PASSWORD_HINT) — o teste
+    // confere a MENSAGEM DE ERRO exata, não qualquer texto com "maiúscula".
+    expect(await screen.findByText('A senha deve conter pelo menos uma letra maiúscula')).toBeInTheDocument();
   });
 });

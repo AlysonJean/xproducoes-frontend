@@ -1,14 +1,17 @@
 // Caminho: frontend/src/pages/client/ProfilePage.tsx
 
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
-import { 
-  Button, 
-  Grid
+import {
+  Grid,
+  Skeleton,
+  buttonVariants
 } from '../../components/ui/StandardComponents';
-import { Settings, User, Lock, Bell } from 'lucide-react';
+import { ClientPage, ClientPageError } from '../../components/client/ClientPage';
+import { strongPasswordSchema } from '../../validators/userSchema';
+import { ArrowLeft, Settings, User, Lock, Bell } from 'lucide-react';
 
 import { 
   ClientProfile, 
@@ -29,9 +32,23 @@ import { PreferencesTab } from './profile/PreferencesTab';
 import { ProfileSidebar } from './profile/ProfileSidebar';
 import { logger } from '../../utils/logger';
 
+type ProfileTab = 'profile' | 'security' | 'notifications' | 'preferences';
+
+const PROFILE_TABS: { id: ProfileTab; label: string; icon: typeof User }[] = [
+  { id: 'profile', label: 'Informações Pessoais', icon: User },
+  { id: 'security', label: 'Segurança', icon: Lock },
+  { id: 'notifications', label: 'Notificações', icon: Bell },
+  { id: 'preferences', label: 'Preferências', icon: Settings },
+];
+
 export const ProfilePage = () => {
-  const navigate = useNavigate();
   const { addNotification } = useNotifications();
+  const tabRefs = useRef<Record<ProfileTab, HTMLButtonElement | null>>({
+    profile: null,
+    security: null,
+    notifications: null,
+    preferences: null,
+  });
 
   // Estados
   const [profile, setProfile] = useState<ClientProfile | null>(null);
@@ -48,7 +65,7 @@ export const ProfilePage = () => {
   });
   
   const [editMode, setEditMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'preferences'>('profile');
+  const [activeTab, setActiveTab] = useState<ProfileTab>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -77,7 +94,7 @@ export const ProfilePage = () => {
 
   const [generalPreferences, setGeneralPreferences] = useState<ProfileGeneralPreferences>({
     language: 'pt',
-    timezone: 'Europe/Lisbon',
+    timezone: 'America/Sao_Paulo',
     currency: 'BRL',
     profileType: 'individual',
     defaultDeliveryMethod: 'delivery',
@@ -235,10 +252,12 @@ export const ProfilePage = () => {
       return;
     }
 
-    if (passwordForm.newPassword.length < 6) {
+    // Mesma regra de senha forte do cadastro, do convite e da redefinição (antes: 6+ caracteres).
+    const passwordCheck = strongPasswordSchema.safeParse(passwordForm.newPassword);
+    if (!passwordCheck.success) {
       addNotification({
         title: 'Aviso',
-        message: 'A nova senha deve ter pelo menos 6 caracteres.',
+        message: passwordCheck.error.issues[0]?.message || 'A nova senha não atende aos requisitos.',
         type: 'warning'
       });
       return;
@@ -246,7 +265,9 @@ export const ProfilePage = () => {
 
     try {
       setSaving(true);
-      await apiFetch('/users/profile/password', {
+      // Achado: chamava POST /users/profile/password, rota que não existe no backend (404 — a troca
+      // de senha nunca funcionou). A rota real é POST /users/change-password, com o mesmo corpo.
+      await apiFetch('/users/change-password', {
         method: 'POST',
         body: JSON.stringify({
           currentPassword: passwordForm.currentPassword,
@@ -284,60 +305,59 @@ export const ProfilePage = () => {
     }).format(value);
   };
 
+  const pageHeader = {
+    title: 'Meu Perfil',
+    description: 'Gerencie suas informações pessoais e configurações',
+    actions: (
+      <Link to="/cliente/painel" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        Voltar ao painel
+      </Link>
+    ),
+  };
+
+  // Setas ←/→ (e Home/End) movem entre as abas, como no padrão WAI-ARIA de abas.
+  const handleTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const last = PROFILE_TABS.length - 1;
+    const nextIndex =
+      event.key === 'ArrowRight' ? (index === last ? 0 : index + 1)
+      : event.key === 'ArrowLeft' ? (index === 0 ? last : index - 1)
+      : event.key === 'Home' ? 0
+      : event.key === 'End' ? last
+      : null;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    const next = PROFILE_TABS[nextIndex].id;
+    setActiveTab(next);
+    tabRefs.current[next]?.focus();
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="animate-pulse space-y-8">
-            <div className="h-8 bg-muted rounded w-1/3"></div>
-            <div className="h-64 bg-muted rounded-lg"></div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="h-96 bg-muted rounded-lg"></div>
-              <div className="lg:col-span-2 h-96 bg-muted rounded-lg"></div>
-            </div>
+      <ClientPage width="6xl" {...pageHeader}>
+        {/* Skeleton padrão (antes: divs com animate-pulse feitas à mão) */}
+        <div className="space-y-8" role="status" aria-label="Carregando perfil">
+          <Skeleton className="h-64 w-full rounded-lg" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <Skeleton className="h-96 rounded-lg lg:col-span-2" />
+            <Skeleton className="h-96 rounded-lg" />
           </div>
         </div>
-      </div>
+      </ClientPage>
     );
   }
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="p-4 bg-destructive/10 text-destructive rounded-md border border-destructive">
-            <h3 className="font-bold">Erro</h3>
-            <p>Não foi possível carregar o perfil.</p>
-          </div>
-        </div>
-      </div>
+      <ClientPage width="6xl" {...pageHeader}>
+        <ClientPageError message="Não foi possível carregar o perfil." onRetry={loadProfile} />
+      </ClientPage>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Meu Perfil</h1>
-            <p className="text-muted-foreground mt-1">
-              Gerencie suas informações pessoais e configurações
-            </p>
-          </div>
-          <div className="mt-4 sm:mt-0">
-            <Button
-              variant="outline"
-              leftIcon={<Settings className="h-4 w-4" />}
-              onClick={() => navigate('/cliente/painel')}
-            >
-              Voltar ao Dashboard
-            </Button>
-          </div>
-        </div>
-
-        <ProfileHeader 
+    <ClientPage width="6xl" {...pageHeader}>
+        <ProfileHeader
           profile={profile}
           editMode={editMode}
           setEditMode={setEditMode}
@@ -346,38 +366,45 @@ export const ProfilePage = () => {
           formatCurrency={formatCurrency}
         />
 
-        {/* Tabs */}
+        {/* Tabs (role tablist/tab/tabpanel + aria-selected: antes eram botões soltos sem estado anunciado) */}
         <div className="border-b border-border mb-8 overflow-x-auto">
-          <nav className="flex space-x-8 min-w-max">
-            {(['profile', 'security', 'notifications', 'preferences'] as const).map((id) => {
-              const tabMap = {
-                profile: { label: 'Informações Pessoais', icon: User },
-                security: { label: 'Segurança', icon: Lock },
-                notifications: { label: 'Notificações', icon: Bell },
-                preferences: { label: 'Preferências', icon: Settings }
-              };
-              const tab = tabMap[id];
+          <div className="flex gap-6 sm:gap-8 min-w-max" role="tablist" aria-label="Seções do perfil">
+            {PROFILE_TABS.map((tab, index) => {
+              const selected = activeTab === tab.id;
               return (
                 <button
-                  key={id}
-                  onClick={() => setActiveTab(id)}
-                  className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    activeTab === id
+                  key={tab.id}
+                  ref={(el) => { tabRefs.current[tab.id] = el; }}
+                  type="button"
+                  role="tab"
+                  id={`profile-tab-${tab.id}`}
+                  aria-selected={selected}
+                  aria-controls="profile-tabpanel"
+                  tabIndex={selected ? 0 : -1}
+                  onClick={() => setActiveTab(tab.id)}
+                  onKeyDown={(e) => handleTabKeyDown(e, index)}
+                  className={`flex min-h-[44px] items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    selected
                       ? 'border-primary text-primary'
                       : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
                   }`}
                 >
-                  <tab.icon className="h-4 w-4" />
+                  <tab.icon className="h-4 w-4" aria-hidden="true" />
                   <span>{tab.label}</span>
                 </button>
               );
             })}
-          </nav>
+          </div>
         </div>
 
         {/* Content & Sidebar */}
         <Grid columns={{ sm: 1, lg: 3 }} gap={8}>
-          <div className="lg:col-span-2">
+          <div
+            className="lg:col-span-2"
+            role="tabpanel"
+            id="profile-tabpanel"
+            aria-labelledby={`profile-tab-${activeTab}`}
+          >
             {activeTab === 'profile' && (
               <PersonalInfoTab 
                 profile={profile}
@@ -422,7 +449,6 @@ export const ProfilePage = () => {
           
           <ProfileSidebar />
         </Grid>
-      </div>
-    </div>
+    </ClientPage>
   );
 };

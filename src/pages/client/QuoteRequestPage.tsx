@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
 import ReactGA from 'react-ga4';
 import { v4 as uuidv4 } from 'uuid';
-import { MapPin, Calendar, Clock, Info, User, Phone, Navigation2, Building2, Tag, X } from 'lucide-react';
+import { MapPin, Calendar, Clock, Info, User, Phone, Navigation2, Building2, Tag, X, Mail } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -26,6 +26,19 @@ import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
 import { quoteSuccessMessage } from '../../utils/quoteSubmission';
 import { TrustStrip } from '../../components/ui/TrustStrip';
+import { ClientPage } from '../../components/client/ClientPage';
+
+// Seções do formulário: mesmo fundo/raio/ícone em todas (antes: rounded-[2rem] e um ícone de cada cor —
+// índigo, esmeralda, âmbar, rosa — fora da paleta de tokens).
+const sectionClass = 'rounded-3xl border border-border/50 bg-muted/10 p-4 sm:p-6 md:p-8';
+const sectionTitleClass = 'mb-6 flex items-center gap-3 text-xl font-bold text-foreground';
+const sectionIconClass = 'rounded-xl bg-primary/10 p-2.5 text-primary';
+
+const logisticsQuestions = [
+  { field: 'requiresStairs', legend: 'Local com escadas?' },
+  { field: 'isCovered', legend: 'Local coberto?' },
+  { field: 'hasParking', legend: 'Tem estacionamento?' },
+] as const;
 
 type QuoteFormInput = z.input<typeof quoteRequestSchema>;
 type QuoteFormData = z.output<typeof quoteRequestSchema>;
@@ -290,48 +303,43 @@ export const QuoteRequestPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      <div className="text-center mb-10">
-        <h1 className="text-3xl font-bold text-foreground">Finalizar Orçamento</h1>
-        <p className="text-muted-foreground mt-2">
-          Revise os detalhes abaixo para que possamos preparar o melhor serviço para você.
-        </p>
-      </div>
-
-      <Card className="p-8 shadow-xl border-border">
+    <ClientPage
+      width="4xl"
+      title="Finalizar Orçamento"
+      description="Revise os detalhes abaixo para que possamos preparar o melhor serviço para você."
+    >
+      <Card className="p-4 shadow-xl sm:p-8">
         {serverError && (
           <Alert variant="error" className="mb-8">
             {serverError}
           </Alert>
         )}
 
-        <Form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
+        <Form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           {/* Seção 1: Detalhes do Evento */}
-          <div className="bg-muted/10 p-6 md:p-8 rounded-[2rem] border border-border/50">
-            <h2 className="text-xl font-bold flex items-center gap-3 text-foreground mb-6">
-              <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+          <section className={sectionClass}>
+            <h2 className={sectionTitleClass}>
+              <span className={sectionIconClass} aria-hidden="true">
                 <Calendar className="h-5 w-5" />
-              </div>
+              </span>
               O Momento
             </h2>
-            
+
             <Grid columns={{ sm: 1, md: 2 }} gap={6}>
               <Input
                 label="Nome/Local do Evento *"
                 leftIcon={<Building2 className="h-4 w-4" />}
                 {...register('venue')}
                 error={errors.venue?.message}
-                placeholder="Ex: Espaço Kalahari, Casamento..."
-                className="bg-card"
+                placeholder="Ex.: Espaço Kalahari, Casamento..."
               />
-              
+
               <Input
                 label="Data do Evento *"
                 type="date"
                 leftIcon={<Calendar className="h-4 w-4" />}
                 {...register('eventDate')}
                 error={errors.eventDate?.message}
-                 className="bg-card"
               />
 
               <Input
@@ -340,7 +348,6 @@ export const QuoteRequestPage: React.FC = () => {
                 leftIcon={<Clock className="h-4 w-4" />}
                 {...register('startTime')}
                 error={errors.startTime?.message}
-                 className="bg-card"
               />
 
               <Input
@@ -349,27 +356,25 @@ export const QuoteRequestPage: React.FC = () => {
                 leftIcon={<Clock className="h-4 w-4" />}
                 {...register('duration')}
                 error={errors.duration?.message}
-                placeholder="Ex: 5"
-                 className="bg-card"
+                placeholder="Ex.: 5"
               />
             </Grid>
-          </div>
+          </section>
 
           {/* Seção 2: Endereço */}
-          <div className="bg-muted/10 p-6 md:p-8 rounded-[2rem] border border-border/50">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-               <h2 className="text-xl font-bold flex items-center gap-3 text-foreground">
-                 <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500">
-                   <MapPin className="h-5 w-5" />
-                 </div>
-                 O Destino
-               </h2>
-               <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Logística Geográfica</p>
-            </div>
+          <section className={sectionClass}>
+            <h2 className={sectionTitleClass}>
+              <span className={sectionIconClass} aria-hidden="true">
+                <MapPin className="h-5 w-5" />
+              </span>
+              O Destino
+            </h2>
 
             <Grid columns={{ sm: 1, md: 2 }} gap={6}>
               <Input
                 label="CEP *"
+                inputMode="numeric"
+                autoComplete="postal-code"
                 {...register('zipCode')}
                 error={errors.zipCode?.message}
                 placeholder="00000-000"
@@ -377,6 +382,7 @@ export const QuoteRequestPage: React.FC = () => {
               
               <Input
                 label="Rua *"
+                autoComplete="address-line1"
                 {...register('street')}
                 error={errors.street?.message}
                 placeholder="Nome da avenida, rua..."
@@ -386,14 +392,15 @@ export const QuoteRequestPage: React.FC = () => {
                 label="Número *"
                 {...register('addressNumber')}
                 error={errors.addressNumber?.message}
-                placeholder="Ex: 123"
+                placeholder="Ex.: 123"
               />
 
               <Input
                 label="Complemento"
+                autoComplete="address-line2"
                 {...register('addressComplement')}
                 error={errors.addressComplement?.message}
-                placeholder="Ex: Bloco A, Apto 101"
+                placeholder="Ex.: Bloco A, Apto 101"
               />
 
               <Input
@@ -403,82 +410,57 @@ export const QuoteRequestPage: React.FC = () => {
               />
 
               <Grid columns={2} gap={4}>
-                <Input label="Cidade *" {...register('city')} error={errors.city?.message} className="bg-card" />
-                <Input label="Estado *" {...register('state')} error={errors.state?.message} placeholder="UF" className="bg-card" />
+                <Input label="Cidade *" autoComplete="address-level2" {...register('city')} error={errors.city?.message} />
+                <Input label="Estado *" autoComplete="address-level1" {...register('state')} error={errors.state?.message} placeholder="UF" />
               </Grid>
             </Grid>
-          </div>
+          </section>
 
           {/* Seção 3: Logística */}
-          <div className="bg-muted/10 p-6 md:p-8 rounded-[2rem] border border-border/50">
-             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                 <h2 className="text-xl font-bold flex items-center gap-3 text-foreground">
-                   <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500">
-                     <Navigation2 className="h-5 w-5" />
-                   </div>
-                   O Terreno
-                 </h2>
-                 <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Análise Estrutural</p>
-             </div>
+          <section className={sectionClass}>
+            <h2 className={sectionTitleClass}>
+              <span className={sectionIconClass} aria-hidden="true">
+                <Navigation2 className="h-5 w-5" />
+              </span>
+              O Terreno
+            </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-6 bg-muted/30 rounded-2xl border border-border/50">
-              <div className="space-y-3">
-                <label className="text-sm font-semibold text-foreground">Local com escadas?</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="radio" value="yes" {...register('requiresStairs')} className="accent-primary" /> Sim
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="radio" value="no" {...register('requiresStairs')} className="accent-primary" /> Não
-                  </label>
-                </div>
-                {errors.requiresStairs && <p className="text-xs text-destructive">{errors.requiresStairs.message}</p>}
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-sm font-semibold text-foreground">Local coberto?</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="radio" value="yes" {...register('isCovered')} className="accent-primary" /> Sim
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="radio" value="no" {...register('isCovered')} className="accent-primary" /> Não
-                  </label>
-                </div>
-                {errors.isCovered && <p className="text-xs text-destructive">{errors.isCovered.message}</p>}
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-sm font-semibold text-foreground">Tem estacionamento?</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="radio" value="yes" {...register('hasParking')} className="accent-primary" /> Sim
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="radio" value="no" {...register('hasParking')} className="accent-primary" /> Não
-                  </label>
-                </div>
-                {errors.hasParking && <p className="text-xs text-destructive">{errors.hasParking.message}</p>}
-              </div>
+            {/* fieldset/legend: antes o título de cada grupo era um <label> solto, sem ligação com os rádios. */}
+            <div className="grid grid-cols-1 gap-6 rounded-2xl border border-border/50 bg-muted/30 p-4 sm:p-6 md:grid-cols-3">
+              {logisticsQuestions.map(({ field, legend }) => (
+                <fieldset key={field} className="space-y-3">
+                  <legend className="mb-3 text-sm font-semibold text-foreground">{legend}</legend>
+                  <div className="flex gap-6">
+                    <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm text-foreground">
+                      <input type="radio" value="yes" {...register(field)} className="h-4 w-4 accent-primary" /> Sim
+                    </label>
+                    <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm text-foreground">
+                      <input type="radio" value="no" {...register(field)} className="h-4 w-4 accent-primary" /> Não
+                    </label>
+                  </div>
+                  {errors[field] && <p className="text-sm text-destructive">{errors[field]?.message}</p>}
+                </fieldset>
+              ))}
             </div>
-          </div>
+          </section>
 
           {/* Seção 4: Contato Adicional (se necessário) */}
           {!user?.id && (
-            <div className="bg-muted/10 p-6 md:p-8 rounded-[2rem] border border-border/50">
-              <h2 className="text-xl font-bold flex items-center gap-3 text-foreground mb-6">
-                <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500">
-                   <User className="h-5 w-5" />
-                </div>
+            <section className={sectionClass}>
+              <h2 className={sectionTitleClass}>
+                <span className={sectionIconClass} aria-hidden="true">
+                  <User className="h-5 w-5" />
+                </span>
                 Sua Identidade
               </h2>
-              <p className="text-sm text-muted-foreground -mt-4 mb-6">
+              <p className="text-sm text-muted-foreground -mt-2 mb-6">
                 Não é preciso criar conta antes — usamos esses dados para acompanhar seu pedido e você pode acessá-lo depois com este e-mail.
               </p>
 
               <Grid columns={{ sm: 1, md: 2 }} gap={6}>
                 <Input
                   label="Seu Nome *"
+                  autoComplete="name"
                   leftIcon={<User className="h-4 w-4" />}
                   {...register('name')}
                   error={errors.name?.message}
@@ -487,75 +469,85 @@ export const QuoteRequestPage: React.FC = () => {
                 <Input
                   label="Seu E-mail *"
                   type="email"
-                  leftIcon={<User className="h-4 w-4" />}
+                  autoComplete="email"
+                  leftIcon={<Mail className="h-4 w-4" />}
                   {...register('email')}
                   error={errors.email?.message}
                 />
 
                 <Input
                   label="Telefone (WhatsApp, opcional)"
+                  type="tel"
+                  autoComplete="tel"
                   leftIcon={<Phone className="h-4 w-4" />}
                   {...register('phone')}
                   error={errors.phone?.message}
                 />
               </Grid>
-            </div>
+            </section>
           )}
 
           {/* Seção 5: Observações */}
-          <div className="bg-muted/10 p-6 md:p-8 rounded-[2rem] border border-border/50">
-            <h2 className="text-xl font-bold flex items-center gap-3 text-foreground mb-6">
-               <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-500">
-                   <Info className="h-5 w-5" />
-               </div>
-               Orientações Finais
+          <section className={sectionClass}>
+            <h2 className={sectionTitleClass}>
+              <span className={sectionIconClass} aria-hidden="true">
+                <Info className="h-5 w-5" />
+              </span>
+              Orientações Finais
             </h2>
-            
+
             <Textarea
+              label="Observações (opcional)"
               {...register('notes')}
               error={errors.notes?.message}
               rows={4}
               placeholder="Deseja acrescentar algum detalhe específico sobre o local, acessos ou necessidades técnicas?"
             />
-          </div>
+          </section>
 
           {/* Seção 6: Cupom de Desconto */}
-          <div className="bg-muted/10 p-6 md:p-8 rounded-[2rem] border border-border/50">
-            <h2 className="text-xl font-bold flex items-center gap-3 text-foreground mb-6">
-              <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+          <section className={sectionClass}>
+            <h2 className={sectionTitleClass}>
+              <span className={sectionIconClass} aria-hidden="true">
                 <Tag className="h-5 w-5" />
-              </div>
+              </span>
               Cupom de Desconto
             </h2>
 
             {appliedCoupon ? (
-              <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-                <div>
-                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-success/30 bg-success/10 p-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-success">
                     Cupom {appliedCoupon.code} aplicado
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Desconto de {formatPrice(appliedCoupon.discountAmount)}
                   </p>
                 </div>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={handleRemoveCoupon}
-                  className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                  className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                   aria-label="Remover cupom"
                 >
-                  <X className="h-4 w-4" />
-                </button>
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </Button>
               </div>
             ) : (
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Input
-                  value={couponInput}
-                  onChange={(e) => setCouponInput(e.target.value)}
-                  placeholder="Ex: BEMVINDO10"
-                  className="bg-card uppercase flex-1"
-                  error={couponError || undefined}
-                />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                <div className="flex-1">
+                  <Input
+                    aria-label="Código do cupom"
+                    value={couponInput}
+                    onChange={(e) => setCouponInput(e.target.value)}
+                    placeholder="Ex.: BEMVINDO10"
+                    className="uppercase"
+                    autoComplete="off"
+                    error={couponError || undefined}
+                  />
+                </div>
                 <Button
                   type="button"
                   variant="outline"
@@ -575,7 +567,7 @@ export const QuoteRequestPage: React.FC = () => {
                   <span className="tabular-nums">{formatPrice(subtotal)}</span>
                 </div>
                 {appliedCoupon && (
-                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <div className="flex justify-between font-semibold text-success">
                     <span>Desconto ({appliedCoupon.code})</span>
                     <span className="tabular-nums">- {formatPrice(appliedCoupon.discountAmount)}</span>
                   </div>
@@ -591,7 +583,7 @@ export const QuoteRequestPage: React.FC = () => {
                 </p>
               </div>
             )}
-          </div>
+          </section>
 
           <div className="pt-6">
             <Button
@@ -599,7 +591,7 @@ export const QuoteRequestPage: React.FC = () => {
               size="lg"
               fullWidth
               isLoading={isSubmitting}
-              className="h-14 text-lg font-bold shadow-lg shadow-primary/20"
+              className="shadow-lg shadow-primary/20"
             >
               Confirmar Pedido de Orçamento
             </Button>
@@ -610,7 +602,7 @@ export const QuoteRequestPage: React.FC = () => {
           </div>
         </Form>
       </Card>
-    </div>
+    </ClientPage>
   );
 };
 

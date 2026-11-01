@@ -6,14 +6,17 @@ import { ptBR } from 'date-fns/locale/pt-BR';
 import { apiFetch } from '@/services/api';
 import { asArray } from '@/utils/normalize';
 import { toNumber } from '@/utils/typeSafeFormatters';
+import { formatPrice } from '@/utils/formatPrice';
+import { bookingStatusLabel, bookingStatusVariant } from '@/utils/bookingStatus';
 import type { SafeBooking } from '@/types/types';
-import { BrandLoader } from '@/components/ui/BrandLoader';
 import {
   Card,
   Badge,
   Modal,
+  Button,
+  buttonVariants,
 } from '@/components/ui/StandardComponents';
-import { Button } from '@/components/ui/Button';
+import { ClientPage, ClientPageError, ClientPageLoading } from '@/components/client/ClientPage';
 import {
   Package,
   MapPin,
@@ -28,7 +31,7 @@ import {
   CalendarPlus,
   RefreshCw,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { logger } from '../../utils/logger';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -75,8 +78,8 @@ function generateGoogleCalendarUrl(booking: SafeBooking): string {
 
   const details = [
     equipNames ? `Equipamentos: ${equipNames}` : '',
-    `Status: ${booking.status}`,
-    `Valor: R$ ${toNumber(booking.totalPrice).toFixed(2)}`,
+    `Status: ${bookingStatusLabel(booking.status)}`,
+    `Valor: ${formatPrice(toNumber(booking.totalPrice))}`,
   ]
     .filter(Boolean)
     .join('\n');
@@ -92,17 +95,12 @@ function generateGoogleCalendarUrl(booking: SafeBooking): string {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
-const statusConfig: Record<string, { variant: 'success' | 'warning' | 'primary' | 'destructive' | 'secondary' | 'outline'; label: string }> = {
-  PENDING: { variant: 'warning', label: 'Pendente' },
-  CONFIRMED: { variant: 'success', label: 'Confirmada' },
-  IN_PROGRESS: { variant: 'primary', label: 'Em Andamento' },
-  COMPLETED: { variant: 'success', label: 'Concluída' },
-  CANCELLED: { variant: 'destructive', label: 'Cancelada' },
-  DRAFT: { variant: 'outline', label: 'Rascunho' },
-};
-
-const getStatus = (status: string | undefined) =>
-  statusConfig[status || ''] || { variant: 'outline' as const, label: 'Desconhecido' };
+// Rótulo e cor do status vêm do módulo compartilhado (antes: um statusConfig local, diferente das
+// outras telas — "Em Andamento" em azul primário aqui, outra cor no painel).
+const getStatus = (status: string | undefined) => ({
+  variant: bookingStatusVariant(status),
+  label: bookingStatusLabel(status),
+});
 
 // ─── Booking Details Modal ───────────────────────────────────
 
@@ -148,13 +146,13 @@ const BookingDetailsModal = ({
     <Modal isOpen={true} onClose={onClose} title="Detalhes da Reserva" size="lg">
       <div className="space-y-6 py-2">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-border/50">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border/50">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center text-primary" aria-hidden="true">
               <FileText className="h-5 w-5" />
             </div>
-            <div>
-              <h3 className="font-bold text-foreground">
+            <div className="min-w-0">
+              <h3 className="font-bold text-foreground truncate">
                 {booking.eventTitle || 'Reserva'}
               </h3>
               <p className="text-xs text-muted-foreground">
@@ -166,7 +164,7 @@ const BookingDetailsModal = ({
         </div>
 
         {/* Info Grid */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex items-center gap-2 text-sm">
             <CalendarIcon className="h-4 w-4 text-muted-foreground" />
             <span>
@@ -190,11 +188,11 @@ const BookingDetailsModal = ({
           <div className="flex items-center gap-2 text-sm">
             <DollarSign className="h-4 w-4 text-muted-foreground" />
             <span className="font-semibold">
-              R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              {formatPrice(totalValue)}
             </span>
           </div>
           {booking.venue && (
-            <div className="flex items-center gap-2 text-sm col-span-2">
+            <div className="flex items-center gap-2 text-sm sm:col-span-2">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <span>
                 {[booking.venue.street, booking.venue.city]
@@ -227,44 +225,46 @@ const BookingDetailsModal = ({
 
         {/* Review */}
         {booking.review && (
-          <div className="flex items-center gap-2 text-sm bg-yellow-500/10 px-3 py-2 rounded-lg">
-            <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+          <div className="flex items-center gap-2 text-sm bg-warning/10 px-3 py-2 rounded-lg">
+            <Star className="h-4 w-4 text-warning fill-warning" aria-hidden="true" />
             <span>Avaliação: {booking.review.rating}/5</span>
           </div>
         )}
 
         {/* Actions */}
-        <div className="flex gap-3 pt-2 border-t border-border/50">
+        <div className="flex flex-col gap-3 pt-4 border-t border-border/50 sm:flex-row">
           <Button
             variant="primary"
-            className="flex-1"
+            className="sm:flex-1"
+            leftIcon={<ExternalLink className="h-4 w-4" aria-hidden="true" />}
             onClick={() => {
               onClose();
               navigate(`/cliente/reservas/${booking.id}`);
             }}
           >
-            <ExternalLink className="h-4 w-4 mr-2" />
             Ver Detalhes
           </Button>
-          
-          <div className="flex flex-1 gap-2">
+
+          <div className="flex gap-2 sm:flex-1">
             <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => window.open(googleUrl, '_blank')}
-                title="Abrir link do Google Calendar"
+              variant="outline"
+              className="flex-1"
+              leftIcon={<CalendarPlus className="h-4 w-4" aria-hidden="true" />}
+              onClick={() => window.open(googleUrl, '_blank')}
+              title="Abrir no Google Agenda"
             >
-                <CalendarPlus className="h-4 w-4 mr-2" />
-                Link
+              Google Agenda
             </Button>
             <Button
-                variant="outline"
-                className="px-3"
-                onClick={handleSync}
-                isLoading={syncing}
-                title="Sincronizar Automaticamente com Google Agenda"
+              variant="outline"
+              size="icon"
+              className="h-12 w-12"
+              onClick={handleSync}
+              isLoading={syncing}
+              title="Sincronizar automaticamente com o Google Agenda"
+              aria-label="Sincronizar automaticamente com o Google Agenda"
             >
-                <RefreshCw className="h-4 w-4" />
+              {!syncing && <RefreshCw className="h-4 w-4" aria-hidden="true" />}
             </Button>
           </div>
         </div>
@@ -296,11 +296,11 @@ const DayEventsModal = ({
               onClose();
               onSelect(ev);
             }}
-            className="w-full text-left p-3 rounded-xl border border-border/50 hover:bg-muted/50 transition-colors flex items-center justify-between group"
+            className="w-full text-left p-3 rounded-xl border border-border/50 hover:bg-muted/50 transition-colors flex items-center justify-between gap-3 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-2 rounded-full bg-primary" />
-              <div>
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+              <div className="min-w-0">
                 <p className="text-sm font-semibold text-foreground">
                   {booking.eventTitle || 'Reserva'}
                 </p>
@@ -312,7 +312,7 @@ const DayEventsModal = ({
                 </p>
               </div>
             </div>
-            <Badge variant={status.variant} className="text-[9px]">
+            <Badge variant={status.variant} size="sm" className="shrink-0">
               {status.label}
             </Badge>
           </button>
@@ -325,7 +325,6 @@ const DayEventsModal = ({
 // ─── Main Page ───────────────────────────────────────────────
 
 export const ClientCalendarPage = () => {
-  const navigate = useNavigate();
   const { addNotification } = useNotifications();
   const [events, setEvents] = useState<ClientCalendarEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -384,6 +383,13 @@ export const ClientCalendarPage = () => {
     fetchBookings();
   }, [fetchBookings]);
 
+  // No celular a grade do mês (7 colunas a 375px) fica ilegível: abre na lista por padrão.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px)').matches) {
+      setView(Views_AGENDA);
+    }
+  }, []);
+
   // ── Stats ──
   const stats = useMemo(() => {
     const total = events.length;
@@ -434,46 +440,33 @@ export const ClientCalendarPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* ── Header ── */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg ring-1 ring-primary/20">
-              <CalendarIcon className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-foreground uppercase tracking-tighter">
-                Minha Agenda
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                Acompanhe todas as suas reservas no calendário
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={() => navigate('/minhas-reservas')}>
-              Ver Lista de Reservas
-            </Button>
-          </div>
-        </div>
-
+    <ClientPage
+      title="Minha Agenda"
+      description="Acompanhe todas as suas reservas no calendário"
+      icon={<CalendarIcon className="h-6 w-6" />}
+      actions={
+        <Link to="/minhas-reservas" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+          Ver Lista de Reservas
+        </Link>
+      }
+    >
+      <div className="space-y-6">
         {/* ── Stats ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="p-4 text-center">
-            <p className="text-2xl font-black text-foreground">{stats.total}</p>
+            <p className="text-2xl font-bold text-foreground">{stats.total}</p>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Total</p>
           </Card>
           <Card className="p-4 text-center">
-            <p className="text-2xl font-black text-green-500">{stats.confirmed}</p>
+            <p className="text-2xl font-bold text-success">{stats.confirmed}</p>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Confirmadas</p>
           </Card>
           <Card className="p-4 text-center">
-            <p className="text-2xl font-black text-yellow-500">{stats.pending}</p>
+            <p className="text-2xl font-bold text-warning">{stats.pending}</p>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Pendentes</p>
           </Card>
           <Card className="p-4 text-center">
-            <p className="text-2xl font-black text-primary">
+            <p className="text-2xl font-bold text-primary">
               {stats.daysUntilNext !== null ? `${stats.daysUntilNext}d` : '—'}
             </p>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">
@@ -486,8 +479,11 @@ export const ClientCalendarPage = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between flex-wrap gap-4">
             {/* Navigation */}
-            <div className="flex items-center gap-2">
-              <button
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Período anterior"
                 title="Período anterior"
                 onClick={() => {
                   const d = new Date(currentDate);
@@ -496,17 +492,21 @@ export const ClientCalendarPage = () => {
                   else d.setDate(d.getDate() - 1);
                   setCurrentDate(d);
                 }}
-                className="p-2 rounded-lg hover:bg-muted transition-colors"
               >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setCurrentDate(new Date())}
-                className="text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                className="bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
               >
                 Hoje
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Próximo período"
                 title="Próximo período"
                 onClick={() => {
                   const d = new Date(currentDate);
@@ -515,27 +515,28 @@ export const ClientCalendarPage = () => {
                   else d.setDate(d.getDate() + 1);
                   setCurrentDate(d);
                 }}
-                className="p-2 rounded-lg hover:bg-muted transition-colors"
               >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-              <h3 className="text-sm font-black uppercase tracking-tighter ml-2">
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <h2 className="ml-2 text-sm font-bold uppercase tracking-tight text-foreground" aria-live="polite">
                 {format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })}
-              </h3>
+              </h2>
             </div>
 
             {/* View Switcher */}
-            <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl">
+            <div className="flex flex-wrap items-center gap-1 bg-muted/50 p-1 rounded-xl" role="group" aria-label="Visualização do calendário">
               {[
                 { id: Views_MONTH, label: 'Mês' },
-                { id: Views_WEEK, label: 'Sem' },
+                { id: Views_WEEK, label: 'Semana' },
                 { id: Views_DAY, label: 'Dia' },
                 { id: Views_AGENDA, label: 'Lista' },
               ].map((v) => (
                 <button
                   key={v.id}
+                  type="button"
                   onClick={() => setView(v.id)}
-                  className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all ${
+                  aria-pressed={view === v.id}
+                  className={`min-h-[36px] text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                     view === v.id
                       ? 'bg-primary text-primary-foreground shadow-lg'
                       : 'text-muted-foreground hover:bg-muted'
@@ -549,20 +550,13 @@ export const ClientCalendarPage = () => {
         </Card>
 
         {/* ── Loading / Error ── */}
-        {error && (
-          <div className="bg-destructive/10 text-destructive p-4 rounded-xl border border-destructive/20 text-sm">
-            {error}
-          </div>
-        )}
-        {loading && (
-          <div className="flex items-center justify-center p-20">
-            <BrandLoader size={80} label="Carregando sua agenda..." />
-          </div>
-        )}
+        {error && <ClientPageError message={error} onRetry={fetchBookings} />}
+        {loading && <ClientPageLoading label="Carregando sua agenda..." />}
 
         {/* ── Calendar ── */}
-        {!loading && (
-          <div className="bg-card border border-border/50 rounded-2xl p-4 h-[70vh] relative shadow-xl overflow-hidden animate-in fade-in duration-700">
+        {/* Com erro, não mostra o calendário vazio ("Nenhuma reserva neste período") como se fosse dado. */}
+        {!loading && !error && (
+          <div className="bg-card border border-border/50 rounded-2xl p-2 sm:p-4 h-[70vh] relative shadow-xl overflow-hidden animate-in fade-in duration-700">
             <Calendar<ClientCalendarEvent>
               localizer={localizer}
               events={events}
@@ -620,17 +614,17 @@ export const ClientCalendarPage = () => {
                       }
                     >
                       <div className="event-header shrink-0">
-                        <div className="event-title text-[9px] font-black uppercase tracking-tighter truncate leading-none">
+                        <div className="event-title text-xs font-bold truncate leading-tight">
                           {booking.eventTitle || 'Reserva'}
                         </div>
                       </div>
                       <div className="event-details mt-auto">
-                        <div className="event-time text-[8px] font-bold opacity-60">
+                        <div className="event-time text-xs font-semibold opacity-80">
                           {format(event.start!, 'HH:mm')}
                         </div>
                         {count > 0 && (
-                          <div className="text-[8px] font-bold opacity-60 flex items-center gap-0.5">
-                            <Package className="h-2 w-2" /> {count}
+                          <div className="text-xs font-semibold opacity-80 flex items-center gap-0.5">
+                            <Package className="h-3 w-3" aria-hidden="true" /> {count}
                           </div>
                         )}
                       </div>
@@ -652,20 +646,15 @@ export const ClientCalendarPage = () => {
               >
                 <Card className="p-0 border-primary/20 bg-card/95 backdrop-blur-xl shadow-2xl overflow-hidden w-64">
                   <div className="p-4 border-b border-border/50 bg-primary/5">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="text-xs font-black text-foreground uppercase tracking-tighter truncate w-36">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <h3 className="min-w-0 truncate text-sm font-bold text-foreground">
                         {hovered.resource.eventTitle || 'Reserva'}
-                      </h4>
-                      <Badge
-                        variant={
-                          getStatus(hovered.resource.status).variant
-                        }
-                        className="text-[8px] font-bold"
-                      >
+                      </h3>
+                      <Badge variant={getStatus(hovered.resource.status).variant} size="sm" className="shrink-0">
                         {getStatus(hovered.resource.status).label}
                       </Badge>
                     </div>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       {safeDate(hovered.resource.eventDate)
                         ? format(
                             safeDate(hovered.resource.eventDate)!,
@@ -676,22 +665,19 @@ export const ClientCalendarPage = () => {
                     </p>
                   </div>
                   <div className="p-3 space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                      <Package className="h-3 w-3" />
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Package className="h-3 w-3" aria-hidden="true" />
                       {(hovered.resource.equipments?.length || 0) +
                         (hovered.resource.kits?.length || 0)}{' '}
                       itens
                     </div>
-                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                      <DollarSign className="h-3 w-3" />
-                      R${' '}
-                      {toNumber(hovered.resource.totalPrice).toLocaleString('pt-BR', {
-                        minimumFractionDigits: 2,
-                      })}
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <DollarSign className="h-3 w-3" aria-hidden="true" />
+                      {formatPrice(toNumber(hovered.resource.totalPrice))}
                     </div>
                     {hovered.resource.venue && (
-                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3" aria-hidden="true" />
                         {[hovered.resource.venue.street, hovered.resource.venue.city]
                           .filter(Boolean)
                           .join(', ')}
@@ -699,26 +685,30 @@ export const ClientCalendarPage = () => {
                     )}
                   </div>
                   <div className="p-2 border-t border-border/50 flex gap-1.5">
-                    <button
+                    <Button
+                      size="xs"
+                      className="flex-1"
                       onClick={() => {
                         setHovered(null);
                         setSelectedEvent(hovered);
                       }}
-                      className="flex-1 text-[9px] font-bold uppercase tracking-wider py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                     >
                       Detalhes
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      className="flex-1"
+                      leftIcon={<CalendarPlus className="h-3 w-3" aria-hidden="true" />}
                       onClick={() =>
                         window.open(
                           generateGoogleCalendarUrl(hovered.resource),
                           '_blank'
                         )
                       }
-                      className="flex-1 text-[9px] font-bold uppercase tracking-wider py-1.5 rounded-lg border border-border text-foreground hover:bg-muted transition-colors flex items-center justify-center gap-1"
                     >
-                      <CalendarPlus className="h-3 w-3" /> Agenda
-                    </button>
+                      Agenda
+                    </Button>
                   </div>
                 </Card>
               </div>
@@ -741,7 +731,7 @@ export const ClientCalendarPage = () => {
           />
         )}
       </div>
-    </div>
+    </ClientPage>
   );
 };
 

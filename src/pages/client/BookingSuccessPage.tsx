@@ -5,6 +5,9 @@ import { Link, useParams, useLocation } from 'react-router-dom';
 import { buildQuoteMessage, getWhatsAppPhone, openWhatsApp } from '../../utils/whatsapp';
 import type { BookingDetails } from '../../types/types';
 import { logger } from '../../utils/logger';
+import { MessageCircle } from 'lucide-react';
+import { Button, buttonVariants } from '../../components/ui/StandardComponents';
+import { SuccessCard } from '../../components/client/SuccessCard';
 
 interface BookingSuccessFormData {
   name?: string;
@@ -87,59 +90,36 @@ export const BookingSuccessPage = () => {
     }, [handleOpenWhatsApp]);
 
   return (
-    <div className="text-center bg-card p-8 rounded-lg max-w-2xl mx-auto border border-border">
-      <div className="mx-auto mb-4 flex items-center justify-center h-12 w-12 rounded-full bg-success/10">
-        <svg
-          className="h-6 w-6 text-success"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M5 13l4 4L19 7"
-          ></path>
-        </svg>
-      </div>
-      <h1 className="text-3xl font-bold mb-4 text-foreground">
-        Reserva Realizada com Sucesso!
-      </h1>
-      <p className="text-muted-foreground mb-2">
-        O seu pedido foi recebido e já está a ser processado pela nossa equipa.
+    <SuccessCard
+      title="Reserva realizada com sucesso!"
+      actions={
+        <>
+          <Button
+            variant="success"
+            onClick={handleOpenWhatsApp}
+            leftIcon={<MessageCircle className="h-4 w-4" aria-hidden="true" />}
+          >
+            Reabrir WhatsApp
+          </Button>
+          <Link to="/" className={buttonVariants()}>
+            Página Inicial
+          </Link>
+          <Link to="/minhas-reservas" className={buttonVariants({ variant: 'outline' })}>
+            Ver Minhas Reservas
+          </Link>
+        </>
+      }
+    >
+      <p>Seu pedido foi recebido e já está sendo processado pela nossa equipe.</p>
+      {id && (
+        <p>
+          O ID da sua reserva é: <strong className="break-all text-foreground">{id}</strong>
+        </p>
+      )}
+      {/* role="status" (antes aria-hidden): quem usa leitor de tela também fica sabendo que o WhatsApp abriu. */}
+      <p role="status" className="text-sm font-semibold text-success">
+        Estamos abrindo o WhatsApp para finalizar os detalhes...
       </p>
-      <p className="text-muted-foreground mb-6">
-        O ID da sua reserva é: <strong className="text-foreground">{id}</strong>
-      </p>
-  <div className="flex flex-col items-center gap-4">
-      <p aria-hidden="true" className="animate-pulse text-sm font-semibold text-emerald-700">
-        Estamos a abrir o WhatsApp para finalizar os detalhes...
-      </p>
-
-        <button
-          aria-label="Abrir WhatsApp"
-          title="Abrir WhatsApp"
-          onClick={handleOpenWhatsApp}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400"
-        >
-          Reabrir WhatsApp
-        </button>
-        <Link
-          to="/"
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-2 px-6 rounded-lg"
-        >
-          Página Inicial
-        </Link>
-        {/* Link corrigido para a nova página */}
-        <Link
-          to="/minhas-reservas"
-          className="bg-muted hover:bg-muted/70 text-foreground font-bold py-2 px-6 rounded-lg border border-border"
-        >
-          Ver Minhas Reservas
-        </Link>
-      </div>
-    </div>
+    </SuccessCard>
   );
 };

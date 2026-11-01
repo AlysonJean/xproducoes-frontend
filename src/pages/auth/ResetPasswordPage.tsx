@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { apiFetch } from '@/services/api';
-import { 
-  Button, 
-  Card, 
-  Input, 
-  Form, 
-  Alert 
+import {
+  Button,
+  Input,
+  Form,
+  Alert
 } from '../../components/ui/StandardComponents';
-import { Lock, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { AuthLayout, BackToLoginLink, PASSWORD_HINT } from '../../components/layouts/AuthLayout';
+import { Lock, ShieldCheck } from 'lucide-react';
 import { strongPasswordSchema } from '../../validators/userSchema';
 
 const resetPasswordSchema = z.object({
@@ -92,64 +92,52 @@ const ResetPasswordPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="max-w-md w-full p-8 shadow-2xl space-y-8">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
-            <ShieldCheck className="h-6 w-6 text-primary" />
-          </div>
-          <h2 className="text-3xl font-bold text-foreground">Redefinir Senha</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Defina uma nova senha para sua conta.</p>
-        </div>
+    <AuthLayout
+      icon={<ShieldCheck className="h-6 w-6" />}
+      title="Redefinir senha"
+      subtitle="Defina uma nova senha para sua conta."
+      footer={<BackToLoginLink />}
+    >
+      {error && (
+        <Alert variant="error">
+          {error}
+        </Alert>
+      )}
 
-        {error && (
-          <Alert variant="error">
-            {error}
-          </Alert>
-        )}
+      <Form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <Input
+          label="Nova Senha"
+          type="password"
+          showPasswordToggle
+          autoComplete="new-password"
+          leftIcon={<Lock className="h-4 w-4" />}
+          {...register('password')}
+          error={errors.password?.message}
+          description={PASSWORD_HINT}
+          placeholder="Crie uma senha"
+        />
 
-        <Form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <Input
-            label="Nova Senha"
-            type="password"
-            showPasswordToggle
-            leftIcon={<Lock className="h-4 w-4" />}
-            {...register('password')}
-            error={errors.password?.message}
-            placeholder="8+ caracteres, com maiúscula, minúscula e número"
-          />
+        <Input
+          label="Confirmar Senha"
+          type="password"
+          showPasswordToggle
+          autoComplete="new-password"
+          leftIcon={<Lock className="h-4 w-4" />}
+          {...register('confirmPassword')}
+          error={errors.confirmPassword?.message}
+          placeholder="Digite a senha novamente"
+        />
 
-          <Input
-            label="Confirmar Senha"
-            type="password"
-            showPasswordToggle
-            leftIcon={<Lock className="h-4 w-4" />}
-            {...register('confirmPassword')}
-            error={errors.confirmPassword?.message}
-            placeholder="Digite a senha novamente"
-          />
-
-          <Button
-            type="submit"
-            fullWidth
-            isLoading={loading}
-            disabled={!token || loading}
-          >
-            Redefinir senha
-          </Button>
-
-          <div className="text-center">
-            <Link
-              to="/login"
-              className="inline-flex items-center text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar ao login
-            </Link>
-          </div>
-        </Form>
-      </Card>
-    </div>
+        <Button
+          type="submit"
+          fullWidth
+          isLoading={loading}
+          disabled={!token || loading}
+        >
+          Redefinir senha
+        </Button>
+      </Form>
+    </AuthLayout>
   );
 };
 

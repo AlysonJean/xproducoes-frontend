@@ -1,7 +1,9 @@
 // Caminho do arquivo: frontend/src/pages/client/CartPage.tsx
 
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import ReactGA from 'react-ga4';
+import { Package, ShoppingBag, Trash2 } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { formatPrice } from '../../utils/formatPrice';
@@ -9,9 +11,21 @@ import { RecommendationSection } from '../../components/ui/RecommendationSection
 import { useRecommendations } from '../../hooks/useRecommendations';
 import { asArray } from '../../utils/normalize';
 import type { Equipment, Service } from '../../types/types';
+import type { StandardVariant } from '../../components/ui/StandardComponents';
+import { Badge, Button, Card, ConfirmModal, buttonVariants } from '../../components/ui/StandardComponents';
+import { ClientPage } from '../../components/client/ClientPage';
+
+// Selo do tipo de item (antes: blue/emerald/orange fixos em 10px).
+const itemTypeBadge: Record<'equipment' | 'service' | 'kit', { label: string; variant: StandardVariant }> = {
+  equipment: { label: 'Equipamento', variant: 'primary' },
+  service: { label: 'Serviço', variant: 'success' },
+  kit: { label: 'Kit', variant: 'warning' },
+};
 
 export const CartPage = () => {
   const { cart, removeItem, itemCount, clearCart } = useCart();
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   // Equipamentos
     const equipmentItems = asArray<{ equipmentId: string; equipment: Equipment } | Equipment>(cart?.equipments).map((item) => {
@@ -98,6 +112,18 @@ export const CartPage = () => {
     }
   };
 
+  const handleClearCart = async () => {
+    try {
+      setClearing(true);
+      await clearCart();
+      setShowClearConfirm(false);
+    } catch {
+      // O CartContext já avisa o erro ("Erro ao limpar") — um segundo aviso aqui duplicava.
+    } finally {
+      setClearing(false);
+    }
+  };
+
   const handleProceedToQuote = () => {
     if (itemCount > 0) {
       ReactGA.event({
@@ -126,176 +152,155 @@ export const CartPage = () => {
 
   if (totalItems === 0) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-20">
-        <div className="text-center bg-card p-12 rounded-3xl border border-border shadow-2xl space-y-8">
-            <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <svg className="w-12 h-12 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-            </div>
-            <div className="space-y-4">
-                <h1 className="text-4xl font-black text-foreground">Seu Carrinho está Vazio</h1>
-                <p className="text-muted-foreground text-xl max-w-md mx-auto">
-                    Ainda não encontramos nenhum item por aqui. Que tal explorar nossos equipamentos e serviços?
-                </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-                <Link
-                    to="/equipamentos"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-black py-4 px-10 rounded-xl transition-all transform hover:scale-105 shadow-lg shadow-primary/20"
-                >
-                    Ver Equipamentos
-                </Link>
-                <Link
-                    to="/servicos"
-                    className="bg-muted hover:bg-muted/80 text-foreground font-bold py-4 px-10 rounded-xl transition-all border border-border"
-                >
-                    Nossos Serviços
-                </Link>
-            </div>
-        </div>
+      <ClientPage width="4xl">
+        <Card className="space-y-8 p-6 text-center shadow-xl sm:p-12">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden="true">
+            <ShoppingBag className="h-10 w-10" />
+          </div>
+          <div className="space-y-4">
+            <h1 className="text-3xl font-bold text-foreground sm:text-4xl">Seu carrinho está vazio</h1>
+            <p className="mx-auto max-w-md text-lg text-muted-foreground">
+              Ainda não encontramos nenhum item por aqui. Que tal explorar nossos equipamentos e serviços?
+            </p>
+          </div>
+          <div className="flex flex-col justify-center gap-4 pt-2 sm:flex-row">
+            <Link to="/equipamentos" className={buttonVariants({ size: 'lg' })}>
+              Ver Equipamentos
+            </Link>
+            <Link to="/servicos" className={buttonVariants({ variant: 'outline', size: 'lg' })}>
+              Nossos Serviços
+            </Link>
+          </div>
+        </Card>
 
         {/* Trending Recommendations when empty */}
         {trendingRecommendations.recommendations.length > 0 && (
-            <div className="mt-20">
-                <RecommendationSection
-                    type="trending"
-                    items={trendingRecommendations.recommendations}
-                    maxItems={4}
-                    loading={trendingRecommendations.loading}
-                    viewAllLink="/equipamentos"
-                    viewAllText="Explorar Mais"
-                    columns={{ sm: 1, md: 2, lg: 4 }}
-                />
-            </div>
+          <div className="mt-16">
+            <RecommendationSection
+              type="trending"
+              items={trendingRecommendations.recommendations}
+              maxItems={4}
+              loading={trendingRecommendations.loading}
+              viewAllLink="/equipamentos"
+              viewAllText="Explorar Mais"
+              columns={{ sm: 1, md: 2, lg: 4 }}
+            />
+          </div>
         )}
-      </div>
+      </ClientPage>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-12">
-      <div className="bg-card p-6 md:p-10 rounded-3xl shadow-2xl border border-border">
-        <div className="flex justify-between items-center mb-10 border-b border-border pb-8">
-            <h1 className="text-4xl font-extrabold text-foreground tracking-tight">
+    <ClientPage width="6xl">
+      <Card className="p-4 shadow-xl sm:p-6 md:p-10">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-border pb-6">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Seu Carrinho
-            </h1>
-            <div className="flex items-center gap-3">
-                <span className="text-muted-foreground font-medium uppercase text-xs tracking-widest">Resumo</span>
-                <span className="bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-black shadow-lg shadow-primary/20">
-                {totalItems} {totalItems === 1 ? 'item' : 'itens'}
-                </span>
-            </div>
+          </h1>
+          <Badge variant="primary" size="lg">
+            {totalItems} {totalItems === 1 ? 'item' : 'itens'}
+          </Badge>
         </div>
 
-        <div className="space-y-6">
-            {items.map((item) => (
-            <div
-                key={`${item.type}-${item.id}`}
-                className="flex items-center justify-between bg-muted/10 p-5 rounded-2xl border border-transparent hover:border-border hover:bg-muted/20 transition-all duration-300 group"
+        <ul className="space-y-4">
+          {items.map((item) => (
+            <li
+              key={`${item.type}-${item.id}`}
+              className="group flex items-start justify-between gap-3 rounded-2xl border border-border/50 bg-muted/10 p-3 transition-colors hover:border-border hover:bg-muted/20 sm:items-center sm:p-5"
             >
-                <div className="flex items-center gap-6">
-                <div className="w-24 h-24 rounded-xl overflow-hidden border border-border bg-background shadow-inner">
+              <div className="flex min-w-0 items-center gap-3 sm:gap-6">
+                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-border bg-muted sm:h-24 sm:w-24">
+                  {item.images?.[0] ? (
                     <img
-                    src={item.images?.[0] || `https://placehold.co/200x200/1f2937/ffffff?text=${item.name.charAt(0)}`}
-                    alt={item.name}
-                    className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500"
+                      src={item.images[0]}
+                      alt={item.name}
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
-                </div>
-                <div>
-                    <div className="flex items-center gap-2 mb-2">
-                    <span className={`text-[10px] uppercase tracking-[0.2em] font-black px-2.5 py-1 rounded-lg ${
-                        item.type === 'equipment' ? 'bg-blue-500/10 text-blue-500' : 
-                        item.type === 'service' ? 'bg-emerald-500/10 text-emerald-500' : 
-                        'bg-orange-500/10 text-orange-500'
-                    }`}>
-                        {item.type === 'equipment' ? 'Equipamento' : item.type === 'service' ? 'Serviço' : 'Combo'}
-                    </span>
+                  ) : (
+                    // Antes: imagem externa do placehold.co com cores fixas (#1f2937/#fff).
+                    <div className="flex h-full w-full items-center justify-center text-muted-foreground" aria-hidden="true">
+                      <Package className="h-8 w-8" />
                     </div>
-                    <h2 className="font-bold text-2xl text-foreground mb-1">{item.name}</h2>
-                    <p className="text-primary font-black text-xl">
-                    {formatPrice(item.price)} <span className="text-sm font-normal text-muted-foreground">{item.type === 'service' ? '/ serviço' : '/ hora'}</span>
-                    </p>
+                  )}
                 </div>
+                <div className="min-w-0">
+                  <Badge variant={itemTypeBadge[item.type].variant} size="sm" className="mb-2">
+                    {itemTypeBadge[item.type].label}
+                  </Badge>
+                  <h2 className="mb-1 break-words text-lg font-bold text-foreground sm:text-2xl">{item.name}</h2>
+                  <p className="text-lg font-bold text-primary sm:text-xl">
+                    {formatPrice(item.price)}{' '}
+                    <span className="text-sm font-normal text-muted-foreground">{item.type === 'service' ? '/ serviço' : '/ hora'}</span>
+                  </p>
                 </div>
-                
-                <button
-                onClick={() => handleRemoveItem(item.id, item.name, item.type)}
-                className="p-4 text-muted-foreground hover:text-white hover:bg-destructive rounded-2xl transition-all duration-300 shadow-sm"
-                title="Remover item"
-                >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                >
-                    <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2.5}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                </svg>
-                </button>
-            </div>
-            ))}
-        </div>
+              </div>
 
-        <div className="mt-12 border-t-2 border-dashed border-border pt-10 px-4">
-            <div className="flex flex-col md:flex-row justify-between items-end gap-10">
-            <div className="space-y-4 max-w-md">
-                <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                    <span className="text-muted-foreground font-semibold uppercase text-xs tracking-widest">Subtotal parcial</span>
-                </div>
-                <div className="text-5xl font-black text-foreground">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleRemoveItem(item.id, item.name, item.type)}
+                className="h-11 w-11 shrink-0 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
+                aria-label={`Remover ${item.name} do carrinho`}
+              >
+                <Trash2 className="h-5 w-5" aria-hidden="true" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-10 border-t-2 border-dashed border-border pt-8">
+          <div className="flex flex-col justify-between gap-8 md:flex-row md:items-end">
+            <div className="max-w-md space-y-3">
+              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Subtotal parcial</span>
+              <div className="text-4xl font-bold text-foreground sm:text-5xl">
                 {formatPrice(subtotal)}
-                </div>
-                <p className="text-muted-foreground leading-relaxed">
+              </div>
+              <p className="leading-relaxed text-muted-foreground">
                 Este valor é uma estimativa parcial. Equipamentos e Kits serão multiplicados pela duração final (horas) do seu evento, enquanto os serviços possuem valor fixo. Taxas de transporte serão validadas por nossa equipe.
-                </p>
+              </p>
             </div>
-            
-            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                <button
-                onClick={async () => {
-                    if(confirm('Limpar todos os itens do carrinho?')) {
-                    await clearCart();
-                    }
-                }}
-                className="bg-muted/50 text-foreground font-bold py-5 px-10 rounded-2xl transition-all border border-border hover:bg-muted/80"
-                >
+
+            <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
+              <Button variant="outline" size="lg" onClick={() => setShowClearConfirm(true)}>
                 Esvaziar Carrinho
-                </button>
-                <button
-                onClick={handleProceedToQuote}
-                className="bg-primary hover:bg-primary text-primary-foreground font-black py-5 px-12 rounded-2xl text-2xl transition-all shadow-2xl shadow-primary/30 hover:shadow-primary/50 transform hover:-translate-y-1 active:scale-95"
-                >
+              </Button>
+              <Button size="lg" onClick={handleProceedToQuote}>
                 Seguir para Orçamento
-                </button>
+              </Button>
             </div>
-            </div>
+          </div>
         </div>
 
         {/* Recomendações Complementares */}
         {complementaryRecommendations.recommendations.length > 0 && (
-            <div className="mt-24 border-t border-border pt-16">
+          <div className="mt-16 border-t border-border pt-12">
             <RecommendationSection
-                type="frequently-bought"
-                title="Aproveite e Adicione"
-                items={complementaryRecommendations.recommendations}
-                maxItems={4}
-                loading={complementaryRecommendations.loading}
-                viewAllLink="/equipamentos"
-                viewAllText="Ver Todas"
-                columns={{ sm: 1, md: 2, lg: 4 }}
+              type="frequently-bought"
+              title="Aproveite e Adicione"
+              items={complementaryRecommendations.recommendations}
+              maxItems={4}
+              loading={complementaryRecommendations.loading}
+              viewAllLink="/equipamentos"
+              viewAllText="Ver Todas"
+              columns={{ sm: 1, md: 2, lg: 4 }}
             />
-            </div>
+          </div>
         )}
-      </div>
-    </div>
+      </Card>
+
+      {/* Antes: confirm() nativo do navegador. */}
+      <ConfirmModal
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={handleClearCart}
+        title="Esvaziar carrinho"
+        message="Remover todos os itens do carrinho?"
+        confirmText="Esvaziar"
+        variant="danger"
+        isLoading={clearing}
+      />
+    </ClientPage>
   );
 };
 export default CartPage;

@@ -8,14 +8,14 @@ import { z } from 'zod';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { authAPI } from '../services/api';
 import { userRegisterSchema } from '../validators/userSchema';
-import { PageLayout } from '../components/layouts/PageLayout';
+import { Helmet } from 'react-helmet-async';
+import { AuthLayout, PASSWORD_HINT } from '../components/layouts/AuthLayout';
 import GoogleAuthButton from '../components/ui/GoogleAuthButton';
-import { 
-  Button, 
-  Card, 
-  Input, 
-  Form, 
-  Alert 
+import {
+  Button,
+  Input,
+  Form,
+  Alert
 } from '../components/ui/StandardComponents';
 import { UserPlus, User, Mail, Phone, Lock } from 'lucide-react';
 
@@ -81,110 +81,109 @@ export const RegisterPage = () => {
   };
 
   return (
-    <PageLayout
-      title={bookingId ? 'Rastrear Proposta' : 'Criar Conta'}
-      description={bookingId ? 'Finalize seu cadastro para acompanhar seu orçamento' : 'Preencha os dados abaixo para criar sua conta e aproveitar todos os benefícios.'}
-    >
-      <div className="max-w-md mx-auto py-8">
-        <Card className="p-8 shadow-xl border-border">
-          <div className="text-center mb-8">
-            <div className="mx-auto h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
-              <UserPlus className="h-6 w-6 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">
-              {bookingId ? 'Rastrear meu Orçamento' : 'Criar Conta'}
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              {bookingId 
-                ? `Finalize seu cadastro para acompanhar a proposta #${bookingId}` 
-                : 'Junte-se à nossa comunidade'}
-            </p>
-          </div>
-
-          {error && (
-            <Alert variant="error" className="mb-6">
-              {error}
-            </Alert>
-          )}
-
-          <Form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <Input
-              label="Nome completo"
-              leftIcon={<User className="h-4 w-4" />}
-              {...register('name')}
-              error={errors.name?.message}
-              placeholder="Ex: João Silva"
-              autoComplete="name"
-            />
-
-            <Input
-              label="E-mail"
-              type="email"
-              leftIcon={<Mail className="h-4 w-4" />}
-              {...register('email')}
-              error={errors.email?.message}
-              placeholder="Ex: joao@exemplo.com"
-              autoComplete="email"
-            />
-
-            <Input
-              label="Telefone"
-              type="tel"
-              leftIcon={<Phone className="h-4 w-4" />}
-              {...register('phone')}
-              error={errors.phone?.message}
-              placeholder="Ex: +55 11 99999-9999"
-              autoComplete="tel"
-            />
-
-            <Input
-              label="Senha"
-              type="password"
-              showPasswordToggle
-              leftIcon={<Lock className="h-4 w-4" />}
-              {...register('password')}
-              error={errors.password?.message}
-              placeholder="8+ caracteres, com maiúscula, minúscula e número"
-              autoComplete="new-password"
-            />
-
-            <Button
-              type="submit"
-              fullWidth
-              isLoading={loading}
-              className="mt-6"
-            >
-              Criar Conta
-            </Button>
-
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border"></div>
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="px-2 bg-card text-muted-foreground">Ou continue com</span>
-              </div>
-            </div>
-
-            <GoogleAuthButton onSuccess={() => {
-              addNotification({
-                type: 'success',
-                title: 'Sucesso',
-                message: 'Autenticação realizada!'
-              });
-              navigate('/login');
-            }} />
-          </Form>
-
-          <p className="text-center text-muted-foreground mt-8 text-sm">
+    <>
+      {/* Mantém o <title>/description que o PageLayout dava a esta rota (o h1 agora é do AuthLayout). */}
+      <Helmet>
+        <title>{bookingId ? 'Rastrear Proposta' : 'Criar Conta'}</title>
+        <meta
+          name="description"
+          content={bookingId ? 'Finalize seu cadastro para acompanhar seu orçamento' : 'Preencha os dados abaixo para criar sua conta e aproveitar todos os benefícios.'}
+        />
+      </Helmet>
+      <AuthLayout
+        icon={<UserPlus className="h-6 w-6" />}
+        title={bookingId ? 'Rastrear meu orçamento' : 'Criar conta'}
+        subtitle={bookingId
+          ? `Finalize seu cadastro para acompanhar a proposta #${bookingId}`
+          : 'Junte-se à nossa comunidade'}
+        footer={
+          <p>
             Já tem uma conta?{' '}
-            <Link to="/login" className="text-primary font-bold hover:underline">
+            <Link to="/login" className="font-medium text-primary hover:underline">
               Entrar
             </Link>
           </p>
-        </Card>
-      </div>
-    </PageLayout>
+        }
+      >
+        {/* Mesma ordem do login: social primeiro, depois o formulário por e-mail. Fora do <form>
+            para o botão social nunca disparar o envio do cadastro. */}
+        <GoogleAuthButton onSuccess={() => {
+          addNotification({
+            type: 'success',
+            title: 'Sucesso',
+            message: 'Autenticação realizada!'
+          });
+          navigate('/login');
+        }} />
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="bg-card px-2 text-muted-foreground">Ou cadastre-se com e-mail</span>
+          </div>
+        </div>
+
+        {error && (
+          <Alert variant="error">
+            {error}
+          </Alert>
+        )}
+
+        <Form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <Input
+            label="Nome completo"
+            leftIcon={<User className="h-4 w-4" />}
+            {...register('name')}
+            error={errors.name?.message}
+            placeholder="Ex.: João Silva"
+            autoComplete="name"
+          />
+
+          <Input
+            label="E-mail"
+            type="email"
+            leftIcon={<Mail className="h-4 w-4" />}
+            {...register('email')}
+            error={errors.email?.message}
+            placeholder="Ex.: joao@exemplo.com"
+            autoComplete="email"
+          />
+
+          <Input
+            label="Telefone"
+            type="tel"
+            leftIcon={<Phone className="h-4 w-4" />}
+            {...register('phone')}
+            error={errors.phone?.message}
+            placeholder="Ex.: (11) 99999-9999"
+            autoComplete="tel"
+          />
+
+          <Input
+            label="Senha"
+            type="password"
+            showPasswordToggle
+            leftIcon={<Lock className="h-4 w-4" />}
+            {...register('password')}
+            error={errors.password?.message}
+            description={PASSWORD_HINT}
+            placeholder="Crie uma senha"
+            autoComplete="new-password"
+          />
+
+          <Button
+            type="submit"
+            fullWidth
+            isLoading={loading}
+            leftIcon={<UserPlus className="h-4 w-4" />}
+          >
+            Criar conta
+          </Button>
+        </Form>
+      </AuthLayout>
+    </>
   );
 };
 

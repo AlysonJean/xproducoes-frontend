@@ -5,6 +5,7 @@ import { Card, Button, Checkbox, Select } from '../../../components/ui/StandardC
 import { ProfileGeneralPreferences } from '../../../types/types';
 import { apiFetch } from '../../../services/api';
 import { logger } from '../../../utils/logger';
+import { useNotifications } from '../../../contexts/NotificationContext';
 
 interface PreferencesTabProps {
   generalPreferences: ProfileGeneralPreferences;
@@ -22,6 +23,7 @@ export const PreferencesTab: React.FC<PreferencesTabProps> = ({
   googleCalendarEmail
 }) => {
   const [googleLoading, setGoogleLoading] = useState(false);
+  const { addNotification } = useNotifications();
 
   const handleConnectGoogle = async () => {
     try {
@@ -32,6 +34,8 @@ export const PreferencesTab: React.FC<PreferencesTabProps> = ({
       }
     } catch (error) {
       logger.error('Erro ao conectar Google:', 'PreferencesTab', error);
+      // Antes a falha era silenciosa (o botão só parava de girar).
+      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível conectar ao Google Agenda agora.' });
     } finally {
       setGoogleLoading(false);
     }
@@ -44,139 +48,133 @@ export const PreferencesTab: React.FC<PreferencesTabProps> = ({
       window.location.reload(); // Recarregar para atualizar estado
     } catch (error) {
       logger.error('Erro ao desconectar Google:', 'PreferencesTab', error);
+      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível desconectar o Google Agenda agora.' });
     } finally {
       setGoogleLoading(false);
     }
   };
 
+  const profileTypes = [
+    { id: 'individual' as const, label: 'Pessoa física' },
+    { id: 'business' as const, label: 'Produtora' },
+  ];
+
+  const deliveryMethods = [
+    { id: 'delivery' as const, label: 'Entrega no local', sub: 'Levamos os equipamentos até o seu evento' },
+    { id: 'pickup' as const, label: 'Retirada', sub: 'Retirada direta em nossa loja' },
+  ];
+
   return (
     <Card>
       <div className="p-6 space-y-8">
-        <div className="flex items-center justify-between border-b pb-4">
-          <div>
-            <h3 className="text-lg font-semibold text-primary">Configurações de Conta</h3>
-            <p className="text-sm text-muted-foreground">Personalize sua experiência na plataforma</p>
-          </div>
+        <div className="border-b border-border pb-4">
+          <h3 className="text-lg font-semibold text-foreground">Configurações de Conta</h3>
+          <p className="text-sm text-muted-foreground">Personalize sua experiência na plataforma</p>
         </div>
-        
+
         {/* Integrações */}
-        <div className="pt-4 pb-4 border-b">
-            <h4 className="text-sm font-medium text-foreground mb-4">Integrações</h4>
-            <div className="flex items-center justify-between p-4 border rounded-lg bg-card">
-                <div className="flex items-center gap-4">
-                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                        <Calendar className="h-6 w-6" />
-                    </div>
-                    <div>
-                        <div className="font-medium">Google Calendar</div>
-                        <div className="text-sm text-muted-foreground">
-                            {googleCalendarEmail 
-                                ? `Conectado como ${googleCalendarEmail}` 
-                                : 'Sincronize suas reservas automaticamente'}
-                        </div>
-                    </div>
+        <div className="pb-4 border-b border-border">
+          <h4 className="text-sm font-medium text-foreground mb-4">Integrações</h4>
+          <div className="flex flex-col gap-4 p-4 border border-border rounded-lg bg-card sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
+              {/* Antes: bg-blue-50 text-blue-600 (quadrado claro no tema escuro) */}
+              <div className="shrink-0 p-2 bg-info/10 text-info rounded-lg" aria-hidden="true">
+                <Calendar className="h-6 w-6" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-medium text-foreground">Google Agenda</div>
+                <div className="text-sm text-muted-foreground break-all">
+                  {googleCalendarEmail
+                    ? `Conectado como ${googleCalendarEmail}`
+                    : 'Sincronize suas reservas automaticamente'}
                 </div>
-                <div>
-                    {googleCalendarEmail ? (
-                        <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="text-red-600 border-red-200 hover:bg-red-50"
-                            onClick={handleDisconnectGoogle}
-                            isLoading={googleLoading}
-                        >
-                            Desconectar
-                        </Button>
-                    ) : (
-                        <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={handleConnectGoogle}
-                            isLoading={googleLoading}
-                        >
-                            Conectar
-                        </Button>
-                    )}
-                </div>
+              </div>
             </div>
+            <div className="shrink-0">
+              {googleCalendarEmail ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-destructive text-destructive hover:bg-destructive/10"
+                  onClick={handleDisconnectGoogle}
+                  isLoading={googleLoading}
+                >
+                  Desconectar
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleConnectGoogle}
+                  isLoading={googleLoading}
+                >
+                  Conectar
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Tipo de Perfil e Identidade Fiscal */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-4">
-            <label className="text-sm font-medium text-foreground">Tipo de Perfil</label>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant={generalPreferences.profileType === 'individual' ? 'primary' : 'outline'}
-                size="sm"
-                onClick={() => setGeneralPreferences(prev => ({ ...prev, profileType: 'individual' }))}
-                className="font-bold"
-              >
-                INDIVIDUAL
-              </Button>
-              <Button
-                variant={generalPreferences.profileType === 'business' ? 'primary' : 'outline'}
-                size="sm"
-                onClick={() => setGeneralPreferences(prev => ({ ...prev, profileType: 'business' }))}
-                className="font-bold"
-              >
-                PRODUTORA
-              </Button>
+            <p className="text-sm font-medium text-foreground" id="profile-type-label">Tipo de Perfil</p>
+            {/* Botões de alternância com aria-pressed (antes o estado só aparecia na cor) */}
+            <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby="profile-type-label">
+              {profileTypes.map((type) => (
+                <Button
+                  key={type.id}
+                  type="button"
+                  variant={generalPreferences.profileType === type.id ? 'primary' : 'outline'}
+                  size="sm"
+                  aria-pressed={generalPreferences.profileType === type.id}
+                  onClick={() => setGeneralPreferences(prev => ({ ...prev, profileType: type.id }))}
+                >
+                  {type.label}
+                </Button>
+              ))}
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-muted/20 border rounded-lg">
-              <div>
-                <p className="text-sm font-medium">Faturamento Automático</p>
-                <p className="text-xs text-muted-foreground">Gerar invoices (NIF/CNPJ) automaticamente</p>
-              </div>
+            <div className="p-4 bg-muted/20 border border-border rounded-lg space-y-2">
               <Checkbox
+                label="Faturamento automático"
                 checked={generalPreferences.autoInvoice}
                 onChange={(e) => setGeneralPreferences(prev => ({ ...prev, autoInvoice: e.target.checked }))}
               />
+              <p className="text-sm text-muted-foreground">Emitir notas fiscais (CPF/CNPJ) automaticamente</p>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <label className="text-sm font-medium text-foreground">Preferência de Logística</label>
+          <fieldset className="min-w-0 space-y-4">
+            <legend className="mb-4 text-sm font-medium text-foreground">Preferência de Logística</legend>
             <div className="space-y-2">
-              <label className={clsx(
-                "flex items-center p-3 border rounded-lg cursor-pointer transition-all",
-                generalPreferences.defaultDeliveryMethod === 'delivery' ? "border-primary bg-primary/5" : "border-border"
-              )}>
-                <input
-                  type="radio"
-                  name="deliveryMethod"
-                  className="text-primary focus:ring-primary h-4 w-4"
-                  checked={generalPreferences.defaultDeliveryMethod === 'delivery'}
-                  onChange={() => setGeneralPreferences(prev => ({ ...prev, defaultDeliveryMethod: 'delivery' }))}
-                />
-                <div className="ml-3">
-                  <p className="text-sm font-bold">ENTREGA NO LOCAL</p>
-                  <p className="text-xs text-muted-foreground">Logística para o set de filmagem</p>
-                </div>
-              </label>
-              <label className={clsx(
-                "flex items-center p-3 border rounded-lg cursor-pointer transition-all",
-                generalPreferences.defaultDeliveryMethod === 'pickup' ? "border-primary bg-primary/5" : "border-border"
-              )}>
-                <input
-                  type="radio"
-                  name="deliveryMethod"
-                  className="text-primary focus:ring-primary h-4 w-4"
-                  checked={generalPreferences.defaultDeliveryMethod === 'pickup'}
-                  onChange={() => setGeneralPreferences(prev => ({ ...prev, defaultDeliveryMethod: 'pickup' }))}
-                />
-                <div className="ml-3">
-                  <p className="text-sm font-bold">RETIRADA NO HUB</p>
-                  <p className="text-xs text-muted-foreground">Retirada direta em nossa loja</p>
-                </div>
-              </label>
+              {deliveryMethods.map((method) => (
+                <label
+                  key={method.id}
+                  className={clsx(
+                    "flex items-center p-3 border rounded-lg cursor-pointer transition-all focus-within:ring-2 focus-within:ring-ring",
+                    generalPreferences.defaultDeliveryMethod === method.id ? "border-primary bg-primary/5" : "border-border"
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="deliveryMethod"
+                    className="h-4 w-4 shrink-0 accent-primary"
+                    checked={generalPreferences.defaultDeliveryMethod === method.id}
+                    onChange={() => setGeneralPreferences(prev => ({ ...prev, defaultDeliveryMethod: method.id }))}
+                  />
+                  <span className="ml-3">
+                    <span className="block text-sm font-semibold text-foreground">{method.label}</span>
+                    <span className="block text-sm text-muted-foreground">{method.sub}</span>
+                  </span>
+                </label>
+              ))}
             </div>
-          </div>
+          </fieldset>
         </div>
 
         {/* Configurações Locais */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-border">
           <Select
             label="Idioma da Interface"
             value={generalPreferences.language}
@@ -198,7 +196,7 @@ export const PreferencesTab: React.FC<PreferencesTabProps> = ({
             ]}
           />
           <Select
-            label="Timezone"
+            label="Fuso horário"
             value={generalPreferences.timezone}
             onChange={(e) => setGeneralPreferences(prev => ({ ...prev, timezone: e.target.value }))}
             options={[
@@ -209,7 +207,7 @@ export const PreferencesTab: React.FC<PreferencesTabProps> = ({
           />
         </div>
 
-        <div className="pt-6 border-t flex justify-end">
+        <div className="pt-6 border-t border-border flex justify-end">
           <Button 
             variant="primary" 
             onClick={handleSavePreferences}
