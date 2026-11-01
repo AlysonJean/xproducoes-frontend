@@ -3,7 +3,8 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { fetchAllAdminBookings } from '../../services/adminBookings';
 import { isWithinLocalDateRange } from '../../utils/dateRange';
-import { downloadBookingsSpreadsheet, DELIVERY_LABELS } from '../../utils/bookingExport';
+import { downloadBookingsSpreadsheet } from '../../utils/bookingExport';
+import { BOOKING_STATUS_OPTIONS, DELIVERY_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '../../utils/bookingStatus';
 import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
 import { normalizeString } from '../../utils/string';
@@ -45,19 +46,17 @@ import {
   Upload
 } from 'lucide-react';
 
-// Seletores da tabela: todos os valores que o backend aceita. Com uma lista parcial, a reserva cujo
-// valor não estava nela (rascunho, em andamento, entrega concluída — inclusive todo o histórico
-// importado) aparecia como a primeira opção, "Pendente".
-const STATUS_OPTIONS = [
-  { value: 'DRAFT', label: 'Rascunho' },
-  { value: 'PENDING', label: 'Pendente' },
-  { value: 'CONFIRMED', label: 'Confirmada' },
-  { value: 'IN_PROGRESS', label: 'Em andamento' },
-  { value: 'COMPLETED', label: 'Concluída' },
-  { value: 'CANCELLED', label: 'Cancelada' },
-  { value: 'REFUNDED', label: 'Reembolsada' },
+// Seletores da tabela: todos os valores que o backend aceita (fonte única em utils/bookingStatus). Com
+// uma lista parcial, a reserva cujo valor não estava nela (rascunho, em andamento, entrega concluída —
+// inclusive todo o histórico importado) aparecia como a primeira opção, "Pendente".
+const STATUS_OPTIONS = BOOKING_STATUS_OPTIONS;
+const DELIVERY_OPTIONS = DELIVERY_STATUS_OPTIONS;
+// Filtro de status: só status da RESERVA (antes misturava "Em trânsito"/"No local", que são de entrega,
+// e não tinha Rascunho, Em andamento nem Reembolsada).
+const STATUS_FILTER_OPTIONS = [
+  { value: 'all', label: 'TODOS OS STATUS' },
+  ...BOOKING_STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label.toUpperCase() })),
 ];
-const DELIVERY_OPTIONS = Object.entries(DELIVERY_LABELS).map(([value, label]) => ({ value, label }));
 
 // Aux function for safe price parsing
 const safeParsePrice = (value: string | number | undefined): number => {
@@ -405,15 +404,8 @@ export const BookingListPage = () => {
                   value={filterStatus}
                                     onChange={(e: ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value)}
                   className="pl-10 h-10 border-border bg-card rounded-xl text-[10px] font-black uppercase tracking-widest"
-                  options={[
-                    { value: 'all', label: 'TODOS OS STATUS' },
-                    { value: 'PENDING', label: '📌 PENDENTE' },
-                    { value: 'CONFIRMED', label: '✅ CONFIRMADO' },
-                    { value: 'ON_THE_WAY', label: '🚚 EM TRÂNSITO' },
-                    { value: 'ARRIVED', label: '📍 NO LOCAL' },
-                    { value: 'COMPLETED', label: '🏁 CONCLUÍDO' },
-                    { value: 'CANCELLED', label: '❌ CANCELADO' },
-                  ]}
+                  aria-label="Filtrar por status"
+                  options={STATUS_FILTER_OPTIONS}
                 />
               </div>
 
@@ -520,12 +512,7 @@ export const BookingListPage = () => {
                           value={booking.paymentStatus || ''}
                           onChange={(e: ChangeEvent<HTMLSelectElement>) => handlePaymentChange(booking.id, e.target.value)}
                           aria-label={`Pagamento da reserva ${booking.id}`}
-                          options={[
-                            { value: '', label: 'Não informado' },
-                            { value: 'PENDING', label: 'Pendente' },
-                            { value: 'PARTIAL', label: 'Parcial' },
-                            { value: 'PAID', label: 'Pago' },
-                          ]}
+                          options={PAYMENT_STATUS_OPTIONS}
                         />
                       </td>
                       <td className="px-6 py-4">

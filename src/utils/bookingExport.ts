@@ -1,6 +1,7 @@
 import type { BookingListItem } from '../types/types';
 import type { BookingStatus } from '../types/enums';
 import { formatBookingPaymentStatus, formatBookingStatus } from './typeSafeFormatters';
+import { DELIVERY_STATUS_LABELS } from './bookingStatus';
 import { downloadSheet, formatDateTimeBR as formatDateTime, toMoney as money, type SheetRow } from './spreadsheet';
 
 // Exportação das reservas da tela de Reservas (o que estiver filtrado) para planilha .xlsx —
@@ -16,15 +17,8 @@ export type BookingExportSource = BookingListItem & Partial<{
   createdAt: string;
 }>;
 
-export const DELIVERY_LABELS: Record<string, string> = {
-  PENDING: 'Pendente',
-  PREPARING: 'Em preparação',
-  ON_THE_WAY: 'A caminho',
-  ARRIVED: 'No local',
-  SETUP_COMPLETE: 'Montado',
-  PICKUP_PENDING: 'Aguardando recolha',
-  COMPLETED: 'Concluída',
-};
+// Rótulos de entrega: fonte única em utils/bookingStatus (mantido o nome para quem já importa daqui).
+export const DELIVERY_LABELS = DELIVERY_STATUS_LABELS;
 
 export function bookingsToSheetRows(bookings: BookingExportSource[]): SheetRow[] {
   return bookings.map((b) => ({
