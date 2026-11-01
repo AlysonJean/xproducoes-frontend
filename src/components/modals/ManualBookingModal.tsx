@@ -7,9 +7,9 @@ import { z } from 'zod';
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { apiFetch } from '../../services/api';
 import type { Equipment, Kit } from '../../types/types';
-import { Button, Input, Textarea, FormActions, Alert, Select } from '../ui/StandardComponents'; // Added Select
+import { Button, Input, Textarea, FormActions, Alert, Select, Checkbox } from '../ui/StandardComponents';
+import { Modal } from '../ui/Modal';
 import { formatPrice } from '../../utils/typeSafeFormatters';
-import { BaseModal } from './BaseModal';
 
 const manualBookingSchema = z
   .object({
@@ -41,6 +41,10 @@ const manualBookingSchema = z
     }
   );
 type ManualBookingFormData = z.infer<typeof manualBookingSchema>;
+
+// Rádio nativo com a cor da marca e foco visível (antes: `rounded`, sem estilo de foco).
+const RADIO_CLASSES =
+  'h-4 w-4 accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background';
 
 interface RawClientRecord {
   id?: string;
@@ -142,7 +146,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
 
   // Reset do estado local do formulário no evento real de fechamento (não reativo a `isOpen`
   // via efeito — evita setState síncrono dentro de um efeito, react-hooks/set-state-in-effect).
-  // Cobre todos os caminhos de fechamento: X/overlay/esc (via BaseModal) e sucesso no submit.
+  // Cobre todos os caminhos de fechamento: X/overlay/esc (via Modal) e sucesso no submit.
   const handleModalClose = () => {
     setSelectedEquipments([]);
     setSelectedKit('');
@@ -177,7 +181,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
   if (!isOpen) return null;
 
   return (
-    <BaseModal
+    <Modal
       isOpen={isOpen}
       onClose={handleModalClose}
       title="Adicionar Reserva Manual"
@@ -186,8 +190,8 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           
           <div className="bg-muted/50 p-4 rounded-lg mb-4">
-            <h4 className="text-sm font-semibold mb-2">Buscar Cliente Cadastrado (Opcional)</h4>
             <Select
+              label="Buscar cliente cadastrado (opcional)"
               placeholder="Selecione para preencher automaticamente..."
               options={clients.map(c => ({ 
                 value: c.id, 
@@ -206,43 +210,39 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
 
           <Input
             {...register('clientName')}
-            placeholder="Nome do Cliente"
+            label="Nome do cliente"
             className="w-full"
             error={errors.clientName?.message}
           />
 
           <Input
             {...register('clientContact')}
-            placeholder="Contato (Telefone/Email)"
+            label="Contato (telefone ou e-mail)"
             className="w-full"
             error={errors.clientContact?.message}
           />
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-muted-foreground mb-1">Início do Evento</label>
-              <Input
-                type="datetime-local"
-                {...register('eventDate')}
-                className="w-full"
-                error={errors.eventDate?.message}
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-muted-foreground mb-1">Fim do Evento</label>
-              <Input
-                type="datetime-local"
-                {...register('eventEndDate')}
-                className="w-full"
-                error={errors.eventEndDate?.message}
-              />
-            </div>
+            <Input
+              label="Início do evento"
+              type="datetime-local"
+              {...register('eventDate')}
+              className="w-full"
+              error={errors.eventDate?.message}
+            />
+            <Input
+              label="Fim do evento"
+              type="datetime-local"
+              {...register('eventEndDate')}
+              className="w-full"
+              error={errors.eventEndDate?.message}
+            />
           </div>
 
           {/* Campos de Endereço */}
           <Input
             {...register('location')}
-            placeholder="Local do Evento"
+            label="Local do evento"
             className="w-full"
             error={errors.location?.message}
           />
@@ -251,7 +251,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
             <div>
               <Input
                 {...register('street')}
-                placeholder="Rua"
+                label="Rua"
                 className="w-full"
                 error={errors.street?.message}
               />
@@ -259,7 +259,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
             <div>
               <Input
                 {...register('addressNumber')}
-                placeholder="Número"
+                label="Número"
                 className="w-full"
                 error={errors.addressNumber?.message}
               />
@@ -270,7 +270,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
             <div>
               <Input
                 {...register('neighborhood')}
-                placeholder="Bairro"
+                label="Bairro"
                 className="w-full"
                 error={errors.neighborhood?.message}
               />
@@ -278,7 +278,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
             <div>
               <Input
                 {...register('zipCode')}
-                placeholder="CEP"
+                label="CEP"
                 className="w-full"
                 error={errors.zipCode?.message}
               />
@@ -289,7 +289,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
             <div>
               <Input
                 {...register('city')}
-                placeholder="Cidade"
+                label="Cidade"
                 className="w-full"
                 error={errors.city?.message}
               />
@@ -297,7 +297,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
             <div>
               <Input
                 {...register('state')}
-                placeholder="Estado"
+                label="Estado"
                 className="w-full"
                 error={errors.state?.message}
               />
@@ -306,13 +306,13 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
 
           <Input
             {...register('addressComplement')}
-            placeholder="Complemento (Opcional)"
+            label="Complemento (opcional)"
             className="w-full"
           />
 
           <Textarea
             {...register('notes')}
-            placeholder="Observações (Opcional)"
+            label="Observações (opcional)"
             rows={3}
             className="w-full"
           />
@@ -325,13 +325,15 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
             </p>
 
             {/* Kits */}
-            <div className="bg-muted p-4 rounded-md">
-              <h4 className="font-semibold mb-2">Kits Disponíveis</h4>
+            <div role="group" aria-labelledby="manual-booking-kits-title" className="bg-muted p-4 rounded-md">
+              <h4 id="manual-booking-kits-title" className="font-semibold mb-2">Kits Disponíveis</h4>
               <Input
+                aria-label="Buscar kit"
                 placeholder="Buscar kit..."
                 value={kitSearch}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setKitSearch(e.target.value)}
-                className="mb-2 h-8 bg-background"
+                size="xs"
+                className="mb-2 bg-background"
               />
               <div className="max-h-32 overflow-y-auto space-y-2">
                 {kits
@@ -344,7 +346,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
                         name="kitSelection"
                         checked={selectedKit === kit.id}
                         onChange={() => handleKitChange(kit.id!)}
-                        className="rounded"
+                        className={RADIO_CLASSES}
                       />
                       <span>
                         {kit.name} - {formatPrice(kit.price ?? 0)}
@@ -358,7 +360,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
                     name="kitSelection"
                     checked={selectedKit === ''}
                     onChange={() => handleKitChange('')}
-                    className="rounded"
+                    className={RADIO_CLASSES}
                   />
                   <span>Nenhum kit (equipamentos individuais)</span>
                 </label>
@@ -366,41 +368,39 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
             </div>
 
             {/* Equipamentos Individuais */}
-            <div className="bg-muted p-4 rounded-md">
-              <h4 className="font-semibold mb-2">Equipamentos Individuais</h4>
+            <div role="group" aria-labelledby="manual-booking-equipments-title" className="bg-muted p-4 rounded-md">
+              <h4 id="manual-booking-equipments-title" className="font-semibold mb-2">Equipamentos Individuais</h4>
               <Input
+                aria-label="Buscar equipamento"
                 placeholder="Buscar equipamento..."
                 value={equipSearch}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEquipSearch(e.target.value)}
-                className="mb-2 h-8 bg-background"
+                size="xs"
+                className="mb-2 bg-background"
               />
               <div className="max-h-40 overflow-y-auto space-y-2">
                 {equipments
                   .filter(eq => eq.name.toLowerCase().includes(equipSearch.toLowerCase()))
                   .map((eq) =>
                   eq.id ? (
-                    <label key={eq.id} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedEquipments.includes(eq.id!)}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          handleEquipmentChange(eq.id!, e.target.checked)
-                        }
-                        disabled={selectedKit !== ''}
-                        className="rounded"
-                      />
-                      <span className={selectedKit !== '' ? 'text-muted-foreground' : ''}>
-                        {eq.name} - {formatPrice(eq.pricePerHour ?? 0)}/hora
-                      </span>
-                    </label>
+                    <Checkbox
+                      key={eq.id}
+                      id={`manual-booking-eq-${eq.id}`}
+                      checked={selectedEquipments.includes(eq.id!)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        handleEquipmentChange(eq.id!, e.target.checked)
+                      }
+                      disabled={selectedKit !== ''}
+                      label={`${eq.name} - ${formatPrice(eq.pricePerHour ?? 0)}/hora`}
+                    />
                   ) : null
                 )}
               </div>
             </div>
           </div>
 
-          {errors.kitId && <p className="text-red-400 font-medium">{errors.kitId.message}</p>}
-          {errors.equipmentIds && <p className="text-red-400 font-medium">{errors.equipmentIds.message}</p>}
+          {errors.kitId && <p role="alert" className="text-sm text-destructive font-medium">{errors.kitId.message}</p>}
+          {errors.equipmentIds && <p role="alert" className="text-sm text-destructive font-medium">{errors.equipmentIds.message}</p>}
 
           {serverError && <Alert variant="error" title="Erro" description={serverError} />}
 
@@ -423,6 +423,6 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
             </Button>
           </FormActions>
         </form>
-    </BaseModal>
+    </Modal>
   );
 };

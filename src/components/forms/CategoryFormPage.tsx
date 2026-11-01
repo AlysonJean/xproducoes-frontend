@@ -154,18 +154,18 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({ initialData, onSucce
           />
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">
+            <label htmlFor="category-image" className="text-sm font-medium text-foreground">
               Imagem da Categoria (Opcional)
             </label>
             <input
+              id="category-image"
               type="file"
-              title="Selecione a imagem da categoria"
-              placeholder="Selecione um arquivo"
+              aria-describedby="category-image-help"
               accept="image/*"
               onChange={(e) => { setFile(e.target.files?.[0] || null); setIsDirty(true); }}
               className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
-             <p className="text-xs text-muted-foreground">
+             <p id="category-image-help" className="text-xs text-muted-foreground">
               A imagem será renomeada automaticamente para SEO.
             </p>
           </div>

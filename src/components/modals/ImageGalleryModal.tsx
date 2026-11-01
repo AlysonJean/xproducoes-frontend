@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { createAndClickAnchor, sanitizeFilename, isSafeUrl } from '../../utils/dom';
 import { normalizeString } from '../../utils/string';
-import { BaseModal } from './BaseModal';
+import { Modal } from '../ui/Modal';
 import { ImageGalleryModalProps } from '../../types/types';
 import { Button } from '../ui/StandardComponents';
 import { logger } from '../../utils/logger';
@@ -323,10 +323,10 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
   if (!currentImage) return null;
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={title} size="full">
+    <Modal isOpen={!!isOpen} onClose={() => onClose?.()} title={title} size="full">
       <div className="h-full flex flex-col" onKeyDown={handleKeyDown} tabIndex={0}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center justify-between p-4 border-b border-border">
           <div>
             <h3 className="text-lg font-medium text-foreground">
               {sanitizeDisplayText(currentImage.title) || `Imagem ${currentIndex + 1} de ${safeImages.length}`}
@@ -345,6 +345,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
                 onClick={handleDownload}
                 isLoading={isLoading}
                 title="Baixar imagem"
+                aria-label="Baixar imagem"
                 className="p-2"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -363,6 +364,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
                 size="sm"
                 onClick={handleShare}
                 title="Compartilhar"
+                aria-label="Compartilhar imagem"
                 className="p-2"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -388,7 +390,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
             disabled={safeImages.length <= 1}
             title="Imagem anterior"
             aria-label="Imagem anterior"
-            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors z-10"
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 hover:text-white transition-colors z-10"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -407,7 +409,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
             disabled={safeImages.length <= 1}
             title="Próxima imagem"
             aria-label="Próxima imagem"
-            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors z-10"
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 hover:text-white transition-colors z-10"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -448,14 +450,14 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
           )}
 
           {/* Image Counter */}
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm" aria-live="polite">
             {currentIndex + 1} de {safeImages.length}
           </div>
         </div>
 
         {/* Thumbnails */}
         {showThumbnails && safeImages.length > 1 && (
-          <div className="p-4 bg-muted border-t">
+          <div className="p-4 bg-muted border-t border-border">
             <div className="flex space-x-2 overflow-x-auto">
               {safeImages.map((image, index) => (
                 <Button
@@ -463,13 +465,14 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
                   variant={index === currentIndex ? 'primary' : 'outline'}
                   size="sm"
                   onClick={() => goToImage(index)}
-                  className={`flex-shrink-0 w-16 h-16 rounded-md overflow-hidden border-2 transition-colors ${
+                  className={`flex-shrink-0 w-16 h-16 p-0 rounded-md overflow-hidden border-2 transition-colors ${
                     index === currentIndex
-                      ? 'border-blue-500'
-                      : 'border hover:border'
+                      ? 'border-primary'
+                      : 'border-border hover:border-primary/50'
                   }`}
                   title={`Selecionar imagem ${index + 1}`}
                   aria-label={`Selecionar imagem ${index + 1}`}
+                  aria-pressed={index === currentIndex}
                 >
                   <img
                     src={image.url}
@@ -482,6 +485,6 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = (props) => {
           </div>
         )}
       </div>
-    </BaseModal>
+    </Modal>
   );
 };

@@ -10,9 +10,9 @@ interface WhatsAppConfirmationModalProps {
   isSending: boolean;
 }
 
-
-
-
+// Achado (auditoria do design system): a prévia abaixo era passada como children, mas o ConfirmModal
+// descartava children — o admin confirmava o envio sem ver o texto que ia para o cliente. O
+// ConfirmModal agora renderiza children; a prévia aparece.
 export const WhatsAppConfirmationModal = ({
   isOpen,
   onClose,
@@ -34,20 +34,24 @@ export const WhatsAppConfirmationModal = ({
       onClose={onClose}
       onConfirm={handleSend}
       title="Confirmar Envio de Mensagem"
-      message=""
       size="md"
       isLoading={isSending}
       cancelText="Cancelar"
       confirmText="Enviar via WhatsApp"
       variant="success"
     >
-      <div className="space-y-4">
-        <p className="text-muted-foreground">
-          A seguinte mensagem será enviada para o número {contactNumber}.
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          A seguinte mensagem será enviada para o número{' '}
+          <strong className="text-foreground">{contactNumber}</strong>:
         </p>
-        <div className="bg-muted p-4 rounded-md whitespace-pre-wrap text-muted-foreground text-sm">
+        {/* tabIndex: texto longo rola — quem usa teclado precisa conseguir rolar a prévia. */}
+        <blockquote
+          tabIndex={0}
+          className="max-h-72 overflow-y-auto rounded-md border border-border bg-muted p-4 text-sm text-foreground whitespace-pre-wrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           {message}
-        </div>
+        </blockquote>
       </div>
     </ConfirmModal>
   );

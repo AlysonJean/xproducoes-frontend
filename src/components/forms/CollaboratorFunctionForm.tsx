@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
+import { Form, FormActions, Button, Input, Textarea } from '../ui/StandardComponents';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { collaboratorFunctionsAPI } from '@/services/api';
 import { CollaboratorFunction } from '@/types/types';
@@ -104,7 +103,7 @@ export const CollaboratorFunctionForm: React.FC<CollaboratorFunctionFormProps> =
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <Form onSubmit={handleSubmit} className="space-y-4">
       {draftPrompt && (
         <DraftRestoreBanner
           savedAt={draftPrompt.savedAt}
@@ -112,37 +111,30 @@ export const CollaboratorFunctionForm: React.FC<CollaboratorFunctionFormProps> =
           onDiscard={handleDiscardDraft}
         />
       )}
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-1">
-          Nome da Função
-        </label>
-        <Input
-          value={name}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setName(e.target.value); setIsDirty(true); }}
-          placeholder="Ex: Fotógrafo, Editor, Auxiliar..."
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-1">
-          Descrição (opcional)
-        </label>
-        <textarea
-          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-          value={description}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => { setDescription(e.target.value); setIsDirty(true); }}
-          placeholder="Descreva as responsabilidades desta função..."
-          rows={3}
-        />
-      </div>
-      <div className="flex justify-end gap-3 pt-2">
+      {/* Achado (auditoria do design system): rótulos soltos (sem htmlFor) e <textarea> cru com
+          foco próprio — agora Input/Textarea com `label`, ligados ao campo. */}
+      <Input
+        label="Nome da Função"
+        value={name}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setName(e.target.value); setIsDirty(true); }}
+        placeholder="Ex: Fotógrafo, Editor, Auxiliar..."
+        required
+      />
+      <Textarea
+        label="Descrição (opcional)"
+        value={description}
+        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => { setDescription(e.target.value); setIsDirty(true); }}
+        placeholder="Descreva as responsabilidades desta função..."
+        rows={3}
+      />
+      <FormActions>
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar
         </Button>
         <Button type="submit" variant="primary" isLoading={loading}>
           {initialData ? 'Atualizar' : 'Criar'}
         </Button>
-      </div>
-    </form>
+      </FormActions>
+    </Form>
   );
 };

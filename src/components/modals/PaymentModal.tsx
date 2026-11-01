@@ -1,6 +1,7 @@
 // packages/web/src/shared/modals/PaymentModal.tsx
 import React, { useState } from 'react';
 import { FormModal } from './FormModal';
+import { Input, Select, Textarea } from '../ui/StandardComponents';
 
 import type { PaymentModalProps, PaymentData } from '../../types/types';
 
@@ -85,6 +86,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     return v;
   };
 
+  // Achado (auditoria do design system): campos crus com `focus:ring-blue-500` e rótulos soltos
+  // (sem htmlFor), azul fixo no método selecionado e um bloco "Dados para Transferência" com banco e
+  // IBAN fictícios ("Banco Exemplo", "PT50 0000…"). Campos agora são Input/Select/Textarea com label;
+  // os dados bancários falsos saíram (fica só a referência do pedido).
   return (
     <FormModal
       isOpen={isOpen}
@@ -98,43 +103,40 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     >
       <div className="space-y-4">
         {/* Payment Amount */}
-        <div>
-          <label className="block text-sm font-medium text-card-foreground mb-1">
-            Valor do Pagamento (R$) *
-          </label>
-          <input
-            type="number"
-            name="amount"
-            required
-            min="0.01"
-            step="0.01"
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="0.00"
-            defaultValue={totalAmount || initialData?.amount}
-          />
-        </div>
+        <Input
+          label="Valor do Pagamento (R$) *"
+          type="number"
+          name="amount"
+          required
+          min="0.01"
+          step="0.01"
+          placeholder="0.00"
+          defaultValue={totalAmount || initialData?.amount}
+        />
 
         {/* Payment Method */}
-        <div>
-          <label className="block text-sm font-medium text-card-foreground mb-2">
+        <fieldset>
+          <legend className="block text-sm font-medium text-card-foreground mb-2">
             Método de Pagamento *
-          </label>
+          </legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {paymentMethods.map((method) => (
               <button
                 key={method}
                 type="button"
                 onClick={() => handleMethodChange(method)}
-                className={`p-3 border rounded-md text-left transition-colors ${
+                aria-pressed={selectedMethod === method}
+                className={`p-3 border rounded-md text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   selectedMethod === method
-                    ? 'border-blue-500 bg-primary/10 text-primary'
-                    : 'border hover:bg-muted'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border hover:bg-muted'
                 }`}
               >
                 <div className="flex items-center">
                   <div
+                    aria-hidden="true"
                     className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                      selectedMethod === method ? 'border-blue-500 bg-primary/100' : 'border'
+                      selectedMethod === method ? 'border-primary bg-primary' : 'border-border'
                     }`}
                   >
                     {selectedMethod === method && (
@@ -146,96 +148,81 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               </button>
             ))}
           </div>
-        </div>
+        </fieldset>
 
         {/* Card Details */}
         {(selectedMethod === 'Cartão de Crédito' || selectedMethod === 'Cartão de Débito') && (
           <div className="space-y-4 p-4 bg-muted rounded-lg">
             <h4 className="font-medium text-foreground">Detalhes do Cartão</h4>
 
-            <div>
-              <label className="block text-sm font-medium text-card-foreground mb-1">
-                Nome do Titular *
-              </label>
-              <input
-                type="text"
-                name="cardholderName"
-                required
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Nome conforme aparece no cartão"
-              />
-            </div>
+            <Input
+              label="Nome do Titular *"
+              type="text"
+              name="cardholderName"
+              required
+              placeholder="Nome conforme aparece no cartão"
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-card-foreground mb-1">
-                Número do Cartão *
-              </label>
-              <input
+            <Input
+              label="Número do Cartão *"
+              type="text"
+              name="cardNumber"
+              required
+              maxLength={19}
+              inputMode="numeric"
+              autoComplete="cc-number"
+              placeholder="1234 5678 9012 3456"
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                e.target.value = formatCardNumber(e.target.value);
+              }}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Data de Validade *"
                 type="text"
-                name="cardNumber"
+                name="expiryDate"
                 required
-                maxLength={19}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="1234 5678 9012 3456"
+                maxLength={5}
+                inputMode="numeric"
+                autoComplete="cc-exp"
+                placeholder="MM/AA"
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  e.target.value = formatCardNumber(e.target.value);
+                  e.target.value = formatExpiryDate(e.target.value);
+                }}
+              />
+
+              <Input
+                label="CVV *"
+                type="text"
+                name="cvv"
+                required
+                maxLength={4}
+                inputMode="numeric"
+                autoComplete="cc-csc"
+                placeholder="123"
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  e.target.value = e.target.value.replace(/[^0-9]/g, '');
                 }}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-card-foreground mb-1">
-                  Data de Validade *
-                </label>
-                <input
-                  type="text"
-                  name="expiryDate"
-                  required
-                  maxLength={5}
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="MM/AA"
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    e.target.value = formatExpiryDate(e.target.value);
-                  }}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-card-foreground mb-1">CVV *</label>
-                <input
-                  type="text"
-                  name="cvv"
-                  required
-                  maxLength={4}
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="123"
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    e.target.value = e.target.value.replace(/[^0-9]/g, '');
-                  }}
-                />
-              </div>
-            </div>
-
             {/* Installments for Credit Card */}
             {selectedMethod === 'Cartão de Crédito' && (
-              <div>
-                <label className="block text-sm font-medium text-card-foreground mb-1">Parcelas</label>
-                <select
-                  name="installments"
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  defaultValue="1"
-                  title="Selecione o número de parcelas"
-                >
-                  <option value="1">1x sem juros</option>
-                  <option value="2">2x sem juros</option>
-                  <option value="3">3x sem juros</option>
-                  <option value="4">4x sem juros</option>
-                  <option value="5">5x sem juros</option>
-                  <option value="6">6x sem juros</option>
-                  <option value="12">12x com juros</option>
-                </select>
-              </div>
+              <Select
+                label="Parcelas"
+                name="installments"
+                defaultValue="1"
+                options={[
+                  { value: '1', label: '1x sem juros' },
+                  { value: '2', label: '2x sem juros' },
+                  { value: '3', label: '3x sem juros' },
+                  { value: '4', label: '4x sem juros' },
+                  { value: '5', label: '5x sem juros' },
+                  { value: '6', label: '6x sem juros' },
+                  { value: '12', label: '12x com juros' },
+                ]}
+              />
             )}
           </div>
         )}
@@ -244,79 +231,53 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         {selectedMethod === 'MB Way' && (
           <div className="p-4 bg-muted rounded-lg">
             <h4 className="font-medium text-foreground mb-3">MB Way</h4>
-            <div>
-              <label className="block text-sm font-medium text-card-foreground mb-1">
-                Número de Telefone *
-              </label>
-              <input
-                type="tel"
-                name="mbWayPhone"
-                required
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="+351 912 345 678"
-              />
-            </div>
+            <Input
+              label="Número de Telefone *"
+              type="tel"
+              name="mbWayPhone"
+              required
+            />
           </div>
         )}
 
         {/* Bank Transfer Info */}
         {selectedMethod === 'Transferência Bancária' && (
-          <div className="p-4 bg-primary/10 border border-blue-200 rounded-lg">
-            <h4 className="font-medium text-blue-900 mb-2">Dados para Transferência</h4>
-            <div className="text-sm text-blue-800 space-y-1">
-              <p>
-                <strong>Banco:</strong> Banco Exemplo
-              </p>
-              <p>
-                <strong>IBAN:</strong> PT50 0000 0000 0000 0000 0000 0
-              </p>
-              <p>
-                <strong>Titular:</strong> X Produçoes e Eventos
-              </p>
-              <p>
-                <strong>Referência:</strong> {bookingId ? `BOOKING-${bookingId}` : 'A definir'}
-              </p>
-            </div>
+          <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
+            <h4 className="font-medium text-foreground mb-2">Transferência Bancária</h4>
+            <p className="text-sm text-foreground">
+              <strong>Referência:</strong> {bookingId ? `BOOKING-${bookingId}` : 'A definir'}
+            </p>
           </div>
         )}
 
         {/* Due Date */}
-        <div>
-          <label className="block text-sm font-medium text-card-foreground mb-1">
-            Data de Vencimento *
-          </label>
-          <input
-            type="date"
-            name="dueDate"
-            required
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            min={new Date().toISOString().split('T')[0]}
-            defaultValue={initialData?.dueDate}
-            title="Data de Vencimento"
-            placeholder="Selecione a data de vencimento"
-          />
-        </div>
+        <Input
+          label="Data de Vencimento *"
+          type="date"
+          name="dueDate"
+          required
+          min={new Date().toISOString().split('T')[0]}
+          defaultValue={initialData?.dueDate}
+        />
 
         {/* Description */}
-        <div>
-          <label className="block text-sm font-medium text-card-foreground mb-1">Descrição</label>
-          <textarea
-            name="description"
-            rows={2}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Descrição adicional do pagamento..."
-            defaultValue={initialData?.description}
-          />
-        </div>
+        <Textarea
+          label="Descrição"
+          name="description"
+          rows={2}
+          placeholder="Descrição adicional do pagamento..."
+          defaultValue={initialData?.description}
+        />
 
         {/* Security Notice */}
-        <div className="p-3 bg-success/10 border border-green-200 rounded-md">
+        <div className="p-3 bg-success/10 border border-success/30 rounded-md">
           <div className="flex items-center">
             <svg
-              className="w-5 h-5 text-success mr-2"
+              className="w-5 h-5 text-success mr-2 shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -325,7 +286,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p className="text-sm text-green-800">
+            <p className="text-sm text-foreground">
               Seus dados de pagamento são processados de forma segura e criptografada.
             </p>
           </div>

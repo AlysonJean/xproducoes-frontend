@@ -15,7 +15,9 @@ import {
   Select,
   Button,
   Alert,
+  Checkbox,
 } from '../ui/StandardComponents';
+import { BOOKING_STATUS_OPTIONS, DELIVERY_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '../../utils/bookingStatus';
 import { BrandLoader } from '../ui/BrandLoader';
 import { logger } from '../../utils/logger';
 import { useFormDraft } from '../../hooks/useFormDraft';
@@ -267,8 +269,12 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
       }
     };
     loadInitial();
+    // Achado (revisão da auditoria): dependia do OBJETO initialData — quem passava `{ ...booking }` inline
+    // criava um objeto novo a cada render, e o primeiro onDirtyChange (1ª tecla) re-renderizava o pai,
+    // recarregava tudo e fazia reset(): o que a pessoa digitava sumia (lista de Reservas e ficha).
+    // Recarrega só quando muda a RESERVA editada.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData, reset]);
+  }, [initialData?.id, reset]);
 
   const onSubmit = async (data: BookingFormData) => {
     setServerError(null);
@@ -395,7 +401,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
             ) : (
               <>
                 <Input label="Nome do Cliente" {...register('clientName')} error={errors.clientName?.message} />
-                <Input label="Contacto" {...register('clientContact')} error={errors.clientContact?.message} />
+                <Input label="Contato" {...register('clientContact')} error={errors.clientContact?.message} />
                 <Input label="Email" type="email" {...register('clientEmail')} error={errors.clientEmail?.message} />
               </>
             )}
@@ -433,9 +439,10 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
                 />
               </div>
             ) : (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Equipamentos</label>
+              <div className="space-y-2" role="group" aria-labelledby="admin-booking-equipments-label">
+                <p id="admin-booking-equipments-label" className="text-sm font-medium text-foreground">Equipamentos</p>
                 <Input
+                  aria-label="Buscar equipamento"
                   placeholder="Buscar equipamento..."
                   value={equipSearch}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEquipSearch(e.target.value)}
@@ -445,14 +452,17 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
                   {equipments
                     .filter(eq => eq.name.toLowerCase().includes(equipSearch.toLowerCase()))
                     .map((eq) => (
-                    <label key={eq.id} className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" value={eq.id} className="h-4 w-4" {...register('equipmentIds')} />
-                      <span>{eq.name}</span>
-                    </label>
+                    <Checkbox
+                      key={eq.id}
+                      id={`admin-booking-eq-${eq.id}`}
+                      value={eq.id}
+                      label={eq.name}
+                      {...register('equipmentIds')}
+                    />
                   ))}
                 </div>
                 {errors.equipmentIds && (
-                  <p className="text-sm text-destructive">Selecione pelo menos um equipamento</p>
+                  <p role="alert" className="text-sm text-destructive">Selecione pelo menos um equipamento</p>
                 )}
               </div>
             )}
@@ -502,12 +512,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
               <Select
                 label="Situação do Pagamento"
                 {...register('paymentStatus')}
-                options={[
-                  { value: '', label: 'Não informado' },
-                  { value: 'PENDING', label: 'Pendente' },
-                  { value: 'PARTIAL', label: 'Parcial' },
-                  { value: 'PAID', label: 'Pago' },
-                ]}
+                options={PAYMENT_STATUS_OPTIONS}
               />
             </div>
           </FormSection>
@@ -520,27 +525,12 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
               <Select
                 label="Status"
                 {...register('status')}
-                options={[
-                  { value: 'DRAFT', label: 'Rascunho' },
-                  { value: 'PENDING', label: 'Pendente' },
-                  { value: 'CONFIRMED', label: 'Confirmada' },
-                  { value: 'IN_PROGRESS', label: 'Em Andamento' },
-                  { value: 'COMPLETED', label: 'Concluída' },
-                  { value: 'CANCELLED', label: 'Cancelada' },
-                ]}
+                options={BOOKING_STATUS_OPTIONS}
               />
               <Select
                 label="Entrega"
                 {...register('deliveryStatus')}
-                options={[
-                  { value: 'PENDING', label: 'Pendente' },
-                  { value: 'PREPARING', label: 'Preparando' },
-                  { value: 'ON_THE_WAY', label: 'A caminho' },
-                  { value: 'ARRIVED', label: 'Chegou' },
-                  { value: 'SETUP_COMPLETE', label: 'Montagem concluída' },
-                  { value: 'PICKUP_PENDING', label: 'Aguardando recolha' },
-                  { value: 'COMPLETED', label: 'Concluída' },
-                ]}
+                options={DELIVERY_STATUS_OPTIONS}
               />
             </div>
           </div>

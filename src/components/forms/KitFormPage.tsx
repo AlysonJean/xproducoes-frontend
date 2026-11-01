@@ -397,52 +397,44 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
               <div className="p-6 space-y-6">
                 {/* Enhanced Search */}
                 <div className="relative group">
-                  <label 
-                    htmlFor="item-search" 
-                    className="text-xs font-bold uppercase text-muted-foreground mb-1.5 block cursor-pointer"
-                  >
-                    Adicionar Itens
-                  </label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <input
-                      id="item-search"
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Busque por equipamentos ou serviços..."
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border-2 bg-background focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm"
-                    />
-                  </div>
-                  
+                  <Input
+                    id="item-search"
+                    label="Adicionar Itens"
+                    type="search"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Busque por equipamentos ou serviços..."
+                    leftIcon={<Search className="w-4 h-4" aria-hidden="true" />}
+                  />
+
                   {/* Results with better visual separation */}
                   {searchTerm && (
-                    <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-popover border-2 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-popover text-popover-foreground border-2 border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                       {filteredItems.length > 0 ? (
                         filteredItems.map(item => (
                           <button
                             key={item.id}
                             type="button"
                             onClick={() => handleAddItem(item)}
-                            className="w-full flex items-center justify-between p-4 hover:bg-muted/50 text-left border-b last:border-0 transition-colors group/item"
+                            className="w-full flex items-center justify-between p-4 hover:bg-muted/50 text-left border-b border-border last:border-0 transition-colors group/item focus-visible:outline-none focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                           >
                             <div className="flex items-center gap-4">
                                <div className={clsx(
                                  "w-12 h-12 rounded-lg flex items-center justify-center border shrink-0",
-                                 item.type === 'EQUIPMENT' ? "bg-blue-50 border-blue-100" : "bg-slate-50 border-slate-100"
+                                 item.type === 'EQUIPMENT' ? "bg-info/10 border-info/20" : "bg-muted border-border"
                                )}>
                                  {item.type === 'EQUIPMENT' ? (
-                                   <Package className="w-6 h-6 text-blue-500" />
+                                   <Package className="w-6 h-6 text-info" aria-hidden="true" />
                                  ) : (
-                                   <User className="w-6 h-6 text-slate-500" />
+                                   <User className="w-6 h-6 text-muted-foreground" aria-hidden="true" />
                                  )}
                                </div>
                                <div>
                                  <div className="flex items-center gap-2">
                                    <p className="font-bold text-foreground group-hover/item:text-primary transition-colors">{item.name}</p>
                                    <span className={clsx(
-                                     "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider",
-                                     item.type === 'EQUIPMENT' ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-700"
+                                     "text-xs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider",
+                                     item.type === 'EQUIPMENT' ? "bg-info/10 text-info" : "bg-muted text-muted-foreground"
                                    )}>
                                      {item.type === 'EQUIPMENT' ? 'Equipamento' : 'Serviço'}
                                    </span>
@@ -452,7 +444,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                             </div>
                             <div className="flex items-center gap-4">
                               <span className="font-mono font-bold text-primary">{formatPrice(item.price)}</span>
-                              <div className="p-1 rounded-md bg-primary/10 text-primary group-hover/item:bg-primary group-hover/item:text-white transition-all">
+                              <div className="p-1 rounded-md bg-primary/10 text-primary group-hover/item:bg-primary group-hover/item:text-primary-foreground transition-all" aria-hidden="true">
                                 <Plus className="w-5 h-5" />
                               </div>
                             </div>
@@ -474,13 +466,13 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                     if (!item) return null;
 
                     return (
-                      <div key={field.id} className="flex items-start gap-4 p-4 bg-muted/20 hover:bg-muted/40 rounded-2xl border-2 border-transparent hover:border-primary/20 transition-all group relative">
+                      <div key={field.id} className="flex items-start gap-4 p-4 bg-muted/20 hover:bg-muted/40 rounded-2xl border-2 border-transparent hover:border-primary/20 focus-within:border-primary/20 transition-all group relative">
                         {/* Image/Icon */}
-                        <div className="w-16 h-16 rounded-xl bg-card border shadow-sm flex items-center justify-center overflow-hidden shrink-0">
+                        <div className="w-16 h-16 rounded-xl bg-card border border-border shadow-sm flex items-center justify-center overflow-hidden shrink-0">
                             {item.imageUrl ? (
                               <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
                             ) : (
-                              item.type === 'EQUIPMENT' ? <Package className="w-8 h-8 text-blue-400" /> : <User className="w-8 h-8 text-slate-400" />
+                              item.type === 'EQUIPMENT' ? <Package className="w-8 h-8 text-info" aria-hidden="true" /> : <User className="w-8 h-8 text-muted-foreground" aria-hidden="true" />
                             )}
                          </div>
  
@@ -489,7 +481,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                            <div className="flex items-center gap-1.5 mb-1">
                              <span className={clsx(
                                "w-2 h-2 rounded-full",
-                               item.type === 'EQUIPMENT' ? "bg-blue-500" : "bg-slate-500"
+                               item.type === 'EQUIPMENT' ? "bg-info" : "bg-muted-foreground"
                              )} />
                             <p className="font-bold text-sm truncate uppercase tracking-tight">{item.name}</p>
                           </div>
@@ -499,37 +491,39 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                           <div className="flex items-center gap-3">
                             <label 
                               htmlFor={`quantity-${index}`}
-                              className="text-[10px] font-bold uppercase text-muted-foreground cursor-pointer"
+                              className="text-xs font-bold uppercase text-muted-foreground cursor-pointer"
                             >
                               Quantidade
                             </label>
-                            <div className="flex items-center border rounded-lg bg-card overflow-hidden">
-                              <button 
+                            <div className="flex items-center border border-border rounded-lg bg-card overflow-hidden">
+                              <button
                                 type="button"
                                 title="Diminuir quantidade"
+                                aria-label={`Diminuir quantidade de ${item.name}`}
                                 onClick={() => {
                                   const currentVal = watch(`items.${index}.quantity`);
                                   if (currentVal > 1) {
                                     register(`items.${index}.quantity`).onChange({ target: { value: currentVal - 1, name: `items.${index}.quantity` } });
                                   }
                                 }}
-                                className="px-2 py-1 hover:bg-muted transition-colors border-r"
+                                className="px-2 py-1 hover:bg-muted transition-colors border-r border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                               >-</button>
                               <input
                                 id={`quantity-${index}`}
                                 type="number"
                                 min="1"
-                                className="w-10 text-center text-sm font-bold bg-transparent no-spinners"
+                                className="w-10 text-center text-sm font-bold bg-transparent no-spinners focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                                 {...register(`items.${index}.quantity`, { valueAsNumber: true, min: 1 })}
                               />
-                               <button 
+                               <button
                                 type="button"
                                 title="Aumentar quantidade"
+                                aria-label={`Aumentar quantidade de ${item.name}`}
                                 onClick={() => {
                                   const currentVal = watch(`items.${index}.quantity`);
                                   register(`items.${index}.quantity`).onChange({ target: { value: currentVal + 1, name: `items.${index}.quantity` } });
                                 }}
-                                className="px-2 py-1 hover:bg-muted transition-colors border-l"
+                                className="px-2 py-1 hover:bg-muted transition-colors border-l border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                               >+</button>
                             </div>
                           </div>
@@ -539,18 +533,19 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                         <button
                           type="button"
                           title="Remover item do kit"
+                          aria-label={`Remover ${item.name} do kit`}
                           onClick={() => remove(index)}
-                          className="absolute top-2 right-2 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                          className="absolute top-2 right-2 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-all md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" aria-hidden="true" />
                         </button>
                       </div>
                     );
                   })}
                   
                   {fields.length === 0 && (
-                    <div className="md:col-span-2 text-center py-16 text-muted-foreground border-2 border-dashed rounded-3xl bg-muted/5">
-                      <ShoppingBag className="w-12 h-12 mx-auto mb-4 opacity-10" />
+                    <div className="md:col-span-2 text-center py-16 text-muted-foreground border-2 border-dashed border-border rounded-3xl bg-muted/5">
+                      <ShoppingBag className="w-12 h-12 mx-auto mb-4 opacity-10" aria-hidden="true" />
                       <p className="text-lg font-medium">Kit Vazio</p>
                       <p className="text-sm max-w-xs mx-auto">Use o campo de busca acima para incluir equipamentos e serviços na composição deste kit.</p>
                     </div>
@@ -576,7 +571,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
           <div className="xl:col-span-1 space-y-8">
             {/* Publication & Status */}
             <div className="bg-card p-5 rounded-2xl border shadow-sm space-y-5">
-              <h3 className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Status & Visibilidade</h3>
+              <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Status & Visibilidade</h3>
               <Select
                 label="Status Atual"
                 {...register('status')}
@@ -594,7 +589,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                  <FormSection title="Imagem" description="Capa do kit" className="space-y-2">
                     <Input
                       type="file"
-                      label=""
+                      aria-label="Imagem de capa do kit"
                       size="sm"
                       {...register('images')}
                       accept="image/*"
@@ -605,7 +600,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                  {initialData?.imageUrl && (
                    <div className="mt-4 rounded-xl overflow-hidden border aspect-video">
                      <img src={initialData.imageUrl} alt="Atual" className="w-full h-full object-cover" />
-                     <div className="p-2 bg-muted text-[10px] text-center font-bold">IMAGEM ATUAL</div>
+                     <div className="p-2 bg-muted text-xs text-center font-bold">IMAGEM ATUAL</div>
                    </div>
                  )}
               </div>
@@ -630,52 +625,43 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                    </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label 
-                    htmlFor="kit-price" 
-                    className="text-xs font-bold text-foreground cursor-pointer"
-                  >
-                    Preço de Venda do Kit
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-primary">R$</span>
-                    <input
-                       id="kit-price"
-                       type="number"
-                       step="0.01"
-                       {...register('price', { valueAsNumber: true })}
-                       className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-primary bg-background text-xl font-bold focus:ring-4 focus:ring-primary/20 outline-none transition-all"
-                       placeholder="0.00"
-                    />
-                  </div>
-                  {errors.price && <p className="text-xs text-destructive font-semibold">{errors.price.message}</p>}
-                </div>
+                <Input
+                  id="kit-price"
+                  label="Preço de Venda do Kit"
+                  type="number"
+                  step="0.01"
+                  {...register('price', { valueAsNumber: true })}
+                  leftIcon={<span className="text-sm font-bold text-primary" aria-hidden="true">R$</span>}
+                  className="text-xl font-bold"
+                  placeholder="0.00"
+                  error={errors.price?.message}
+                />
 
                 {/* Discount Strategy Visualization */}
                 {discountStats && (
                   <div className={clsx(
                     "p-5 rounded-2xl border-2 flex flex-col gap-2 transition-all shadow-inner",
-                    discountStats.isPositive ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200"
+                    discountStats.isPositive ? "bg-success/10 border-success/30" : "bg-warning/10 border-warning/30"
                   )}>
                     <div className="flex justify-between items-center">
                       <span className={clsx(
-                        "text-[10px] font-black uppercase tracking-widest",
-                        discountStats.isPositive ? "text-green-600" : "text-orange-600"
+                        "text-xs font-black uppercase tracking-widest",
+                        discountStats.isPositive ? "text-success" : "text-warning"
                       )}>
                         {discountStats.isPositive ? 'Vantagem do Kit' : 'Markup do Kit'}
                       </span>
                       <div className={clsx(
                         "px-2 py-0.5 rounded text-xs font-bold",
-                        discountStats.isPositive ? "bg-green-600 text-white" : "bg-orange-600 text-white"
+                        discountStats.isPositive ? "bg-success text-success-foreground" : "bg-warning text-warning-foreground"
                       )}>
-                        {discountStats.isPositive ? 'ECONOMIA' : 'PLUS'}
+                        {discountStats.isPositive ? 'ECONOMIA' : 'ACRÉSCIMO'}
                       </div>
                     </div>
                     
                     <div className="flex items-baseline gap-2">
                       <span className={clsx(
                         "text-3xl font-black",
-                        discountStats.isPositive ? "text-green-700" : "text-orange-700"
+                        discountStats.isPositive ? "text-success" : "text-warning"
                       )}>
                         {Math.abs(discountStats.percentage).toFixed(0)}%
                       </span>

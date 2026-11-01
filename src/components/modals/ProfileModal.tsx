@@ -6,7 +6,8 @@ import { ProfileModalProps, ProfileData } from '../../types/types';
 import {
   Input,
   Select,
-  Textarea
+  Textarea,
+  Checkbox
 } from '../ui/StandardComponents';
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({
@@ -107,7 +108,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 />
               ) : (
                 <svg
-                  className="w-8 h-8 text-tertiary"
+                  className="w-8 h-8 text-muted-foreground"
+                  aria-hidden="true"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -172,9 +174,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         </div>
         {/* Address Information */}
         <div className="space-y-4">
-          <h4 className="text-md font-medium text-foreground border-b pb-2">Endereço</h4>
+          <h4 className="text-base font-medium text-foreground border-b border-border pb-2">Endereço</h4>
           <Input
-            label="Rua / Morada"
+            label="Rua e número"
             type="text"
             name="street"
             defaultValue={
@@ -185,7 +187,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 ? initialData.address.street
                 : ''
             }
-            placeholder="Rua / Morada"
+            placeholder="Rua, número"
           />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Input
@@ -203,7 +205,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               placeholder="Cidade"
             />
             <Input
-              label="Código Postal"
+              label="CEP"
               type="text"
               name="postalCode"
               defaultValue={
@@ -214,7 +216,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   ? initialData.address.postalCode
                   : ''
               }
-              placeholder="Código Postal"
+              placeholder="00000-000"
             />
             <Select
               label="País"
@@ -233,10 +235,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         </div>
         {/* Preferences */}
         <div className="space-y-4">
-          <h4 className="text-md font-medium text-foreground border-b pb-2">Preferências</h4>
+          <h4 className="text-base font-medium text-foreground border-b border-border pb-2">Preferências</h4>
           <div className="space-y-3">
-            <Input
-              type="checkbox"
+            <Checkbox
               label="Receber notificações por email"
               name="notifications"
               value="true"
@@ -249,8 +250,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   : false
               )}
             />
-            <Input
-              type="checkbox"
+            <Checkbox
               label="Receber newsletter"
               name="newsletter"
               value="true"
@@ -263,8 +263,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   : false
               )}
             />
-            <Input
-              type="checkbox"
+            <Checkbox
               label="Receber notificações por SMS"
               name="smsNotifications"
               value="true"
@@ -279,7 +278,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             />
           </div>
           {showPasswordChange && (
-            <div className="space-y-3 p-4 bg-surface border border-border rounded-lg">
+            <div className="space-y-3 p-4 bg-muted border border-border rounded-lg">
               <Input
                 label="Senha Atual *"
                 type="password"

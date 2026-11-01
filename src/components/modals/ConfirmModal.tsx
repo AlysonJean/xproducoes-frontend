@@ -1,10 +1,21 @@
 // packages/web/src/shared/modals/ConfirmModal.tsx
-import React from 'react';
-import { BaseModal } from './BaseModal';
-import { Button, Alert } from '../ui/StandardComponents';
+import React, { ReactNode } from 'react';
+import { Modal } from '../ui/Modal';
+import { Button } from '../ui/Button';
+import { Alert } from '../ui/Alert';
 import { ConfirmModalProps } from '../../types/types';
 
-export const ConfirmModal: React.FC<ConfirmModalProps> = ({
+// Achado (auditoria do design system): `message` só aceitava string e `children` era descartado —
+// o ConfirmModal repassava os próprios filhos ao modal base, por cima dos de quem chamava. O
+// WhatsAppConfirmationModal mandava a prévia da mensagem como children e o admin confirmava o envio
+// sem ver o texto. Agora `message` aceita ReactNode e `children` aparece abaixo da mensagem.
+// (Importa Modal/Button/Alert direto dos arquivos: via StandardComponents era import circular, porque
+// o barrel reexporta este ConfirmModal.)
+type ConfirmModalComponentProps = Omit<ConfirmModalProps, 'message'> & {
+  message?: ReactNode;
+};
+
+export const ConfirmModal: React.FC<ConfirmModalComponentProps> = ({
   isOpen,
   onClose,
   onConfirm,
@@ -16,7 +27,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isLoading = false,
   className = '',
   size = 'md',
-  ...props
+  children,
+  closeOnEscape = true,
+  closeOnOverlayClick = true,
+  showCloseButton = false,
 }) => {
   const handleConfirm = () => {
     if (!isLoading && onConfirm) {
@@ -50,38 +64,34 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     }
   };
 
-  const getIcon = () => {
-    switch (variant) {
-      case 'danger':
-        return '⚠️';
-      case 'warning':
-        return '⚡';
-      case 'success':
-        return '✅';
-      default:
-        return '❓';
-    }
-  };
+  const hasMessage = message !== undefined && message !== null && message !== '';
 
   return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
+    <Modal
+      isOpen={!!isOpen}
+      onClose={() => onClose?.()}
       title={title}
       className={className}
       size={size}
-      showCloseButton={false}
-      {...props}
+      showCloseButton={showCloseButton}
+      closeOnEscape={closeOnEscape}
+      closeOnOverlayClick={closeOnOverlayClick}
     >
       <div className="space-y-6">
-        <Alert variant={getAlertVariant()}>
-          <div className="flex items-center space-x-3">
-            <span className="text-2xl">{getIcon()}</span>
-            <p className="text-sm leading-relaxed">{message}</p>
-          </div>
-        </Alert>
+        {/* O Alert já mostra o ícone do status (os emojis ⚠️/✅/❓ duplicavam a informação). */}
+        {hasMessage && (
+          <Alert variant={getAlertVariant()}>
+            {typeof message === 'string' ? (
+              <p className="text-sm leading-relaxed">{message}</p>
+            ) : (
+              message
+            )}
+          </Alert>
+        )}
 
-        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0">
+        {children}
+
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button
             type="button"
             variant="outline"
@@ -103,6 +113,6 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </Button>
         </div>
       </div>
-    </BaseModal>
+    </Modal>
   );
 };

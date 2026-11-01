@@ -1,6 +1,7 @@
 // packages/web/src/shared/modals/ShareModal.tsx
 import React, { useState } from 'react';
-import { BaseModal } from './BaseModal';
+import { Modal } from '../ui/Modal';
+import { Button } from '../ui/Button';
 import { BaseModalProps } from '../../types/types';
 
 interface ShareModalProps extends BaseModalProps {
@@ -16,6 +17,7 @@ interface SharePlatform {
   name: string;
   icon: string;
   url: string;
+  /** Fundo + texto (classes completas). Cores de marca de terceiros são exceção legítima. */
   color: string;
 }
 
@@ -43,37 +45,37 @@ export const ShareModal: React.FC<ShareModalProps> = (props) => {
       name: 'Facebook',
       icon: '📘',
       url: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
-      color: 'bg-blue-600 hover:bg-blue-700',
+      color: 'bg-[#1877F2] text-white hover:bg-[#166FE5]',
     },
     {
       name: 'Twitter',
       icon: '🐦',
       url: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`,
-      color: 'bg-sky-500 hover:bg-sky-600',
+      color: 'bg-black text-white hover:bg-black/80',
     },
     {
       name: 'LinkedIn',
       icon: '💼',
       url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
-      color: 'bg-blue-700 hover:bg-blue-800',
+      color: 'bg-[#0A66C2] text-white hover:bg-[#004182]',
     },
     {
       name: 'WhatsApp',
       icon: '💬',
       url: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}`,
-      color: 'bg-green-600 hover:bg-green-700',
+      color: 'bg-[#25D366] text-black hover:bg-[#1EBE5A]',
     },
     {
       name: 'Telegram',
       icon: '✈️',
       url: `https://t.me/share/url?url=${encodedUrl}&text=${encodedTitle}`,
-      color: 'bg-primary/100 hover:bg-blue-600',
+      color: 'bg-[#229ED9] text-black hover:bg-[#1C8BC0]',
     },
     {
       name: 'Email',
       icon: '📧',
       url: `mailto:?subject=${encodedTitle}&body=${encodedDescription}%20${encodedUrl}`,
-      color: 'bg-gray-600 hover:bg-gray-700',
+      color: 'bg-primary text-primary-foreground hover:bg-primary/90',
     },
   ];
 
@@ -119,7 +121,7 @@ export const ShareModal: React.FC<ShareModalProps> = (props) => {
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={shareTitle} size="md">
+    <Modal isOpen={!!isOpen} onClose={() => onClose?.()} title={shareTitle} size="md">
       <div className="space-y-4">
         {/* Content Preview */}
         <div className="p-4 bg-muted rounded-lg">
@@ -141,11 +143,13 @@ export const ShareModal: React.FC<ShareModalProps> = (props) => {
 
         {/* Native Share (if available) */}
         {typeof navigator !== 'undefined' && 'share' in navigator && (
-          <button
+          <Button
+            type="button"
+            size="sm"
+            fullWidth
             onClick={handleNativeShare}
-            className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -154,7 +158,7 @@ export const ShareModal: React.FC<ShareModalProps> = (props) => {
               />
             </svg>
             <span>Compartilhar</span>
-          </button>
+          </Button>
         )}
 
         {/* Platform Buttons */}
@@ -164,13 +168,14 @@ export const ShareModal: React.FC<ShareModalProps> = (props) => {
             {platforms.map((platform) => (
               <button
                 key={platform.name}
+                type="button"
                 onClick={() => handlePlatformClick(platform)}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-md text-white transition-colors ${
-                  selectedPlatform === platform.name ? 'opacity-75' : platform.color
+                className={`flex items-center space-x-3 px-4 py-3 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background ${platform.color} ${
+                  selectedPlatform === platform.name ? 'opacity-75' : ''
                 }`}
                 disabled={selectedPlatform === platform.name}
               >
-                <span className="text-lg">{platform.icon}</span>
+                <span className="text-lg" aria-hidden="true">{platform.icon}</span>
                 <span className="font-medium">{platform.name}</span>
                 {selectedPlatform === platform.name && (
                   <div className="ml-auto">
@@ -197,24 +202,23 @@ export const ShareModal: React.FC<ShareModalProps> = (props) => {
         </div>
 
         {/* Copy Link */}
-        <div className="border-t pt-4">
-          <label className="block text-sm font-medium text-card-foreground mb-2">Ou copie o link:</label>
+        <div className="border-t border-border pt-4">
+          <label htmlFor="share-modal-link" className="block text-sm font-medium text-card-foreground mb-2">Ou copie o link:</label>
           <div className="flex rounded-md shadow-sm">
             <input
+              id="share-modal-link"
               type="text"
               value={safeUrl}
               readOnly
-              className="flex-1 min-w-0 px-3 py-2 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-muted"
-              title="Link para compartilhar"
-              aria-label="Link para compartilhar"
-              placeholder="Link para compartilhar"
+              className="flex-1 min-w-0 px-3 py-2 border border-input rounded-l-md bg-muted text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             <button
+              type="button"
               onClick={handleCopyLink}
-              className={`px-4 py-2 border-l-0 border rounded-r-md text-sm font-medium transition-colors ${
+              className={`px-4 py-2 border-l-0 border border-input rounded-r-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 copySuccess
-                  ? 'bg-success/100 text-white'
-                  : 'bg-muted text-card-foreground hover:bg-muted'
+                  ? 'bg-success text-success-foreground'
+                  : 'bg-muted text-card-foreground hover:bg-accent hover:text-accent-foreground'
               }`}
             >
               {copySuccess ? (
@@ -246,25 +250,14 @@ export const ShareModal: React.FC<ShareModalProps> = (props) => {
           </div>
         </div>
 
-        {/* QR Code (placeholder) */}
-        <div className="text-center">
-          <button
-            onClick={() => {
-              /* Implementar geração de QR code futuramente */
-            }}
-            className="text-sm text-primary hover:text-blue-800 underline"
-            title="Gerar código QR para o link"
-            aria-label="Gerar código QR para o link"
-          >
-            Gerar código QR
-          </button>
-        </div>
+        {/* Achado (auditoria do design system): havia um botão "Gerar código QR" sem ação
+            (onClick vazio, "implementar futuramente") — removido; botão morto não aparece. */}
 
         {/* Share Statistics (if available) */}
         <div className="text-center text-xs text-muted-foreground">
           Compartilhe este conteúdo com seus amigos e colegas
         </div>
       </div>
-    </BaseModal>
+    </Modal>
   );
 };

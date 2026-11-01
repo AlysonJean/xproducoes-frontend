@@ -4,8 +4,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { FormModal } from './FormModal';
 import { ContactModalProps, ContactType } from '../../types/types';
-import { Input, Textarea, Button, FormSection, Alert } from '../ui/StandardComponents';
+import { Input, Textarea, Button, FormSection, Alert, Checkbox } from '../ui/StandardComponents';
 import { AttachmentIcon, ClockIcon } from '../icons/index';
+import { getWhatsAppPhone } from '../../utils/whatsapp';
+import { SUPPORT_EMAIL, COMPANY_ADDRESS_LINE, COMPANY_CITY_LINE, formatPhoneDisplay } from '../../data/site';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_FILES = 5;
@@ -184,10 +186,11 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                 variant={selectedType === type.value ? 'primary' : 'outline'}
                 size="sm"
                 onClick={() => setValue('type', type.value)}
+                aria-pressed={selectedType === type.value}
                 className="p-3 text-left"
               >
                 <div className="flex items-center space-x-2">
-                  <span className="text-lg">{type.icon}</span>
+                  <span className="text-lg" aria-hidden="true">{type.icon}</span>
                   <span className="text-sm font-medium">{type.label}</span>
                 </div>
               </Button>
@@ -247,17 +250,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             required
           />
 
-          <div className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              {...register('urgent')}
-              className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
-              id="urgent-checkbox"
-            />
-            <label htmlFor="urgent-checkbox" className="text-sm text-foreground font-medium">
-              Este é um assunto urgente
-            </label>
-          </div>
+          <Checkbox id="urgent-checkbox" label="Este é um assunto urgente" {...register('urgent')} />
         </FormSection>
 
         <FormSection title="Anexos">
@@ -290,7 +283,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                     className="flex items-center justify-between p-3 bg-card border border-border rounded-lg"
                   >
                     <div className="flex items-center space-x-3">
-                      <AttachmentIcon className="w-5 h-5 text-muted-foreground" />
+                      <AttachmentIcon className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
                       <div>
                         <span className="text-sm font-medium text-foreground">{file.name}</span>
                         <p className="text-xs text-muted-foreground">
@@ -303,6 +296,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={() => removeAttachment(index)}
+                      aria-label={`Remover ${file.name}`}
                       className="text-destructive hover:text-destructive/80"
                     >
                       Remover
@@ -314,22 +308,25 @@ export const ContactModal: React.FC<ContactModalProps> = ({
           )}
         </FormSection>
 
+        {/* Achado (auditoria do design system): telefone "+351 123 456 789" e endereço
+            "Rua das Produções, 123, Lisboa" eram fictícios. Agora vêm da fonte única (data/site.ts e
+            o WhatsApp oficial configurado); horário igual ao da página de contato. */}
         <Alert variant="info" title="Outras formas de contato">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
             <div className="space-y-2">
-              <p className="flex items-center gap-2">
-                <span>📞</span> <strong>Telefone:</strong> +351 123 456 789
+              <p>
+                <strong>WhatsApp:</strong> {formatPhoneDisplay(getWhatsAppPhone())}
               </p>
-              <p className="flex items-center gap-2">
-                <span>📧</span> <strong>Email:</strong> <span>suporte@xproducoeseventos.com.br</span>
+              <p className="break-all">
+                <strong>E-mail:</strong> {SUPPORT_EMAIL}
               </p>
             </div>
             <div className="space-y-2">
-              <p className="flex items-center gap-2">
-                <span>📍</span> <strong>Endereço:</strong> Rua das Produções, 123, Lisboa
+              <p>
+                <strong>Endereço:</strong> {COMPANY_ADDRESS_LINE}, {COMPANY_CITY_LINE}
               </p>
-              <p className="flex items-center gap-2">
-                <span>🕐</span> <strong>Horário:</strong> Segunda a Sexta, 9h às 18h
+              <p>
+                <strong>Horário:</strong> Segunda a sexta, 9h às 18h
               </p>
             </div>
           </div>
@@ -337,7 +334,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
         <Alert variant="default">
           <div className="flex items-center space-x-2">
-            <ClockIcon className="w-5 h-5 text-muted-foreground" />
+            <ClockIcon className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
             <p className="text-sm">
               <strong>Tempo de resposta:</strong> Até 24 horas em dias úteis {renderResponseType()}
             </p>

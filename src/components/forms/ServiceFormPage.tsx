@@ -263,20 +263,22 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
             />
           </div>
 
-          <div className="space-y-4">
-            <label className="block text-sm font-medium text-foreground">Imagem de Capa</label>
+          <div className="space-y-4" role="group" aria-labelledby="service-cover-label">
+            <p id="service-cover-label" className="block text-sm font-medium text-foreground">Imagem de Capa</p>
             
             {/* Upload Button or Preview */}
             {!imagePreview ? (
               <div className="flex items-center justify-center w-full">
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                  {/* Achado (auditoria do design system): input `hidden` (display:none) não recebia foco —
+                      upload inalcançável pelo teclado. sr-only + focus-within no label. */}
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ring-offset-background">
                       <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                          <Upload className="w-8 h-8 text-muted-foreground mb-2" aria-hidden="true" />
                           <p className="text-sm text-muted-foreground">Clique para adicionar imagem</p>
                       </div>
                       <input 
                           type="file" 
-                          className="hidden" 
+                          className="sr-only" 
                           accept="image/*"
                           onChange={handleFileSelect}
                       />
@@ -284,15 +286,16 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
               </div>
             ) : (
               <div className="relative w-full max-w-sm">
-                <img src={imagePreview} alt="Preview" className="w-full h-48 object-cover rounded-lg border" />
+                <img src={imagePreview} alt="Prévia da imagem de capa" className="w-full h-48 object-cover rounded-lg border border-border" />
                 <Button
                   type="button"
                   variant="destructive"
                   size="sm"
                   className="absolute top-2 right-2 h-8 w-8 p-0 rounded-full"
                   onClick={removeImage}
+                  aria-label="Remover imagem de capa"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4" aria-hidden="true" />
                 </Button>
               </div>
             )}

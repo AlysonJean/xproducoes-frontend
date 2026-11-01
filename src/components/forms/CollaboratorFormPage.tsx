@@ -16,6 +16,7 @@ import {
   Select,
   Button
 } from '@/components/ui/StandardComponents';
+import { COLLABORATOR_ROLE_OPTIONS } from '../../utils/collaboratorRoles';
 import { useFormDraft } from '../../hooks/useFormDraft';
 import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
 
@@ -210,13 +211,9 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
             label="Papel (Sistema)"
             {...register('role')}
             error={errors.role?.message as string}
-            options={[
-              { value: 'PHOTOGRAPHER', label: 'Fotógrafo' },
-              { value: 'VIDEOGRAPHER', label: 'Videomaker' },
-              { value: 'EDITOR', label: 'Editor' },
-              { value: 'ASSISTANT', label: 'Assistente' },
-              { value: 'OTHER', label: 'Outro' },
-            ]}
+            // Achado (auditoria do design system): a lista local tinha "EDITOR", que o enum do
+            // backend não tem (salvar falhava), e faltavam 6 funções reais. Fonte única agora.
+            options={COLLABORATOR_ROLE_OPTIONS}
           />
           <Input
             label="Valor Hora (R$)"

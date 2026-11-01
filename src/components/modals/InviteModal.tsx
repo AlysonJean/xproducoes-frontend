@@ -1,8 +1,13 @@
-import React from 'react';
-import { BaseModal } from './BaseModal';
-import { Button } from '../ui/StandardComponents';
+import React, { useState } from 'react';
+import { Check, Copy } from 'lucide-react';
+import { Modal } from '../ui/Modal';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 import { logger } from '../../utils/logger';
 
+// Achado (auditoria do design system): a senha temporária ficava num `bg-gray-100` sem cor de texto
+// — no tema escuro, texto branco sobre cinza claro (ilegível) justamente no dado que o admin precisa
+// copiar. O link usava um <input> cru com aria-label "invite-url" e "Copiar" não dava retorno.
 export const InviteModal: React.FC<{
   isOpen: boolean;
   onClose?: () => void;
@@ -10,45 +15,61 @@ export const InviteModal: React.FC<{
   inviteUrl?: string;
   tempPassword?: string;
 }> = ({ isOpen, onClose, onResend, inviteUrl, tempPassword }) => {
+  const [copied, setCopied] = useState(false);
+
   const copy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (e) {
-       
       logger.error('failed copy', 'InviteModal', e);
     }
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title="Convite criado" size="md">
+    <Modal isOpen={isOpen} onClose={() => onClose?.()} title="Convite criado" size="md">
       <div className="space-y-4">
         {tempPassword && (
-          <div>
-            <p className="text-sm">Senha temporária:</p>
-            <p className="font-mono bg-gray-100 p-2 rounded mt-1">{tempPassword}</p>
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">Senha temporária:</p>
+            <p className="rounded-lg border border-border bg-muted px-3 py-2 font-mono text-sm text-foreground break-all">
+              {tempPassword}
+            </p>
           </div>
         )}
 
         {inviteUrl && (
-          <div>
-            <p className="text-sm">Link de convite:</p>
-            <div className="flex gap-2 mt-1">
-              <input readOnly value={inviteUrl} className="flex-1 border rounded px-3 py-2" aria-label="invite-url" />
-              <Button onClick={() => copy(inviteUrl)}>Copiar</Button>
-            </div>
+          <div className="flex items-end gap-2">
+            <Input readOnly value={inviteUrl} label="Link de convite" size="sm" onFocus={(e) => e.currentTarget.select()} />
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => copy(inviteUrl)}
+              leftIcon={copied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
+            >
+              {copied ? 'Copiado' : 'Copiar'}
+            </Button>
           </div>
         )}
 
+        {/* Anuncia "copiado" para leitor de tela. */}
+        <p className="sr-only" role="status" aria-live="polite">
+          {copied ? 'Link copiado' : ''}
+        </p>
+
         <div className="flex justify-end gap-2 mt-4">
           {onResend && (
-            <Button variant="outline" onClick={onResend}>
+            <Button type="button" variant="outline" size="sm" onClick={onResend}>
               Reenviar convite
             </Button>
           )}
-          <Button onClick={onClose}>Fechar</Button>
+          <Button type="button" size="sm" onClick={onClose}>
+            Fechar
+          </Button>
         </div>
       </div>
-    </BaseModal>
+    </Modal>
   );
 };
 

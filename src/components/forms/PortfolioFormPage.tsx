@@ -10,7 +10,8 @@ import {
   Input,
   Textarea,
   Button,
-  Alert
+  Alert,
+  Checkbox
 } from '../ui/StandardComponents';
 import { X, Star, Video, Image as ImageIcon, Plus } from 'lucide-react';
 import { useFormDraft } from '../../hooks/useFormDraft';
@@ -307,17 +308,13 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
             onChange={(e) => { setEventDate(e.target.value); setIsDirty(true); }}
             required
           />
-          <div className="flex items-center gap-2 px-1">
-            <input
-              type="checkbox"
+          <div className="px-1">
+            <Checkbox
               id="isPinned"
+              label="Fixar no Topo (Destaque Principal)"
               checked={isPinned}
               onChange={(e) => { setIsPinned(e.target.checked); setIsDirty(true); }}
-              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
             />
-            <label htmlFor="isPinned" className="text-sm font-medium cursor-pointer">
-              Fixar no Topo (Destaque Principal)
-            </label>
           </div>
         </FormSection>
 
@@ -325,15 +322,17 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
           <div className="space-y-4">
             {/* Upload Button */}
             <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                {/* Achado (auditoria do design system): o input ficava `hidden` (display:none) — sem
+                    foco, o upload era inalcançável pelo teclado. sr-only + focus-within no label. */}
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ring-offset-background">
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Plus className="w-8 h-8 text-muted-foreground mb-2" />
+                        <Plus className="w-8 h-8 text-muted-foreground mb-2" aria-hidden="true" />
                         <p className="text-sm text-muted-foreground">Clique para adicionar fotos ou vídeos</p>
                         <p className="text-xs text-muted-foreground mt-1">(JPG, PNG, MP4, WebM)</p>
                     </div>
                     <input 
                         type="file" 
-                        className="hidden" 
+                        className="sr-only" 
                         multiple 
                         accept="image/*,video/*"
                         onChange={handleFileSelect}
@@ -345,16 +344,17 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
             {mediaItems.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {mediaItems.map((item, index) => (
-                        <div key={index} className={`relative group rounded-lg overflow-hidden border ${item.isCover ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
-                            <div className="aspect-square bg-black/5 flex items-center justify-center relative">
+                        <div key={index} className={`relative group rounded-lg overflow-hidden border border-border ${item.isCover ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}`}>
+                            <div className="aspect-square bg-muted flex items-center justify-center relative">
                                 {item.type === 'VIDEO' ? (
                                     <video src={item.url} className="w-full h-full object-cover" muted loop playsInline onMouseOver={e => e.currentTarget.play()} onMouseOut={e => e.currentTarget.pause()} />
                                 ) : (
                                     <img src={item.url} alt={`Preview ${index}`} className="w-full h-full object-cover" />
                                 )}
                                 
-                                {/* Overlay Actions */}
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                                {/* Overlay Actions — sempre visíveis no toque/celular; no desktop aparecem no
+                                    hover ou quando um dos botões recebe foco (antes: só no hover). */}
+                                <div className="absolute inset-0 bg-black/40 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                                     <Button
                                         type="button"
                                         variant="secondary"
@@ -362,7 +362,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
                                         className="h-8 px-2 text-xs"
                                         onClick={() => setAsCover(index)}
                                     >
-                                        {item.isCover ? <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 mr-1" /> : <Star className="w-4 h-4 mr-1" />}
+                                        {item.isCover ? <Star className="w-4 h-4 fill-warning text-warning mr-1" aria-hidden="true" /> : <Star className="w-4 h-4 mr-1" aria-hidden="true" />}
                                         {item.isCover ? 'Capa Principal' : 'Definir Capa'}
                                     </Button>
                                     <Button
@@ -371,16 +371,17 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
                                         size="sm"
                                         className="h-8 px-2 text-xs"
                                         onClick={() => removeMedia(index)}
+                                        aria-label={`Remover mídia ${index + 1}`}
                                     >
-                                        <X className="w-4 h-4 mr-1" />
+                                        <X className="w-4 h-4 mr-1" aria-hidden="true" />
                                         Remover
                                     </Button>
                                 </div>
 
                                 {/* Type Badge */}
-                                <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full flex items-center">
-                                    {item.type === 'VIDEO' ? <Video className="w-3 h-3 mr-1" /> : <ImageIcon className="w-3 h-3 mr-1" />}
-                                    {item.type}
+                                <div className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full flex items-center">
+                                    {item.type === 'VIDEO' ? <Video className="w-3 h-3 mr-1" aria-hidden="true" /> : <ImageIcon className="w-3 h-3 mr-1" aria-hidden="true" />}
+                                    {item.type === 'VIDEO' ? 'Vídeo' : 'Imagem'}
                                 </div>
                             </div>
                         </div>

@@ -8,9 +8,10 @@ import {
   Select,
   Textarea,
   Button,
-  Alert
+  Alert,
+  Checkbox
 } from '../ui/StandardComponents';
-import { toNumber } from '../../utils/typeSafeFormatters';
+import { formatPrice, toNumber } from '../../utils/typeSafeFormatters';
 
 export const KitModal: React.FC<KitModalProps> = ({
   isOpen,
@@ -141,10 +142,10 @@ export const KitModal: React.FC<KitModalProps> = ({
         </div>
 
         <div>
-          <label className="text-sm font-medium text-card-foreground mb-2">
+          <p className="text-sm font-medium text-card-foreground mb-2" id="kit-modal-equipments-label">
             Equipamentos do Kit *
-          </label>
-          <div className="border rounded-md p-3 max-h-48 overflow-y-auto">
+          </p>
+          <div role="group" aria-labelledby="kit-modal-equipments-label" className="border border-border rounded-md p-3 max-h-48 overflow-y-auto">
             {availableEquipment.length === 0 ? (
               <p className="text-muted-foreground text-sm">Nenhum equipamento disponível</p>
             ) : (
@@ -154,22 +155,16 @@ export const KitModal: React.FC<KitModalProps> = ({
                     key={equipment.id}
                     className="flex items-center justify-between p-2 hover:bg-muted rounded"
                   >
-                    <div className="flex items-center">
-                      <Input
-                        type="checkbox"
+                    <div className="flex items-center gap-2">
+                      <Checkbox
                         checked={equipment.id ? selectedEquipment.includes(equipment.id) : false}
                         onChange={() => toggleEquipment(equipment.id)}
-                        className="mr-3 h-4 w-4 text-primary border rounded"
-                        title={`Selecionar equipamento ${equipment.name}`}
-                        aria-label={`Selecionar equipamento ${equipment.name}`}
+                        label={equipment.name}
                       />
-                      <div>
-                        <span className="text-sm font-medium">{equipment.name}</span>
-                        <span className="text-xs text-muted-foreground ml-2">({equipment.categoryId})</span>
-                      </div>
+                      <span className="text-xs text-muted-foreground">({equipment.categoryId})</span>
                     </div>
                     <div className="text-sm">
-                      <span className="font-medium text-success">R${equipment.price}/dia</span>
+                      <span className="font-medium text-success">{formatPrice(equipment.price)}/dia</span>
                     </div>
                   </div>
                 ))}
@@ -205,12 +200,12 @@ export const KitModal: React.FC<KitModalProps> = ({
         </div>
 
         {selectedEquipment.length > 0 && (
-          <div className="p-3 bg-primary/10 border border-blue-200 rounded-md">
-            <h4 className="font-medium text-blue-900 mb-2">Resumo de Preços</h4>
-            <div className="text-sm text-blue-800 space-y-1">
+          <div className="p-3 bg-primary/10 border border-primary/20 rounded-md">
+            <h4 className="font-medium text-foreground mb-2">Resumo de Preços</h4>
+            <div className="text-sm text-foreground space-y-1">
               <div className="flex justify-between">
                 <span>Total dos equipamentos individuais:</span>
-                <span>R${calculateTotalPrice().toFixed(2)}</span>
+                <span>{formatPrice(calculateTotalPrice())}</span>
               </div>
               <div className="flex justify-between">
                 <span>Equipamentos selecionados:</span>
@@ -242,22 +237,23 @@ export const KitModal: React.FC<KitModalProps> = ({
 
         {previewUrls.length > 0 && (
           <div>
-            <label className="text-sm font-medium text-card-foreground mb-2">
+            <p className="text-sm font-medium text-card-foreground mb-2">
               Pré-visualização das Imagens
-            </label>
+            </p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {previewUrls.map((url, index) => (
                 <div key={index} className="relative">
                   <img
                     src={url}
                     alt={`Preview ${index + 1}`}
-                    className="w-full h-24 object-cover rounded-md border"
+                    className="w-full h-24 object-cover rounded-md border border-border"
                   />
                   <Button
                     type="button"
                     variant="destructive"
                     size="xs"
-                    className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center text-xs"
+                    className="absolute top-1 right-1 w-6 h-6 p-0 flex items-center justify-center text-xs"
+                    aria-label={`Remover imagem ${index + 1}`}
                     onClick={() => {
                       const newFiles = imageFiles.filter((_, i) => i !== index);
                       const newUrls = previewUrls.filter((_, i) => i !== index);

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
+import { Form, FormActions, Input, Button } from '@/components/ui/StandardComponents';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '@/services/api';
 import { useModal } from '@/components/modals/ModalContext';
@@ -198,7 +197,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
   };
 
   return (
-      <form onSubmit={onSubmit} className="space-y-6">
+      <Form onSubmit={onSubmit} className="space-y-6">
         {draftPrompt && (
           <DraftRestoreBanner
             savedAt={draftPrompt.savedAt}
@@ -206,59 +205,62 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
             onDiscard={handleDiscardDraft}
           />
         )}
+        {/* Achado (auditoria do design system): os <label> eram soltos (sem htmlFor) e o Input não
+            recebia `label`/`error` — leitor de tela não ligava rótulo nem erro ao campo. O upload
+            usava cinza fixo (slate-50/700), claro demais no tema escuro. */}
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Nome</label>
-            <Input
-              value={name}
-              onChange={(e) => { setName(e.target.value); setIsDirty(true); }}
-              placeholder="Nome completo"
-              aria-invalid={!!errors.name}
-            />
-            {errors.name && <p className="mt-1 text-sm text-destructive">{errors.name}</p>}
-          </div>
+          <Input
+            label="Nome"
+            value={name}
+            onChange={(e) => { setName(e.target.value); setIsDirty(true); }}
+            placeholder="Nome completo"
+            error={errors.name}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Email</label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); setIsDirty(true); }}
-              placeholder="email@exemplo.com"
-              aria-invalid={!!errors.email}
-            />
-            {errors.email && <p className="mt-1 text-sm text-destructive">{errors.email}</p>}
-          </div>
+          <Input
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); setIsDirty(true); }}
+            placeholder="email@exemplo.com"
+            error={errors.email}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Telefone (opcional)</label>
-            <Input
-              value={phone}
-              onChange={(e) => { setPhone(e.target.value); setIsDirty(true); }}
-              placeholder="(00) 00000-0000"
-            />
-          </div>
+          <Input
+            label="Telefone (opcional)"
+            type="tel"
+            value={phone}
+            onChange={(e) => { setPhone(e.target.value); setIsDirty(true); }}
+            placeholder="(00) 00000-0000"
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Avatar (opcional)</label>
-            <input aria-label="Avatar do cliente" type="file" accept="image/*" onChange={(e) => { setAvatarFile(e.target.files ? e.target.files[0] : null); setIsDirty(true); }} className="block w-full text-sm text-slate-500
-              file:mr-4 file:py-2 file:px-4
-              file:rounded-full file:border-0
-              file:text-sm file:font-semibold
-              file:bg-slate-50 file:text-slate-700
-              hover:file:bg-slate-100" />
+          <div className="space-y-2">
+            <label htmlFor="client-avatar" className="block text-sm font-medium text-foreground">Avatar (opcional)</label>
+            <input
+              id="client-avatar"
+              type="file"
+              accept="image/*"
+              onChange={(e) => { setAvatarFile(e.target.files ? e.target.files[0] : null); setIsDirty(true); }}
+              className="block w-full text-sm text-muted-foreground rounded-lg
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-muted file:text-foreground
+                hover:file:bg-accent hover:file:text-accent-foreground
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
+            />
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-4 border-t">
+        <FormActions>
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancelar
           </Button>
           <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting}>
             {isSubmitting ? 'Salvando...' : (isEditing ? 'Salvar Alterações' : 'Criar Cliente')}
           </Button>
-        </div>
-      </form>
+        </FormActions>
+      </Form>
   );
 };
 

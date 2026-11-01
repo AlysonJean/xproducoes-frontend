@@ -1,6 +1,6 @@
 // packages/web/src/shared/modals/FormModal.tsx
 import React, { ReactNode } from 'react';
-import { BaseModal } from './BaseModal';
+import { Modal } from '../ui/Modal';
 import { Button, Form, FormActions } from '../ui/StandardComponents';
 import { FormModalProps } from '../../types/types';
 
@@ -19,7 +19,8 @@ export const FormModal: React.FC<FormModalComponentProps> = ({
   cancelText = 'Cancelar',
   className = '',
   size = 'md',
-  ...props
+  closeOnEscape = true,
+  closeOnOverlayClick = true,
 }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,14 +32,15 @@ export const FormModal: React.FC<FormModalComponentProps> = ({
   };
 
   return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
+    <Modal
+      isOpen={!!isOpen}
+      onClose={() => onClose?.()}
       title={title}
       className={className}
       size={size}
       showCloseButton={true}
-      {...props}
+      closeOnEscape={closeOnEscape}
+      closeOnOverlayClick={closeOnOverlayClick}
     >
       <Form onSubmit={handleSubmit}>
         <div className="mb-6">{children}</div>
@@ -62,6 +64,6 @@ export const FormModal: React.FC<FormModalComponentProps> = ({
           </Button>
         </FormActions>
       </Form>
-    </BaseModal>
+    </Modal>
   );
 };

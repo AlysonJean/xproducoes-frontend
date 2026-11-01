@@ -10,7 +10,8 @@ import {
   FormActions,
   Input,
   Textarea,
-  Button
+  Button,
+  Checkbox
 } from '../ui/StandardComponents';
 import { generateSeoFilename } from '../../utils/seoUtils';
 import { Banner } from '../../types/types';
@@ -18,6 +19,12 @@ import { BrandLoader } from '../ui/BrandLoader';
 import { logger } from '../../utils/logger';
 import { useFormDraft } from '../../hooks/useFormDraft';
 import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
+
+// Achado (auditoria do design system): o <input type="file"> ficava `hidden` (display:none) dentro do
+// <label> estilizado como botão — não recebia foco, então o upload era inalcançável pelo teclado.
+// `sr-only` mantém o input focável; o anel de foco aparece no label via focus-within.
+const UPLOAD_LABEL_CLASSES =
+  'cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2';
 
 
 // Schema
@@ -236,11 +243,11 @@ export const BannerForm: React.FC<BannerFormProps> = ({ initialData, onSuccess, 
                     error={errors.imageUrl?.message}
                 />
                 <div className="flex items-center gap-2">
-                     <label className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
-                        {uploadingDesktop ? 'Enviando...' : '📷 Upload Desktop'}
+                     <label className={UPLOAD_LABEL_CLASSES}>
+                        {uploadingDesktop ? 'Enviando...' : 'Enviar imagem (desktop)'}
                         <input 
                             type="file" 
-                            className="hidden" 
+                            className="sr-only" 
                             accept="image/*"
                             onChange={(e) => handleImageUpload(e, 'imageUrl')}
                             disabled={uploadingDesktop}
@@ -257,11 +264,11 @@ export const BannerForm: React.FC<BannerFormProps> = ({ initialData, onSuccess, 
                     error={errors.mobileImageUrl?.message}
                 />
                 <div className="flex items-center gap-2">
-                     <label className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
-                        {uploadingMobile ? 'Enviando...' : '📱 Upload Mobile'}
+                     <label className={UPLOAD_LABEL_CLASSES}>
+                        {uploadingMobile ? 'Enviando...' : 'Enviar imagem (celular)'}
                         <input 
                             type="file" 
-                            className="hidden" 
+                            className="sr-only" 
                             accept="image/*"
                             onChange={(e) => handleImageUpload(e, 'mobileImageUrl')}
                             disabled={uploadingMobile}
@@ -287,17 +294,7 @@ export const BannerForm: React.FC<BannerFormProps> = ({ initialData, onSuccess, 
                 error={errors.sortOrder?.message}
              />
              <div className="col-span-2 pt-4">
-                <div className="flex items-center space-x-2">
-                    <input
-                        type="checkbox" 
-                        id="active"
-                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                        {...register('active')}
-                    />
-                    <label htmlFor="active" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        Banner Ativo
-                    </label>
-                </div>
+                <Checkbox id="active" label="Banner Ativo" {...register('active')} />
              </div>
         </div>
       </FormSection>

@@ -8,6 +8,7 @@ import {
   Select,
   Textarea
 } from '../ui/StandardComponents';
+import { formatPrice } from '../../utils/typeSafeFormatters';
 
 export const BookingModal: React.FC<BookingModalProps> = ({
   isOpen,
@@ -60,13 +61,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     >
       <div className="space-y-4">
         {(equipment || kit) && (
-          <div className="p-4 bg-surface rounded-lg">
+          <div className="p-4 bg-muted rounded-lg">
             <h4 className="font-medium text-primary mb-2">
               {equipment ? 'Equipamento' : 'Kit'} Selecionado
             </h4>
-            <p className="text-sm text-tertiary">{equipment?.name || kit?.name}</p>
+            <p className="text-sm text-muted-foreground">{equipment?.name || kit?.name}</p>
             {equipment?.price && (
-              <p className="text-sm font-medium text-success">R${equipment.price}/dia</p>
+              <p className="text-sm font-medium text-success">{formatPrice(equipment.price)}/dia</p>
             )}
           </div>
         )}
@@ -126,7 +127,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           defaultValue={formData.deliveryAddress as string}
         />
 
-        <div className="border-t pt-4">
+        <div className="border-t border-border pt-4">
           <h4 className="font-medium text-primary mb-3">Dados do Cliente</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input

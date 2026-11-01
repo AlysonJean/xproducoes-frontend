@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { FormModal } from './FormModal';
 import { FilterModalProps, FilterData } from '../../types/types';
-import { Select, Input, Button } from '../ui/StandardComponents';
+import { Select, Input, Button, Checkbox } from '../ui/StandardComponents';
+import { BOOKING_STATUS_OPTIONS } from '../../utils/bookingStatus';
 
 export const FilterModal: React.FC<FilterModalProps> = ({
   isOpen,
@@ -23,7 +24,8 @@ export const FilterModal: React.FC<FilterModalProps> = ({
 
   // Helpers locais (fallbacks) – podem ser substituídos via props futuramente
   const categories = availableCategories;
-  const statusOptions = ['DRAFT','PENDING','CONFIRMED','IN_PROGRESS','COMPLETED','CANCELLED'];
+  // Achado (auditoria do design system): as opções mostravam o enum cru ("DRAFT", "PENDING"…).
+  const statusOptions = BOOKING_STATUS_OPTIONS;
   const features = ['Entrega Rápida','Seguro incluído','Instalação','Suporte 24/7'];
   const sortOptions = [
     { value: 'price', label: 'Preço' },
@@ -70,7 +72,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
       size="lg"
       {...props}
     >
-      <div className="space-y-6 text-primary">
+      <div className="space-y-6 text-foreground">
         {/* Categoria */}
         {categories.length > 0 && (
           <div>
@@ -79,14 +81,13 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               name="category"
               options={[{ value: '', label: 'Todas as categorias' }, ...categories.map(c => ({ value: String(c), label: String(c) }))]}
               defaultValue={filters.category || ''}
-              placeholder="Categoria"
             />
           </div>
         )}
 
         {/* Preço */}
-        <div>
-          <label className="block text-sm font-medium text-secondary mb-2">Preço</label>
+        <fieldset>
+          <legend className="block text-sm font-medium text-foreground mb-2">Preço</legend>
           <div className="grid grid-cols-2 gap-4">
             <Input
               type="number"
@@ -107,7 +108,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               defaultValue={filters.priceRange?.max}
             />
           </div>
-        </div>
+        </fieldset>
 
         {/* Localização */}
         {availableLocations.length > 0 && (
@@ -117,7 +118,6 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               name="location"
               options={[{ value: '', label: 'Todas as localizações' }, ...availableLocations.map(l => ({ value: l, label: l }))]}
               defaultValue={filters.location || ''}
-              placeholder="Localização"
             />
           </div>
         )}
@@ -133,7 +133,6 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               { value: 'false', label: 'Indisponível' }
             ]}
             defaultValue={filters.availability !== undefined ? String(filters.availability) : ''}
-            placeholder="Disponibilidade"
           />
         </div>
 
@@ -143,16 +142,15 @@ export const FilterModal: React.FC<FilterModalProps> = ({
             <Select
               label="Status"
               name="status"
-              options={[{ value: '', label: 'Todos os status' }, ...statusOptions.map(s => ({ value: String(s), label: String(s) }))]}
+              options={[{ value: '', label: 'Todos os status' }, ...statusOptions]}
               defaultValue={filters.status || ''}
-              placeholder="Status"
             />
           </div>
         )}
 
         {/* Período */}
-        <div>
-          <label className="block text-sm font-medium text-secondary mb-2">Período</label>
+        <fieldset>
+          <legend className="block text-sm font-medium text-foreground mb-2">Período</legend>
           <div className="grid grid-cols-2 gap-4">
             <Input
               type="date"
@@ -169,26 +167,23 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               placeholder="Data Final"
             />
           </div>
-        </div>
+        </fieldset>
 
         {/* Características */}
   {features.length > 0 && (
-          <div>
-            <label className="block text-sm font-medium text-secondary mb-2">Características</label>
+          <fieldset>
+            <legend className="block text-sm font-medium text-foreground mb-2">Características</legend>
             <div className="grid grid-cols-2 gap-2">
               {features.map((feature) => (
-                <label key={feature} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedFeatures.includes(feature)}
-                    onChange={() => toggleFeature(feature)}
-                    className="form-checkbox h-4 w-4 text-accent focus:ring-accent border-border rounded"
-                  />
-                  <span className="text-sm text-primary">{feature}</span>
-                </label>
+                <Checkbox
+                  key={feature}
+                  label={feature}
+                  checked={selectedFeatures.includes(feature)}
+                  onChange={() => toggleFeature(feature)}
+                />
               ))}
             </div>
-          </div>
+          </fieldset>
         )}
 
         {/* Ordenação */}
@@ -198,7 +193,6 @@ export const FilterModal: React.FC<FilterModalProps> = ({
             name="sortBy"
             options={[{ value: '', label: 'Ordenação padrão' }, ...sortOptions]}
             defaultValue={filters.sortBy || ''}
-            placeholder="Ordenar por"
           />
           <Select
             label="Ordem"
@@ -208,7 +202,6 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               { value: 'desc', label: 'Decrescente' }
             ]}
             defaultValue={filters.sortOrder || 'asc'}
-            placeholder="Ordem"
           />
         </div>
 
