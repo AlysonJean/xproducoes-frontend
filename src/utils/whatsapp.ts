@@ -52,9 +52,13 @@ export const openWhatsApp = (phone: string, message: string): void => {
 
   const cleaned = normalizePhone(phone);
   const url = `https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`;
-  // Tenta abrir em nova aba sem sair do site
-  const win = window.open(url, '_blank', 'noopener,noreferrer');
-  if (!win) {
+  // Tenta abrir em nova aba sem sair do site. Achado (revisão): com "noopener" o window.open
+  // devolve sempre null (é o que a especificação manda), então o fallback abaixo rodava sempre e,
+  // com pop-ups liberados, abriam duas abas do WhatsApp. Sem a flag, corta o opener à mão.
+  const win = window.open(url, '_blank');
+  if (win) {
+    win.opener = null;
+  } else {
     // Fallback para casos de bloqueio de popup: cria um link e clica programaticamente
       try {
         createAndClickAnchor({ href: url, target: '_blank', rel: 'noopener noreferrer' });
