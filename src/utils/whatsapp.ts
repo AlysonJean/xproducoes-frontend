@@ -6,6 +6,7 @@ import ReactGA from 'react-ga4';
 import { createAndClickAnchor } from './dom';
 import type { QuoteMessageParams } from '@/types/forms';
 import { logger } from './logger';
+import { formatBookingCode } from './bookingCode';
 
 export const normalizePhone = (phone: string): string => phone.replace(/\D/g, '');
 
@@ -77,7 +78,7 @@ export const buildQuoteMessage = (p: QuoteMessageParams): string => {
 
   return (
     `\n*Pedido de Orçamento*` +
-    (p.bookingId ? `\n*Nº do Pedido:* ${p.bookingId.substring(0, 8)}` : '') +
+    (p.bookingId ? `\n*Nº do Pedido:* ${formatBookingCode(p.bookingId)}` : '') +
     `\n\n*Cliente:* ${p.user?.name || '-'}\n*Contato:* ${p.user?.phone || '-'}\n\n` +
     `*Local do Evento:* ${p.venue}\n*Data:* ${when}\n*Duração:* ${p.durationHours}h\n\n` +
     `*Endereço de Entrega:*\n` +

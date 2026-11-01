@@ -46,6 +46,7 @@ import { EventManagement } from '../../components/modals/EventManagement';
 import { bookingAPI, collaboratorsAPI, api } from '../../services/api';
 import { createAndClickAnchor } from '../../utils/dom';
 import { SUPPORT_EMAIL } from '../../data/site';
+import { formatBookingCode } from '../../utils/bookingCode';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { BookingCollaborators } from '../../components/bookings/BookingCollaborators';
 import { BookingFinancialSummary } from '../../components/bookings/BookingFinancialSummary';
@@ -283,7 +284,7 @@ export const BookingDetailPage = () => {
 
     let message = '';
     const name = booking?.client?.name || booking?.clientName || 'Cliente';
-    const bId = booking?.id?.substring(0, 8);
+    const bId = formatBookingCode(booking?.id);
 
     switch (action) {
       case 'confirm':
@@ -373,7 +374,7 @@ export const BookingDetailPage = () => {
 
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Emitida em: ${dataEmissao}   |   Validade: 7 dias   |   Ref: #${booking.id?.substring(0, 8).toUpperCase()}`, 72, 23);
+    doc.text(`Emitida em: ${dataEmissao}   |   Validade: 7 dias   |   Ref: #${formatBookingCode(booking.id).toUpperCase()}`, 72, 23);
 
     // ── Responsável ──────────────────────────────────────────────────────────
     let curY = 42;
@@ -784,7 +785,7 @@ export const BookingDetailPage = () => {
     );
   }
 
-  const bookingCode = booking.id?.startsWith('XP-') ? booking.id : `#${booking.id?.substring(0, 8)}`;
+  const bookingCode = booking.id?.startsWith('XP-') ? booking.id : `#${formatBookingCode(booking.id)}`;
   const status = booking.status || 'PENDING';
   const canConfirm = status === 'DRAFT' || status === 'PENDING';
   const isClosed = status === 'CANCELLED' || status === 'REFUNDED';

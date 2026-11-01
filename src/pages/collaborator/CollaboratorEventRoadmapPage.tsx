@@ -39,6 +39,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { logger } from '../../utils/logger';
 import { cn } from '../../utils/cn';
+import { formatBookingCode } from '../../utils/bookingCode';
 
 interface RoadmapTask {
   id: string;
@@ -445,7 +446,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2 min-w-0">
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-primary-foreground/15 uppercase tracking-wider">
-                Reserva #{booking.id.substring(0, 8)}
+                Reserva #{formatBookingCode(booking.id)}
               </span>
               {/* <h2>: o <h1> da página é o título do layout. */}
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight break-words">{booking.eventTitle || 'Evento X Produções'}</h2>
@@ -832,7 +833,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
                       </div>
                       <div>
                         <h3 className="font-black text-sm uppercase tracking-wider">Chat da equipe</h3>
-                        <p className="text-xs opacity-80 font-bold">Reserva: {booking.id.substring(0, 8)}</p>
+                        <p className="text-xs opacity-80 font-bold">Reserva: {formatBookingCode(booking.id)}</p>
                       </div>
                     </div>
                     {/* Achado: era "Equipe Online" com um ponto piscando fixo. Agora mostra o estado real
