@@ -38,6 +38,11 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   // URL que falhou ao carregar (guardar a URL, não um booleano, faz uma foto nova voltar a aparecer).
   const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const setAvatarFailed = (failed: boolean) => setFailedAvatarUrl(failed ? profile.avatarUrl ?? null : null);
+
+  const createdAt = profile.createdAt ? new Date(profile.createdAt) : null;
+  const memberSince = createdAt && !Number.isNaN(createdAt.getTime())
+    ? createdAt.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    : null;
   const showAvatar = Boolean(
     profile.avatarUrl && isSafeAvatar(profile.avatarUrl) && failedAvatarUrl !== profile.avatarUrl
   );
@@ -135,10 +140,13 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                   </div>
                 )}
                 
-                <div className="flex items-center text-muted-foreground mt-1">
-                  <Calendar className="h-4 w-4 mr-1" />
-                  <span className="text-sm">Membro desde {profile.memberSince}</span>
-                </div>
+                {/* Achado: lia profile.memberSince, que a API nunca mandou ("Membro desde undefined"). */}
+                {memberSince && (
+                  <div className="flex items-center text-muted-foreground mt-1">
+                    <Calendar className="h-4 w-4 mr-1" aria-hidden="true" />
+                    <span className="text-sm">Membro desde {memberSince}</span>
+                  </div>
+                )}
               </div>
               
               <div className="shrink-0">

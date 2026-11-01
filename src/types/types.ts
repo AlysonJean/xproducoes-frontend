@@ -1141,7 +1141,6 @@ export interface ClientProfile {
   totalSpent: number;
   averageRating?: number;
   isVip?: boolean;
-  memberSince: string;
   preferences?: {
     notifications?: ProfileNotificationPreferences;
     general?: ProfileGeneralPreferences;

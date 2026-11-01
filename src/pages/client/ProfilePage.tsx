@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { apiFetch } from '../../services/api';
 import {
   Grid,
@@ -43,6 +44,7 @@ const PROFILE_TABS: { id: ProfileTab; label: string; icon: typeof User }[] = [
 
 export const ProfilePage = () => {
   const { addNotification } = useNotifications();
+  const { user: authUser, setAuthenticatedUser } = useAuth();
   const tabRefs = useRef<Record<ProfileTab, HTMLButtonElement | null>>({
     profile: null,
     security: null,
@@ -142,17 +144,27 @@ export const ProfilePage = () => {
     loadProfile();
       }, [loadProfile]);
 
+  // Achado: as três gravações desta página chamavam rotas que não existem (PATCH /users/profile,
+  // PATCH /users/profile/preferences, POST /users/profile/avatar) — nada era salvo. Agora tudo
+  // passa por PUT /users/profile (que devolve o perfil completo) e a foto por POST /upload/avatar.
+  const saveProfile = async (body: Record<string, unknown>) => {
+    const updated = await apiFetch<ClientProfile>('/users/profile', { method: 'PUT', body: JSON.stringify(body) });
+    // Nome e foto também aparecem no cabeçalho do site (vêm da sessão) — atualiza sem recarregar.
+    if (authUser) setAuthenticatedUser({ ...authUser, name: updated.name, avatarUrl: updated.avatarUrl || undefined });
+    return updated;
+  };
+
   const handleSavePreferences = async () => {
     try {
       setSaving(true);
-      await apiFetch('/users/profile/preferences', {
-        method: 'PATCH',
-        body: JSON.stringify({
+      const updatedProfile = await saveProfile({
+        preferences: {
           notifications: notificationPreferences,
           general: generalPreferences
-        })
+        }
       });
-      
+      setProfile(updatedProfile);
+
       addNotification({
         title: 'Sucesso',
         message: 'Preferências salvas com sucesso!',
@@ -172,6 +184,8 @@ export const ProfilePage = () => {
 
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    // Limpa o campo para escolher o mesmo arquivo de novo depois de um erro.
+    event.target.value = '';
     if (!file) return;
 
     // Validar tamanho (max 5MB) e tipo
@@ -190,14 +204,14 @@ export const ProfilePage = () => {
       const formDataUpload = new FormData();
       formDataUpload.append('avatar', file);
 
-      const response = await apiFetch<{ avatarUrl: string }>('/users/profile/avatar', {
+      // /upload/avatar só envia a imagem e devolve a URL; gravar no perfil é um segundo passo.
+      const { avatarUrl } = await apiFetch<{ avatarUrl: string }>('/upload/avatar', {
         method: 'POST',
         body: formDataUpload,
-        // Override default content-type for multipart
-        headers: {} 
       });
+      const updatedProfile = await saveProfile({ avatarUrl });
 
-      setProfile(prev => prev ? { ...prev, avatarUrl: response.avatarUrl } : null);
+      setProfile(updatedProfile);
       addNotification({
         title: 'Sucesso',
         message: 'Foto de perfil atualizada!',
@@ -216,14 +230,24 @@ export const ProfilePage = () => {
   };
 
   const handleSaveProfile = async () => {
+    // Mesma regra do servidor (nome com 3+ letras) — evita o "Dados de entrada inválidos" genérico.
+    if (formData.name.trim().length < 3) {
+      addNotification({ title: 'Aviso', message: 'O nome precisa ter pelo menos 3 letras.', type: 'warning' });
+      return;
+    }
     try {
       setSaving(true);
-      const updatedProfile = await apiFetch<ClientProfile>('/users/profile', {
-        method: 'PATCH',
-        body: JSON.stringify(formData)
+      // E-mail fica de fora: aparece só para leitura nesta tela.
+      const { name, phone, bio, location, companyName, jobTitle, industry } = formData;
+      const trimmedWebsite = formData.website.trim();
+      const updatedProfile = await saveProfile({
+        name, phone, bio, location, companyName, jobTitle, industry,
+        // O servidor exige URL completa; "www.exemplo.com" vira "https://www.exemplo.com".
+        website: trimmedWebsite && !/^https?:\/\//i.test(trimmedWebsite) ? `https://${trimmedWebsite}` : trimmedWebsite,
       });
-      
+
       setProfile(updatedProfile);
+      setFormData(prev => ({ ...prev, website: updatedProfile.website || '' }));
       setEditMode(false);
       addNotification({
         title: 'Sucesso',
@@ -234,7 +258,7 @@ export const ProfilePage = () => {
       logger.error('Erro ao salvar perfil:', 'ProfilePage', error);
       addNotification({
         title: 'Erro',
-        message: 'Ocorreu um erro ao salvar as alterações.',
+        message: error instanceof Error && error.message ? error.message : 'Ocorreu um erro ao salvar as alterações.',
         type: 'error'
       });
     } finally {

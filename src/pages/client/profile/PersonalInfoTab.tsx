@@ -83,6 +83,7 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
             <Input
               label="Localização"
               value={formData.location}
+              maxLength={100}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               leftIcon={<MapPin className="h-4 w-4" />}
               placeholder="Belo Horizonte, MG"
@@ -96,6 +97,7 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
           <Textarea
             label="Sobre você"
             value={formData.bio}
+            maxLength={500}
             onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
             placeholder="Conte um pouco sobre você..."
             readOnly={!editMode}
@@ -112,6 +114,7 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
               <Input
                 label="Empresa"
                 value={formData.companyName}
+                maxLength={120}
                 onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                 leftIcon={<Building2 className="h-4 w-4" />}
                 placeholder="Nome da empresa"
@@ -123,6 +126,7 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
               <Input
                 label="Cargo"
                 value={formData.jobTitle}
+                maxLength={120}
                 onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
                 placeholder="Seu cargo"
                 readOnly={!editMode}
