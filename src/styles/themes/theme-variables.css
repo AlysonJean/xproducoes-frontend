@@ -8,7 +8,12 @@
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   
-  /* Border radius tokens */
+  /* Border radius tokens.
+     --radius é a base usada por rounded-sm/md/lg no tailwind.config (lg = --radius, md = -2px,
+     sm = -4px). Achado (auditoria do design system): não era definida em lugar nenhum, então
+     rounded-sm/md/lg calculavam border-radius inválido e saíam QUADRADOS (0px) — Card, Input,
+     Select, Modal e ~340 usos no app; as páginas compensavam à mão com rounded-xl/2xl/[32px]. */
+  --radius: 0.5rem;         /* 8px */
   --radius-xs: 0.125rem;    /* 2px */
   --radius-sm: 0.25rem;     /* 4px */
   --radius-md: 0.375rem;    /* 6px */
@@ -48,32 +53,37 @@
   --primary: 200 100% 14%;          /* #003049 - Azul petróleo (escuro, confiável) */
   --primary-foreground: 0 0% 100%;  /* #ffffff - White */
   
-  /* Secondary colors - Warm Orange */
-  --secondary: 142 72% 29%;           /* #00a651 - Deep green */
+  /* Secondary colors - Verde (no tema escuro vira grafite) */
+  --secondary: 142 72% 29%;           /* #157a3f - Verde escuro */
   --secondary-foreground: 0 0% 100%; /* #ffffff - White */
   
-  /* Muted colors - Light grays */
-  --muted: 210 20% 96%;             /* #f7f7f7 - Light gray */
-  --muted-foreground: 215 16% 47%;  /* #717171 - Medium gray */
+  /* Muted colors - Light grays.
+     Contraste (WCAG AA ≥ 4.5:1): muted-foreground era 47% de luminosidade — 4.3:1 sobre
+     --muted (reprovava em todo texto secundário sobre fundo cinza). 42%: 5.7 no branco, 5.2 no muted. */
+  --muted: 210 20% 96%;             /* #f3f5f7 - Light gray */
+  --muted-foreground: 215 16% 42%;  /* #5a6578 - Medium gray */
   
   /* Accent colors - Tons de azul petróleo claros para realces sutis */
   --accent: 200 40% 94%;            /* ~#e9f1f6 - Azul claro sutil */
   --accent-foreground: 200 100% 20%;/* Azul petróleo mais legível para texto/acento */
   
-  /* Destructive colors (mantém vermelho apenas para erros/alertas) */
-  --destructive: 0 84% 60%;         /* #ef4444 - Red 500 */
+  /* Destructive colors (mantém vermelho apenas para erros/alertas).
+     #ef4444 dava 3.8:1 com o branco (texto de erro e botão "Excluir" reprovavam); #dc2626 = 4.8:1. */
+  --destructive: 0 72% 51%;         /* #dc2626 - Red 600 */
   --destructive-foreground: 0 0% 100%; /* #ffffff - White */
   
-  /* Success colors - Deep green */
-  --success: 142 72% 29%;           /* #00a651 - Deep green */
+  /* Success colors - Deep green (5.1:1 com o branco) */
+  --success: 142 72% 29%;           /* #157a3f - Deep green */
   --success-foreground: 0 0% 100%;  /* #ffffff - White */
   
-  /* Warning colors - Warm yellow */
-  --warning: 38 95% 56%;            /* #ffb000 - Warm yellow */
+  /* Warning colors - Âmbar escuro.
+     O amarelo #f9b21d dava 1.9:1 com o texto branco (selo/botão de aviso) e como texto sobre fundo
+     claro ("Pendente", estrelas). Âmbar 700: 5.05:1 nos dois sentidos. */
+  --warning: 26 90% 37%;            /* #b4540a - Amber 700 */
   --warning-foreground: 0 0% 100%;  /* #ffffff - White */
   
-  /* Info colors */
-  --info: 199 89% 48%;              /* #0ea5e9 - Sky 500 */
+  /* Info colors — sky 500 dava 2.9:1 com o branco ("Em breve"); sky 700 = 5.95:1 */
+  --info: 201 96% 32%;              /* #0369a1 - Sky 700 */
   --info-foreground: 0 0% 100%;     /* #ffffff - White */
   
   /* Border colors */
@@ -123,12 +133,13 @@
   --muted: 220 20% 12%;             /* #181c25 - Cinza neutro sóbrio */
   --muted-foreground: 215 15% 60%;  /* #94a3b8 - Cinza azulado suave */
 
-  /* Accent colors - Signal Orange (Alerta/Destaque tecnológico) */
-  --accent: 25 95% 53%;            /* #ff7849 - Laranja vibrante (Stripe-like) */
-  --accent-foreground: 0 0% 100%;   /* Branco */
+  /* Accent colors - Signal Orange (Alerta/Destaque tecnológico).
+     Texto branco sobre o laranja dava 2.8:1 (hover:bg-accent hover:text-accent-foreground); quase preto = 7.2:1 */
+  --accent: 25 95% 53%;            /* #f97316 - Laranja vibrante (Stripe-like) */
+  --accent-foreground: 220 30% 4%;  /* Quase preto */
 
-  /* Destructive colors */
-  --destructive: 0 84% 60%;         /* #ef4444 */
+  /* Destructive colors — mesmo vermelho do claro: 4.8:1 com o branco e 4.6:1 sobre o fundo escuro */
+  --destructive: 0 72% 51%;         /* #dc2626 */
   --destructive-foreground: 0 0% 100%;
 
   /* Success colors - Emerald Tecnológico */
@@ -139,9 +150,9 @@
   --warning: 45 93% 47%;            /* Ouro tecnológico */
   --warning-foreground: 220 30% 4%;
 
-  /* Info colors */
+  /* Info colors — branco sobre o sky 500 dava 2.9:1; quase preto = 7:1 */
   --info: 199 89% 48%;              /* Sky Blue */
-  --info-foreground: 0 0% 100%;
+  --info-foreground: 220 30% 4%;
 
   /* Border colors - Linhas finas e nítidas */
   --border: 220 20% 16%;            /* #2a303c - Grafite nítido */
