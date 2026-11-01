@@ -16,7 +16,6 @@ export const INSTAGRAM_HANDLE = '@x_producoeseventos';
 // mesmo do site e do backend. Antes o rodapé, contato, carreiras, imprensa e ajuda mostravam
 // @xproducoeseventos.com.br (com um "e" só), que não é o domínio da empresa.
 export const SUPPORT_EMAIL = 'suporte@xproducoeseeventos.com.br';
-export const PRIVACY_CONTACT_EMAIL = 'contato@xproducoeseeventos.com.br';
 
 /** Título da aba: "Página | X Produções", sem duplicar o sufixo quando a página já o traz. */
 export function buildPageTitle(title: string): string {

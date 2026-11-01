@@ -2,7 +2,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { PageLayout } from '../components/layouts/PageLayout';
 import { Alert, Card } from '../components/ui/StandardComponents';
-import { PRIVACY_CONTACT_EMAIL } from '../data/site';
+import { SUPPORT_EMAIL } from '../data/site';
 
 /**
  * Página de Status de Exclusão de Dados
@@ -63,10 +63,10 @@ export function DataDeletionStatusPage() {
           <p className="text-sm text-muted-foreground">
             Se você tiver dúvidas, entre em contato conosco através do email{' '}
             <a
-              href={`mailto:${PRIVACY_CONTACT_EMAIL}`}
+              href={`mailto:${SUPPORT_EMAIL}`}
               className="text-primary hover:underline underline-offset-4 break-all"
             >
-              {PRIVACY_CONTACT_EMAIL}
+              {SUPPORT_EMAIL}
             </a>
           </p>
         </div>
