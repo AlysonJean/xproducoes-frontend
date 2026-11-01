@@ -500,7 +500,7 @@ export const AdminDashboardPage = () => {
                          <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 shrink-0">
                             <Users className="h-4 w-4" />
                          </div>
-                         <span className="text-xs font-bold text-foreground">{booking.client?.user?.name || 'Manual Registro'}</span>
+                         <span className="text-xs font-bold text-foreground">{booking.client?.user?.name || booking.clientName || 'Manual Registro'}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">

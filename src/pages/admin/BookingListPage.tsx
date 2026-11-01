@@ -410,7 +410,7 @@ export const BookingListPage = () => {
                     <tr key={booking.id} className="hover:bg-muted/20 transition-colors group">
                       <td className="px-6 py-4">
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-foreground truncate">{booking.client?.user?.name || 'Cliente Avulso'}</p>
+                          <p className="text-sm font-bold text-foreground truncate">{booking.client?.user?.name || booking.clientName || 'Cliente Avulso'}</p>
                           <p className="text-xs font-mono text-muted-foreground flex items-center gap-1.5 pt-0.5">
                             <span className="h-1.5 w-1.5 rounded-full bg-primary/40 shrink-0" />
                             {booking.id?.startsWith('XP-') ? booking.id : (booking.id ? `#${booking.id.slice(0, 8)}` : 'S/ID')}

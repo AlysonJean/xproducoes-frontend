@@ -82,3 +82,16 @@ describe('BookingListPage — carrega todas as reservas', () => {
     expect(rows.map((r) => r['Código'])).toEqual(['XP-31-OUT']);
   });
 });
+
+// Reserva manual (sem conta no site) guarda o nome em clientName; a tabela só olhava a conta e
+// mostrava "Cliente Avulso" para todas — inclusive para o histórico importado das agendas.
+describe('BookingListPage — nome do cliente de reserva manual', () => {
+  it('mostra clientName quando a reserva não tem conta vinculada', async () => {
+    useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
+    apiFetch.mockReset();
+    apiFetch.mockResolvedValue([{ id: 'XP-MANUAL', status: 'COMPLETED', totalPrice: '500', eventDate: '2025-03-08T23:00:00.000Z', clientName: 'Resenha do Morro' }]);
+    render(<MemoryRouter initialEntries={['/admin/reservas']}><BookingListPage /></MemoryRouter>);
+    expect(await screen.findByText('Resenha do Morro')).toBeInTheDocument();
+    expect(screen.queryByText('Cliente Avulso')).not.toBeInTheDocument();
+  });
+});
