@@ -5,6 +5,9 @@
    site inteiro. Ver comentário completo em +onRenderHtml.tsx. */
 
 @import "tailwindcss";
+/* Utilitários animate-in / fade-in / zoom-in-95 / slide-in-from-* (usados em Modal, avisos e ~30
+   telas). Sem este pacote eles não geravam CSS nenhum — o equivalente v4 do tailwindcss-animate. */
+@import "tw-animate-css";
 @config "../tailwind.config.js";
 
 @theme {
@@ -31,6 +34,17 @@
 
 @layer base {
   /* Definições de tema movidas para theme-variables.css */
+
+  /* Achado (auditoria do design system): no Tailwind v4 a cor padrão de borda é currentColor e o
+     projeto não tinha a regra de compatibilidade — todo `border`/`border-b` sem cor saía na cor do
+     TEXTO (linha escura no claro, clara no escuro). Cor padrão = token --border. */
+  *,
+  ::before,
+  ::after,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: hsl(var(--border));
+  }
 }
 
 @layer base {
@@ -373,12 +387,12 @@
 
   @keyframes pulseGlow {
     from {
-      box-shadow: 0 0 5px rgba(var(--primary), 0.3);
+      box-shadow: 0 0 5px hsl(var(--primary) / 0.3);
     }
     to {
       box-shadow:
-        0 0 20px rgba(var(--primary), 0.8),
-        0 0 30px rgba(var(--primary), 0.4);
+        0 0 20px hsl(var(--primary) / 0.8),
+        0 0 30px hsl(var(--primary) / 0.4);
     }
   }
 
@@ -487,4 +501,15 @@
 }
 .brand-loader-filter-layer {
   filter: url(#brand-recolor-final);
+}
+
+/* Tremida do WhatsApp flutuante (animate-shake). Ficava em animations.css, que nunca foi
+   carregado — a classe não tinha efeito. */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+  20%, 40%, 60%, 80% { transform: translateX(10px); }
+}
+@utility animate-shake {
+  animation: shake 0.82s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }

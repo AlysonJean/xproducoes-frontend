@@ -1,9 +1,12 @@
 .booking-toolbar{display:flex;justify-content:space-between;align-items:center;gap:.75rem;margin-bottom:.75rem}.booking-toolbar .left,.booking-toolbar .right{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}.booking-toolbar .toolbar-title{text-transform:capitalize;font-weight:600;color:var(--color-foreground,#111827)}.booking-toolbar .toolbar-btn{background:var(--color-muted,#f3f4f6);border:1px solid var(--color-border,#e5e7eb);border-radius:.5rem;padding:.4rem .6rem;color:var(--color-foreground,#111827);font-size:.875rem;line-height:1rem;cursor:pointer}.booking-toolbar .toolbar-btn.active,.booking-toolbar .toolbar-btn.today{background:var(--color-primary,#2563eb);border-color:var(--color-primary,#2563eb);color:#fff}.booking-toolbar .filter{min-width:9rem}
 /* Estilos de evento por status */
 .rbc-event{border-radius:.5rem;padding:.15rem .35rem;border:0}
-.event-default{background:#e5e7eb;color:#111827}
-.event-pending{background:#fef3c7;color:#92400e}
-.event-confirmed{background:#d1fae5;color:#065f46}
+/* Chips de evento com tokens do tema (antes: hex claros fixos, sem versão escura) e o estado
+   "concluído", usado pelos calendários mas definido só em components.css (nunca carregado). */
+.event-default{background:hsl(var(--muted));color:hsl(var(--foreground))}
+.event-pending{background:hsl(var(--warning) / 0.15);color:hsl(var(--foreground));border-left:3px solid hsl(var(--warning))}
+.event-confirmed{background:hsl(var(--success) / 0.15);color:hsl(var(--foreground));border-left:3px solid hsl(var(--success))}
+.event-completed{background:hsl(var(--primary) / 0.1);color:hsl(var(--foreground));border-left:3px solid hsl(var(--primary))}
 .event-in-progress{background:#e0e7ff;color:#3730a3}
 .event-completed{background:#e0f2fe;color:#075985}
 .event-cancelled{background:#fee2e2;color:#991b1b}
@@ -24,8 +27,8 @@
   padding: 4px 6px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: var(--card);
-  color: var(--foreground);
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
   font-size: 11px;
   line-height: 1.2;
   min-height: 32px;
@@ -48,7 +51,7 @@
 }
 
 .custom-event-content.has-collaborators {
-  border-left: 3px solid var(--primary);
+  border-left: 3px solid hsl(var(--primary));
 }
 
 .event-header {
@@ -61,7 +64,7 @@
 
 .event-title {
   font-weight: 600;
-  color: var(--foreground);
+  color: hsl(var(--foreground));
   flex: 1;
   margin-right: 4px;
   font-size: 10px;
@@ -113,12 +116,12 @@
   border-radius: 50%;
 }
 
-.status-indicator.status-pending { background: var(--warning); }
-.status-indicator.status-confirmed { background: var(--success); }
-.status-indicator.status-in_progress { background: var(--accent); }
-.status-indicator.status-completed { background: var(--primary); }
-.status-indicator.status-cancelled { background: var(--destructive); }
-.status-indicator.status-draft { background: var(--muted-foreground); }
+.status-indicator.status-pending { background: hsl(var(--warning)); }
+.status-indicator.status-confirmed { background: hsl(var(--success)); }
+.status-indicator.status-in_progress { background: hsl(var(--accent)); }
+.status-indicator.status-completed { background: hsl(var(--primary)); }
+.status-indicator.status-cancelled { background: hsl(var(--destructive)); }
+.status-indicator.status-draft { background: hsl(var(--muted-foreground)); }
 
 /* Enhanced Tooltip Styles */
 .bc-tooltip {
@@ -132,8 +135,8 @@
 }
 
 .bc-tooltip-card {
-  background: var(--popover);
-  border: 1px solid var(--border);
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
   border-radius: 8px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   overflow: hidden;
@@ -141,14 +144,14 @@
 
 .bc-tooltip-header {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--muted);
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
 }
 
 .bc-tooltip-title {
   font-size: 16px;
   font-weight: 600;
-  color: var(--foreground);
+  color: hsl(var(--foreground));
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -157,7 +160,7 @@
 
 .bc-tooltip-subtitle {
   font-size: 12px;
-  color: var(--muted-foreground);
+  color: hsl(var(--muted-foreground));
 }
 
 .bc-tooltip-content {
@@ -177,15 +180,15 @@
 }
 
 .bc-muted {
-  color: var(--muted-foreground);
+  color: hsl(var(--muted-foreground));
   font-weight: 500;
   min-width: 60px;
 }
 
 .bc-tooltip-actions {
   padding: 12px 16px;
-  border-top: 1px solid var(--border);
-  background: var(--muted);
+  border-top: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
 }
 
 .action-buttons-grid {
@@ -196,10 +199,10 @@
 
 .btn-ghost {
   padding: 6px 8px;
-  border: 1px solid var(--border);
+  border: 1px solid hsl(var(--border));
   border-radius: 4px;
-  background: var(--background);
-  color: var(--foreground);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;
@@ -208,9 +211,9 @@
 }
 
 .btn-ghost:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-foreground);
+  background: hsl(var(--accent));
+  border-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
 }
 
 .btn-ghost:disabled {
@@ -224,42 +227,42 @@
 }
 
 .btn-primary {
-  background: var(--primary);
-  color: var(--primary-foreground);
-  border-color: var(--primary);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
 }
 
 .btn-primary:hover {
-  background: var(--primary);
+  background: hsl(var(--primary));
   opacity: 0.9;
 }
 
 .btn-success {
-  background: var(--success);
+  background: hsl(var(--success));
   color: white;
-  border-color: var(--success);
+  border-color: hsl(var(--success));
 }
 
 .btn-success:hover {
-  background: var(--success);
+  background: hsl(var(--success));
   opacity: 0.9;
 }
 
 .btn-danger {
-  background: var(--destructive);
+  background: hsl(var(--destructive));
   color: white;
-  border-color: var(--destructive);
+  border-color: hsl(var(--destructive));
 }
 
 .btn-danger:hover {
-  background: var(--destructive);
+  background: hsl(var(--destructive));
   opacity: 0.9;
 }
 
 /* Enhanced Toolbar Styles */
 .booking-toolbar {
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
   border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 16px;
@@ -286,10 +289,10 @@
 
 .toolbar-btn {
   padding: 6px 12px;
-  border: 1px solid var(--border);
+  border: 1px solid hsl(var(--border));
   border-radius: 6px;
-  background: var(--background);
-  color: var(--foreground);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -300,20 +303,20 @@
 }
 
 .toolbar-btn:hover {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: hsl(var(--accent));
+  border-color: hsl(var(--accent));
 }
 
 .toolbar-btn.active {
-  background: var(--primary);
-  color: var(--primary-foreground);
-  border-color: var(--primary);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
 }
 
 .toolbar-btn.today {
-  background: var(--primary);
-  color: var(--primary-foreground);
-  border-color: var(--primary);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
 }
 
 .toolbar-btn.today:hover {
@@ -327,7 +330,7 @@
 .toolbar-title {
   font-size: 16px;
   font-weight: 600;
-  color: var(--foreground);
+  color: hsl(var(--foreground));
   margin: 0 12px;
 }
 
