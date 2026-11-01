@@ -1,5 +1,5 @@
 import React, { forwardRef, ReactNode, useState } from 'react';
-import { clsx } from 'clsx';
+import { cn } from '../../utils/cn';
 import { Loader2, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { StandardSize } from './StandardTypes';
 
@@ -69,17 +69,17 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             type={inputType}
-            className={clsx(
+            className={cn(
               'w-full rounded-lg border-2 bg-card text-foreground transition-all duration-200',
               'placeholder:text-muted-foreground',
-              'focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring',
               'disabled:cursor-not-allowed disabled:opacity-50',
               'hover:border-primary/50',
               inputSizes[size],
               leftIcon && 'pl-10',
               (rightIcon || showPasswordToggle || isLoading) && 'pr-10',
-              hasError && 'border-destructive focus:ring-destructive focus:border-destructive',
-              hasSuccess && 'border-success focus:ring-success focus:border-success',
+              hasError && 'border-destructive focus-visible:ring-destructive focus-visible:border-destructive',
+              hasSuccess && 'border-success focus-visible:ring-success focus-visible:border-success',
               !hasError && !hasSuccess && 'border-border',
               className
             )}

@@ -30,7 +30,7 @@ export const BannerCarousel = () => {
   const prev = () => setCurrentIndex((prev) => (prev - 1 + banners.length) % banners.length);
 
   return (
-    <div className="relative w-full overflow-hidden group bg-surface h-[min(500px,60vh)]">
+    <div className="relative w-full overflow-hidden group bg-muted h-[min(500px,60vh)]">
       {/* Images */}
       <div className="relative w-full h-full">
          <Link to={current.linkUrl || '#'} className={`block w-full h-full ${!current.linkUrl ? 'pointer-events-none' : ''}`}>
@@ -50,8 +50,9 @@ export const BannerCarousel = () => {
              />
            </picture>
            {/* Overlay Gradient for text readability */}
-           <div className="absolute inset-0 bg-gradient-to-t from-surface/80 via-transparent to-transparent flex items-end">
-             <div className="p-6 md:p-12 text-foreground w-full max-w-7xl mx-auto">
+           {/* bg-surface não existe: o gradiente sumia e o texto do tema ficava direto sobre a foto */}
+           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end">
+             <div className="p-6 md:p-12 text-white w-full max-w-7xl mx-auto">
                <h2 className="text-xl md:text-3xl font-bold mb-2 drop-shadow-md">{current.title}</h2>
                {current.description && (
                  <p className="text-sm md:text-lg max-w-3xl drop-shadow-md opacity-90">{current.description}</p>
@@ -66,14 +67,14 @@ export const BannerCarousel = () => {
         <>
           <button 
             onClick={(e) => { e.preventDefault(); prev(); }}
-            className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 p-2 bg-surface/20 hover:bg-surface/60 backdrop-blur-sm text-foreground rounded-full opacity-0 group-hover:opacity-100 transition-all"
+            className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 p-2 bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white rounded-full md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white transition-all"
             aria-label="Anterior"
           >
             <ChevronLeft size={24} className="md:w-8 md:h-8" />
           </button>
           <button 
             onClick={(e) => { e.preventDefault(); next(); }}
-            className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 p-2 bg-surface/20 hover:bg-surface/60 backdrop-blur-sm text-foreground rounded-full opacity-0 group-hover:opacity-100 transition-all"
+            className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 p-2 bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white rounded-full md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white transition-all"
             aria-label="Próximo"
           >
             <ChevronRight size={24} className="md:w-8 md:h-8" />

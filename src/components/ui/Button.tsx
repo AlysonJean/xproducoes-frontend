@@ -1,6 +1,6 @@
 import { forwardRef, ReactNode } from 'react';
-import { clsx } from 'clsx';
 import { Loader2 } from 'lucide-react';
+import { cn } from '../../utils/cn';
 import { StandardVariant, StandardSize } from './StandardTypes';
 
 export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'size'> {
@@ -12,7 +12,7 @@ export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonE
   fullWidth?: boolean;
 }
 
-const buttonVariants: Record<StandardVariant, string> = {
+const variantClasses: Record<StandardVariant, string> = {
   primary: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-lg',
   secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border shadow-sm',
   outline: 'border-2 border-primary text-primary hover:bg-primary/5',
@@ -20,9 +20,10 @@ const buttonVariants: Record<StandardVariant, string> = {
   destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-md',
   success: 'bg-success text-success-foreground hover:bg-success/90 shadow-md',
   warning: 'bg-warning text-warning-foreground hover:bg-warning/90 shadow-md',
+  info: 'bg-info text-info-foreground hover:bg-info/90 shadow-md',
 };
 
-const buttonSizes: Record<StandardSize, string> = {
+const sizeClasses: Record<StandardSize, string> = {
   xs: 'h-8 px-3 text-xs',
   sm: 'h-10 px-4 text-sm font-medium',
   md: 'h-12 px-6 text-sm font-bold uppercase tracking-wider',
@@ -30,6 +31,29 @@ const buttonSizes: Record<StandardSize, string> = {
   xl: 'h-16 px-10 text-lg font-bold uppercase tracking-widest',
   icon: 'h-10 w-10 p-2',
 };
+
+// Achado (auditoria do design system): o botão não tinha estilo de foco — quem navega por teclado
+// não via onde estava. Anel no token --ring (marca no claro, laranja no escuro), só no foco por
+// teclado (focus-visible), igual em todos os controles.
+const baseClasses =
+  'inline-flex items-center justify-center gap-2 rounded-xl transition-all duration-300 active:scale-95 ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
+  'disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100';
+
+/**
+ * Classes do Button para elementos que não são <button> — ex.: `<Link className={buttonVariants({ variant: 'outline' })}>`.
+ * Achado: sem isto (o Button não tem `asChild`), cada tela copiava o estilo do botão à mão em
+ * links (CTAs das páginas de detalhe, erro, sucesso…), cada uma com raio/altura/caixa diferente.
+ */
+export function buttonVariants({
+  variant = 'primary',
+  size = 'md',
+  fullWidth = false,
+  className,
+}: { variant?: StandardVariant; size?: StandardSize; fullWidth?: boolean; className?: string } = {}) {
+  // cn = clsx + tailwind-merge: o className de quem chama vence o padrão (ex.: h-8 num size="sm").
+  return cn(baseClasses, variantClasses[variant], sizeClasses[size], fullWidth && 'w-full', className);
+}
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
@@ -51,16 +75,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         disabled={disabled || isLoading}
-        className={clsx(
-          'inline-flex items-center justify-center gap-2 rounded-xl transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100',
-          buttonVariants[variant],
-          buttonSizes[size],
-          fullWidth && 'w-full',
-          className
-        )}
+        className={buttonVariants({ variant, size, fullWidth, className })}
         {...props}
       >
-        {isLoading && <Loader2 className="h-5 w-5 animate-spin" />}
+        {isLoading && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
         {!isLoading && leftIcon}
         <span className="truncate">{children}</span>
         {!isLoading && rightIcon}

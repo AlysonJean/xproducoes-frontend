@@ -1,4 +1,5 @@
-import React, { useRef, useLayoutEffect } from 'react';
+import React from 'react';
+import { cn } from '../../utils/cn';
 
 interface SkeletonProps {
   className?: string;
@@ -15,25 +16,19 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   height,
   animated = true,
 }) => {
-  const variantClass = variant === 'circle' ? 'skeleton-circle' : 'skeleton-rect';
-  const animationClass = animated ? 'animate-pulse' : '';
-  const skRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    if (skRef.current) {
-      if (width) {
-        skRef.current.style.setProperty('--sk-w', typeof width === 'number' ? `${width}px` : width.toString());
-      }
-      if (height) {
-        skRef.current.style.setProperty('--sk-h', typeof height === 'number' ? `${height}px` : height.toString());
-      }
-    }
-  }, [width, height]);
-
+  // Achado (auditoria do design system): usava as classes skeleton-root/rect/circle, definidas só em
+  // components.css — arquivo que nunca foi carregado —, então o skeleton não tinha fundo nem tamanho.
+  const toCss = (v?: string | number) => (typeof v === 'number' ? `${v}px` : v);
   return (
     <div
-      ref={skRef}
-      className={`skeleton-root ${variantClass} ${animationClass} ${className}`}
+      className={cn(
+        'bg-muted',
+        variant === 'circle' ? 'rounded-full' : 'rounded-md',
+        variant === 'text' && 'h-4',
+        animated && 'animate-pulse',
+        className
+      )}
+      style={width || height ? { width: toCss(width), height: toCss(height) } : undefined}
       aria-hidden="true"
     />
   );

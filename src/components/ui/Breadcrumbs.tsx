@@ -33,7 +33,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items = [] }) => {
   const breadcrumbSchema = generateBreadcrumbSchema(schemaItems);
 
   return (
-    <nav aria-label="Breadcrumb" className="mb-6 hidden md:block">
+    <nav aria-label="Trilha de navegação" className="mb-6 hidden md:block">
       <StructuredData schema={breadcrumbSchema} />
       <ol className="flex items-center space-x-2 text-sm text-muted-foreground">
         <li>

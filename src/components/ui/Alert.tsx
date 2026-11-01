@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { clsx } from 'clsx';
+import { cn } from '../../utils/cn';
 import { Info, CheckCircle2, AlertTriangle, AlertCircle, X } from 'lucide-react';
 import { StandardStatus } from './StandardTypes';
 
@@ -13,26 +13,30 @@ interface AlertProps {
   action?: ReactNode;
 }
 
+// Achado (auditoria do design system): o texto usava `text-{status}-foreground` — a cor feita para ir
+// SOBRE o fundo sólido do status (branco no claro, quase preto no escuro) — em cima de um fundo a 10%:
+// texto branco em fundo quase branco. Atingia todo Alert (32 telas) e a mensagem de todo ConfirmModal.
+// Agora o texto é o do tema; o status aparece no ícone, na borda e no fundo suave.
 const alertVariants: Record<StandardStatus, { container: string; icon: ReactNode }> = {
-  default: { 
-    container: 'border-border bg-background text-foreground', 
-    icon: <Info className="h-4 w-4" /> 
+  default: {
+    container: 'border-border bg-background text-foreground',
+    icon: <Info className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
   },
-  info: { 
-    container: 'border-info/50 bg-info/10 text-info-foreground', 
-    icon: <Info className="h-4 w-4" /> 
+  info: {
+    container: 'border-info/50 bg-info/10 text-foreground',
+    icon: <Info className="h-4 w-4 text-info" aria-hidden="true" />
   },
-  success: { 
-    container: 'border-success/50 bg-success/10 text-success-foreground', 
-    icon: <CheckCircle2 className="h-4 w-4" /> 
+  success: {
+    container: 'border-success/50 bg-success/10 text-foreground',
+    icon: <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
   },
-  warning: { 
-    container: 'border-warning/50 bg-warning/10 text-warning-foreground', 
-    icon: <AlertTriangle className="h-4 w-4" /> 
+  warning: {
+    container: 'border-warning/50 bg-warning/10 text-foreground',
+    icon: <AlertTriangle className="h-4 w-4 text-warning" aria-hidden="true" />
   },
-  error: { 
-    container: 'border-destructive/50 bg-destructive/10 text-destructive-foreground', 
-    icon: <AlertCircle className="h-4 w-4" /> 
+  error: {
+    container: 'border-destructive/50 bg-destructive/10 text-foreground',
+    icon: <AlertCircle className="h-4 w-4 text-destructive" aria-hidden="true" />
   },
 };
 
@@ -49,7 +53,7 @@ export const Alert: React.FC<AlertProps> = ({
 
   return (
     <div
-      className={clsx(
+      className={cn(
         'relative w-full rounded-lg border p-4',
         alertConfig.container,
         className
@@ -86,7 +90,8 @@ export const Alert: React.FC<AlertProps> = ({
         {onClose && (
           <button
             onClick={onClose}
-            className="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity"
+            type="button"
+            className="flex-shrink-0 rounded-sm opacity-70 hover:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Fechar alerta"
           >
             <X className="h-4 w-4" />

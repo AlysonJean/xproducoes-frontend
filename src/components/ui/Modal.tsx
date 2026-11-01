@@ -122,8 +122,8 @@ export const Modal: React.FC<ModalProps> = ({
         aria-label={!title ? ariaLabel || 'Janela modal' : undefined}
         tabIndex={-1}
         className={clsx(
-          'relative bg-card/60 backdrop-blur-xl text-card-foreground rounded-2xl shadow-2xl border border-white/20',
-          'max-h-[92vh] overflow-y-auto overflow-x-hidden animate-in fade-in zoom-in duration-300',
+          'relative bg-card/60 backdrop-blur-xl text-card-foreground rounded-2xl shadow-2xl border border-border',
+          'max-h-[92vh] overflow-y-auto overflow-x-hidden animate-in fade-in zoom-in-95 duration-300',
           !className?.includes('max-w-') && modalSizes[size],
           'w-full mx-4',
           className

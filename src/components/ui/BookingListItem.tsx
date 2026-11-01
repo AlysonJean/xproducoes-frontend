@@ -41,7 +41,7 @@ export const BookingListItem = ({ booking, onReviewClick, onViewDetails }: Booki
           </p>
           <p className="text-lg font-bold text-foreground">Data: {formatDate(booking.eventDate)}</p>
           {booking.eventTitle && (
-            <p className="text-md text-foreground">Evento: {booking.eventTitle}</p>
+            <p className="text-base text-foreground">Evento: {booking.eventTitle}</p>
           )}
         </div>
         <div className="flex items-center gap-4">

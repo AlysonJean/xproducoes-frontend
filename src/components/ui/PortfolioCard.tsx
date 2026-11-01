@@ -44,8 +44,8 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({ item, ...rest }) =
                     onMouseOut={e => e.currentTarget.pause()}
                 />
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity duration-300">
-                    <div className="bg-surface/40 rounded-full p-3 backdrop-blur-sm">
-                      <PlayCircle className="w-10 h-10 text-foreground" />
+                    <div className="bg-black/40 rounded-full p-3 backdrop-blur-sm">
+                      <PlayCircle className="w-10 h-10 text-white" aria-hidden="true" />
                     </div>
                 </div>
             </div>
@@ -61,16 +61,16 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({ item, ...rest }) =
         )}
 
         {item.isPinned && (
-            <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/90 text-white text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm shadow-lg shadow-emerald-500/20 border border-white/20">
-                <Star className="w-3 h-3 fill-white" />
+            <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success text-success-foreground text-xs font-bold uppercase tracking-wider shadow-lg border border-white/20">
+                <Star className="w-3 h-3 fill-current" aria-hidden="true" />
                 Destaque
             </div>
         )}
         
-        <div className="absolute inset-0 bg-gradient-to-t from-surface/80 via-surface/20 to-transparent opacity-100 transition-opacity duration-300 flex items-end">
-          <div className="p-4 text-foreground w-full">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-100 transition-opacity duration-300 flex items-end">
+          <div className="p-4 text-white w-full">
             <h3 className="font-bold text-lg truncate mb-1">{item.title}</h3>
-            {item.description && <p className="text-xs text-muted-foreground line-clamp-1">{item.description}</p>}
+            {item.description && <p className="text-xs text-white/80 line-clamp-1">{item.description}</p>}
           </div>
         </div>
       </div>

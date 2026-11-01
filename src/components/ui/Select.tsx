@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { clsx } from 'clsx';
+import { cn } from '../../utils/cn';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { StandardSize } from './StandardTypes';
 
@@ -46,14 +46,14 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         <select
           ref={ref}
           id={selectId}
-          className={clsx(
+          className={cn(
             'w-full rounded-lg border-2 bg-card text-foreground transition-all duration-200 cursor-pointer',
-            'focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring',
             'disabled:cursor-not-allowed disabled:opacity-50',
             'hover:border-primary/50',
             inputSizes[size],
-            hasError && 'border-destructive focus:ring-destructive focus:border-destructive',
-            hasSuccess && 'border-success focus:ring-success focus:border-success',
+            hasError && 'border-destructive focus-visible:ring-destructive focus-visible:border-destructive',
+            hasSuccess && 'border-success focus-visible:ring-success focus-visible:border-success',
             !hasError && !hasSuccess && 'border-border',
             className
           )}

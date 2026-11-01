@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { clsx } from 'clsx';
+import { cn } from '../../utils/cn';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -28,14 +28,14 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           ref={ref}
           id={textareaId}
-          className={clsx(
+          className={cn(
             'w-full min-h-[80px] rounded-lg border-2 bg-card px-3 py-2 text-foreground transition-all duration-200',
             'placeholder:text-muted-foreground',
-            'focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring',
             'disabled:cursor-not-allowed disabled:opacity-50',
             'hover:border-primary/50',
-            hasError && 'border-destructive focus:ring-destructive focus:border-destructive',
-            hasSuccess && 'border-success focus:ring-success focus:border-success',
+            hasError && 'border-destructive focus-visible:ring-destructive focus-visible:border-destructive',
+            hasSuccess && 'border-success focus-visible:ring-success focus-visible:border-success',
             !hasError && !hasSuccess && 'border-border',
             resize === 'none' && 'resize-none',
             resize === 'vertical' && 'resize-y',

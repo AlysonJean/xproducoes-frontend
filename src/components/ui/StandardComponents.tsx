@@ -13,7 +13,7 @@
 export * from './StandardTypes';
 
 // Componentes Core
-export { Button, type ButtonProps } from './Button';
+export { Button, buttonVariants, type ButtonProps } from './Button';
 export { Input, type InputProps } from './Input';
 export { Select, type SelectProps, type SelectOption } from './Select';
 export { Textarea, type TextareaProps } from './Textarea';
@@ -21,9 +21,12 @@ export { Checkbox, type CheckboxProps } from './Checkbox';
 
 // Layout e Estrutura
 export { Grid } from './Grid';
-export { Card, GlassCard } from './Cards';
+export { Card, GlassCard, SimpleCard, StatsCard } from './Cards';
 export { Badge } from './Badge';
 export { Skeleton, CardSkeleton, ListSkeleton } from './Skeleton';
+export { BrandLoader } from './BrandLoader';
+export { Pagination } from './Pagination';
+export { Breadcrumbs } from './Breadcrumbs';
 
 // Modais
 export { Modal } from './Modal';

@@ -102,8 +102,8 @@ const getRecommendationConfig = (type: RecommendationType) => {
       icon: Zap,
       title: 'Novidades',
       subtitle: 'Recém-adicionados ao catálogo',
-      color: 'text-secondary',
-      bgColor: 'bg-secondary/10'
+      color: 'text-success',
+      bgColor: 'bg-success/10'
     },
     seasonal: {
       icon: Award,

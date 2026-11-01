@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { clsx } from 'clsx';
+import { cn } from '../../utils/cn';
 
 export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label?: string;
@@ -17,10 +17,14 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           type="checkbox"
           ref={ref}
           id={checkboxId}
-          className={clsx(
-            "h-4 w-4 rounded border-border text-primary ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          // `text-primary` não colore checkbox nativo (sem plugin de forms) — saía no azul do navegador.
+          // accent-color pinta com a marca; erro ligado ao campo para leitor de tela.
+          className={cn(
+            "peer h-4 w-4 rounded accent-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
             className
           )}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? `${checkboxId}-error` : undefined}
           {...props}
         />
         <div className="grid gap-1.5 leading-none">
@@ -32,7 +36,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
               {label}
             </label>
           )}
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p id={`${checkboxId}-error`} className="text-sm text-destructive">{error}</p>}
         </div>
       </div>
     );

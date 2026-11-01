@@ -8,7 +8,7 @@ interface BrandLoaderProps {
   size?: LoaderSize;
   /** Classe CSS adicional */
   className?: string;
-  /** Texto exibido abaixo do loader (ignorado conforme pedido, mas mantido na interface para compatibilidade) */
+  /** Texto do carregamento — não aparece na tela (pedido de design), mas é anunciado a leitores de tela */
   label?: string;
   /** Se deve ocupar a tela inteira (centralizado) */
   fullScreen?: boolean;
@@ -47,6 +47,7 @@ const SIZE_MAP: Record<string, string> = {
 const BrandLoader: React.FC<BrandLoaderProps> = ({
   size = 'lg',
   className = '',
+  label,
   fullScreen = false,
 }) => {
   const [isClient, setIsClient] = useState(false);
@@ -89,12 +90,16 @@ const BrandLoader: React.FC<BrandLoaderProps> = ({
     : { r: '0', g: '0.188', b: '0.286' };
 
   return (
-    <div className={`${containerClass} ${className}`}>
+    // role="status": o carregamento é anunciado (antes, nenhum loading do app era).
+    <div className={`${containerClass} ${className}`} role="status" aria-live="polite">
+      <span className="sr-only">{label || 'Carregando…'}</span>
       {isClient && (
-        <div 
-          className={`brand-loader-animation flex items-center justify-center relative ${
-            typeof size === 'number' ? `w-[${size}px] h-[${size}px]` : sizeClass
-          }`}
+        <div
+          // Tamanho numérico via style: a classe montada em tempo de execução (`w-[140px]`) não existe
+          // no CSS gerado pelo Tailwind, e o loader ficava sem tamanho.
+          className={`brand-loader-animation flex items-center justify-center relative ${sizeClass}`}
+          style={typeof size === 'number' ? { width: size, height: size } : undefined}
+          aria-hidden="true"
         >
           {/* SVG Filter para colorização absoluta e agressiva */}
           <svg width="0" height="0" className="absolute pointer-events-none overflow-hidden h-0 w-0">

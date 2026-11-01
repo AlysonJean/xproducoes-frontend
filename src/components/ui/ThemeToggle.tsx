@@ -18,7 +18,7 @@ export function ThemeToggle({ showLabel = false, className = '' }: ThemeTogglePr
     <div className={`flex items-center gap-2 ${className}`}>
       {showLabel && (
         <span className="text-sm font-medium text-foreground">
-          {isDark ? 'Dark' : 'Light'}
+          {isDark ? 'Escuro' : 'Claro'}
         </span>
       )}
       
@@ -32,8 +32,8 @@ export function ThemeToggle({ showLabel = false, className = '' }: ThemeTogglePr
             : 'bg-primary hover:bg-primary/90'
           }
         `}
-        aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`}
-        title={`Switch to ${isDark ? 'light' : 'dark'} theme`}
+        aria-label={isDark ? 'Ativar tema claro' : 'Ativar tema escuro'}
+        title={isDark ? 'Ativar tema claro' : 'Ativar tema escuro'}
       >
         {/* Toggle Circle */}
         <div

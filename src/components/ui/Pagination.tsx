@@ -45,13 +45,13 @@ export const Pagination = ({
   const endItem = Math.min(currentPage * itemsPerPage, totalItems || 0);
 
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8 p-4 bg-card border border-border rounded-lg">
-      {/* Informações dos itens */}
-      {totalItems && (
+    <nav aria-label="Paginação" className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8 p-4 bg-card border border-border rounded-lg">
+      {/* Informações dos itens — `totalItems &&` renderizava um "0" solto quando não havia itens */}
+      {totalItems ? (
         <div className="text-sm text-muted-foreground">
           Mostrando {startItem} - {endItem} de {totalItems} itens
         </div>
-      )}
+      ) : null}
 
       {/* Controles de navegação */}
       <div className="flex items-center gap-2">
@@ -59,7 +59,8 @@ export const Pagination = ({
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+          aria-label="Página anterior"
+          className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
             currentPage === 1
               ? 'bg-muted text-muted-foreground cursor-not-allowed'
               : 'bg-primary text-primary-foreground hover:bg-primary/80'
@@ -75,7 +76,9 @@ export const Pagination = ({
               key={index}
               onClick={() => typeof page === 'number' && onPageChange(page)}
               disabled={page === '...'}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              aria-current={page === currentPage ? 'page' : undefined}
+              aria-label={typeof page === 'number' ? `Página ${page}` : undefined}
+              className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 page === currentPage
                   ? 'bg-primary text-primary-foreground'
                   : page === '...'
@@ -92,7 +95,8 @@ export const Pagination = ({
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+          aria-label="Próxima página"
+          className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
             currentPage === totalPages
               ? 'bg-muted text-muted-foreground cursor-not-allowed'
               : 'bg-primary text-primary-foreground hover:bg-primary/80'
@@ -101,6 +105,6 @@ export const Pagination = ({
           Próximo →
         </button>
       </div>
-    </div>
+    </nav>
   );
 };

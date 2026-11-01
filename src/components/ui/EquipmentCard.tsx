@@ -12,8 +12,8 @@ import { memo, useCallback, useState } from 'react';
 // Constantes para disponibilidade
 // Achado (Lighthouse/axe-core contra produção real): badge MAINTENANCE (bg-orange-500) e
 // COMING_SOON (bg-blue-500) com texto branco tinham contraste 2.8:1/2.86:1 (WCAG exige
-// 4.5:1). orange-700/blue-700 são locais a este componente, não tokens de tema
-// compartilhados — ACTIVE/UNAVAILABLE já usam os tokens success/destructive corretamente.
+// 4.5:1). Corrigido primeiro com orange-700/blue-700 locais; desde a auditoria do design system os
+// tokens warning/info passam no contraste (5.05:1 / 5.95:1) e o card volta a usá-los, como os demais.
 const STATUS_CONFIG = {
   ACTIVE: {
     label: 'Disponível',
@@ -23,13 +23,13 @@ const STATUS_CONFIG = {
   },
   MAINTENANCE: {
     label: 'Em Manutenção',
-    badge: 'bg-orange-700 text-white',
+    badge: 'bg-warning text-warning-foreground',
     overlay: 'EM MANUTENÇÃO',
     btnClass: 'bg-muted text-muted-foreground cursor-not-allowed'
   },
   COMING_SOON: {
     label: 'Em Breve',
-    badge: 'bg-blue-700 text-white',
+    badge: 'bg-info text-info-foreground',
     overlay: 'EM BREVE',
     btnClass: 'bg-muted text-muted-foreground cursor-not-allowed'
   },
@@ -94,10 +94,10 @@ const EquipmentImage = memo(
         
         {config.overlay && (
           <div
-            className="absolute inset-0 bg-surface/80 flex items-center justify-center p-4 text-center"
+            className="absolute inset-0 bg-background/80 flex items-center justify-center p-4 text-center"
             aria-label={`Equipamento ${config.label}`}
           >
-            <span className={`${status === 'MAINTENANCE' ? 'text-orange-500' : status === 'COMING_SOON' ? 'text-blue-500' : 'text-danger'} font-bold text-lg uppercase`}>
+            <span className={`${status === 'MAINTENANCE' ? 'text-warning' : status === 'COMING_SOON' ? 'text-info' : 'text-destructive'} font-bold text-lg uppercase`}>
               {config.overlay}
             </span>
           </div>

@@ -33,7 +33,8 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
-            className="w-full pl-14 pr-4 py-5 bg-card/40 backdrop-blur-md border border-white/20 rounded-2xl text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 shadow-xl group-hover:shadow-2xl group-hover:-translate-y-1"
+            aria-label={searchPlaceholder || 'Buscar'}
+            className="w-full pl-14 pr-4 py-5 bg-card/40 backdrop-blur-md border border-border rounded-2xl text-foreground placeholder-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-transparent transition-all duration-300 shadow-xl group-hover:shadow-2xl group-hover:-translate-y-1"
           />
           <div className="absolute inset-y-0 left-0 flex items-center pl-5">
             <svg className="h-6 w-6 text-primary group-hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -42,8 +43,9 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
           </div>
           {searchQuery && (
             <button
+              type="button"
               onClick={() => onSearchChange('')}
-              className="absolute inset-y-0 right-0 flex items-center pr-4 text-muted-foreground hover:text-foreground transition-colors duration-200"
+              className="absolute inset-y-0 right-0 flex items-center pr-4 rounded-r-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-muted-foreground hover:text-foreground transition-colors duration-200"
               title="Limpar busca"
               aria-label="Limpar busca"
             >
@@ -102,23 +104,27 @@ export const FilterSelect: React.FC<FilterSelectProps> = ({
   onChange,
   options,
   className = ''
-}) => (
-  <div className={`flex flex-col gap-2 ${className}`}>
-    <label className="text-sm font-medium text-muted-foreground">{label}</label>
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="px-4 py-3 bg-card border-2 border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 cursor-pointer hover:border-primary/50"
-      aria-label={label}
-    >
-      {options.map(option => (
-        <option key={option.value} value={option.value} className="bg-card text-foreground">
-          {option.label}
-        </option>
-      ))}
-    </select>
-  </div>
-);
+}) => {
+  // Rótulo associado ao select (antes era um <label> solto, sem htmlFor).
+  const id = React.useId();
+  return (
+    <div className={`flex flex-col gap-2 ${className}`}>
+      <label htmlFor={id} className="text-sm font-medium text-muted-foreground">{label}</label>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="px-4 py-3 bg-card border-2 border-border rounded-lg text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-all duration-200 cursor-pointer hover:border-primary/50"
+      >
+        {options.map(option => (
+          <option key={option.value} value={option.value} className="bg-card text-foreground">
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};
 
 interface FilterPriceRangeProps {
   label: string;
