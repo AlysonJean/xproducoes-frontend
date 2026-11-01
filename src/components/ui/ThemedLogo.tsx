@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '../../utils/cn';
 
 interface ThemedLogoProps {
   // Props mantidas para compatibilidade
@@ -15,7 +16,7 @@ interface ThemedLogoProps {
  */
 export const ThemedLogo: React.FC<ThemedLogoProps> = ({ className = '', title = 'X Produções' }) => {
   return (
-    <div className={`text-primary ${className}`} title={title}>
+    <div className={cn('text-primary', className)} title={title}>
       <svg 
         xmlns="http://www.w3.org/2000/svg" 
         version="1.1" 

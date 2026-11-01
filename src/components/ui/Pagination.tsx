@@ -1,4 +1,5 @@
 import type { PaginationProps } from '@/types/ui';
+import { cn } from '../../utils/cn';
 
 export const Pagination = ({
   currentPage,
@@ -6,6 +7,7 @@ export const Pagination = ({
   onPageChange,
   itemsPerPage = 10,
   totalItems,
+  className,
 }: PaginationProps) => {
   const generatePageNumbers = () => {
     const delta = 2; // Quantas páginas mostrar antes e depois da atual
@@ -45,7 +47,7 @@ export const Pagination = ({
   const endItem = Math.min(currentPage * itemsPerPage, totalItems || 0);
 
   return (
-    <nav aria-label="Paginação" className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8 p-4 bg-card border border-border rounded-lg">
+    <nav aria-label="Paginação" className={cn('flex flex-col sm:flex-row justify-between items-center gap-4 mt-8 p-4 bg-card border border-border rounded-lg', className)}>
       {/* Informações dos itens — `totalItems &&` renderizava um "0" solto quando não havia itens */}
       {totalItems ? (
         <div className="text-sm text-muted-foreground">

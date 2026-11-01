@@ -53,7 +53,10 @@ export const FavoriteButton = ({
 
   return (
   <button
+      type="button"
       onClick={handleToggle}
+      // Botão de alternar: leitor de tela precisa do estado (aria-pressed), não só do rótulo.
+      aria-pressed={favorite}
       className={`
         ${sizeClasses[size]}
         ${favorite ? 'text-destructive hover:text-destructive/80' : 'text-foreground hover:text-muted-foreground'}
@@ -64,10 +67,11 @@ export const FavoriteButton = ({
       aria-label={favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
     >
       <svg
-    fill={favorite ? 'currentColor' : 'none'}
-    stroke="currentColor"
+        fill={favorite ? 'currentColor' : 'none'}
+        stroke="currentColor"
         viewBox="0 0 24 24"
-    className="w-5 h-5"
+        className="w-5 h-5"
+        aria-hidden="true"
       >
         <path
           strokeLinecap="round"

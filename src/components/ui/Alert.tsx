@@ -58,7 +58,9 @@ export const Alert: React.FC<AlertProps> = ({
         alertConfig.container,
         className
       )}
-      role="alert"
+      // Erro e aviso interrompem o leitor de tela; informativo e sucesso não (um texto estático
+      // com role="alert" era anunciado de forma assertiva ao carregar a página).
+      role={variant === 'error' || variant === 'warning' ? 'alert' : 'status'}
     >
       <div className="flex gap-3">
         <div className="flex-shrink-0 mt-0.5">
@@ -67,9 +69,9 @@ export const Alert: React.FC<AlertProps> = ({
         
         <div className="flex-1 min-w-0">
           {title && (
-            <h5 className="mb-1 font-medium leading-none tracking-tight">
+            <p className="mb-1 font-display font-medium leading-none tracking-tight">
               {title}
-            </h5>
+            </p>
           )}
           
           {description && (

@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { clsx } from 'clsx';
+import { cn } from '../../utils/cn';
 
 interface StandardFormProps extends React.FormHTMLAttributes<HTMLFormElement> {
   children: ReactNode;
@@ -7,7 +7,7 @@ interface StandardFormProps extends React.FormHTMLAttributes<HTMLFormElement> {
 
 export const Form: React.FC<StandardFormProps> = ({ children, className, ...props }) => {
   return (
-    <form className={clsx('space-y-6', className)} {...props}>
+    <form className={cn('space-y-6', className)} {...props}>
       {children}
     </form>
   );
@@ -27,7 +27,7 @@ export const FormSection: React.FC<StandardFormSectionProps> = ({
   className 
 }) => {
   return (
-    <div className={clsx('space-y-4', className)}>
+    <div className={cn('space-y-4', className)}>
       {(title || description) && (
         <div className="space-y-1">
           {title && (
@@ -63,7 +63,7 @@ export const FormActions: React.FC<StandardFormActionsProps> = ({
 }) => {
   return (
     <div 
-      className={clsx(
+      className={cn(
         'flex gap-3 pt-4 border-t border-border',
         align === 'left' && 'justify-start',
         align === 'center' && 'justify-center',

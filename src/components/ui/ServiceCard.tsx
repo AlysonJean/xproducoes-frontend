@@ -6,29 +6,27 @@ import type { Service } from '../../types/types';
 import { FavoriteButton } from '../../components/ui/FavoriteButton';
 import CompareButton from '../../components/ui/CompareButton';
 import { memo, useCallback, useState } from 'react';
+import { Minus, Plus } from 'lucide-react';
+import { Button } from './Button';
 import { useCart } from '../../hooks/useCart';
 import { useNotifications } from '../../contexts/NotificationContext';
 
 const STATUS_CONFIG = {
   ACTIVE: {
     label: 'Ativo',
-    badge: 'bg-success text-success-foreground',
-    btnClass: 'bg-primary text-primary-foreground hover:bg-primary/90'
+    badge: 'bg-success text-success-foreground'
   },
   INACTIVE: {
     label: 'Inativo',
-    badge: 'bg-destructive text-destructive-foreground',
-    btnClass: 'bg-muted text-muted-foreground cursor-not-allowed'
+    badge: 'bg-destructive text-destructive-foreground'
   },
   MAINTENANCE: {
     label: 'Manutenção',
-    badge: 'bg-warning text-warning-foreground',
-    btnClass: 'bg-muted text-muted-foreground cursor-not-allowed'
+    badge: 'bg-warning text-warning-foreground'
   },
   COMING_SOON: {
     label: 'Em Breve',
-    badge: 'bg-info text-info-foreground',
-    btnClass: 'bg-muted text-muted-foreground cursor-not-allowed'
+    badge: 'bg-info text-info-foreground'
   },
 } as const;
 
@@ -103,64 +101,72 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
   };
 
   const currentStatus = service.status || 'ACTIVE';
-  const validCurrentStatus = (currentStatus in STATUS_CONFIG) ? currentStatus as keyof typeof STATUS_CONFIG : 'ACTIVE';
-  const config = STATUS_CONFIG[validCurrentStatus];
+  const isActive = currentStatus === 'ACTIVE';
 
   // Achado (Lighthouse/axe-core contra produção real): mesmo problema do EquipmentCard —
   // aria-label fixo não incluía o badge de status visível ("Ativo"/"Em Breve"), violando
   // WCAG 2.5.3 (Label in Name). Removido para o nome acessível vir do conteúdo real do card.
+  // Achado (auditoria do design system): comparar, favoritar e adicionar ficavam DENTRO do <Link>
+  // (interativo dentro de interativo). Agora o Link cobre imagem + título + descrição e os botões são
+  // irmãos dele; o "adicionar" é o Button padrão (antes: <button> com classes à mão).
   return (
-    <Link
+    <div
       {...rest}
-      to={`/servicos/${service.slug || service.id}`}
-      className={`relative block bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02] ${className}`}
+      className={`relative bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02] ${className}`}
     >
-      <div className="relative">
-        <ServiceImage
-          imageUrl={service.imageUrl}
-          name={service.name}
-          status={currentStatus}
-        />
+      <Link
+        to={`/servicos/${service.slug || service.id}`}
+        className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      >
+        <div className="relative">
+          <ServiceImage
+            imageUrl={service.imageUrl}
+            name={service.name}
+            status={currentStatus}
+          />
 
-        {(showCompare || showFavorite) && (
-          <div className="absolute top-2 right-2 flex space-x-2 z-20">
-            {showCompare && <CompareButton equipment={service} size="sm" itemType="service" />}
-            {showFavorite && service.id && (
-              <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="sm" isService={true} />
-            )}
+          <div className="absolute bottom-0 right-0 bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-tl-lg pointer-events-none">
+            Ver Detalhes
           </div>
-        )}
-
-        <div className="absolute bottom-0 right-0 bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-tl-lg pointer-events-none">
-          Ver Detalhes
         </div>
-      </div>
 
-      <div className="p-4">
-        <h3 className="text-xl font-bold mb-2 truncate text-foreground">{service.name}</h3>
+        <div className="px-4 pt-4">
+          <h3 className="text-xl font-bold mb-2 truncate text-foreground">{service.name}</h3>
 
-        {service.description && (
-          <p className="text-muted-foreground text-sm mb-4 h-10 overflow-hidden line-clamp-2">
-            {service.description}
-          </p>
-        )}
-
-        <div className="flex justify-between items-center mt-4">
-          <span className="text-lg font-semibold text-primary">
-            <span className="text-xs font-normal mr-1">a partir de</span>
-            {formatPrice(service.price || 0)}
-          </span>
-          <button
-            onClick={handleQuickAdd}
-            disabled={currentStatus !== 'ACTIVE'}
-            className={`font-bold py-2 px-4 rounded transition-colors ${config.btnClass}`}
-            aria-label="Adicionar ao carrinho"
-          >
-            {currentStatus === 'ACTIVE' ? '+' : '−'}
-          </button>
+          {service.description && (
+            <p className="text-muted-foreground text-sm mb-4 h-10 overflow-hidden line-clamp-2">
+              {service.description}
+            </p>
+          )}
         </div>
+      </Link>
+
+      {(showCompare || showFavorite) && (
+        <div className="absolute top-2 right-2 flex space-x-2 z-20">
+          {showCompare && <CompareButton equipment={service} size="sm" itemType="service" />}
+          {showFavorite && service.id && (
+            <FavoriteButton equipmentId={service.id} equipmentName={service.name} size="sm" isService={true} />
+          )}
+        </div>
+      )}
+
+      <div className="flex justify-between items-center px-4 pb-4 mt-4">
+        <span className="text-lg font-semibold text-primary">
+          <span className="text-xs font-normal mr-1">a partir de</span>
+          {formatPrice(service.price || 0)}
+        </span>
+        <Button
+          type="button"
+          size="icon"
+          variant={isActive ? 'primary' : 'secondary'}
+          onClick={handleQuickAdd}
+          disabled={!isActive}
+          aria-label={isActive ? `Adicionar ${service.name} ao orçamento` : `${service.name} indisponível no momento`}
+        >
+          {isActive ? <Plus className="h-5 w-5" aria-hidden="true" /> : <Minus className="h-5 w-5" aria-hidden="true" />}
+        </Button>
       </div>
-    </Link>
+    </div>
   );
 };
 

@@ -2,6 +2,9 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { History, X } from 'lucide-react';
 
+// Achado (auditoria do design system): paleta âmbar fixa (amber-500/600/700/900) com `dark:` só em
+// parte (o ícone ficava amber-600 nos dois temas). Agora segue o padrão de aviso suave do design
+// system — fundo e borda do token warning, texto do tema — e os botões têm foco visível.
 export function DraftRestoreBanner({
   savedAt,
   onRestore,
@@ -12,10 +15,10 @@ export function DraftRestoreBanner({
   onDiscard: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 p-4 mb-6 rounded-xl bg-amber-500/10 border border-amber-500/30">
+    <div className="flex items-center justify-between gap-4 p-4 mb-6 rounded-xl bg-warning/10 border border-warning/30">
       <div className="flex items-center gap-3 min-w-0">
-        <History className="h-5 w-5 text-amber-600 shrink-0" />
-        <p className="text-sm text-amber-900 dark:text-amber-200">
+        <History className="h-5 w-5 text-warning shrink-0" aria-hidden="true" />
+        <p className="text-sm text-foreground">
           Encontramos um rascunho não salvo de{' '}
           <strong>{formatDistanceToNow(savedAt, { addSuffix: true, locale: ptBR })}</strong>.
         </p>
@@ -24,18 +27,18 @@ export function DraftRestoreBanner({
         <button
           type="button"
           onClick={onRestore}
-          className="text-sm font-semibold text-amber-900 dark:text-amber-100 hover:underline"
+          className="rounded-sm px-1 text-sm font-semibold text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Restaurar
         </button>
         <button
           type="button"
           onClick={onDiscard}
-          className="p-1 text-amber-700 hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-100"
+          className="rounded-sm p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="Descartar rascunho"
           title="Descartar rascunho"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
     </div>

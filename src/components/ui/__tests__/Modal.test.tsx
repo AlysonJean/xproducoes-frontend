@@ -140,3 +140,84 @@ describe('Modal - semântica de diálogo, trap de foco e restauração de foco',
     expect(results).toHaveNoViolations();
   });
 });
+
+// Achado (auditoria do design system): sem portal e sem pilha, um modal aninhado (EventManagement →
+// ConfirmModal) fechava junto com o de fora no Escape, e fechar o de dentro destravava a rolagem da
+// página com o de fora ainda aberto.
+describe('Modal - portal e pilha de modais aninhados', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    document.body.style.overflow = '';
+  });
+
+  it('renderiza o diálogo num portal no <body>, fora do contêiner de quem o usa', () => {
+    const { container } = render(
+      <Modal isOpen onClose={vi.fn()} title="Portal">
+        <p>Conteúdo</p>
+      </Modal>
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(container.contains(dialog)).toBe(false);
+    expect(document.body.contains(dialog)).toBe(true);
+  });
+
+  it('modal aninhado: Escape fecha só o modal do topo', () => {
+    const onCloseOuter = vi.fn();
+    const onCloseInner = vi.fn();
+
+    render(
+      <Modal isOpen onClose={onCloseOuter} title="De fora">
+        <p>Conteúdo de fora</p>
+      </Modal>
+    );
+    // O de dentro abre depois (como o ConfirmModal aberto a partir do de fora).
+    render(
+      <Modal isOpen onClose={onCloseInner} title="De dentro">
+        <p>Conteúdo de dentro</p>
+      </Modal>
+    );
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(onCloseInner).toHaveBeenCalledTimes(1);
+    expect(onCloseOuter).not.toHaveBeenCalled();
+  });
+
+  it('a rolagem da página só é liberada quando o último modal fecha', () => {
+    function Harness({ inner }: { inner: boolean }) {
+      return (
+        <Modal isOpen onClose={vi.fn()} title="De fora">
+          <Modal isOpen={inner} onClose={vi.fn()} title="De dentro">
+            <p>Interno</p>
+          </Modal>
+        </Modal>
+      );
+    }
+
+    const { rerender, unmount } = render(<Harness inner={false} />);
+    expect(document.body.style.overflow).toBe('hidden');
+
+    rerender(<Harness inner />);
+    expect(document.body.style.overflow).toBe('hidden');
+
+    // Fecha o de dentro: o de fora continua aberto, a página continua travada.
+    rerender(<Harness inner={false} />);
+    expect(document.body.style.overflow).toBe('hidden');
+
+    unmount();
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('o diálogo no portal não tem violações de acessibilidade detectáveis pelo axe', async () => {
+    render(
+      <Modal isOpen onClose={vi.fn()} title="Título acessível">
+        <p>Conteúdo</p>
+        <button>Ação</button>
+      </Modal>
+    );
+
+    const results = await axe(screen.getByRole('dialog'));
+    expect(results).toHaveNoViolations();
+  });
+});

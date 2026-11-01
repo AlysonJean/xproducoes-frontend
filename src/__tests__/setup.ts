@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom'
 
-// jsdom não implementa IntersectionObserver (usado por hooks como useRevealOnView, via
-// PageLayout) — sem este mock, qualquer teste que renderize uma página real envolvida em
+// jsdom não implementa IntersectionObserver (usado por componentes com carregamento sob demanda,
+// como imagens otimizadas) — sem este mock, qualquer teste que renderize uma página real envolvida em
 // PageLayout quebra com "IntersectionObserver is not defined", mesmo sem relação alguma
 // com o que o teste está de fato verificando.
 class MockIntersectionObserver implements IntersectionObserver {

@@ -46,6 +46,7 @@ export interface PaginationProps {
   onPageChange: (page: number) => void;
   itemsPerPage?: number;
   totalItems?: number;
+  className?: string;
 }
 
 export interface ThemeToggleProps {

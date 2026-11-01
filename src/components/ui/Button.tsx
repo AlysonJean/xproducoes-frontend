@@ -45,6 +45,9 @@ const baseClasses =
  * Achado: sem isto (o Button não tem `asChild`), cada tela copiava o estilo do botão à mão em
  * links (CTAs das páginas de detalhe, erro, sucesso…), cada uma com raio/altura/caixa diferente.
  */
+// Exportado junto do componente de propósito (mesmo estilo, mesma fonte) — a regra do Fast Refresh só
+// afeta a granularidade do recarregamento em dev, sem efeito em produção.
+// eslint-disable-next-line react-refresh/only-export-components
 export function buttonVariants({
   variant = 'primary',
   size = 'md',
@@ -80,7 +83,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {isLoading && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
         {!isLoading && leftIcon}
-        <span className="truncate">{children}</span>
+        {/* Achado (revisão da auditoria, medido em produção): ícone passado como filho (`<Download /> Exportar`)
+            ficava EM CIMA do texto — o preflight do Tailwind v4 deixa todo <svg> como display:block, e o
+            span é um bloco (item de flex). Ícones dentro do texto voltam a ser inline, alinhados ao meio. */}
+        <span className="truncate [&>svg]:inline-block [&>svg]:align-middle [&>svg]:mx-0.5">{children}</span>
         {!isLoading && rightIcon}
       </button>
     );

@@ -151,14 +151,14 @@ export const InteractiveQuiz = () => {
           {currentStep !== 'event_type' ? (
             <button 
               onClick={handleBack}
-              className="group flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all font-black uppercase text-[10px] tracking-widest"
+              className="group flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all font-black uppercase text-xs tracking-widest"
             >
               <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> 
               Voltar
             </button>
           ) : <div className="w-16" />}
 
-          <div className="px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-black uppercase tracking-[0.2em] text-primary animate-pulse">
+          <div className="px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-black uppercase tracking-[0.2em] text-primary animate-pulse">
             Passo {currentStep === 'event_type' ? '01' : currentStep === 'audience_size' ? '02' : currentStep === 'environment' ? '03' : 'Concluído'} / 03
           </div>
           
@@ -237,7 +237,7 @@ export const InteractiveQuiz = () => {
                     <p className={`text-lg font-black uppercase tracking-tight leading-none ${
                         answers.audienceSize === opt.id ? 'text-primary-foreground' : 'text-foreground'
                     }`}>{opt.label}</p>
-                    <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 opacity-60 ${
+                    <p className={`text-xs font-bold uppercase tracking-widest mt-1 opacity-60 ${
                         answers.audienceSize === opt.id ? 'text-primary-foreground/80' : 'text-primary'
                     }`}>{opt.sublabel}</p>
                   </div>
@@ -271,7 +271,7 @@ export const InteractiveQuiz = () => {
                     <p className={`text-lg font-black uppercase tracking-tight leading-none ${
                         answers.environment === opt.id ? 'text-primary-foreground' : 'text-foreground'
                     }`}>{opt.label}</p>
-                    <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 opacity-60 ${
+                    <p className={`text-xs font-bold uppercase tracking-widest mt-1 opacity-60 ${
                         answers.environment === opt.id ? 'text-primary-foreground/80' : 'text-primary'
                     }`}>{opt.sublabel}</p>
                   </div>
@@ -296,7 +296,7 @@ export const InteractiveQuiz = () => {
 
             {budgetRange && (
               <div className="mb-8 w-full max-w-lg">
-                <p className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-3">
+                <p className="text-center text-xs font-black uppercase tracking-[0.2em] text-primary mb-3">
                   Faixa estimada de investimento por hora
                 </p>
                 <p className="text-center text-3xl font-black text-foreground mb-4">
@@ -306,7 +306,7 @@ export const InteractiveQuiz = () => {
                   <p className="text-center text-xs text-muted-foreground">Buscando equipamentos compatíveis...</p>
                 ) : suggestions.length > 0 ? (
                   <div className="space-y-2">
-                    <p className="text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                    <p className="text-center text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
                       Equipamentos nessa faixa
                     </p>
                     {suggestions.map((item) => (
@@ -317,7 +317,7 @@ export const InteractiveQuiz = () => {
                     ))}
                   </div>
                 ) : null}
-                <p className="text-center text-[10px] text-muted-foreground mt-3 italic">
+                <p className="text-center text-xs text-muted-foreground mt-3 italic">
                   Estimativa de referência — o valor final considera duração, quantidade e serviços adicionais.
                 </p>
               </div>

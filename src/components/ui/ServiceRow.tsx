@@ -52,22 +52,29 @@ export const ServiceRow = () => {
   return (
     <div className="py-8 border-b border-border/40 last:border-0">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-2xl font-bold heading-elegant flex items-center gap-2">
+        {/* `heading-elegant` vinha de components.css, que nunca foi carregado (classe sem efeito). */}
+        <h3 className="text-2xl font-bold text-foreground flex items-center gap-2">
           Nossos Serviços
-            <span className="w-2 h-2 rounded-full bg-info/40 inline-block ml-2"></span>
+          <span className="w-2 h-2 rounded-full bg-info/40 inline-block ml-2" aria-hidden="true"></span>
         </h3>
         <Link 
           to="/servicos" 
           className="text-sm font-medium text-primary hover:text-primary/80 flex items-center gap-1 transition-colors group"
         >
           Ver todos
-          <ChevronRight size={16} className="transform group-hover:translate-x-0.5 transition-transform" />
+          <ChevronRight size={16} className="transform group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
         </Link>
       </div>
 
       <div className="relative group/scroll">
         {/* Horizontal Scroll Container */}
-        <div className="flex overflow-x-auto pb-6 gap-6 snap-x snap-mandatory scrollbar-none hover:scrollbar-thin scrollbar-thumb-primary/10 scrollbar-track-transparent transition-all w-full">
+        {/* Rolagem horizontal alcançável pelo teclado (setas) — região com nome. */}
+        <div
+          role="region"
+          aria-label="Nossos serviços"
+          tabIndex={0}
+          className="flex overflow-x-auto pb-6 gap-6 snap-x snap-mandatory transition-all w-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           {services.map((service) => (
             <div 
               key={service.id} 

@@ -15,7 +15,8 @@ export enum BookingStatus {
   CONFIRMED = 'CONFIRMED',
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
-  CANCELLED = 'CANCELLED'
+  CANCELLED = 'CANCELLED',
+  REFUNDED = 'REFUNDED'
 }
 
 // Situação do pagamento da reserva — campo manual do admin (null/ausente = não informado).
@@ -46,10 +47,19 @@ export enum ItemStatus {
   COMING_SOON = 'COMING_SOON'
 }
 
+// Espelha o enum CollaboratorRole do backend (rótulos em utils/collaboratorRoles.ts). Tinha só 4
+// valores, um deles (PRODUCER) inexistente no backend.
 export enum ECollaboratorRole {
   PHOTOGRAPHER = 'PHOTOGRAPHER',
+  VIDEOGRAPHER = 'VIDEOGRAPHER',
+  SOUND_TECHNICIAN = 'SOUND_TECHNICIAN',
+  LIGHTING_TECHNICIAN = 'LIGHTING_TECHNICIAN',
+  DJ = 'DJ',
+  PRESENTER = 'PRESENTER',
+  COORDINATOR = 'COORDINATOR',
   ASSISTANT = 'ASSISTANT',
-  PRODUCER = 'PRODUCER',
+  SECURITY = 'SECURITY',
+  TRANSPORT = 'TRANSPORT',
   OTHER = 'OTHER',
 }
 

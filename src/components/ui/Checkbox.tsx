@@ -3,11 +3,13 @@ import { cn } from '../../utils/cn';
 
 export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label?: string;
+  /** Texto de apoio abaixo do rótulo (ligado ao campo via aria-describedby) */
+  description?: string;
   error?: string;
 }
 
 export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
-  ({ label, error, className, id, ...props }, ref) => {
+  ({ label, description, error, className, id, ...props }, ref) => {
     const generatedId = React.useId();
     const checkboxId = id || props.name || generatedId;
 
@@ -24,7 +26,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
             className
           )}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? `${checkboxId}-error` : undefined}
+          aria-describedby={[description && `${checkboxId}-description`, error && `${checkboxId}-error`].filter(Boolean).join(' ') || undefined}
           {...props}
         />
         <div className="grid gap-1.5 leading-none">
@@ -36,6 +38,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
               {label}
             </label>
           )}
+          {description && <p id={`${checkboxId}-description`} className="text-sm text-muted-foreground">{description}</p>}
           {error && <p id={`${checkboxId}-error`} className="text-sm text-destructive">{error}</p>}
         </div>
       </div>

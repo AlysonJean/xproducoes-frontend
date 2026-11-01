@@ -298,7 +298,8 @@ export const formatBookingStatus = (status: BookingStatus): string => {
     [BookingStatus.CONFIRMED]: 'Confirmado',
     [BookingStatus.IN_PROGRESS]: 'Em Andamento',
     [BookingStatus.COMPLETED]: 'Concluído',
-    [BookingStatus.CANCELLED]: 'Cancelado'
+    [BookingStatus.CANCELLED]: 'Cancelado',
+    [BookingStatus.REFUNDED]: 'Reembolsado'
   };
   
   return statusMap[status] || status;

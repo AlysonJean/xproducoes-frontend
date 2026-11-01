@@ -22,11 +22,13 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items = [] }) => {
       });
 
   // Prepare Schema Data
+  // O item atual (sem path) é a própria página — com '' o BreadcrumbList dizia ao Google que o
+  // produto ficava na home.
   const schemaItems = [
     { name: 'Início', item: '/' },
     ...breadcrumbItems.map(item => ({
       name: item.label,
-      item: item.path || ''
+      item: item.path || location.pathname
     }))
   ];
 
@@ -46,11 +48,11 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items = [] }) => {
           <li key={index} className="flex items-center">
             <ChevronRightIcon className="w-4 h-4 mx-2 text-border" />
             {item.path ? (
-              <Link to={item.path} className="hover:text-primary transition-colors capitalize">
+              <Link to={item.path} className="hover:text-primary transition-colors">
                 {item.label}
               </Link>
             ) : (
-              <span className="font-medium text-foreground capitalize" aria-current="page">
+              <span className="font-medium text-foreground" aria-current="page">
                 {item.label}
               </span>
             )}

@@ -53,8 +53,11 @@ const CompareButton = ({ equipment, className = '', size = 'md', itemType }: Com
 
   return (
   <button
+      type="button"
       onClick={handleToggle}
       disabled={!inCompare && !canAddMore}
+      // Botão de alternar: leitor de tela precisa do estado (aria-pressed), não só do rótulo.
+      aria-pressed={inCompare}
       className={`
         ${sizeClasses[size]}
         disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
@@ -65,7 +68,7 @@ const CompareButton = ({ equipment, className = '', size = 'md', itemType }: Com
       title={inCompare ? 'Remover da comparação' : 'Adicionar à comparação'}
       aria-label={inCompare ? 'Remover da comparação' : 'Adicionar à comparação'}
     >
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"

@@ -38,7 +38,7 @@ export const DELIVERY_STATUS_LABELS: Record<string, string> = {
   ON_THE_WAY: 'A caminho',
   ARRIVED: 'No local',
   SETUP_COMPLETE: 'Montado',
-  PICKUP_PENDING: 'Aguardando recolha',
+  PICKUP_PENDING: 'Aguardando retirada',
   COMPLETED: 'Concluída',
 };
 

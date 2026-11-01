@@ -121,7 +121,9 @@ describe('Acessibilidade - Componentes Core (componentes reais do projeto)', () 
   });
 
   it('Modal real (role="dialog"/aria-modal, ver Modal.test.tsx para trap de foco) não tem violações de acessibilidade', async () => {
-    const { container } = render(
+    // O Modal renderiza num portal no <body>: `container` ficaria vazio e o axe passaria sem
+    // verificar nada. baseElement inclui o diálogo.
+    const { baseElement } = render(
       <MockProviders>
         <Modal isOpen onClose={() => {}} title="Confirmar ação">
           <p>Deseja realmente prosseguir?</p>
@@ -131,7 +133,8 @@ describe('Acessibilidade - Componentes Core (componentes reais do projeto)', () 
       </MockProviders>
     );
 
-    const results = await axe(container);
+    expect(baseElement.querySelector('[role="dialog"]')).not.toBeNull();
+    const results = await axe(baseElement);
     expect(results).toHaveNoViolations();
   });
 

@@ -14,7 +14,7 @@ const Stars = ({ rating }: StarsProps) => {
       {[...Array(5)].map((_, i) => (
         <svg
           key={i}
-          className={`w-5 h-5 ${i < rating ? 'text-primary' : 'text-muted-foreground'}`}
+          className={`w-5 h-5 ${i < rating ? 'text-warning' : 'text-muted-foreground'}`}
           fill="currentColor"
           viewBox="0 0 20 20"
         >
@@ -29,7 +29,7 @@ export const TestimonialCard: React.FC<TestimonialCardProps> = ({ review, ...res
   return (
     <div {...rest} className="bg-card border border-border p-6 rounded-lg shadow-sm flex flex-col h-full relative group">
       {review.slug && (
-        <a href={`/depoimentos/${review.slug}`} className="absolute top-4 right-4 text-muted-foreground hover:text-primary transition-colors" title="Link direto">
+        <a href={`/depoimentos/${review.slug}`} className="absolute top-4 right-4 rounded-sm text-muted-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" title="Abrir depoimento" aria-label="Abrir depoimento">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
         </a>
       )}

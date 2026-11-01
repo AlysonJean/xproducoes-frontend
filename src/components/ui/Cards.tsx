@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '../../utils/cn';
 
 // Componente de Card de Estatísticas reutilizável
 export interface StatsCardProps {
@@ -55,7 +56,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   return (
     <div
       className={`bg-card rounded-xl p-6 shadow-sm border transition-all duration-200 ${
-        onClick ? 'hover:shadow-md hover:bg-muted/40 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30' : 'hover:shadow-lg'
+        onClick ? 'hover:shadow-md hover:bg-muted/40 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring' : 'hover:shadow-lg'
       } ${className}`}
       {...(onClick
         ? {
@@ -139,10 +140,10 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   }[color] || 'progress-primary';
 
   return (
-    <div className={`bg-card rounded-xl p-6 shadow-sm border hover:shadow-lg transition-all duration-200 ${className}`}>
+    <div className={cn('bg-card rounded-xl p-6 shadow-sm border border-border hover:shadow-lg transition-all duration-200', className)}>
       <div className="flex items-center space-x-3 mb-4">
         {icon && (
-          <div className={`p-3 rounded-lg ${getColorClasses(color)}`}>
+          <div className={`p-3 rounded-lg ${getColorClasses(color)}`} aria-hidden="true">
             {icon}
           </div>
         )}
@@ -150,14 +151,15 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
           <div className="flex items-center space-x-2">
             <span className="text-2xl font-bold text-foreground">{value}</span>
-            {total && (
+            {/* `total && …` renderizava "0" na tela quando total era 0. */}
+            {total ? (
               <span className="text-sm text-muted-foreground">/ {total}</span>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
       
-      {total && (
+      {total ? (
         <div className="mb-2">
           <progress
             className={`progress ${progressVariant}`}
@@ -166,7 +168,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
             aria-label={`${title} progresso`}
           />
         </div>
-      )}
+      ) : null}
       
       {description && (
         <p className="text-xs text-muted-foreground">{description}</p>
@@ -182,6 +184,8 @@ export interface SimpleCardProps {
   description?: string;
   className?: string;
   headerRight?: React.ReactNode;
+  /** Nível do título — h3 por padrão; use h2 quando o card vem logo abaixo do h1 da página. */
+  titleAs?: 'h2' | 'h3';
 }
 
 export const SimpleCard: React.FC<SimpleCardProps> = ({
@@ -190,6 +194,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = ({
   description,
   className = '',
   headerRight,
+  titleAs: TitleTag = 'h3',
 }) => {
   return (
     <div className={`bg-card rounded-xl shadow-sm border ${className}`}>
@@ -198,7 +203,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = ({
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               {title && (
-                <h3 className="text-lg font-semibold text-foreground truncate">{title}</h3>
+                <TitleTag className="text-lg font-semibold text-foreground truncate">{title}</TitleTag>
               )}
               {description && (
                 <p className="text-sm text-muted-foreground mt-1">{description}</p>
@@ -230,7 +235,7 @@ export const Card: React.FC<CardProps> = ({
   padding = false 
 }) => {
   return (
-    <div className={`rounded-lg border border-border bg-card text-card-foreground shadow-sm ${padding ? 'p-6' : ''} ${className}`}>
+    <div className={cn('relative rounded-lg border border-border bg-card text-card-foreground shadow-sm', padding && 'p-6', className)}>
       {children}
     </div>
   );
@@ -243,13 +248,21 @@ export interface GlassCardProps {
   hoverEffect?: boolean;
 }
 
+// Achado (auditoria do design system): o vidro era `bg-white/10 border-white/20` — só funciona sobre
+// fundo escuro; no tema claro o card sumia (branco a 10% sobre branco). E o className de quem chama
+// era concatenado sem tailwind-merge, então `bg-card/80` (InteractiveQuiz) disputava com `bg-white/10`.
+// Agora o vidro usa os tokens do tema e cn deixa o className do chamador vencer.
 export const GlassCard: React.FC<GlassCardProps> = ({ children, className = '', hoverEffect = true }) => {
   return (
-    <div className={`relative bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 ${
-      hoverEffect ? 'hover:bg-white/15 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]' : ''
-    } ${className}`}>
-      <div className="absolute -top-24 -left-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-secondary/10 rounded-full blur-3xl pointer-events-none" />
+    <div
+      className={cn(
+        'relative bg-card/80 backdrop-blur-lg border border-border/50 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500',
+        hoverEffect && 'hover:bg-card/90 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]',
+        className
+      )}
+    >
+      <div className="absolute -top-24 -left-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+      <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-secondary/10 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
       <div className="relative z-10 p-6">
         {children}
       </div>

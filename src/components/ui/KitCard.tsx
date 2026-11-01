@@ -8,6 +8,8 @@ import { FavoriteButton } from './FavoriteButton';
 import CompareButton from './CompareButton';
 import { OptimizedImage } from './OptimizedImage';
 import { memo, useCallback, useState } from 'react';
+import { Check, Plus } from 'lucide-react';
+import { Button } from './Button';
 import { useCart } from '../../hooks/useCart';
 import { useNotifications } from '../../contexts/NotificationContext';
 
@@ -93,80 +95,86 @@ export const KitCard: React.FC<KitCardProps> = ({
   // aria-label fixo não incluía o texto visível "Ver Detalhes do Kit" nem outros elementos do
   // card, violando WCAG 2.5.3 (Label in Name). Removido para o nome acessível vir do conteúdo
   // real do card.
+  // Achado (auditoria do design system): os botões (comparar, favoritar, adicionar) ficavam DENTRO do
+  // <Link> — interativo dentro de interativo (HTML inválido; leitor de tela anunciava o card inteiro
+  // como um link com botões dentro). Agora o Link cobre imagem + título + descrição e os botões são
+  // irmãos dele, por cima da imagem / no rodapé. O "adicionar" usava `.btn .btn-default` (CSS global
+  // fora do componente padrão); agora é o Button.
   return (
-    <Link
+    <div
       {...rest}
-      to={`/kits/${kit.slug || kit.id}`}
-      className={`relative block card-glass card-glass-hover rounded-2xl overflow-hidden ${className}`}
+      className={`relative card-glass card-glass-hover rounded-2xl overflow-hidden ${className}`}
     >
-      <div className="relative">
-        <KitImage
-          imageUrl={kit.imageUrl}
-          name={kit.name}
-        />
+      <Link
+        to={`/kits/${kit.slug || kit.id}`}
+        className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      >
+        <div className="relative">
+          <KitImage
+            imageUrl={kit.imageUrl}
+            name={kit.name}
+          />
 
-        {(showCompare || showFavorite) && (
-          <div className="absolute top-2 right-2 flex space-x-2 z-20">
-            {showCompare && (
-              <CompareButton
-                equipment={{
-                  id: kit.id,
-                  name: kit.name,
-                  description: kit.description,
-                  pricePerHour: kit.price,
-                  imageUrl: kit.imageUrl,
-                  isAvailable: kit.isActive ?? true
-                } satisfies Equipment}
-                itemType="kit"
-                size="sm"
-              />
-            )}
-            {showFavorite && kit.id && (
-              <FavoriteButton 
-                equipmentId={kit.id} 
-                equipmentName={kit.name} 
-                size="sm" 
-              />
-            )}
+          <div className="absolute bottom-0 right-0 bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-tl-lg pointer-events-none">
+            Ver Detalhes do Kit
           </div>
-        )}
-
-        <div className="absolute bottom-0 right-0 bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-tl-lg pointer-events-none">
-          Ver Detalhes do Kit
         </div>
-      </div>
 
-      <div className="p-4">
-        <h3 className="text-xl font-bold mb-2 truncate text-foreground">{kit.name}</h3>
+        <div className="px-4 pt-4">
+          <h3 className="text-xl font-bold mb-2 truncate text-foreground">{kit.name}</h3>
 
-        {kit.description && (
-          <p className="text-muted-foreground text-sm mb-4 h-10 overflow-hidden line-clamp-2">
-            {kit.description}
-          </p>
-        )}
-
-        <div className="flex justify-between items-center mt-4">
-          <div className="flex flex-col">
-              <span className="text-xs text-muted-foreground">a partir de</span>
-              <span className="text-lg font-bold text-primary">
-                {formatPrice(kit.price || 0)} <span className="text-xs font-normal">/ hora</span>
-              </span>
-          </div>
-          <button
-            onClick={handleQuickAdd}
-            disabled={isAlreadyInCart}
-            className={`py-2 px-4 transition-colors ${
-              isAlreadyInCart 
-                ? 'bg-muted text-muted-foreground cursor-not-allowed rounded-lg' 
-                : 'btn btn-default rounded-xl'
-            }`}
-            aria-label="Adicionar kit ao carrinho"
-          >
-            {isAlreadyInCart ? '✓' : '+'}
-          </button>
+          {kit.description && (
+            <p className="text-muted-foreground text-sm mb-4 h-10 overflow-hidden line-clamp-2">
+              {kit.description}
+            </p>
+          )}
         </div>
+      </Link>
+
+      {(showCompare || showFavorite) && (
+        <div className="absolute top-2 right-2 flex space-x-2 z-20">
+          {showCompare && (
+            <CompareButton
+              equipment={{
+                id: kit.id,
+                name: kit.name,
+                description: kit.description,
+                pricePerHour: kit.price,
+                imageUrl: kit.imageUrl,
+                isAvailable: kit.isActive ?? true
+              } satisfies Equipment}
+              itemType="kit"
+              size="sm"
+            />
+          )}
+          {showFavorite && kit.id && (
+            <FavoriteButton 
+              equipmentId={kit.id} 
+              equipmentName={kit.name} 
+              size="sm" 
+            />
+          )}
+        </div>
+      )}
+
+      <div className="flex justify-between items-center px-4 pb-4 mt-4">
+        <div className="flex flex-col">
+            <span className="text-xs text-muted-foreground">a partir de</span>
+            <span className="text-lg font-bold text-primary">
+              {formatPrice(kit.price || 0)} <span className="text-xs font-normal">/ hora</span>
+            </span>
+        </div>
+        <Button
+          type="button"
+          size="icon"
+          onClick={handleQuickAdd}
+          disabled={isAlreadyInCart}
+          aria-label={isAlreadyInCart ? `${kit.name} já está no orçamento` : `Adicionar ${kit.name} ao orçamento`}
+        >
+          {isAlreadyInCart ? <Check className="h-5 w-5" aria-hidden="true" /> : <Plus className="h-5 w-5" aria-hidden="true" />}
+        </Button>
       </div>
-    </Link>
+    </div>
   );
 };
 
