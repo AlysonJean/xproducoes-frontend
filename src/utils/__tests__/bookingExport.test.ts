@@ -9,6 +9,7 @@ const { XLSX } = vi.hoisted(() => ({
 vi.mock('xlsx-js-style', () => ({ default: XLSX, ...XLSX }));
 
 import { bookingsToSheetRows, exportFileName, downloadBookingsSpreadsheet } from '../bookingExport';
+import { BookingPaymentStatus } from '../../types/enums';
 
 // Exportação das reservas filtradas (fechamento mensal / notas fiscais). O botão "Exportar" da
 // tela de Reservas existia sem ação nenhuma.
@@ -17,6 +18,7 @@ const registered = {
   eventDate: '2026-10-31T23:00:00.000Z', eventEndDate: '2026-11-01T03:00:00.000Z', eventTitle: 'Casamento Ana',
   client: { id: 'c1', phone: '31988887777', companyName: 'Ana Eventos', user: { id: 'u1', name: 'Ana', email: 'ana@t.com' } },
   city: 'Belo Horizonte', discountAmount: '150', serviceValue: '900', createdAt: '2026-10-01T15:00:00.000Z',
+  paymentStatus: BookingPaymentStatus.PAID,
 };
 const manual = {
   id: 'XP-MAN-2', status: 'PENDING', totalPrice: '0', eventDate: '2026-10-05T18:00:00.000Z',
@@ -38,6 +40,7 @@ describe('bookingsToSheetRows', () => {
       'Cidade': 'Belo Horizonte',
       'Status': 'Confirmado',
       'Entrega': 'A caminho',
+      'Pagamento': 'Pago',
       'Valor total (R$)': 1500.5,
       'Desconto (R$)': 150,
       'Valor de serviço (R$)': 900,
@@ -47,7 +50,7 @@ describe('bookingsToSheetRows', () => {
 
   it('reserva manual (sem cliente cadastrado) usa os dados de contato da própria reserva', () => {
     const [row] = bookingsToSheetRows([manual]);
-    expect(row).toMatchObject({ 'Cliente': 'João (manual)', 'E-mail': 'joao@t.com', 'Telefone': '3133334444', 'Status': 'Pendente', 'Valor total (R$)': 0, 'Desconto (R$)': 0 });
+    expect(row).toMatchObject({ 'Cliente': 'João (manual)', 'E-mail': 'joao@t.com', 'Telefone': '3133334444', 'Status': 'Pendente', 'Pagamento': 'Não informado', 'Valor total (R$)': 0, 'Desconto (R$)': 0 });
   });
 });
 

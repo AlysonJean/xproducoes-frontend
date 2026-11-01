@@ -95,3 +95,44 @@ describe('BookingListPage — nome do cliente de reserva manual', () => {
     expect(screen.queryByText('Cliente Avulso')).not.toBeInTheDocument();
   });
 });
+
+// Situação do pagamento (campo novo): filtro na tela e troca direto na linha — o formulário de
+// edição exige endereço e kit, que o histórico importado das agendas não tem.
+describe('BookingListPage — situação do pagamento', () => {
+  const rows = [
+    { ...booking(1), id: 'XP-PAGO', paymentStatus: 'PAID' },
+    { ...booking(2), id: 'XP-DEVENDO', paymentStatus: 'PENDING' },
+    { ...booking(3), id: 'XP-SEM-INFO' },
+  ];
+
+  beforeEach(() => {
+    useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
+    apiFetch.mockReset();
+    apiFetch.mockImplementation((url: string) => Promise.resolve(url.startsWith('/admin/bookings') ? rows : {}));
+  });
+
+  it('filtra por "Pago" e por "Não informado"', async () => {
+    render(<MemoryRouter initialEntries={['/admin/reservas']}><BookingListPage /></MemoryRouter>);
+    await screen.findByText(/Mostrando 3 de 3 registros/);
+
+    fireEvent.change(screen.getByLabelText('Filtrar por pagamento'), { target: { value: 'PAID' } });
+    expect(await screen.findByText(/Mostrando 1 de 3 registros/)).toBeInTheDocument();
+    expect(screen.getByText('XP-PAGO', { exact: false })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Filtrar por pagamento'), { target: { value: 'NONE' } });
+    expect(await screen.findByText(/Mostrando 1 de 3 registros/)).toBeInTheDocument();
+    expect(screen.getByText('XP-SEM-INFO', { exact: false })).toBeInTheDocument();
+  });
+
+  it('trocar na linha grava só o campo (PUT /bookings/:id); "Não informado" manda null', async () => {
+    render(<MemoryRouter initialEntries={['/admin/reservas']}><BookingListPage /></MemoryRouter>);
+    await screen.findByText(/Mostrando 3 de 3 registros/);
+
+    fireEvent.change(screen.getByLabelText('Pagamento da reserva XP-DEVENDO'), { target: { value: 'PAID' } });
+    await vi.waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/bookings/XP-DEVENDO', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ paymentStatus: 'PAID' }) })));
+    await vi.waitFor(() => expect((screen.getByLabelText('Pagamento da reserva XP-DEVENDO') as HTMLSelectElement).value).toBe('PAID'));
+
+    fireEvent.change(screen.getByLabelText('Pagamento da reserva XP-PAGO'), { target: { value: '' } });
+    await vi.waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/bookings/XP-PAGO', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ paymentStatus: null }) })));
+  });
+});

@@ -18,7 +18,7 @@ export interface Banner {
   updatedAt: string;
 }
 
-import { ItemStatus, EquipmentStatus, BookingStatus, PaymentStatus, UserRole, ECollaboratorRole, ExperienceLevel } from './enums';
+import { ItemStatus, EquipmentStatus, BookingStatus, BookingPaymentStatus, PaymentStatus, UserRole, ECollaboratorRole, ExperienceLevel } from './enums';
 
 export { ItemStatus, EquipmentStatus, BookingStatus, PaymentStatus, UserRole, ECollaboratorRole, ExperienceLevel };
 
@@ -193,6 +193,7 @@ export interface Booking {
   totalPrice?: number;
   discount?: number;
   status?: BookingStatus;
+  paymentStatus?: BookingPaymentStatus | null;
   notes?: string;
   userId?: string;
   user?: User;
@@ -745,6 +746,7 @@ export interface BookingListItem {
   location?: string;
   notes?: string;
   clientName?: string; // Reservas manuais sem cliente cadastrado
+  paymentStatus?: BookingPaymentStatus | null;
 }
 
 export interface ContactSubmission {

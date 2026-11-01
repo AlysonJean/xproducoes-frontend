@@ -24,6 +24,7 @@ import {
 import { AdminBookingForm as BookingForm } from '@/components/forms/AdminBookingForm';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import type { BookingListItem, BookingStatus } from '../../types/types';
+import type { BookingPaymentStatus } from '../../types/enums';
 import { 
   Search, 
   Plus, 
@@ -56,6 +57,7 @@ export const BookingListPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterPayment, setFilterPayment] = useState<string>('all');
   const [exporting, setExporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -148,6 +150,35 @@ export const BookingListPage = () => {
     }
   };
 
+  // Situação do pagamento: PUT só com o campo (vazio = "não informado"). Não passa pelo formulário
+  // de edição, que exige endereço e kit/equipamentos — o histórico importado das agendas não tem.
+  const handlePaymentChange = async (bookingId: string, value: string) => {
+    const paymentStatus = (value || null) as BookingPaymentStatus | null;
+    try {
+      await apiFetch(`/bookings/${bookingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentStatus }),
+      });
+
+      setBookings((prev) =>
+        prev.map((b) => (b.id === bookingId ? { ...b, paymentStatus } : b))
+      );
+
+      addNotification({
+        type: 'success',
+        title: 'Atualizado',
+        message: 'Pagamento atualizado com sucesso.'
+      });
+    } catch (err: unknown) {
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: err instanceof Error ? err.message : 'Erro ao atualizar o pagamento.'
+      });
+    }
+  };
+
   const formatDate = (dateString: string | null | undefined): string => {
     if (!dateString) return 'N/A';
     try {
@@ -170,13 +201,15 @@ export const BookingListPage = () => {
       const bookingId = normalizeString(booking.id || '');
       const matchesSearch = clientName.includes(q) || bookingId.includes(q);
       const matchesStatus = filterStatus === 'all' || booking.status === filterStatus;
+      const matchesPayment = filterPayment === 'all'
+        || (filterPayment === 'NONE' ? !booking.paymentStatus : booking.paymentStatus === filterPayment);
       
       // Dias locais inteiros: new Date('AAAA-MM-DD') é meia-noite UTC (21h do dia anterior no Brasil).
       const matchesDate = !booking.eventDate || isWithinLocalDateRange(booking.eventDate, startDate, endDate);
       
-      return matchesSearch && matchesStatus && matchesDate;
+      return matchesSearch && matchesStatus && matchesPayment && matchesDate;
     });
-  }, [bookings, searchTerm, filterStatus, startDate, endDate]);
+  }, [bookings, searchTerm, filterStatus, filterPayment, startDate, endDate]);
 
   // O botão "Exportar" existia sem ação. Exporta o que está filtrado na tela (período, status e
   // busca) — o período vira o recorte do fechamento mensal.
@@ -359,12 +392,30 @@ export const BookingListPage = () => {
                 />
               </div>
 
-              {(searchTerm || filterStatus !== 'all' || startDate || endDate) && (
+              <div className="relative min-w-[200px]">
+                <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Select
+                  value={filterPayment}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setFilterPayment(e.target.value)}
+                  aria-label="Filtrar por pagamento"
+                  className="pl-10 h-10 border-border bg-card rounded-xl text-[10px] font-black uppercase tracking-widest"
+                  options={[
+                    { value: 'all', label: 'TODOS OS PAGAMENTOS' },
+                    { value: 'PAID', label: '💰 PAGO' },
+                    { value: 'PARTIAL', label: '🌓 PARCIAL' },
+                    { value: 'PENDING', label: '⏳ PAGAMENTO PENDENTE' },
+                    { value: 'NONE', label: '❔ NÃO INFORMADO' },
+                  ]}
+                />
+              </div>
+
+              {(searchTerm || filterStatus !== 'all' || filterPayment !== 'all' || startDate || endDate) && (
                 <Button 
                   variant="ghost" 
                   onClick={() => {
                     setSearchTerm('');
                     setFilterStatus('all');
+                    setFilterPayment('all');
                     setStartDate('');
                     setEndDate('');
                   }}
@@ -387,6 +438,7 @@ export const BookingListPage = () => {
                   <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Evento</th>
                   <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Investimento</th>
                   <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status Reserva</th>
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Pagamento</th>
                   <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Entrega</th>
                   <th className="px-6 py-4 text-xs font-bold text-right text-muted-foreground uppercase tracking-wider">Ações</th>
                 </tr>
@@ -394,13 +446,13 @@ export const BookingListPage = () => {
               <tbody className="divide-y divide-border">
                 {filteredBookings.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-20 text-center">
+                    <td colSpan={7} className="px-6 py-20 text-center">
                       <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4 opacity-50">
                         <AlertCircle className="h-8 w-8 text-muted-foreground" />
                       </div>
                       <h3 className="text-lg font-bold text-foreground">Nenhuma reserva localizada</h3>
                       <p className="text-muted-foreground max-w-xs mx-auto">Tente ajustar seus filtros ou busca para encontrar o que procura.</p>
-                      <Button variant="outline" className="mt-6" onClick={() => { setSearchTerm(''); setFilterStatus('all'); }}>
+                      <Button variant="outline" className="mt-6" onClick={() => { setSearchTerm(''); setFilterStatus('all'); setFilterPayment('all'); }}>
                         Limpar Filtros
                       </Button>
                     </td>
@@ -438,6 +490,20 @@ export const BookingListPage = () => {
                             { value: 'CONFIRMED', label: 'Confirmada' },
                             { value: 'COMPLETED', label: 'Concluída' },
                             { value: 'CANCELLED', label: 'Cancelada' },
+                          ]}
+                        />
+                      </td>
+                      <td className="px-6 py-4">
+                        <Select
+                          className="h-9 min-w-[130px] border-border text-xs"
+                          value={booking.paymentStatus || ''}
+                          onChange={(e: ChangeEvent<HTMLSelectElement>) => handlePaymentChange(booking.id, e.target.value)}
+                          aria-label={`Pagamento da reserva ${booking.id}`}
+                          options={[
+                            { value: '', label: 'Não informado' },
+                            { value: 'PENDING', label: 'Pendente' },
+                            { value: 'PARTIAL', label: 'Parcial' },
+                            { value: 'PAID', label: 'Pago' },
                           ]}
                         />
                       </td>

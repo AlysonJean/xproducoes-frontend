@@ -1,6 +1,6 @@
 import type { BookingListItem } from '../types/types';
 import type { BookingStatus } from '../types/enums';
-import { formatBookingStatus } from './typeSafeFormatters';
+import { formatBookingPaymentStatus, formatBookingStatus } from './typeSafeFormatters';
 import { downloadSheet, formatDateTimeBR as formatDateTime, toMoney as money, type SheetRow } from './spreadsheet';
 
 // Exportação das reservas da tela de Reservas (o que estiver filtrado) para planilha .xlsx —
@@ -39,6 +39,7 @@ export function bookingsToSheetRows(bookings: BookingExportSource[]): SheetRow[]
     'Cidade': b.city || '',
     'Status': formatBookingStatus(b.status as BookingStatus),
     'Entrega': (b.deliveryStatus && DELIVERY_LABELS[b.deliveryStatus]) || b.deliveryStatus || '',
+    'Pagamento': formatBookingPaymentStatus(b.paymentStatus),
     'Valor total (R$)': money(b.totalPrice),
     'Desconto (R$)': money(b.discountAmount),
     'Valor de serviço (R$)': money(b.serviceValue),

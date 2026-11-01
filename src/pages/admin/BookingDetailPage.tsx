@@ -33,6 +33,7 @@ import {
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatPrice } from '@/utils/formatPrice';
+import { formatBookingPaymentStatus } from '@/utils/typeSafeFormatters';
 import { isToday } from 'date-fns';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { useAuth } from '../../contexts/AuthContext';
@@ -1072,7 +1073,7 @@ export const BookingDetailPage = () => {
                             <h3 className="text-4xl font-black tracking-tighter">R$ {Number(booking.totalPrice || 0).toFixed(2)}</h3>
                             <div className="flex items-center gap-2 mt-4">
                                 <Badge variant="outline" className="border-white/20 text-white bg-white/10 font-black h-5 uppercase text-[9px]">
-                                   Pagamento: {booking.paymentStatus || 'Aguardando'}
+                                   Pagamento: {formatBookingPaymentStatus(booking.paymentStatus)}
                                 </Badge>
                             </div>
                         </div>

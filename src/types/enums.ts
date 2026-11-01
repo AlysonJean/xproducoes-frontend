@@ -18,6 +18,13 @@ export enum BookingStatus {
   CANCELLED = 'CANCELLED'
 }
 
+// Situação do pagamento da reserva — campo manual do admin (null/ausente = não informado).
+export enum BookingPaymentStatus {
+  PENDING = 'PENDING',
+  PARTIAL = 'PARTIAL',
+  PAID = 'PAID'
+}
+
 export enum PaymentStatus {
   PENDING = 'PENDING',
   PAID = 'PAID',

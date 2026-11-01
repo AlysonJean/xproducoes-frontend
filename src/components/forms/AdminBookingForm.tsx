@@ -53,6 +53,7 @@ const bookingFormSchema = z
     // Campos admin-only
     serviceValue: z.number().positive('Valor do serviço deve ser positivo'),
     paymentProof: z.unknown(), // FileList será tratado no submit
+    paymentStatus: z.string(), // '' = não informado
   })
   .refine(
     (d) =>
@@ -139,6 +140,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
       status: 'PENDING',
       deliveryStatus: 'PENDING',
       serviceValue: undefined,
+      paymentStatus: '',
     },
   });
 
@@ -252,6 +254,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
             status: (booking.status as string) || 'PENDING',
             deliveryStatus: (booking.deliveryStatus as string) || 'PENDING',
             serviceValue: booking.serviceValue || undefined,
+            paymentStatus: booking.paymentStatus || '',
           });
         }
 
@@ -326,6 +329,10 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
         }
         if (paymentProofUrl) {
           payload.paymentProofUrl = paymentProofUrl;
+        }
+        // Na edição, "Não informado" limpa (null); na criação, só manda se escolhido.
+        if (data.paymentStatus || isEditing) {
+          payload.paymentStatus = data.paymentStatus || null;
         }
       }
       
@@ -491,6 +498,16 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
                 accept="image/*,.pdf"
                 error={errors.paymentProof ? String(errors.paymentProof.message) : undefined}
                 description="Anexe o comprovante de pagamento (imagem ou PDF)"
+              />
+              <Select
+                label="Situação do Pagamento"
+                {...register('paymentStatus')}
+                options={[
+                  { value: '', label: 'Não informado' },
+                  { value: 'PENDING', label: 'Pendente' },
+                  { value: 'PARTIAL', label: 'Parcial' },
+                  { value: 'PAID', label: 'Pago' },
+                ]}
               />
             </div>
           </FormSection>

@@ -2,7 +2,7 @@
 import type { Equipment, Kit } from '@/types/domains/equipment';
 import type { Booking } from '@/types/domains/booking';
 import type { User } from '@/types/domains/user';
-import { EquipmentStatus, BookingStatus, UserRole } from '@/types/enums';
+import { EquipmentStatus, BookingStatus, BookingPaymentStatus, UserRole } from '@/types/enums';
 
 // ================================
 // FORMATADORES DE PREÇO
@@ -304,6 +304,16 @@ export const formatBookingStatus = (status: BookingStatus): string => {
   return statusMap[status] || status;
 };
 
+export const formatBookingPaymentStatus = (status?: BookingPaymentStatus | string | null): string => {
+  const statusMap: Record<BookingPaymentStatus, string> = {
+    [BookingPaymentStatus.PENDING]: 'Pendente',
+    [BookingPaymentStatus.PARTIAL]: 'Parcial',
+    [BookingPaymentStatus.PAID]: 'Pago'
+  };
+
+  return (status && statusMap[status as BookingPaymentStatus]) || 'Não informado';
+};
+
 /**
  * ✅ TYPE-SAFE: Formata status de equipamento para display
  */
@@ -430,6 +440,7 @@ export default {
   formatDate,
   formatDateTime,
   formatBookingStatus,
+  formatBookingPaymentStatus,
   formatEquipmentStatus,
   formatUserRole,
   toNumber,
