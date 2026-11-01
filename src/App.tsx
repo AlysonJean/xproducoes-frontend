@@ -174,13 +174,18 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const isAdminPage = location.pathname.startsWith('/admin');
   const isTVPage = location.pathname.startsWith('/tv');
+  // Painéis internos (admin e colaborador) não mostram o rodapé de marketing nem o WhatsApp
+  // flutuante do site — ficavam por baixo da sidebar fixa e cobriam ações da tela.
+  const isPortalPage = isAdminPage || /^\/(colaborador|collaborator)(\/|$)/.test(location.pathname);
 
   if (isTVPage) {
      return <div className="min-h-screen bg-black">{children}</div>;
   }
 
+  // Achado (auditoria do design system): era `bg-surface text-primary` — bg-surface não existe
+  // (fundo transparente) e todo texto sem cor própria herdava a cor da marca.
   return (
-    <div className="min-h-screen bg-surface text-primary transition-colors duration-300 flex flex-col">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300 flex flex-col">
       {/* API TEST PANEL DISABLED FOR PRODUCTION */}
       {/* {import.meta.env?.MODE === 'development' && (
         <div className="fixed bottom-4 left-4 z-50">
@@ -194,8 +199,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   {/* Força scroll para o topo a cada mudança de rota */}
   <ScrollToTop />
       <main className={`flex-grow ${isAdminPage ? 'pt-16' : 'pt-20'}`}>{children}</main>
-      <FloatingWhatsApp />
-      <Footer />
+      {!isPortalPage && <FloatingWhatsApp />}
+      {!isPortalPage && <Footer />}
       <CookieConsentBanner />
     </div>
   );
