@@ -85,9 +85,6 @@ const QuoteRequestPage = lazy(() =>
 const QuoteSuccessPage = lazy(() =>
   import('./pages/client/QuoteSuccessPage').then((m) => ({ default: m.QuoteSuccessPage }))
 );
-const BookingSuccessPage = lazy(() =>
-  import('./pages/client/BookingSuccessPage').then((m) => ({ default: m.BookingSuccessPage }))
-);
 const CartPage = lazy(() =>
   import('./pages/client/CartPage').then((m) => ({ default: m.CartPage }))
 );
@@ -143,6 +140,14 @@ const UploadSocialPage = lazy(() => import('./pages/social/UploadSocialPage'));
 const CollaboratorEventRoadmapRedirect: React.FC = () => {
   const { id } = useParams();
   return <Navigate to={`/colaborador/evento/${id}/roadmap`} replace />;
+};
+
+// /reserva-sucesso era a tela antiga do pedido de orçamento ("Reserva realizada", com o pedido ainda
+// pendente). Links e históricos antigos caem na tela certa, levando o state do formulário junto.
+const LegacyQuoteSuccessRedirect: React.FC = () => {
+  const { id } = useParams();
+  const location = useLocation();
+  return <Navigate to={id ? `/orcamento-sucesso/${id}` : '/orcamento-sucesso'} replace state={location.state} />;
 };
 
 // Component para notificação offline
@@ -244,8 +249,9 @@ const AppRoutes: React.FC = () => {
       <Route path="/carrinho" element={<CartPage />} />
       <Route path="/orcamento" element={<QuoteRequestPage />} />
       <Route path="/orcamento-sucesso" element={<QuoteSuccessPage />} />
-      <Route path="/reserva-sucesso" element={<BookingSuccessPage />} />
-      <Route path="/reserva-sucesso/:id" element={<BookingSuccessPage />} />
+      <Route path="/orcamento-sucesso/:bookingId" element={<QuoteSuccessPage />} />
+      <Route path="/reserva-sucesso" element={<LegacyQuoteSuccessRedirect />} />
+      <Route path="/reserva-sucesso/:id" element={<LegacyQuoteSuccessRedirect />} />
       <Route path="/proposta/:id" element={<ProposalViewPage />} />
 
       {/* Blog / Guides Routes */}

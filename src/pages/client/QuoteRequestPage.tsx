@@ -278,11 +278,7 @@ export const QuoteRequestPage: React.FC = () => {
         ]
       };
 
-      if (createdBooking?.id) {
-        navigate(`/reserva-sucesso/${createdBooking.id}`, { state: statePayload });
-      } else {
-        navigate('/reserva-sucesso', { state: statePayload });
-      }
+      navigate(createdBooking?.id ? `/orcamento-sucesso/${createdBooking.id}` : '/orcamento-sucesso', { state: statePayload });
         } catch (err: unknown) {
       logger.error('Erro ao criar booking', 'QuoteRequestPage', err);
       const msg = (axios.isAxiosError(err) && err.response?.data?.message) || (err instanceof Error ? err.message : null) || 'Erro ao salvar pedido.';
