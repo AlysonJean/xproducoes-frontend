@@ -1,6 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { SITE_NAME, buildPageTitle } from '../data/site';
+import { getWhatsAppPhone } from '../utils/whatsapp';
 
 interface SEOProps {
   title: string;
@@ -38,7 +39,9 @@ export const SEO: React.FC<SEOProps> = ({
     "image": [image],
     "@id": "https://www.xproducoeseeventos.com.br",
     "url": "https://www.xproducoeseeventos.com.br",
-    "telephone": "+5531998522380", // Real phone
+    // Achado: era +5531998522380, número diferente do WhatsApp mostrado no site. Agora sai da
+    // mesma fonte do botão de WhatsApp (VITE_WHATSAPP_PHONE, padrão (31) 98925-2272).
+    "telephone": `+${getWhatsAppPhone()}`,
     "priceRange": "$$",
     "address": {
       "@type": "PostalAddress",

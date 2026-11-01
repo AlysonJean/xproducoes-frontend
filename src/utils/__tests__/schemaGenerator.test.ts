@@ -27,3 +27,18 @@ describe('schemaGenerator - domínio e logo corretos nos dados estruturados (JSO
     expect(schema.url).toBe(CANONICAL_DOMAIN);
   });
 });
+
+// Achado: o JSON-LD publicava +55 31 99852-2380 (o WhatsApp do site é (31) 98925-2272), rua/CEP
+// de placeholder e perfis sociais não confirmados.
+describe('schemaGenerator - contato publicado para o Google', () => {
+  it('telefone é o mesmo do WhatsApp do site', () => {
+    expect(generateLocalBusinessSchema().telephone).toBe('+5531989252272');
+    expect(generateOrganizationSchema().contactPoint.telephone).toBe('+5531989252272');
+  });
+
+  it('endereço sem CEP inventado e só o Instagram oficial', () => {
+    expect(COMPANY_INFO.address).not.toHaveProperty('postalCode');
+    expect(COMPANY_INFO.address.streetAddress).toMatch(/Flor d'Água/);
+    expect(COMPANY_INFO.sameAs).toEqual(['https://www.instagram.com/x_producoeseventos']);
+  });
+});

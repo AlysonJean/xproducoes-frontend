@@ -1,6 +1,6 @@
 import { PageLayout } from '../components/layouts/PageLayout';
 import { getWhatsAppPhone } from '../utils/whatsapp';
-import { LEGAL_SUPPORT_EMAIL, formatPhoneDisplay } from '../data/site';
+import { SUPPORT_EMAIL, formatPhoneDisplay } from '../data/site';
 
 // Data da última revisão do TEXTO destes termos. Atualize sempre que o conteúdo mudar.
 // Achado: antes era `new Date()` — a página dizia ter sido atualizada "hoje" em todo acesso.
@@ -58,8 +58,8 @@ export const TermsPage = () => {
             <h2 className="text-2xl font-semibold text-foreground mb-4">5. Contato</h2>
             <p className="text-muted-foreground leading-relaxed">
               Para dúvidas sobre estes termos, entre em contato conosco através do e-mail{' '}
-              <a href={`mailto:${LEGAL_SUPPORT_EMAIL}`} className="text-primary hover:underline underline-offset-4 break-all">
-                {LEGAL_SUPPORT_EMAIL}
+              <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary hover:underline underline-offset-4 break-all">
+                {SUPPORT_EMAIL}
               </a>{' '}
               ou telefone{' '}
               <a href={`tel:+${phone}`} className="text-primary hover:underline underline-offset-4">

@@ -5,7 +5,7 @@ import { Alert } from '../components/ui/Alert';
 import { ConfirmModal } from '../components/modals/ConfirmModal';
 import { apiFetch } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { LEGAL_SUPPORT_EMAIL } from '../data/site';
+import { SUPPORT_EMAIL } from '../data/site';
 
 function downloadJson(data: unknown, filename: string) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -61,8 +61,8 @@ export const LGPDPage: React.FC = () => {
           <p className="text-muted-foreground">
             Informamos como tratamos dados pessoais, direitos dos titulares e canais de contato para solicitações.
             Para dúvidas fora do que pode ser feito diretamente aqui, envie email para{' '}
-            <a href={`mailto:${LEGAL_SUPPORT_EMAIL}`} className="font-semibold text-primary hover:underline underline-offset-4 break-all">
-              {LEGAL_SUPPORT_EMAIL}
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-primary hover:underline underline-offset-4 break-all">
+              {SUPPORT_EMAIL}
             </a>
             .
           </p>

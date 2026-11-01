@@ -1,3 +1,6 @@
+import { getWhatsAppPhone } from './whatsapp';
+import { COMPANY_ADDRESS_LINE, INSTAGRAM_URL } from '../data/site';
+
 export type SchemaType = 'Organization' | 'LocalBusiness' | 'Product' | 'BreadcrumbList' | 'Event' | 'WebSite';
 
 
@@ -7,23 +10,23 @@ export const COMPANY_INFO = {
   logo: 'https://www.xproducoeseeventos.com.br/xproducoes-logo.png',
   description: 'Referência em aluguel de som, luz, painel de LED e estruturas para eventos em Belo Horizonte e região.',
   address: {
-    streetAddress: 'Belo Horizonte', // Placeholder, update if real address found
+    // Achado: rua e CEP eram placeholders ("Belo Horizonte", "30000-000") publicados para o Google.
+    // CEP real não confirmado — fica de fora em vez de inventado.
+    streetAddress: COMPANY_ADDRESS_LINE,
     addressLocality: 'Belo Horizonte',
     addressRegion: 'MG',
-    postalCode: '30000-000', // Placeholder
     addressCountry: 'BR'
   },
   contactPoint: {
-    telephone: '+55 31 99852-2380', // Updated real number
+    // Achado: era +55 31 99852-2380, diferente do WhatsApp do site. Mesma fonte do botão de WhatsApp.
+    telephone: `+${getWhatsAppPhone()}`,
     contactType: 'customer service',
     areaServed: ['BR', 'Belo Horizonte', 'Nova Lima', 'Contagem', 'Betim'],
     availableLanguage: 'Portuguese'
   },
-  sameAs: [
-    'https://www.instagram.com/xproducoes',
-    'https://www.facebook.com/xproducoes',
-    'https://www.linkedin.com/company/xproducoes'
-  ],
+  // Achado: listava instagram.com/xproducoes, facebook.com/xproducoes e linkedin.com/company/xproducoes,
+  // perfis não confirmados (o Instagram oficial é @x_producoeseventos). Fica só o perfil confirmado.
+  sameAs: [INSTAGRAM_URL],
   geo: {
     latitude: -19.9167, // BH coordinates
     longitude: -43.9345

@@ -45,6 +45,7 @@ import { useNotifications } from '../../contexts/NotificationContext';
 import { EventManagement } from '../../components/modals/EventManagement';
 import { bookingAPI, collaboratorsAPI, api } from '../../services/api';
 import { createAndClickAnchor } from '../../utils/dom';
+import { SUPPORT_EMAIL } from '../../data/site';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { BookingCollaborators } from '../../components/bookings/BookingCollaborators';
 import { BookingFinancialSummary } from '../../components/bookings/BookingFinancialSummary';
@@ -623,7 +624,7 @@ export const BookingDetailPage = () => {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.text('Tel/WhatsApp: (31) 98925-2272', MARGIN, fy);
-    doc.text('Email: suporte@xproducoeseventos.com.br', 95, fy);
+    doc.text(`E-mail: ${SUPPORT_EMAIL}`, 95, fy);
 
     fy += 5;
     doc.setTextColor(167, 202, 255);

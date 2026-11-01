@@ -1,6 +1,6 @@
 import { PageLayout } from '../components/layouts/PageLayout';
 import { getWhatsAppPhone } from '../utils/whatsapp';
-import { COMPANY_ADDRESS_LINE, COMPANY_CITY_LINE, LEGAL_SUPPORT_EMAIL, formatPhoneDisplay } from '../data/site';
+import { COMPANY_ADDRESS_LINE, COMPANY_CITY_LINE, SUPPORT_EMAIL, formatPhoneDisplay } from '../data/site';
 
 // Data da última revisão do TEXTO desta política. Atualize sempre que o conteúdo mudar.
 // Achado: antes era `new Date()` — a página dizia ter sido atualizada "hoje" em todo acesso.
@@ -82,8 +82,8 @@ export const PrivacyPage = () => {
             <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4 mt-2">
               <li>
                 E-mail:{' '}
-                <a href={`mailto:${LEGAL_SUPPORT_EMAIL}`} className="text-primary hover:underline underline-offset-4 break-all">
-                  {LEGAL_SUPPORT_EMAIL}
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary hover:underline underline-offset-4 break-all">
+                  {SUPPORT_EMAIL}
                 </a>
               </li>
               <li>
