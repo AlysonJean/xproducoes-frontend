@@ -152,7 +152,7 @@ function OfflineNotification() {
   if (!isOffline) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 bg-yellow-500 text-white text-center py-2 z-50">
+    <div role="status" className="fixed top-0 left-0 right-0 bg-warning text-warning-foreground text-center py-2 z-50">
       📱 Você está offline. Algumas funcionalidades podem estar limitadas.
     </div>
   );
@@ -182,6 +182,18 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
      return <div className="min-h-screen bg-black">{children}</div>;
   }
 
+  // Páginas do convidado do mural (QR code no evento, no celular): sem o cabeçalho, rodapé e WhatsApp
+  // de marketing do site — o cabeçalho fixo cobria o topo da tela de envio. O aviso de cookies fica.
+  if (/^\/(participate|upload)\//.test(location.pathname)) {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <ScrollToTop />
+        {children}
+        <CookieConsentBanner />
+      </div>
+    );
+  }
+
   // Achado (auditoria do design system): era `bg-surface text-primary` — bg-surface não existe
   // (fundo transparente) e todo texto sem cor própria herdava a cor da marca.
   return (
@@ -189,7 +201,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       {/* API TEST PANEL DISABLED FOR PRODUCTION */}
       {/* {import.meta.env?.MODE === 'development' && (
         <div className="fixed bottom-4 left-4 z-50">
-          <details className="bg-surface shadow-lg rounded-lg">
+          <details className="bg-card shadow-lg rounded-lg">
             <summary className="p-3 cursor-pointer font-medium">🔗 API Test</summary>
             <div className="p-4 border-t"></div>
           </details>
@@ -290,6 +302,9 @@ const AppRoutes: React.FC = () => {
           <CompleteRegistrationPage />
         }
       />
+      {/* Achado (auditoria): o convite gerado pelo backend aponta para /complete-registration
+          (adminController), rota que não existia aqui — todo link de convite caía no 404. */}
+      <Route path="/complete-registration" element={<CompleteRegistrationPage />} />
       <Route
         path="/completar-perfil"
         element={
@@ -389,7 +404,7 @@ const AppWithMonitoring: React.FC = () => {
 
       {/* Update notification */}
       {updateAvailable && (
-        <div className="fixed top-12 left-0 right-0 bg-blue-600 text-white text-center py-2 z-40">
+        <div role="status" className="fixed top-12 left-0 right-0 bg-info text-info-foreground text-center py-2 z-40">
           <span>Nova versão disponível! </span>
           <button onClick={update} className="underline hover:no-underline">
             Atualizar agora
