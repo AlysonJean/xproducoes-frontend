@@ -15,9 +15,13 @@ import {
 } from '@sentry/react';
 import { SentryErrorFallback } from '@/components/SentryErrorFallback';
 import { logger } from './logger';
+import { stripSensitiveParams } from './sensitiveParams';
 
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
 const SENTRY_ENVIRONMENT = import.meta.env.VITE_SENTRY_ENVIRONMENT || 'development';
+
+// Campos em que o SDK grava URLs nos breadcrumbs: navegação (from/to) e requisições fetch/xhr (url).
+const BREADCRUMB_URL_FIELDS = ['url', 'from', 'to'];
 
 export const initSentry = () => {
   if (!SENTRY_DSN) {
@@ -48,6 +52,19 @@ export const initSentry = () => {
 
     // Error filtering
     beforeSend(event, hint) {
+      // Achado (revisão antes do deploy): o SDK anexa a todo evento a URL da página (request.url) e
+      // o document.referrer (header Referer) com a query inteira, e usa a URL da página como arquivo
+      // do frame quando um erro global chega sem o script de origem. Os links dos e-mails levam
+      // credenciais nessa URL. Mesmo filtro dos breadcrumbs abaixo e do Vercel Analytics.
+      const { request } = event;
+      if (request?.url) request.url = stripSensitiveParams(request.url);
+      if (request?.headers?.Referer) request.headers.Referer = stripSensitiveParams(request.headers.Referer);
+      for (const exception of event.exception?.values ?? []) {
+        for (const frame of exception.stacktrace?.frames ?? []) {
+          if (frame.filename) frame.filename = stripSensitiveParams(frame.filename);
+        }
+      }
+
       // Filter out network errors that are expected
       if (event.exception) {
         const error = hint.originalException;
@@ -87,6 +104,17 @@ export const initSentry = () => {
       // Filter out noisy console logs
       if (breadcrumb.category === 'console' && breadcrumb.level === 'log') {
         return null;
+      }
+      // Achado (revisão antes do deploy): o breadcrumb de navegação guarda from/to com a query
+      // (ex.: sair de /redefinir-senha?token=... para /login) e o de fetch/xhr guarda a URL da API
+      // (ex.: /auth/verify-email?token=...). Copia `data` em vez de alterar: no fetch com erro, o
+      // SDK usa o próprio objeto da requisição como `data`.
+      if (breadcrumb.data) {
+        const data = { ...breadcrumb.data };
+        for (const field of BREADCRUMB_URL_FIELDS) {
+          if (typeof data[field] === 'string') data[field] = stripSensitiveParams(data[field]);
+        }
+        breadcrumb.data = data;
       }
       return breadcrumb;
     },
