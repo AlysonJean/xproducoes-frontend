@@ -252,7 +252,9 @@ export const AdminQuickProposalPage = () => {
         clientId: clientType === 'registered' ? selectedClientId : undefined,
         clientName: clientType === 'manual' ? clientName : undefined,
         clientContact: clientType === 'manual' ? clientContact : undefined,
-        clientEmail: clientType === 'manual' ? clientEmail : undefined,
+        // Achado (revisão antes do deploy): o e-mail é opcional, mas '' ia no corpo e o backend
+        // (z.string().email().optional()) respondia 400 — proposta sem e-mail nunca era criada.
+        clientEmail: clientType === 'manual' ? clientEmail.trim() || undefined : undefined,
         eventTitle: eventTitle || 'Proposta Rápida',
         location,
         street,

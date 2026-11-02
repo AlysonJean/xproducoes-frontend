@@ -77,6 +77,22 @@ describe('AdminQuickProposalPage — gerar link da proposta', () => {
     expect(addNotification).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
   });
 
+  // Achado (revisão antes do deploy): o e-mail do cliente manual é opcional, mas a tela mandava
+  // clientEmail: '' e o backend (z.string().email().optional()) respondia 400.
+  it('cliente manual sem e-mail: o corpo não leva clientEmail vazio', async () => {
+    apiFetch.mockImplementation((url: string, opts?: { method?: string }) => {
+      if (url === '/bookings' && opts?.method === 'POST') return Promise.resolve({ id: 'XP-NOVA' });
+      return Promise.resolve(url === '/equipments' ? [mesa] : []);
+    });
+    renderPage();
+    await preencherProposta();
+
+    fireEvent.click(screen.getByRole('button', { name: /gerar link da proposta/i }));
+
+    await waitFor(() => expect(chamadasPost()).toHaveLength(1));
+    expect(JSON.parse(chamadasPost()[0][1].body)).not.toHaveProperty('clientEmail');
+  });
+
   it('tentar de novo o mesmo envio repete a Idempotency-Key; com o formulário alterado, a chave é outra', async () => {
     let tentativas = 0;
     apiFetch.mockImplementation((url: string, opts?: { method?: string }) => {
