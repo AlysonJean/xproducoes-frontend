@@ -26,6 +26,8 @@ interface DraftableClientData {
 interface CreateClientResponse {
   tempPassword?: string;
   inviteUrl?: string;
+  /** Aviso do servidor quando o cliente foi criado, mas a foto não subiu (adminController.createClient). */
+  warning?: string;
   client?: { id?: string };
   clientId?: string;
   id?: string;
@@ -181,6 +183,11 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
         const clientId = responseData?.client?.id || responseData?.clientId || responseData?.id;
 
         addNotification({ type: 'success', title: 'Sucesso', message: 'Cliente criado!' });
+        // Achado (auditoria ponta a ponta): o cliente é criado mesmo quando a foto não sobe (o servidor
+        // responde 201 com um aviso); a tela dizia só "Cliente criado!" e a falta da foto passava despercebida.
+        if (responseData?.warning) {
+          addNotification({ type: 'warning', title: 'Atenção', message: responseData.warning });
+        }
         clearDraft();
         onSuccess();
 
