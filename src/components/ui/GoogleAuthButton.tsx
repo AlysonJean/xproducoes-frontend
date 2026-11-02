@@ -57,11 +57,14 @@ const GoogleAuthButtonInner: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) =
         if (axios.isAxiosError(error)) {
           logger.error('Erro no login Google:', 'GoogleAuthButton', error.response?.data);
         }
+        // Achado (auditoria ponta a ponta): o backend manda o motivo da recusa em `error` (formato do
+        // globalErrorHandler) e só `message` era lido: em vez de "entre com e-mail e senha", a pessoa
+        // via "Falha ao conectar: Request failed with status code 401".
         addNotification({
           type: 'error',
           title: 'Erro de Autenticação',
-          message: axios.isAxiosError(error) && error.response?.data?.message 
-            ? error.response.data.message 
+          message: axios.isAxiosError(error) && (error.response?.data?.message || error.response?.data?.error) 
+            ? error.response.data.message || error.response.data.error 
             : `Falha ao conectar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`
         });
       } finally {

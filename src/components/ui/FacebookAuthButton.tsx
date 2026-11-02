@@ -118,8 +118,9 @@ const FacebookAuthButton: React.FC<FacebookAuthButtonProps> = ({ onSuccess }) =>
             addNotification({
               type: 'error',
               title: 'Erro de Autenticação',
-              message: axios.isAxiosError(error) && error.response?.data?.message
-                ? error.response.data.message
+              // O motivo da recusa vem em `error` (formato do globalErrorHandler); ver GoogleAuthButton.
+              message: axios.isAxiosError(error) && (error.response?.data?.message || error.response?.data?.error)
+                ? error.response.data.message || error.response.data.error
                 : 'Falha ao conectar com Facebook.',
             });
           }
