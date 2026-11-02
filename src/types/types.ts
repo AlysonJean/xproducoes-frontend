@@ -683,6 +683,7 @@ export interface BookingListItem {
   location?: string;
   notes?: string;
   clientName?: string; // Reservas manuais sem cliente cadastrado
+  clientContact?: string | null; // Contato informado na reserva (o WhatsApp da lista usa antes do cadastro)
   paymentStatus?: BookingPaymentStatus | null;
 }
 

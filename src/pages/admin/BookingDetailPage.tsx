@@ -48,6 +48,7 @@ import { bookingAPI, api } from '../../services/api';
 import { createAndClickAnchor } from '../../utils/dom';
 import { SUPPORT_EMAIL } from '../../data/site';
 import { formatBookingCode } from '../../utils/bookingCode';
+import { bookingEmail, bookingPhone, toWhatsAppNumber } from '../../utils/bookingContact';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { BookingCollaborators } from '../../components/bookings/BookingCollaborators';
 import { BookingFinancialSummary } from '../../components/bookings/BookingFinancialSummary';
@@ -272,9 +273,11 @@ export const BookingDetailPage = () => {
   const prepareWhatsAppMessage = (
     action: 'confirm' | 'cancel' | 'complete' | 'on_the_way' | 'arrived' | 'setup_complete' | 'thank_you'
   ) => {
-    const contact = booking?.client?.phone || booking?.clientContact;
+    // Contato da reserva antes do cadastro, já com DDI: sem o 55, o wa.me abria outro país (31 é a
+    // Holanda). Ver utils/bookingContact.
+    const contact = booking ? toWhatsAppNumber(bookingPhone(booking)) : null;
     if (!contact) {
-      addNotification({ type: 'warning', title: 'Sem telefone', message: 'O cliente não tem telefone cadastrado.' });
+      addNotification({ type: 'warning', title: 'Sem telefone', message: 'O cliente não tem um telefone válido para o WhatsApp. Mude o status pela lista de Reservas.' });
       return;
     }
 
@@ -305,20 +308,11 @@ export const BookingDetailPage = () => {
     }
 
     setWppMessage(message);
-    setWppContact(contact.replace(/\D/g, ''));
+    setWppContact(contact);
     setWppModalOpen(true);
   };
 
   // ─── PDF / WhatsApp helpers ────────────────────────────────────────────────
-  const normalizeWhatsAppNumber = (raw: string): string | null => {
-    const digits = raw.replace(/\D/g, '');
-    if (!digits) return null;
-    if (digits.startsWith('55') && digits.length >= 12) return digits;
-    if (digits.length === 10 || digits.length === 11) return `55${digits}`;
-    if (digits.length >= 12) return digits;
-    return null;
-  };
-
   const buildWhatsappText = (b: typeof booking): string => {
     if (!b) return '';
     const name = b.client?.name || b.clientName || 'cliente';
@@ -390,8 +384,8 @@ export const BookingDetailPage = () => {
 
     curY += 9;
     const clientName = booking.client?.name || booking.clientName || 'Nao informado';
-    const clientPhone = booking.client?.phone || booking.clientContact || '-';
-    const clientEmail = booking.client?.email || booking.clientEmail || '-';
+    const clientPhone = bookingPhone(booking) || '-';
+    const clientEmail = bookingEmail(booking) || '-';
     doc.setFontSize(9);
     doc.setTextColor(...C_TEXT);
     doc.setFont('helvetica', 'bold');
@@ -661,8 +655,7 @@ export const BookingDetailPage = () => {
   };
 
   const handleDownloadAndWhatsApp = async () => {
-    const rawPhone = booking?.client?.phone || booking?.clientContact || '';
-    const normalizedPhone = normalizeWhatsAppNumber(rawPhone);
+    const normalizedPhone = booking ? toWhatsAppNumber(bookingPhone(booking)) : null;
     if (!normalizedPhone) {
       addNotification({ type: 'error', title: 'WhatsApp inválido', message: 'O cliente não tem um telefone válido cadastrado.' });
       return;
@@ -788,8 +781,9 @@ export const BookingDetailPage = () => {
   const deliveryIndex = DELIVERY_STATUS_OPTIONS.findIndex((o) => o.value === (booking.deliveryStatus || 'PENDING'));
   const eventDate = booking.eventDate ? new Date(booking.eventDate) : null;
   const clientName = booking.client?.name || booking.client?.user?.name || booking.clientName || 'Cliente sem nome';
-  const clientPhone = booking.client?.phone || booking.clientContact;
-  const clientEmail = booking.client?.email || booking.client?.user?.email || booking.clientEmail;
+  // O mesmo contato que os botões de WhatsApp e o PDF usam (ver utils/bookingContact).
+  const clientPhone = bookingPhone(booking);
+  const clientEmail = bookingEmail(booking);
 
   return (
     <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
@@ -891,8 +885,9 @@ export const BookingDetailPage = () => {
                 </Button>
               </div>
             ) : (
+              // Antes mandava usar o Editar, que nunca gravou o status (e agora nem o mostra).
               <p className="text-sm text-muted-foreground">
-                Reserva {bookingStatusLabel(status).toLowerCase()}. Use o botão Editar para mudar o status.
+                Reserva {bookingStatusLabel(status).toLowerCase()}. Para mudar o status, use os botões de Logística ou a lista de Reservas.
               </p>
             )}
           </Card>

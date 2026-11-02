@@ -44,7 +44,9 @@ const toLocalInput = (iso: string): string => {
 // do outro modo nem aparece na tela: o erro ficava invisível e "Criar reserva" não fazia nada. O
 // e-mail do cliente manual, opcional na Proposta Rápida, também barrava quem não tinha. Cada modo
 // confere os próprios campos nas validações do fim do schema ('' = select sem nada escolhido).
-const bookingFormSchema = z
+// Na edição, o cliente cadastrado e os itens aparecem só para leitura (ver o formulário): a escolha
+// deles só é conferida na criação.
+const bookingFormSchema = (isEditing: boolean) => z
   .object({
     clientType: z.enum(['registered', 'manual']),
     clientId: idSchema.optional().or(z.literal('')),
@@ -75,7 +77,7 @@ const bookingFormSchema = z
   // O erro vai para o campo do modo escolhido: com cliente manual, `clientId` não está na tela.
   .superRefine((d, ctx) => {
     if (d.clientType === 'registered') {
-      if (!d.clientId) ctx.addIssue({ code: 'custom', path: ['clientId'], message: 'Selecione um cliente.' });
+      if (!isEditing && !d.clientId) ctx.addIssue({ code: 'custom', path: ['clientId'], message: 'Selecione um cliente.' });
       return;
     }
     if (!d.clientName?.trim()) ctx.addIssue({ code: 'custom', path: ['clientName'], message: 'Informe o nome do cliente.' });
@@ -83,13 +85,16 @@ const bookingFormSchema = z
   })
   .refine(
     (d) =>
-      d.selectionType === 'kit'
+      isEditing ||
+      (d.selectionType === 'kit'
         ? Boolean(d.kitId)
-        : Boolean(d.equipmentIds && d.equipmentIds.length > 0),
+        : Boolean(d.equipmentIds && d.equipmentIds.length > 0)),
     { message: 'Escolha um kit ou selecione equipamentos.', path: ['kitId'] }
   );
+const createSchema = bookingFormSchema(false);
+const editSchema = bookingFormSchema(true);
 
-type BookingFormData = z.infer<typeof bookingFormSchema>;
+type BookingFormData = z.infer<typeof createSchema>;
 type ClientForSelect = { id: string; name: string; email?: string; phone?: string };
 
 interface ClientData {
@@ -103,15 +108,28 @@ interface ClientResponse {
   data?: ClientData[];
 }
 
+// Reserva como a API devolve: cliente cadastrado em clientId/client (nome em client.user, ou em
+// client.name como a lista de Reservas monta), contato do cliente digitado na própria reserva
+// (clientName/clientContact/clientEmail), kit em `kit`, equipamentos e serviços em listas.
 interface RawBooking extends Omit<Booking, 'kits' | 'equipments'> {
-  userId?: string;
-  client?: { name?: string; phone?: string; email?: string };
+  clientId?: string | null;
+  client?: { name?: string; user?: { name?: string } };
+  clientName?: string | null;
+  clientContact?: string | null;
+  clientEmail?: string | null;
   location?: string;
   venue?: { street?: string; neighborhood?: string; city?: string; state?: string; zipCode?: string; addressNumber?: string; addressComplement?: string };
-  kits?: Array<{ id?: string; kitId?: string }>;
-  equipments?: Array<{ id?: string; equipmentId?: string }>;
+  equipments?: Array<{ name?: string }>;
+  services?: Array<{ name?: string }>;
   serviceValue?: number;
 }
+
+// Na edição: o tipo de cliente é o da reserva, e os itens dela aparecem só para leitura.
+const editClientTypeOf = (booking: RawBooking): 'registered' | 'manual' =>
+  booking.clientId ? 'registered' : 'manual';
+const itemNamesOf = (booking: RawBooking): string[] =>
+  [booking.kit?.name, ...(booking.equipments ?? []).map((e) => e.name), ...(booking.services ?? []).map((s) => s.name)]
+    .filter((name): name is string => Boolean(name));
 
 interface AdminBookingFormProps {
   initialData?: Booking | null;
@@ -125,6 +143,7 @@ interface AdminBookingFormProps {
 
 export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData, defaultClientType = 'registered', onSuccess, onCancel, onDirtyChange }) => {
   const isEditing = Boolean(initialData);
+  const editedBooking = (initialData ?? null) as RawBooking | null;
   const { addNotification } = useNotifications();
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
@@ -151,7 +170,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
     reset,
     formState: { errors, isDirty },
   } = useForm<BookingFormData>({
-    resolver: zodResolver(bookingFormSchema),
+    resolver: zodResolver(isEditing ? editSchema : createSchema),
     defaultValues: {
       clientType: defaultClientType,
       // Achado (auditoria ponta a ponta): sem valor inicial, o select abria no primeiro cliente/kit
@@ -192,7 +211,9 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
 
   const handleRestoreDraft = () => {
     if (!draftPrompt) return;
-    reset(draftPrompt.values);
+    // Na edição o tipo de cliente é o da reserva (o seletor não aparece), mesmo com rascunho da
+    // versão anterior do formulário, que deixava trocar.
+    reset(editedBooking ? { ...draftPrompt.values, clientType: editClientTypeOf(editedBooking) } : draftPrompt.values);
     setDraftPrompt(null);
   };
 
@@ -244,28 +265,26 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
 
         if (initialData) {
           const booking = initialData as RawBooking;
-          const manualClient = !booking.userId;
           const eventDate = (booking.eventDate as string) || '';
           const eventEndDate = (booking.eventEndDate as string) || eventDate;
           const location = booking.location || '';
           const address = booking.venue || (booking as unknown as { street?: string; neighborhood?: string; city?: string; state?: string; zipCode?: string; addressNumber?: string; addressComplement?: string });
-          const extractedKitId = (Array.isArray(booking.kits) && booking.kits.length > 0)
-            ? booking.kits[0]?.kitId || booking.kits[0]?.id
-            // A API manda o kit da reserva em `kit`, não em `kits[]`: sem isto, a reserva só com kit
-            // abria no modo equipamentos, sem nenhum marcado, e "Salvar alterações" não fazia nada.
-            : booking.kit?.id;
-          const extractedEquipmentIds = Array.isArray(booking.equipments)
-            ? booking.equipments.map((e) => e.equipmentId || e.id).filter(Boolean) as string[]
-            : [];
+          // Achado (auditoria ponta a ponta): o tipo de cliente saía de `userId`, que a reserva não
+          // tem (é clientId), e a edição abria sempre no modo "Manual", com nome e contato lidos do
+          // cadastro (`client`): vazios na reserva de cliente digitado, que guarda o contato nela
+          // mesma. Para salvar era preciso redigitar, e o servidor não gravava o que se digitava.
+          // Agora o cliente digitado abre com o contato da reserva (e o servidor grava); o cadastrado
+          // aparece só para leitura, sem campos. Kit e equipamentos também (ver a seção Itens).
+          const typed = editClientTypeOf(booking) === 'manual';
           reset({
-            clientType: manualClient ? 'manual' : 'registered',
-            clientId: booking.userId as string | undefined,
-            clientName: booking?.client?.name,
-            clientContact: booking?.client?.phone,
-            clientEmail: booking?.client?.email,
-            selectionType: extractedKitId ? 'kit' : 'equipments',
-            kitId: extractedKitId as string | undefined,
-            equipmentIds: extractedEquipmentIds,
+            clientType: typed ? 'manual' : 'registered',
+            clientId: '',
+            clientName: typed ? booking.clientName || '' : '',
+            clientContact: typed ? booking.clientContact || '' : '',
+            clientEmail: typed ? booking.clientEmail || '' : '',
+            selectionType: 'kit',
+            kitId: '',
+            equipmentIds: [],
             eventDate: toLocalInput(eventDate),
             eventEndDate: toLocalInput(eventEndDate),
             location: location,
@@ -330,14 +349,18 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
         }
       }
 
+      // Na edição não vão cliente cadastrado, kit, equipamentos nem status: nada disso muda por aqui
+      // (o servidor não grava), e o formulário não os oferece.
       const payload: Record<string, unknown> = {
-        clientId: data.clientType === 'registered' ? data.clientId : undefined,
+        clientId: !isEditing && data.clientType === 'registered' ? data.clientId : undefined,
         clientName: data.clientType === 'manual' ? data.clientName : undefined,
         clientContact: data.clientType === 'manual' ? data.clientContact : undefined,
-        // E-mail em branco fica fora do corpo: '' o backend recusa (400), como na Proposta Rápida.
-        clientEmail: data.clientType === 'manual' ? data.clientEmail || undefined : undefined,
-        kitId: data.selectionType === 'kit' ? data.kitId : undefined,
-        equipmentIds: data.selectionType === 'equipments' ? data.equipmentIds : undefined,
+        // E-mail em branco fica fora do corpo ('' o backend recusa, como na Proposta Rápida). Na
+        // edição, apagar o e-mail que a reserva tinha manda null, que o tira da reserva; reserva sem
+        // e-mail segue sem o campo no corpo (o backend anterior a este lote recusa null).
+        clientEmail: data.clientType === 'manual' ? data.clientEmail || (editedBooking?.clientEmail ? null : undefined) : undefined,
+        kitId: !isEditing && data.selectionType === 'kit' ? data.kitId : undefined,
+        equipmentIds: !isEditing && data.selectionType === 'equipments' ? data.equipmentIds : undefined,
         // Horário local digitado → ISO (ver toLocalInput).
         eventDate: new Date(data.eventDate).toISOString(),
         eventEndDate: new Date(data.eventEndDate).toISOString(),
@@ -350,7 +373,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
         addressNumber: data.addressNumber,
         addressComplement: data.addressComplement,
         notes: data.notes,
-        status: data.status,
+        status: isEditing ? undefined : data.status,
         deliveryStatus: data.deliveryStatus,
       };
 
@@ -388,6 +411,10 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
 
   if (loading) return <BrandLoader size={100} label="Carregando formulário de reserva..." />;
 
+  // Na edição, só para leitura: o nome do cliente cadastrado e os itens da reserva.
+  const registeredClientName = editedBooking?.client?.user?.name || editedBooking?.client?.name || editedBooking?.clientName;
+  const editItemNames = editedBooking ? itemNamesOf(editedBooking) : [];
+
   return (
     <div className="space-y-6">
       {serverError && (
@@ -402,18 +429,34 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
             onDiscard={handleDiscardDraft}
           />
         )}
-        <FormSection title="Cliente" description="Associe a reserva a um cliente">
+        <FormSection
+          title="Cliente"
+          description={
+            !isEditing
+              ? 'Associe a reserva a um cliente'
+              : clientType === 'registered'
+                ? 'O cliente cadastrado da reserva não troca na edição'
+                : 'Nome e contato do cliente gravados nesta reserva'
+          }
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Select
-              label="Tipo de Cliente"
-              value={clientType}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setValue('clientType', e.target.value as 'registered' | 'manual')}
-              options={[
-                { value: 'registered', label: 'Registrado' },
-                { value: 'manual', label: 'Manual' },
-              ]}
-            />
-            {clientType === 'registered' ? (
+            {/* Na edição o tipo não troca: vincular ou desvincular o cadastro de um cliente não é por aqui. */}
+            {!isEditing && (
+              <Select
+                label="Tipo de Cliente"
+                value={clientType}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setValue('clientType', e.target.value as 'registered' | 'manual')}
+                options={[
+                  { value: 'registered', label: 'Registrado' },
+                  { value: 'manual', label: 'Manual' },
+                ]}
+              />
+            )}
+            {isEditing && clientType === 'registered' ? (
+              <p className="text-sm text-foreground">
+                Cliente cadastrado: <strong>{registeredClientName || 'sem nome'}</strong>
+              </p>
+            ) : clientType === 'registered' ? (
               <Select
                 label="Cliente"
                 placeholder="Selecione um cliente"
@@ -434,66 +477,81 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
           </div>
         </FormSection>
 
-        <FormSection title="Itens" description="Selecione um kit ou equipamentos individuais">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Select
-              label="Modo de seleção"
-              value={selectionType}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setValue('selectionType', e.target.value as 'kit' | 'equipments')}
-              options={[
-                { value: 'kit', label: 'Kit' },
-                { value: 'equipments', label: 'Equipamentos' },
-              ]}
-            />
-            {selectionType === 'kit' ? (
-              <div className="space-y-2"> 
-                <Input
-                  label="Buscar Kit"
-                  value={kitSearch}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setKitSearch(e.target.value)}
-                  placeholder="Filtrar kits..."
-                />
-                <Select
-                  label="Kit"
-                  placeholder="Selecione um kit"
-                  {...register('kitId')}
-                  error={errors.kitId?.message as string | undefined}
-                  options={kits
-                    .filter(k => k.name.toLowerCase().includes(kitSearch.toLowerCase()))
-                    .map((k) => ({ value: k.id, label: k.name }))
-                  }
-                />
-              </div>
+        {isEditing ? (
+          // Achado (auditoria ponta a ponta): a edição deixava trocar kit e equipamentos, e o servidor
+          // não gravava a troca. Gravar exige recalcular o valor da reserva (regra de preço ainda em
+          // decisão); até lá, na edição eles aparecem só para leitura.
+          <FormSection title="Itens" description="Kit, equipamentos e serviços não mudam na edição: trocar exigiria recalcular o valor da reserva.">
+            {editItemNames.length > 0 ? (
+              <ul className="list-disc pl-5 space-y-1 text-sm text-foreground">
+                {editItemNames.map((name, index) => <li key={index}>{name}</li>)}
+              </ul>
             ) : (
-              <div className="space-y-2" role="group" aria-labelledby="admin-booking-equipments-label">
-                <p id="admin-booking-equipments-label" className="text-sm font-medium text-foreground">Equipamentos</p>
-                <Input
-                  aria-label="Buscar equipamento"
-                  placeholder="Buscar equipamento..."
-                  value={equipSearch}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEquipSearch(e.target.value)}
-                  className="mb-2"
-                />
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-56 overflow-auto p-3 border border-border rounded-lg bg-background">
-                  {equipments
-                    .filter(eq => eq.name.toLowerCase().includes(equipSearch.toLowerCase()))
-                    .map((eq) => (
-                    <Checkbox
-                      key={eq.id}
-                      id={`admin-booking-eq-${eq.id}`}
-                      value={eq.id}
-                      label={eq.name}
-                      {...register('equipmentIds')}
-                    />
-                  ))}
-                </div>
-                {errors.equipmentIds && (
-                  <p role="alert" className="text-sm text-destructive">Selecione pelo menos um equipamento</p>
-                )}
-              </div>
+              <p className="text-sm text-muted-foreground">Nenhum item nesta reserva.</p>
             )}
-          </div>
-        </FormSection>
+          </FormSection>
+        ) : (
+          <FormSection title="Itens" description="Selecione um kit ou equipamentos individuais">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Select
+                label="Modo de seleção"
+                value={selectionType}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setValue('selectionType', e.target.value as 'kit' | 'equipments')}
+                options={[
+                  { value: 'kit', label: 'Kit' },
+                  { value: 'equipments', label: 'Equipamentos' },
+                ]}
+              />
+              {selectionType === 'kit' ? (
+                <div className="space-y-2">
+                  <Input
+                    label="Buscar Kit"
+                    value={kitSearch}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setKitSearch(e.target.value)}
+                    placeholder="Filtrar kits..."
+                  />
+                  <Select
+                    label="Kit"
+                    placeholder="Selecione um kit"
+                    {...register('kitId')}
+                    error={errors.kitId?.message as string | undefined}
+                    options={kits
+                      .filter(k => k.name.toLowerCase().includes(kitSearch.toLowerCase()))
+                      .map((k) => ({ value: k.id, label: k.name }))
+                    }
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2" role="group" aria-labelledby="admin-booking-equipments-label">
+                  <p id="admin-booking-equipments-label" className="text-sm font-medium text-foreground">Equipamentos</p>
+                  <Input
+                    aria-label="Buscar equipamento"
+                    placeholder="Buscar equipamento..."
+                    value={equipSearch}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEquipSearch(e.target.value)}
+                    className="mb-2"
+                  />
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-56 overflow-auto p-3 border border-border rounded-lg bg-background">
+                    {equipments
+                      .filter(eq => eq.name.toLowerCase().includes(equipSearch.toLowerCase()))
+                      .map((eq) => (
+                      <Checkbox
+                        key={eq.id}
+                        id={`admin-booking-eq-${eq.id}`}
+                        value={eq.id}
+                        label={eq.name}
+                        {...register('equipmentIds')}
+                      />
+                    ))}
+                  </div>
+                  {errors.equipmentIds && (
+                    <p role="alert" className="text-sm text-destructive">Selecione pelo menos um equipamento</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </FormSection>
+        )}
 
         <FormSection title="Datas do Evento" description="Defina o início e fim">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -548,11 +606,15 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Textarea label="Observações" rows={3} {...register('notes')} />
             <div className="grid grid-cols-2 gap-4">
-              <Select
-                label="Status"
-                {...register('status')}
-                options={BOOKING_STATUS_OPTIONS}
-              />
+              {/* Na edição o status não aparece: o servidor não o grava por aqui, e ele muda pelos botões
+                  da ficha e pela lista de Reservas (confirmar confere conflito e avisa o cliente). */}
+              {!isEditing && (
+                <Select
+                  label="Status"
+                  {...register('status')}
+                  options={BOOKING_STATUS_OPTIONS}
+                />
+              )}
               <Select
                 label="Entrega"
                 {...register('deliveryStatus')}

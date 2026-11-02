@@ -8,6 +8,7 @@ import { BOOKING_STATUS_OPTIONS, DELIVERY_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS
 import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
 import { normalizeString } from '../../utils/string';
+import { bookingPhone, toWhatsAppNumber } from '../../utils/bookingContact';
 import { Link } from 'react-router-dom';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { AdminLayout } from '../../components/admin/AdminLayout';
@@ -184,7 +185,8 @@ export const BookingListPage = () => {
   };
 
   // Situação do pagamento: PUT só com o campo (vazio = "não informado"). Não passa pelo formulário
-  // de edição, que exige endereço e kit/equipamentos — o histórico importado das agendas não tem.
+  // de edição, que exige endereço, contato do cliente e valor do serviço — o histórico importado das
+  // agendas não tem.
   const handlePaymentChange = async (bookingId: string, value: string) => {
     const paymentStatus = (value || null) as BookingPaymentStatus | null;
     try {
@@ -560,9 +562,14 @@ export const BookingListPage = () => {
                             size="icon"
                             className="h-9 w-9 text-success border-success/30 hover:bg-success/10"  
                             onClick={() => {
+                              // Contato da reserva antes do cadastro, com DDI (ver utils/bookingContact).
+                              const phone = toWhatsAppNumber(bookingPhone(booking));
+                              if (!phone) {
+                                addNotification({ type: 'warning', title: 'Sem telefone', message: 'A reserva não tem um telefone válido para o WhatsApp.' });
+                                return;
+                              }
                               const url = `${window.location.origin}/proposta/${booking.id}`;
                               const text = `Olá! Sou da X Produções. Segue o link com a sua proposta comercial exclusiva para o evento: ${url}`;
-                              const phone = (booking.client?.phone || '').replace(/\D/g, '');
                               window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
                             }} 
                             title="WhatsApp"
