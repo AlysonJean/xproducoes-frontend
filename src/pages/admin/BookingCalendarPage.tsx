@@ -562,7 +562,11 @@ export const BookingCalendarPage = () => {
 
   const openConfirm = (b: CalendarBooking) => {
     setConfirmBookingId(b.id);
-    setConfirmPrice(String(b.serviceValue || b.totalPrice || ''));
+    // Achado (auditoria ponta a ponta): o "Valor final" vinha do "Valor do serviço" (serviceValue)
+    // quando havia, e o confirm-details o grava como totalPrice: confirmar sem mexer no campo trocava
+    // o preço da reserva sem ninguém ver (e a página do cliente ainda somava o serviceValue de novo).
+    // Parte do total da reserva, como a confirmação da ficha da reserva.
+    setConfirmPrice(String(b.totalPrice || ''));
     setConfirmOpen(true);
   };
 
