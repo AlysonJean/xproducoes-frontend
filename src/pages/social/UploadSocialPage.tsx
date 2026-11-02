@@ -27,6 +27,13 @@ interface UploadedPost {
     status?: 'APPROVED' | 'PENDING' | 'REJECTED';
 }
 
+// Achado (auditoria ponta a ponta): toda falha do envio virava "verifique sua conexão", inclusive foto
+// grande demais, formato não aceito, mural ocupado e limite de envios, em que tentar de novo do mesmo
+// jeito não resolve (ou só resolve depois de esperar). Esses textos vêm do backend
+// (middlewares/publicWallUpload.ts e os limites do mural em rateLimitMiddleware.ts) e aparecem como
+// chegam; o resto (queda de rede, tempo esgotado, erro de proxy) segue com a mensagem genérica.
+const GUEST_UPLOAD_SERVER_MESSAGE = /^(Foto muito grande|Envie uma foto|Muitos envios ao mesmo tempo|Muitas fotos|Mural não encontrado)/;
+
 const UploadSocialPage = () => {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
@@ -114,7 +121,8 @@ const UploadSocialPage = () => {
         } catch (err) {
             logger.error("Upload failed", 'UploadSocialPage', err);
             // Achado (auditoria): o erro aparecia num alert() nativo.
-            setSubmitError('Falha ao enviar a foto. Verifique sua conexão e tente de novo.');
+            const serverMessage = err instanceof Error && GUEST_UPLOAD_SERVER_MESSAGE.test(err.message) ? err.message : null;
+            setSubmitError(serverMessage ?? 'Falha ao enviar a foto. Verifique sua conexão e tente de novo.');
         } finally {
             setUploading(false);
         }
