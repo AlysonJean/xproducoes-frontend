@@ -5,7 +5,7 @@ import { GoogleCalendarIntegration } from '../../components/GoogleCalendarIntegr
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../services/api';
-import { fetchAllAdminBookings } from '../../services/adminBookings';
+import { fetchUpcomingAdminBookings } from '../../services/adminBookings';
 import { bookingStatusLabel, bookingStatusVariant } from '../../utils/bookingStatus';
 import { collaboratorRoleLabel } from '../../utils/collaboratorRoles';
 import { AdminLayout } from '../../components/admin/AdminLayout';
@@ -36,7 +36,7 @@ import {
   Alert,
   Skeleton
 } from '../../components/ui/StandardComponents';
-import type { AdminDashboardStats, Activity as DashboardActivity, AdminNotification } from '../../types/domains/dashboard';
+import type { AdminDashboardStats, Activity as DashboardActivity } from '../../types/domains/dashboard';
 import type { BookingListItem } from '../../types/types';
 import { BrandLoader } from '../../components/ui/BrandLoader';
 import { logger } from '../../utils/logger';
@@ -250,11 +250,12 @@ export const AdminDashboardPage = () => {
     try {
       setLoading(true);
       setError(null);
-      const [statsRes, actsRes, liveRes, , equipRes, collabRes] = await Promise.allSettled([
+      // /dashboard/notifications saiu daqui: a resposta era jogada fora (a tela não tem sino). A rota
+      // continua no backend.
+      const [statsRes, actsRes, liveRes, equipRes, collabRes] = await Promise.allSettled([
         apiFetch<AdminDashboardStats>('/dashboard/stats'),
         apiFetch<DashboardActivity[]>('/dashboard/recent-activities'),
         apiFetch<{ todayBookings: number; todayRevenue: number; activeUsers: number }>('/dashboard/live-stats'),
-        apiFetch<AdminNotification[]>('/dashboard/notifications'),
         apiFetch<{ name: string; bookings: number }[]>('/dashboard/top-equipment'),
         apiFetch<{ collaborator: { id: string; name: string; role: string }; rating: number; eventCount: number }[]>('/dashboard/top-collaborators')
       ]);
@@ -267,15 +268,9 @@ export const AdminDashboardPage = () => {
       if (collabRes.status === 'fulfilled') setTopCollaborators(collabRes.value || []);
 
       try {
-        // Todas as páginas: GET /admin/bookings sem parâmetros devolve só a 1ª página (20 reservas, as
-        // de data MAIS ANTIGA) — "Próximos eventos" ficava vazio ou com eventos errados.
-        const allBookings = await fetchAllAdminBookings();
-        const now = new Date();
-        const upcoming = allBookings
-          .filter((b: BookingListItem) => b?.eventDate && new Date(b.eventDate) >= new Date(now.getFullYear(), now.getMonth(), now.getDate()))
-          .sort((a: BookingListItem, b: BookingListItem) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime())
-          .slice(0, 5);
-        setNextBookings(upcoming);
+        // Os 5 próximos a partir de hoje, já filtrados e ordenados pelo servidor (antes: todas as
+        // reservas, página a página, filtradas aqui).
+        setNextBookings(await fetchUpcomingAdminBookings(5));
       } catch {
         // bookings are non-critical — leave list empty on failure
       }

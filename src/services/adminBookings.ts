@@ -18,3 +18,14 @@ export async function fetchAllAdminBookings(): Promise<BookingListItem[]> {
   }
   return all;
 }
+
+// Achado (auditoria ponta a ponta): "Próximos eventos" do painel baixava todas as páginas acima para
+// mostrar 5. GET /admin/bookings já filtra pela data do evento (startDate), ordena do mais próximo ao
+// mais distante e limita a quantidade (limit): uma chamada basta. "A partir de hoje" é a meia-noite no
+// fuso do navegador, como no filtro que a tela fazia; sem filtro de status, como antes.
+export async function fetchUpcomingAdminBookings(limit: number): Promise<BookingListItem[]> {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const params = new URLSearchParams({ startDate: startOfToday.toISOString(), limit: String(limit) });
+  return asArray<BookingListItem>(await apiFetch(`/admin/bookings?${params.toString()}`));
+}
