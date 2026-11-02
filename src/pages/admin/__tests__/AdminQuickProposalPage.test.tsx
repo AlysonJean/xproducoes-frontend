@@ -56,7 +56,9 @@ const chamadasPost = () => apiFetch.mock.calls.filter((c) => c[0] === '/bookings
 // Achado (revisão antes do deploy): o apiFetch já desembrulha { success, data } e devolve a própria
 // reserva, mas a tela lia `.data.id` — toda criação terminava em "Reserva criada mas ID não
 // retornado." e o novo clique, com outra Idempotency-Key, gravava a reserva de novo.
-describe('AdminQuickProposalPage — gerar link da proposta', () => {
+// A página é grande e cada teste preenche 11 campos: com a cobertura ligada (npm run test:coverage) e a
+// máquina ocupada, dois testes passavam dos 5 s padrão do vitest e falhavam por tempo, não por erro.
+describe('AdminQuickProposalPage — gerar link da proposta', { timeout: 20000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
