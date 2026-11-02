@@ -9,7 +9,7 @@ import { formatPrice } from '@/utils/formatPrice';
 import type { BookingStatus } from '@/types/enums';
 import { BOOKING_STATUS_OPTIONS, bookingStatusLabel, bookingStatusVariant } from '@/utils/bookingStatus';
 import { COLLABORATOR_ROLE_OPTIONS, collaboratorRoleLabel } from '@/utils/collaboratorRoles';
-import type { Equipment, Kit, ICollaborator, CalendarBooking } from '@/types/types';
+import type { Equipment, Kit, CalendarBooking } from '@/types/types';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { 
@@ -45,6 +45,7 @@ import withDragAndDrop, { type EventInteractionArgs } from 'react-big-calendar/l
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { useCollaborators } from '@/hooks/useCollaborators';
 import { logger } from '../../utils/logger';
 
 const locales = { 'pt-BR': ptBR };
@@ -320,7 +321,11 @@ export const BookingCalendarPage = () => {
     hasItems: 'ALL',
     dateRange: 'ALL',
   });
-  const [collaborators, setCollaborators] = useState<ICollaborator[]>([]);
+  // Achado (revisão antes do deploy): a agenda buscava GET /collaborators cru e lia `c.name`, mas a
+  // API manda o nome dentro de `user` — "Filtrar por colaborador" e "Colaborador responsável"
+  // mostravam opções em branco. O hook da tela de Colaboradores já põe esse nome em `name` (mesma
+  // correção do BookingDetailPage).
+  const { collaborators, error: collaboratorsError, fetchCollaborators } = useCollaborators();
   const [hovered, setHovered] = useState<CalendarEvent | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -394,15 +399,13 @@ export const BookingCalendarPage = () => {
   }, [fetchCalendarBookings]);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const list = await apiFetch<ICollaborator[]>('/collaborators');
-        setCollaborators(asArray<ICollaborator>(list));
-      } catch (err) {
-        logger.error('Falha ao carregar colaboradores', 'BookingCalendarPage', err);
-      }
-    })();
-  }, []);
+    fetchCollaborators();
+  }, [fetchCollaborators]);
+
+  // O hook só guarda a mensagem de erro; a falha continua indo para o logger (Sentry), como antes.
+  useEffect(() => {
+    if (collaboratorsError) logger.error('Falha ao carregar colaboradores', 'BookingCalendarPage', new Error(collaboratorsError));
+  }, [collaboratorsError]);
 
   const eventStyleGetter = (event: CalendarEvent) => {
     const status = (event.resource.status || 'PENDING') as string;
