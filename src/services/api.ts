@@ -408,11 +408,13 @@ export const clientAPI = {
 };
 
 export const collaboratorsAPI = {
-  getAll: () => api.get('/admin/collaborators'),
-  getById: (id: string) => api.get(`/admin/collaborators/${id}`),
-  create: (data: Record<string, unknown>) => api.post('/admin/collaborators', data),
-  update: (id: string, data: Record<string, unknown>) => api.put(`/admin/collaborators/${id}`, data),
-  delete: (id: string) => api.delete(`/admin/collaborators/${id}`),
+  // Achado (revisão antes do deploy): apontava para /admin/collaborators, rota que o backend nunca
+  // teve (404). As rotas reais são /collaborators — todas só de admin, exceto GET /:id.
+  getAll: () => api.get('/collaborators'),
+  getById: (id: string) => api.get(`/collaborators/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/collaborators', data),
+  update: (id: string, data: Record<string, unknown>) => api.put(`/collaborators/${id}`, data),
+  delete: (id: string) => api.delete(`/collaborators/${id}`),
   // Enviar convite por e-mail (admin)
   invite: (email: string) => api.post('/collaborators/invite', { email }),
   // Dashboard pessoal do colaborador
@@ -422,7 +424,7 @@ export const collaboratorsAPI = {
   getMyPayments: () => api.get('/collaborators/me/payments'),
 
   // Buscar colaboradores disponíveis na data
-  getAvailable: (date: string, role?: string) => api.get('/admin/collaborators/available', { params: { date, role } }),
+  getAvailable: (date: string, role?: string) => api.get('/collaborators/available', { params: { date, role } }),
 };
 
 export const collaboratorFunctionsAPI = {

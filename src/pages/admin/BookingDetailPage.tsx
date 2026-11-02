@@ -36,6 +36,7 @@ import { formatBookingPaymentStatus } from '@/utils/typeSafeFormatters';
 import { bookingStatusLabel, bookingStatusVariant, deliveryStatusLabel, DELIVERY_STATUS_OPTIONS } from '@/utils/bookingStatus';
 import { COLLABORATOR_ROLE_OPTIONS } from '@/utils/collaboratorRoles';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
+import { useCollaborators } from '@/hooks/useCollaborators';
 import { AdminBookingForm } from '@/components/forms/AdminBookingForm';
 import { isToday } from 'date-fns';
 import { BrandLoader } from '@/components/ui/BrandLoader';
@@ -43,7 +44,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { WhatsAppConfirmationModal } from '../../components/modals/WhatsAppConfirmationModal';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { EventManagement } from '../../components/modals/EventManagement';
-import { bookingAPI, collaboratorsAPI, api } from '../../services/api';
+import { bookingAPI, api } from '../../services/api';
 import { createAndClickAnchor } from '../../utils/dom';
 import { SUPPORT_EMAIL } from '../../data/site';
 import { formatBookingCode } from '../../utils/bookingCode';
@@ -67,7 +68,6 @@ import type {
   Equipment,
   Kit,
   Service,
-  ICollaborator,
 } from '@/types/types';
 
 type BookingKitEntry = Kit | { id?: string; name?: string; kit?: Kit; items?: unknown[] };
@@ -181,7 +181,11 @@ export const BookingDetailPage = () => {
   const [confirmPrice, setConfirmPrice] = useState('');
   const [confirmCollaboratorId, setConfirmCollaboratorId] = useState('');
   const [confirmRole, setConfirmRole] = useState('ASSISTANT');
-    const [availableCollaborators, setAvailableCollaborators] = useState<ICollaborator[]>([]);
+  // Achado (revisão antes do deploy): "Confirmar reserva" e "Alocar equipe" buscavam
+  // /admin/collaborators, rota que não existe (404 — a lista abria sempre vazia). O hook da tela de
+  // Colaboradores já busca a rota real e põe em `name` o nome que vem dentro de `user`; sem isso o
+  // EventManagement quebraria em `collaborator.name.toLowerCase()`.
+  const { collaborators: availableCollaborators, fetchCollaborators: fetchAvailableCollaborators } = useCollaborators();
 
   const fetchBooking = useCallback(async () => {
     if (!id) return;
@@ -200,14 +204,6 @@ export const BookingDetailPage = () => {
   useEffect(() => {
     fetchBooking();
   }, [fetchBooking]);
-
-  const fetchAvailableCollaborators = async () => {
-    try {
-      const res = await collaboratorsAPI.getAll();
-            const list: ICollaborator[] = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
-            setAvailableCollaborators(list);
-        } catch { /* ignore */ }
-  };
 
   const handleExportBooking = () => {
     if (!booking) return;

@@ -146,16 +146,20 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
       const payload = {
         ...data,
         hourlyRate: (data.hourlyRate === '' || data.hourlyRate === null) ? undefined : Number(data.hourlyRate),
+        // Sem função personalizada o select manda '', que a validação de id do backend recusa (400).
+        functionId: data.functionId || undefined,
       };
 
+      // Achado (revisão antes do deploy): gravava em /admin/collaborators, rota que o backend nunca
+      // teve (404 em todo "Salvar"). As rotas reais, só de admin, são POST/PUT /collaborators.
       if (isEditing && initialData?.id) {
-        await apiFetch(`/admin/collaborators/${initialData.id}`, {
+        await apiFetch(`/collaborators/${initialData.id}`, {
           method: 'PUT',
           body: JSON.stringify(payload),
         });
         addNotification({ type: 'success', title: 'Sucesso', message: 'Colaborador atualizado!' });
       } else {
-        await apiFetch('/admin/collaborators', {
+        await apiFetch('/collaborators', {
           method: 'POST',
           body: JSON.stringify(payload),
         });
