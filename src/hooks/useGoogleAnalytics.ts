@@ -3,6 +3,21 @@ import { useLocation } from 'react-router-dom';
 import ReactGA from 'react-ga4';
 import { useCookieConsent } from '../contexts/CookieConsentContext';
 
+// Achado (revisão antes do deploy): a página ia para o GA com a query string inteira, e os links
+// dos e-mails levam credenciais nela (?token= em /redefinir-senha, /verify-email e
+// /complete-registration; ?token=&email= em /cadastro-convite; ?code= em /data-deletion-status).
+// Só seguem os parâmetros de campanha (utm_*, IDs de clique do Google Ads), que o GA4 lê do
+// page_location para atribuir a origem da visita, do jeito que vieram; o resto fica de fora.
+const CAMPAIGN_PARAM = /^(?:utm_\w+|gclid|gbraid|wbraid)=/;
+
+const toAnalyticsPage = (pathname: string, search: string): string => {
+  const campaign = search
+    .replace(/^\?/, '')
+    .split('&')
+    .filter((pair) => CAMPAIGN_PARAM.test(pair));
+  return campaign.length ? `${pathname}?${campaign.join('&')}` : pathname;
+};
+
 export const useGoogleAnalytics = () => {
   const location = useLocation();
   const { consent } = useCookieConsent();
@@ -21,7 +36,10 @@ export const useGoogleAnalytics = () => {
     if (gaId && consent === 'accepted' && !initialized) {
       // Defer initialization to avoid blocking main thread on initial load
       const timeoutId = setTimeout(() => {
-        ReactGA.initialize(gaId);
+        // Achado (revisão antes do deploy): sem send_page_view: false, o `config` do GA4 manda
+        // sozinho um page_view com a URL completa da barra (token incluso) e ainda duplicava o
+        // page_view da primeira página, que o efeito abaixo já envia.
+        ReactGA.initialize(gaId, { gtagOptions: { send_page_view: false } });
         setInitialized(true);
       }, 3000); // 3 second delay
 
@@ -31,8 +49,13 @@ export const useGoogleAnalytics = () => {
 
   useEffect(() => {
     if (initialized) {
-      // Send pageview with path
-      ReactGA.send({ hitType: "pageview", page: location.pathname + location.search });
+      // Todo hit do GA4 leva por padrão page_location = URL completa da barra, inclusive os
+      // ReactGA.event() das páginas (ex.: clique no WhatsApp numa página com token). O `set` troca
+      // esse padrão pela URL filtrada para os eventos seguintes; o page_view já vai com ela.
+      const page = toAnalyticsPage(location.pathname, location.search);
+      const pageLocation = `${window.location.origin}${page}`;
+      ReactGA.set({ page_location: pageLocation });
+      ReactGA.send({ hitType: "pageview", page, location: pageLocation });
     }
   }, [initialized, location]);
 };
