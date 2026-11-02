@@ -60,6 +60,13 @@ const SORT_OPTIONS = [
 // Mesmo critério do card "Clientes VIP" (gasto acumulado).
 const VIP_SPENT_THRESHOLD = 5000;
 
+// Mensagem do backend (axios) quando houver; senão, um texto genérico. O backend recusa (409)
+// cliente com reservas e diz quantas são.
+const apiErrorMessage = (err: unknown, fallback: string) => {
+  const data = (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data;
+  return data?.message || data?.error || fallback;
+};
+
 export const ClientListPage: React.FC = () => {
   const { addNotification } = useNotifications();
   const { clients: rawClients, isLoading: loading, error, fetchClients, deleteClient } = useClients();
@@ -174,12 +181,13 @@ export const ClientListPage: React.FC = () => {
         message: 'O cliente foi removido.',
       });
       setIsDeleteModalOpen(false);
-    } catch {
+    } catch (err) {
       addNotification({
         type: 'error',
         title: 'Erro ao excluir',
-        message: 'Não foi possível excluir o cliente.',
+        message: apiErrorMessage(err, 'Não foi possível excluir o cliente.'),
       });
+      setIsDeleteModalOpen(false);
     } finally {
       setIsDeleting(false);
       setClientToDelete(null);
@@ -498,7 +506,7 @@ export const ClientListPage: React.FC = () => {
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
         title="Excluir cliente?"
-        message="O cliente será removido da base. Esta ação não pode ser desfeita."
+        message="O cliente será removido da base. Cliente com reservas não pode ser excluído. Esta ação não pode ser desfeita."
         variant="danger"
         isLoading={isDeleting}
         confirmText="Excluir"
