@@ -691,7 +691,7 @@ export interface ContactSubmission {
   name: string;
   email: string;
   message: string;
-  status: 'PENDING' | 'READ';
+  isRead: boolean; // modelo Contact do backend (GET /admin/contacts): não existe "status"
   createdAt: string;
 }
 

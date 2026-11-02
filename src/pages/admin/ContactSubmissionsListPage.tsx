@@ -33,6 +33,13 @@ import {
 const PAGE_TITLE = 'Mensagens de contato';
 const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Contatos' }];
 
+// Achado (auditoria ponta a ponta): a tela lia `sub.status` ('PENDING'/'READ'), campo que a API
+// nunca mandou — GET /admin/contacts devolve o modelo Contact, com `isRead` (boolean). Toda
+// mensagem aparecia como "Lida", "Não lidas" ficava em 0, "Marcar Lida" nunca aparecia e os
+// filtros de situação esvaziavam a lista. Lida/não lida agora sai de `isRead`, o mesmo campo que
+// o PATCH de "Marcar Lida" devolve atualizado.
+type ReadFilter = 'all' | 'unread' | 'read';
+
 export const ContactSubmissionsListPage = () => {
   const { addNotification } = useNotifications();
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
@@ -41,7 +48,7 @@ export const ContactSubmissionsListPage = () => {
   
   // States for search and filter
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'PENDING' | 'READ'>('all');
+  const [filterStatus, setFilterStatus] = useState<ReadFilter>('all');
   
   // Delete modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -121,15 +128,15 @@ export const ContactSubmissionsListPage = () => {
       sub.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sub.message.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = filterStatus === 'all' || sub.status === filterStatus;
+    const matchesStatus = filterStatus === 'all' || (filterStatus === 'unread' ? !sub.isRead : sub.isRead);
     
     return matchesSearch && matchesStatus;
   });
 
   const stats = {
     total: submissions.length,
-    pending: submissions.filter(s => s.status === 'PENDING').length,
-    read: submissions.filter(s => s.status === 'READ').length
+    pending: submissions.filter(s => !s.isRead).length,
+    read: submissions.filter(s => s.isRead).length
   };
 
   if (loading && submissions.length === 0) {
@@ -226,11 +233,11 @@ export const ContactSubmissionsListPage = () => {
                 <Select
                   aria-label="Filtrar por situação"
                   value={filterStatus}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as 'all' | 'PENDING' | 'READ')}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value as ReadFilter)}
                   options={[
                     { value: 'all', label: 'Todas as mensagens' },
-                    { value: 'PENDING', label: 'Não lidas' },
-                    { value: 'READ', label: 'Lidas' }
+                    { value: 'unread', label: 'Não lidas' },
+                    { value: 'read', label: 'Lidas' }
                   ]}
                 />
               </div>
@@ -262,7 +269,7 @@ export const ContactSubmissionsListPage = () => {
               <Card 
                 key={sub.id} 
                 className={`group transition-all duration-300 hover:shadow-lg ${
-                  sub.status === 'PENDING' 
+                  !sub.isRead 
                     ? 'border-l-4 border-l-primary bg-primary/5 ring-1 ring-primary/20' 
                     : 'bg-card'
                 }`}
@@ -275,8 +282,8 @@ export const ContactSubmissionsListPage = () => {
                           <User className="h-4 w-4 text-primary" />
                         </div>
                         <h3 className="text-lg font-bold text-foreground">{sub.name}</h3>
-                        <Badge variant={sub.status === 'PENDING' ? 'primary' : 'outline'}>
-                          {sub.status === 'PENDING' ? 'Nova' : 'Lida'}
+                        <Badge variant={sub.isRead ? 'outline' : 'primary'}>
+                          {sub.isRead ? 'Lida' : 'Nova'}
                         </Badge>
                       </div>
 
@@ -300,7 +307,7 @@ export const ContactSubmissionsListPage = () => {
                     </div>
 
                     <div className="flex flex-row lg:flex-col gap-2 flex-shrink-0 self-end lg:self-start">
-                      {sub.status === 'PENDING' && (
+                      {!sub.isRead && (
                         <Button
                           onClick={() => handleMarkAsRead(sub.id)}
                           variant="secondary"
