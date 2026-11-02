@@ -344,12 +344,15 @@ export const BookingDetailsPage = () => {
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="font-medium text-success">
-                        {formatPrice(collaborator.totalPayment || 0)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {collaborator.totalHours}h
-                      </p>
+                      {/* Achado (revisão antes do deploy): aqui aparecia o cachê do colaborador
+                          (totalPayment, o "custo de equipe" da margem no painel admin), que não é
+                          preço do cliente — a API não manda mais esse valor ao cliente. As horas só
+                          aparecem quando lançadas (a escala nasce com totalHours nulo e sobrava um "h"). */}
+                      {collaborator.totalHours != null && (
+                        <p className="text-xs text-muted-foreground">
+                          {collaborator.totalHours}h
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
