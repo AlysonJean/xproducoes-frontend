@@ -119,12 +119,22 @@ export const BookingDetailsPage = () => {
     try {
       setUploading(true);
 
+      // Achado (auditoria ponta a ponta): o arquivo ia em FormData direto para
+      // POST /bookings/:id/attachments, que só aceita JSON com a URL de um arquivo já enviado — todo
+      // comprovante voltava 400 ("URL do arquivo é obrigatória.") e nunca chegava à empresa. Agora é o
+      // caminho do painel admin: sobe a imagem em /upload/image e anexa a URL devolvida.
       const formData = new FormData();
-      formData.append('file', selectedFile);
+      formData.append('image', selectedFile);
+      formData.append('folder', 'bookings');
+      const uploaded = await apiFetch<{ imageUrl?: string }>('/upload/image', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!uploaded?.imageUrl) throw new Error('Upload sem URL do arquivo');
 
       await apiFetch(`/bookings/${id}/attachments`, {
         method: 'POST',
-        body: formData,
+        body: JSON.stringify({ url: uploaded.imageUrl, filename: selectedFile.name, mimeType: selectedFile.type }),
       });
 
       // Atualizar a lista de comprovantes após upload
@@ -141,7 +151,16 @@ export const BookingDetailsPage = () => {
     } catch (error) {
       logger.error('Erro ao enviar comprovante:', 'BookingDetailsPage', error);
       // Antes a falha era silenciosa: o modal só parava de girar, sem dizer o que houve.
-      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível enviar o comprovante. Tente novamente.' });
+      // /upload tem teto de 3 envios por hora por IP (createUploadRateLimiter, no backend): nesse
+      // caso "tente novamente" enganaria — o certo é esperar.
+      const limite = error instanceof Error && /limit exceeded/i.test(error.message);
+      addNotification({
+        type: 'error',
+        title: 'Erro',
+        message: limite
+          ? 'Limite de envios atingido. Tente de novo em 1 hora.'
+          : 'Não foi possível enviar o comprovante. Tente novamente.',
+      });
     } finally {
       setUploading(false);
     }
@@ -497,7 +516,8 @@ export const BookingDetailsPage = () => {
         showCloseButton={!uploading}
       >
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">Selecione um arquivo (PDF, JPG ou PNG) para enviar.</p>
+          {/* Só imagem: o upload (/upload/image) recusa PDF (uploadService.mediaFilter aceita imagem e vídeo). */}
+          <p className="text-sm text-muted-foreground">Selecione a imagem do comprovante (JPG ou PNG) para enviar.</p>
           <div>
             <label htmlFor="proof-file-input" className="block text-sm font-medium text-foreground mb-2">
               Arquivo
@@ -505,7 +525,7 @@ export const BookingDetailsPage = () => {
             <input
               id="proof-file-input"
               type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
+              accept=".jpg,.jpeg,.png"
               onChange={handleFileSelect}
               className="w-full px-3 py-2 border-2 border-border rounded-lg bg-card text-foreground text-sm file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1 file:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
