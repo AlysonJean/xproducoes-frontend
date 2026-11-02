@@ -93,6 +93,25 @@ describe('AdminQuickProposalPage — gerar link da proposta', () => {
     expect(JSON.parse(chamadasPost()[0][1].body)).not.toHaveProperty('clientEmail');
   });
 
+  // Achado (auditoria ponta a ponta): o corpo levava `userId: user?.id`, o id do admin logado, e o
+  // backend pendurava a reserva do cliente manual no perfil de cliente do próprio admin.
+  it('cliente manual: o corpo não leva o id do admin como userId', async () => {
+    apiFetch.mockImplementation((url: string, opts?: { method?: string }) => {
+      if (url === '/bookings' && opts?.method === 'POST') return Promise.resolve({ id: 'XP-NOVA' });
+      return Promise.resolve(url === '/equipments' ? [mesa] : []);
+    });
+    renderPage();
+    await preencherProposta();
+
+    fireEvent.click(screen.getByRole('button', { name: /gerar link da proposta/i }));
+
+    await waitFor(() => expect(chamadasPost()).toHaveLength(1));
+    const corpo = JSON.parse(chamadasPost()[0][1].body);
+    expect(corpo).not.toHaveProperty('userId');
+    expect(corpo).not.toHaveProperty('clientId');
+    expect(corpo).toMatchObject({ clientName: 'Ana Souza', clientContact: '31988887777' });
+  });
+
   it('tentar de novo o mesmo envio repete a Idempotency-Key; com o formulário alterado, a chave é outra', async () => {
     let tentativas = 0;
     apiFetch.mockImplementation((url: string, opts?: { method?: string }) => {

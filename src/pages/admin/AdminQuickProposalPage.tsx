@@ -247,8 +247,11 @@ export const AdminQuickProposalPage = () => {
         .join('\n');
       const fullNotes = customItemsText ? `${notes}\n\nItens personalizados:\n${customItemsText}`.trim() : notes;
 
+      // Achado (auditoria ponta a ponta): ia também `userId: user?.id`, o id do admin logado. Com
+      // cliente manual, o backend pendurava a reserva no perfil de cliente do próprio admin (telefone
+      // da primeira proposta manual) e a confirmação ia ao admin por e-mail e a outro cliente por
+      // WhatsApp. O cliente é o cadastrado (clientId) ou o manual, gravado na própria reserva.
       const payload: Record<string, unknown> = {
-        userId: user?.id,
         clientId: clientType === 'registered' ? selectedClientId : undefined,
         clientName: clientType === 'manual' ? clientName : undefined,
         clientContact: clientType === 'manual' ? clientContact : undefined,

@@ -29,15 +29,30 @@ const idSchema = z.union([
   z.string().regex(/^[a-z0-9]{20,}$/i),
 ]);
 
+// Achado (auditoria ponta a ponta): a edição cortava o ISO do backend (UTC) e mostrava 21:00 para um
+// evento das 18:00, e o envio mandava o horário sem fuso, que o servidor (UTC) gravava 3 h antes. O
+// campo mostra o horário local e o envio volta para ISO, como na Proposta Rápida e no modal da agenda.
+const toLocalInput = (iso: string): string => {
+  const d = new Date(iso);
+  if (!iso || Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+// Achado (auditoria ponta a ponta): os campos dos dois modos eram todos obrigatórios — clientId com
+// cliente manual, nome/contato/e-mail com cliente cadastrado, kitId com equipamentos avulsos. O campo
+// do outro modo nem aparece na tela: o erro ficava invisível e "Criar reserva" não fazia nada. O
+// e-mail do cliente manual, opcional na Proposta Rápida, também barrava quem não tinha. Cada modo
+// confere os próprios campos nas validações do fim do schema ('' = select sem nada escolhido).
 const bookingFormSchema = z
   .object({
     clientType: z.enum(['registered', 'manual']),
-    clientId: idSchema,
-    clientName: z.string(),
-    clientContact: z.string(),
-    clientEmail: z.string().email(),
+    clientId: idSchema.optional().or(z.literal('')),
+    clientName: z.string().optional(),
+    clientContact: z.string().optional(),
+    clientEmail: z.string().email().optional().or(z.literal('')),
     selectionType: z.enum(['kit', 'equipments']),
-    kitId: idSchema,
+    kitId: idSchema.optional().or(z.literal('')),
     equipmentIds: z.array(idSchema),
     eventDate: z.string().min(1, 'Data do evento é obrigatória'),
     eventEndDate: z.string().min(1, 'Data final do evento é obrigatória'),
@@ -57,13 +72,15 @@ const bookingFormSchema = z
     paymentProof: z.unknown(), // FileList será tratado no submit
     paymentStatus: z.string(), // '' = não informado
   })
-  .refine(
-    (d) =>
-      d.clientType === 'registered'
-        ? Boolean(d.clientId)
-        : Boolean(d.clientName && d.clientContact),
-    { message: 'Associe um cliente ou informe os dados manuais.', path: ['clientId'] }
-  )
+  // O erro vai para o campo do modo escolhido: com cliente manual, `clientId` não está na tela.
+  .superRefine((d, ctx) => {
+    if (d.clientType === 'registered') {
+      if (!d.clientId) ctx.addIssue({ code: 'custom', path: ['clientId'], message: 'Selecione um cliente.' });
+      return;
+    }
+    if (!d.clientName?.trim()) ctx.addIssue({ code: 'custom', path: ['clientName'], message: 'Informe o nome do cliente.' });
+    if (!d.clientContact?.trim()) ctx.addIssue({ code: 'custom', path: ['clientContact'], message: 'Informe o contato do cliente.' });
+  })
   .refine(
     (d) =>
       d.selectionType === 'kit'
@@ -137,6 +154,11 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
       clientType: defaultClientType,
+      // Achado (auditoria ponta a ponta): sem valor inicial, o select abria no primeiro cliente/kit
+      // da lista (o placeholder é desabilitado) e a reserva ia para esse cliente sem ninguém
+      // escolher. '' deixa o select no placeholder e a validação pede a escolha.
+      clientId: '',
+      kitId: '',
       selectionType: 'kit',
       equipmentIds: [],
       status: 'PENDING',
@@ -229,7 +251,9 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
           const address = booking.venue || (booking as unknown as { street?: string; neighborhood?: string; city?: string; state?: string; zipCode?: string; addressNumber?: string; addressComplement?: string });
           const extractedKitId = (Array.isArray(booking.kits) && booking.kits.length > 0)
             ? booking.kits[0]?.kitId || booking.kits[0]?.id
-            : undefined;
+            // A API manda o kit da reserva em `kit`, não em `kits[]`: sem isto, a reserva só com kit
+            // abria no modo equipamentos, sem nenhum marcado, e "Salvar alterações" não fazia nada.
+            : booking.kit?.id;
           const extractedEquipmentIds = Array.isArray(booking.equipments)
             ? booking.equipments.map((e) => e.equipmentId || e.id).filter(Boolean) as string[]
             : [];
@@ -242,8 +266,8 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
             selectionType: extractedKitId ? 'kit' : 'equipments',
             kitId: extractedKitId as string | undefined,
             equipmentIds: extractedEquipmentIds,
-            eventDate: eventDate ? eventDate.substring(0, 16) : '',
-            eventEndDate: eventEndDate ? eventEndDate.substring(0, 16) : '',
+            eventDate: toLocalInput(eventDate),
+            eventEndDate: toLocalInput(eventEndDate),
             location: location,
             street: address.street || '',
             neighborhood: address.neighborhood || '',
@@ -310,11 +334,13 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
         clientId: data.clientType === 'registered' ? data.clientId : undefined,
         clientName: data.clientType === 'manual' ? data.clientName : undefined,
         clientContact: data.clientType === 'manual' ? data.clientContact : undefined,
-        clientEmail: data.clientType === 'manual' ? data.clientEmail : undefined,
+        // E-mail em branco fica fora do corpo: '' o backend recusa (400), como na Proposta Rápida.
+        clientEmail: data.clientType === 'manual' ? data.clientEmail || undefined : undefined,
         kitId: data.selectionType === 'kit' ? data.kitId : undefined,
         equipmentIds: data.selectionType === 'equipments' ? data.equipmentIds : undefined,
-        eventDate: data.eventDate,
-        eventEndDate: data.eventEndDate,
+        // Horário local digitado → ISO (ver toLocalInput).
+        eventDate: new Date(data.eventDate).toISOString(),
+        eventEndDate: new Date(data.eventEndDate).toISOString(),
         location: data.location,
         street: data.street,
         neighborhood: data.neighborhood,
