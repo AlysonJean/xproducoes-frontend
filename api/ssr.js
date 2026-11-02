@@ -51,7 +51,15 @@ export default async function handler(request, response) {
       }
     }
 
-    return response.status(statusCode).send(body)
+    // Achado (auditoria ponta a ponta): o app inteiro é uma única página do Vike (pages/all, rota
+    // "/*"), então o Vike responde 200 para qualquer endereço — inclusive endereço errado, que o
+    // React Router resolve para NotFoundPage. Durante o SSR, NotFoundPage avisa
+    // renderer/+onRenderHtml.tsx, que devolve pageContext.notFoundRendered. Só troca uma resposta
+    // que o Vike deu como sucesso; os cabeçalhos acima (inclusive o Cache-Control) continuam os de
+    // uma página: o HTML do 404 também é o mesmo para qualquer visitante.
+    const responseStatus = statusCode === 200 && pageContext.notFoundRendered === true ? 404 : statusCode
+
+    return response.status(responseStatus).send(body)
   } catch (error) {
     console.error('[SSR_HANDLER_ERROR]', error)
     response.setHeader('x-ssr-diagnostic', 'handler-catch')

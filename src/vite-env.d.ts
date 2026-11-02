@@ -17,3 +17,12 @@ interface Window {
     __TV_DEBUG?: boolean;
     __sponsorsLoaded?: number;
 }
+
+// Campo que renderer/+onRenderHtml.tsx acrescenta ao pageContext do Vike
+// (https://vike.dev/pageContext#typescript): NotFoundPage apareceu no SSR, então api/ssr.js
+// (produção) e server.ts (dev) respondem 404.
+declare namespace Vike {
+  interface PageContext {
+    notFoundRendered?: boolean;
+  }
+}

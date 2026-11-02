@@ -1,10 +1,11 @@
-import { useParams, Navigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { PageLayout } from '../components/layouts/PageLayout';
 import { SEO } from '../components/SEO';
 import { GUIDES } from '../data/guides';
 import { ChevronLeft, CalendarIcon } from 'lucide-react';
 import { Badge } from '../components/ui/StandardComponents';
+import { NotFoundPage } from './NotFoundPage';
 
 const formatGuideDate = (date: string) => {
   const parsed = new Date(`${date}T12:00:00`);
@@ -20,8 +21,11 @@ export const GuideDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const guide = GUIDES.find(g => g.slug === slug);
 
+  // Achado (auditoria ponta a ponta): guia inexistente ia para /404, que não é uma rota (casa com
+  // /:seoSlug) e terminava em página em branco; agora o próprio endereço mostra a página 404 e o SSR
+  // responde 404.
   if (!guide) {
-    return <Navigate to="/404" />;
+    return <NotFoundPage />;
   }
 
   const authorInitial = (sizeClass: string) => (

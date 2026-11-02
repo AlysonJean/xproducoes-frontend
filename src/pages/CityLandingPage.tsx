@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, Navigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { PageLayout } from '../components/layouts/PageLayout';
 import { SEO } from '../components/SEO';
@@ -16,6 +16,7 @@ import { useState, useEffect, useId } from 'react';
 import { logger } from '../utils/logger';
 import { getWhatsAppPhone } from '../utils/whatsapp';
 import { formatPhoneDisplay } from '../data/site';
+import { NotFoundPage } from './NotFoundPage';
 
 export const CityLandingPage = () => {
   const { seoSlug } = useParams<{ seoSlug: string }>();
@@ -42,9 +43,12 @@ export const CityLandingPage = () => {
     autoFetch: true
   });
 
-  // If invalid service or city, redirect to 404
+  // Achado (auditoria ponta a ponta): slug que não é serviço×cidade fazia <Navigate to="/404" /> —
+  // mas /404 também casa com /:seoSlug, então o redirecionamento caía aqui de novo e terminava numa
+  // página em branco, sem título, indexável e com status 200. Agora o próprio endereço mostra a
+  // página 404 (com noindex) e o SSR responde 404 (ver NotFoundPage).
   if (!city || !service) {
-    return <Navigate to="/404" replace />;
+    return <NotFoundPage />;
   }
 
   // Sem "| X-Produções" aqui: o <SEO>/PageLayout já acrescentam o nome do site (saía duplicado).

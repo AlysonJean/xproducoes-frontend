@@ -261,7 +261,10 @@ const AppRoutes: React.FC = () => {
       {/* Local SEO Landing Pages — achado: React Router não suporta dois parâmetros dinâmicos
           separados por um caractere literal dentro do mesmo segmento (":a-:b" nunca casava
           com nada, confirmado via matchPath); usa um único segmento e desambigua em
-          parseServiceCitySlug (localSeoConfig.ts). */}
+          parseServiceCitySlug (localSeoConfig.ts). As rotas fixas (/sobre, /ajuda…) e os
+          prefixos /cliente/*, /colaborador/* e /admin/* vencem esta pela pontuação do React
+          Router, não pela ordem; qualquer outro endereço de um segmento cai aqui e, se não for
+          serviço×cidade, mostra NotFoundPage (404). */}
       <Route path="/:seoSlug" element={<CityLandingPage />} />
 
       {/* Institutional Pages */}

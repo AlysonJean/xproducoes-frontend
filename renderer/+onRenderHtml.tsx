@@ -6,6 +6,7 @@ import type { OnRenderHtmlAsync } from 'vike/types'
 import type { HelmetServerState } from 'react-helmet-async'
 import { PageShell } from './PageShell'
 import { StaticRouter } from 'react-router'
+import { NotFoundStatusContext } from '../src/contexts/NotFoundStatusContext'
 
 import type { PageContextServer } from 'vike/types'
 
@@ -83,12 +84,22 @@ export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageCon
   // Preenchido por <HelmetProvider context={helmetContext}> DEPOIS que a árvore termina de
   // renderizar (por isso só é lido após o `await pipeToString` abaixo, nunca antes).
   const helmetContext: { helmet?: HelmetServerState } = {}
+  // Achado (auditoria ponta a ponta): para o Vike a rota "/*" sempre existe, então endereço errado
+  // saía com status 200. NotFoundPage chama esta função durante a renderização (ver
+  // src/contexts/NotFoundStatusContext.ts); o resultado volta em pageContext.notFoundRendered e
+  // api/ssr.js (produção) / server.ts (dev) respondem 404. Objeto por requisição, como o do Helmet.
+  const notFound = { rendered: false }
+  const markNotFound = () => {
+    notFound.rendered = true
+  }
 
   const streamResult = await renderToStream(
     <PageShell pageContext={pageContext} helmetContext={helmetContext}>
-      <StaticRouter location={pageContext.urlOriginal}>
-        <Page {...pageProps} />
-      </StaticRouter>
+      <NotFoundStatusContext.Provider value={markNotFound}>
+        <StaticRouter location={pageContext.urlOriginal}>
+          <Page {...pageProps} />
+        </StaticRouter>
+      </NotFoundStatusContext.Provider>
     </PageShell>,
     { disable: true }
   )
@@ -193,6 +204,7 @@ export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageCon
     documentHtml,
     pageContext: {
       // We can add some `pageContext` here, which is useful if we want to do page redirection https://vike.dev/page-redirection
+      notFoundRendered: notFound.rendered
     }
   }
 }

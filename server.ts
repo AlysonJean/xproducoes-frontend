@@ -58,7 +58,11 @@ async function startServer() {
       const { body, statusCode, earlyHints } = httpResponse
       if (res.writeEarlyHints) res.writeEarlyHints({ link: earlyHints.map((e) => e.earlyHintLink) })
       helpers(httpResponse, res)
-      res.status(statusCode).send(body)
+      // Mesma regra de api/ssr.js (a entrada de produção): endereço que o app resolveu para
+      // NotFoundPage responde 404 (ver renderer/+onRenderHtml.tsx). Este arquivo fica fora do
+      // tsconfig, por isso o tipo do campo é declarado aqui.
+      const { notFoundRendered } = pageContext as { notFoundRendered?: boolean }
+      res.status(statusCode === 200 && notFoundRendered === true ? 404 : statusCode).send(body)
     }
   })
 

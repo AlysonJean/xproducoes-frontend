@@ -4,11 +4,16 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { PageLayout } from '../components/layouts/PageLayout';
 import { buttonVariants } from '../components/ui/StandardComponents';
+import { useNotFoundStatus } from '../contexts/NotFoundStatusContext';
 
 // Achados (auditoria do design system): a página tinha dois <h1> (o do PageLayout e o "404") e
 // um <h2> repetindo "Página Não Encontrada"; o <title> também era definido duas vezes. Agora o
 // título vem só do PageLayout e o "404" é decorativo.
 export const NotFoundPage = () => {
+  // Achado (auditoria ponta a ponta): esta página saía do SSR com status 200; agora a resposta sai
+  // 404 sempre que ela aparece (ver contexts/NotFoundStatusContext.ts).
+  useNotFoundStatus();
+
   return (
     <PageLayout title="Página não encontrada" description="O recurso solicitado não existe.">
       <Helmet>
