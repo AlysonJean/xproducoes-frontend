@@ -13,8 +13,9 @@ const getSentry = (): SentryType | null => {
     if (typeof window === 'undefined') {
       return null;
     }
-    // Dynamic import to avoid circular dependency
-    return (window as unknown as { __SENTRY__?: SentryType }).__SENTRY__ || null;
+    // Dynamic import to avoid circular dependency. Gravado por Providers.tsx; não usar __SENTRY__,
+    // que é o global do próprio SDK do Sentry.
+    return (window as unknown as { __XP_SENTRY__?: SentryType }).__XP_SENTRY__ || null;
   } catch {
     return null;
   }

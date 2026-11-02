@@ -7,8 +7,12 @@ import './styles/themes/theme-variables.css'
 import './index.css'
 // Initialize Sentry
 const sentry = typeof window !== 'undefined' ? initSentry() : null
+// Achado (revisão antes do deploy): window.__SENTRY__ é o objeto global do próprio SDK do Sentry
+// (onde ele guarda o client e os escopos). Gravar ali o objeto do app trocava esse global logo
+// depois do init: o client sumia e nenhum erro chegava ao Sentry. O app usa um global próprio,
+// lido por utils/logger.ts.
 if (typeof window !== 'undefined' && sentry) {
-  (window as unknown as { __SENTRY__?: typeof sentry }).__SENTRY__ = sentry
+  (window as unknown as { __XP_SENTRY__?: typeof sentry }).__XP_SENTRY__ = sentry
 }
 const SentryErrorBoundary = (sentry && sentry.ErrorBoundary) || (({ children }: { children: React.ReactNode }) => children)
 
