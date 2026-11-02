@@ -106,7 +106,7 @@ describe('BookingDetailsPage (cliente) — envio de comprovante', () => {
     expect(apiFetch).not.toHaveBeenCalledWith('/bookings/XP-1/attachments', expect.anything());
   });
 
-  // /upload tem teto de 3 envios por hora por IP; o 429 traz "Upload limit exceeded. Try again in 1 hour."
+  // /upload tem teto de 3 envios por hora por conta; o 429 traz "Upload limit exceeded. Try again in 1 hour."
   it('teto de envios atingido: diz para esperar 1 hora, não para tentar de novo', async () => {
     apiFetch.mockImplementation((endpoint: string, options?: RequestInit) =>
       endpoint === '/upload/image'

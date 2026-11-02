@@ -151,7 +151,7 @@ export const BookingDetailsPage = () => {
     } catch (error) {
       logger.error('Erro ao enviar comprovante:', 'BookingDetailsPage', error);
       // Antes a falha era silenciosa: o modal só parava de girar, sem dizer o que houve.
-      // /upload tem teto de 3 envios por hora por IP (createUploadRateLimiter, no backend): nesse
+      // /upload tem teto de 3 envios por hora por conta (createUploadRateLimiter, no backend): nesse
       // caso "tente novamente" enganaria — o certo é esperar.
       const limite = error instanceof Error && /limit exceeded/i.test(error.message);
       addNotification({
