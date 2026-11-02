@@ -34,9 +34,21 @@ export default function WhatsappPage() {
 
   useEffect(() => {
     fetchStatus();
-    // Polling a cada 30s (otimizado para Free Tier Neon: 1.200 → 120 requests/hora)
-    const interval = setInterval(fetchStatus, 30000);
-    return () => clearInterval(interval);
+    // Polling a cada 30s (otimizado para Free Tier Neon: 1.200 → 120 requests/hora).
+    // Achado (auditoria ponta a ponta): seguia com a aba escondida — /whatsapp/status passa por
+    // authenticateWithDB (lê o banco). Pausa com a aba escondida e, ao voltar, consulta na hora.
+    const interval = setInterval(() => {
+      if (document.hidden) return;
+      fetchStatus();
+    }, 30000);
+    const onVisibilityChange = () => {
+      if (!document.hidden) fetchStatus();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, [fetchStatus]);
 
   const handleRestart = async () => {

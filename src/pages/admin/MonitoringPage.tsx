@@ -114,10 +114,23 @@ export const MonitoringPage: React.FC = () => {
     }
   }, []);
 
+  // Achado (auditoria ponta a ponta): o polling de 30 s seguia com a aba escondida — cada consulta
+  // passa por authenticateWithDB (lê o banco), e uma aba esquecida mantinha o Neon (plano free)
+  // acordado. Pausa com a aba escondida e, ao voltar, atualiza na hora.
   useEffect(() => {
     loadDashboardData(true);
-    const interval = setInterval(() => loadDashboardData(false), REFRESH_INTERVAL_MS);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (document.hidden) return;
+      loadDashboardData(false);
+    }, REFRESH_INTERVAL_MS);
+    const onVisibilityChange = () => {
+      if (!document.hidden) loadDashboardData(false);
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, [loadDashboardData]);
 
   const testIntegration = async (integrationName: string) => {

@@ -60,10 +60,25 @@ export function BookingChatPanel({ bookingId, currentUserId }: { bookingId: stri
   // Verifica por novas mensagens periodicamente enquanto o painel está aberto — não há
   // integração de socket para chat no frontend ainda (só REST), então polling simples é o
   // caminho proporcional aqui em vez de introduzir um novo padrão de tempo real sem precedente.
+  // Achado (auditoria ponta a ponta): o polling seguia com a aba escondida — cada consulta lê o
+  // banco, e uma aba esquecida aberta mantinha o Neon (plano free) acordado o dia todo, gastando a
+  // cota mensal. Agora pausa enquanto a aba está escondida e, ao voltar, busca na hora em vez de
+  // esperar o próximo ciclo.
   useEffect(() => {
     if (!chatId) return;
-    const interval = setInterval(() => loadMessages(chatId), 6000);
-    return () => clearInterval(interval);
+    const tick = () => {
+      if (document.hidden) return;
+      loadMessages(chatId);
+    };
+    const onVisibilityChange = () => {
+      if (!document.hidden) loadMessages(chatId);
+    };
+    const interval = setInterval(tick, 6000);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, [chatId, loadMessages]);
 
   useEffect(() => {

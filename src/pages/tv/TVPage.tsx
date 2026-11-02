@@ -266,6 +266,14 @@ const FloatingOverlay: React.FC<{ config: WallConfig }> = ({ config }) => (
     </div>
 );
 
+// Achado (auditoria ponta a ponta): a tela de pareamento consultava /tv/config (que lê o banco) a
+// cada 5 s sem prazo — e a TV fica ligada e visível, então uma TV esquecida nessa tela mantinha o
+// banco (Neon free) acordado 24 h e gastava a cota mensal. A busca agora para depois de
+// PAIRING_WINDOW_MS; a tela avisa, e um toque, uma tecla do controle ou a aba voltar a ficar visível
+// retomam com o MESMO código (sem ?code= na URL, recarregar a página sortearia outro).
+const PAIRING_POLL_MS = 5000;
+const PAIRING_WINDOW_MS = 15 * 60 * 1000;
+
 const TVPage: React.FC = () => {
     const [searchParams] = useSearchParams();
     const [config, setConfig] = useState<WallConfig | null>(() => TV_DEV_FALLBACK_ENABLED ? TV_DEV_FALLBACK_CONFIG : null);
@@ -289,6 +297,7 @@ const TVPage: React.FC = () => {
         if (code) return code;
         return Math.floor(1000 + Math.random() * 9000).toString();
     });
+    const [pairingPaused, setPairingPaused] = useState(false);
 
     // Refs for intervals/timeouts
     const nextSlideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -329,22 +338,46 @@ const TVPage: React.FC = () => {
     }, [searchParams, pairingCode]); // fetchConfig não lê `config` — a checagem "só busca se ainda não tem" é feita pelo chamador
 
     useEffect(() => {
+        if (config || pairingPaused) return;
+        const startedAt = Date.now();
         const tick = () => {
+            if (Date.now() - startedAt >= PAIRING_WINDOW_MS) {
+                setPairingPaused(true); // janela esgotada: para até alguém retomar
+                return;
+            }
             if (document.hidden) return; // Pausa polling se a aba não estiver visível
-            if (!config) fetchConfig();
+            fetchConfig();
         };
 
         // Busca inicial + polling unificados no mesmo `tick`. A busca inicial roda via
         // setTimeout (não direto no corpo do efeito) para não disparar setState de forma
         // síncrona dentro do efeito (react-hooks/set-state-in-effect).
         const initial = setTimeout(tick, 0);
-        const interval = setInterval(tick, 5000);
+        const interval = setInterval(tick, PAIRING_POLL_MS);
 
         return () => {
             clearTimeout(initial);
             clearInterval(interval);
         };
-    }, [fetchConfig, config]);
+    }, [fetchConfig, config, pairingPaused]);
+
+    // Pareamento pausado: um toque, uma tecla (controle remoto) ou a aba voltar a ficar visível
+    // retomam a busca, com o mesmo código.
+    useEffect(() => {
+        if (!pairingPaused) return;
+        const resume = () => setPairingPaused(false);
+        const onVisibilityChange = () => {
+            if (!document.hidden) resume();
+        };
+        window.addEventListener('pointerdown', resume);
+        window.addEventListener('keydown', resume);
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return () => {
+            window.removeEventListener('pointerdown', resume);
+            window.removeEventListener('keydown', resume);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+        };
+    }, [pairingPaused]);
 
     // Warn when QR is enabled but slug is missing (always declared to keep Hooks order stable)
     useEffect(() => {
@@ -512,6 +545,20 @@ const TVPage: React.FC = () => {
                 <p className="text-2xl uppercase tracking-widest text-white/70">Código de pareamento</p>
                 <h1 className="text-8xl font-bold tracking-widest">{pairingCode}</h1>
                 <p className="text-3xl text-white/70">No painel, entre em Admin › Social para parear esta TV</p>
+                {pairingPaused && (
+                    <div role="status" className="flex flex-col items-center gap-4 mt-6">
+                        <p className="text-2xl text-white/70">
+                            Pareamento pausado após {PAIRING_WINDOW_MS / 60000} minutos. Toque na tela ou aperte qualquer tecla para continuar.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => setPairingPaused(false)}
+                            className="rounded-full bg-white px-8 py-4 text-2xl font-bold text-black focus:outline-none focus-visible:ring-4 focus-visible:ring-white/60"
+                        >
+                            Continuar pareamento
+                        </button>
+                    </div>
+                )}
             </div>
         );
     }
