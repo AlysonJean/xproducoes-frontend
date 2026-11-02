@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,6 +51,12 @@ const BREADCRUMBS = [
   { name: 'Reservas', href: '/admin/reservas' },
   { name: 'Nova proposta' },
 ];
+
+// Mesma geração de chave do apiFetch (src/services/api.ts).
+const newIdempotencyKey = (): string =>
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
 
 interface ProposalItem {
   id: string;
@@ -110,6 +116,12 @@ export const AdminQuickProposalPage = () => {
   // Falha ao carregar o catálogo virava só um toast e a tela seguia com o catálogo vazio.
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+
+  // Achado (revisão antes do deploy): cada clique em "Gerar link da proposta" mandava uma
+  // Idempotency-Key nova, então tentar de novo depois de um erro podia gravar a reserva duas
+  // vezes. O mesmo envio (mesmo corpo) repete a chave e o backend devolve a reserva já gravada;
+  // se o formulário mudou, é outro envio e ganha chave nova.
+  const lastSubmissionRef = useRef<{ body: string; key: string } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -259,12 +271,21 @@ export const AdminQuickProposalPage = () => {
         ...(kitIdItem?.sourceId && { kitId: kitIdItem.sourceId }),
       };
 
-      const response = await apiFetch<{ success: boolean; data: { id: string } }>('/bookings', {
+      const body = JSON.stringify(payload);
+      const previous = lastSubmissionRef.current;
+      const idempotencyKey = previous && previous.body === body ? previous.key : newIdempotencyKey();
+      lastSubmissionRef.current = { body, key: idempotencyKey };
+
+      // Achado (revisão antes do deploy): o apiFetch já desembrulha { success, data } e devolve a
+      // própria reserva; ler `.data.id` dava sempre vazio, e toda criação bem-sucedida terminava
+      // em "Reserva criada mas ID não retornado.".
+      const booking = await apiFetch<{ id: string }>('/bookings', {
         method: 'POST',
-        body: JSON.stringify(payload)
+        body,
+        headers: { 'Idempotency-Key': idempotencyKey }
       });
 
-      const bookingId = response?.data?.id;
+      const bookingId = booking?.id;
       if (!bookingId) throw new Error('Reserva criada mas ID não retornado.');
 
       addNotification({ type: 'success', title: 'Proposta gerada!', message: 'O link de proposta está disponível na página da reserva.' });
