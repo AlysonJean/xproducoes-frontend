@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/StandardComponents';
 import { useAuth } from '../../contexts/AuthContext';
 import { SentryTestButton } from '../../components/SentryTestButton';
+import { AdminEmailTestCard } from '../../components/admin/AdminEmailTestCard';
 import { useNotifications } from '@/contexts/NotificationContext';
 import {
   MonitoringService,
@@ -264,6 +265,9 @@ export const MonitoringPage: React.FC = () => {
                 </Button>
             </div>
         </div>
+
+        {/* D1: fora do carregamento do painel, para o teste funcionar mesmo com o resto em erro. */}
+        <AdminEmailTestCard />
 
         {loadError && dashboardData && errorAlert}
 
