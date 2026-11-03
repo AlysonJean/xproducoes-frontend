@@ -131,7 +131,7 @@ export const CityLandingPage = () => {
           {/* Achado: eram <Link><Button> aninhados (botão dentro de link). Agora o próprio link
               tem a aparência de botão. */}
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link to="/contato" className={buttonVariants({ size: 'lg', className: 'w-full sm:w-auto' })}>
+            <Link to="/briefing" className={buttonVariants({ size: 'lg', className: 'w-full sm:w-auto' })}>
               Solicitar Orçamento Grátis
             </Link>
             <Link to="/portfolio" className={buttonVariants({ variant: 'outline', size: 'lg', className: 'w-full sm:w-auto' })}>

@@ -1,39 +1,17 @@
 import React from 'react';
-import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
-import { Button } from './ui/StandardComponents';
-import { useWhatsAppModal } from './modals/ModalContext';
-import { getWhatsAppPhone } from '../utils/whatsapp';
+import { Link } from 'react-router-dom';
+import { ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
+import { buttonVariants } from './ui/StandardComponents';
 
-// Achados (auditoria do design system): o telefone estava fixo aqui (e repetido no Header) em vez
-// de vir de getWhatsAppPhone(), e o ícone era um envelope para uma ação que abre o WhatsApp.
-export const RequestQuoteButton: React.FC<{ className?: string }> = ({ className }) => {
-  const { openWhatsAppModal } = useWhatsAppModal();
-
-  const handleOpenQuote = () => {
-    openWhatsAppModal({
-      phoneNumber: getWhatsAppPhone(),
-      title: 'Pedir Orçamento',
-      subject: 'Pedido de Orçamento',
-      message:
-        'Olá! Gostaria de receber um orçamento para o meu evento.\n- Tipo de evento: \n- Data (aprox.): \n- Cidade: Belo Horizonte, MG\n- Número aproximado de pessoas: \n- Observações / referências (link ou breve descrição): ',
-    });
-  };
-
-  return (
-    <Button
-      variant="primary"
-      size="sm"
-      className={className}
-      onClick={handleOpenQuote}
-      aria-label="Solicitar orçamento"
-    >
-      <span className="flex items-center gap-2">
-        <ChatBubbleLeftRightIcon className="w-4 h-4" strokeWidth={2} aria-hidden="true" />
-        <span className="hidden lg:inline">Solicitar Orçamento</span>
-        <span className="lg:hidden">Orçamento</span>
-      </span>
-    </Button>
-  );
-};
+// "Solicitar Orçamento" leva sempre ao briefing. Achado: o mesmo texto abria a janela do WhatsApp no
+// topo do site, o WhatsApp direto na home e a página de contato nas páginas por cidade. Quem prefere
+// conversar segue com o botão flutuante do WhatsApp; quem já montou o carrinho usa "Seguir para Orçamento".
+export const RequestQuoteButton: React.FC<{ className?: string }> = ({ className }) => (
+  <Link to="/briefing" className={buttonVariants({ size: 'sm', className })} aria-label="Solicitar orçamento">
+    <ClipboardDocumentListIcon className="w-4 h-4" strokeWidth={2} aria-hidden="true" />
+    <span className="hidden lg:inline">Solicitar Orçamento</span>
+    <span className="lg:hidden">Orçamento</span>
+  </Link>
+);
 
 export default RequestQuoteButton;

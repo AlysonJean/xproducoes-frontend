@@ -14,11 +14,10 @@ import {
   PhotoIcon,
   PhoneIcon,
   BookOpenIcon,
-  ChatBubbleLeftRightIcon,
+  ClipboardDocumentListIcon,
   ArrowRightStartOnRectangleIcon,
   ArrowLeftEndOnRectangleIcon,
 } from '@heroicons/react/24/outline';
-import { getWhatsAppPhone } from '@/utils/whatsapp';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/hooks/useCart';
 import { useCompare } from '@/contexts/CompareContext';
@@ -26,7 +25,6 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { ThemeToggle } from './ui/ThemeToggle';
 import ThemedLogo from './ui/ThemedLogo';
 import RequestQuoteButton from './RequestQuoteButton';
-import { useWhatsAppModal } from './modals/ModalContext';
 import { getDashboardRoute } from '@/utils/authUtils';
 
 export const Header = () => {
@@ -34,7 +32,6 @@ export const Header = () => {
   const { itemCount } = useCart();
   const { items: compareItems } = useCompare();
   const { companyName } = useSettings();
-  const { openWhatsAppModal } = useWhatsAppModal();
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -287,25 +284,15 @@ export const Header = () => {
 
             {/* Links de Ação Mobile */}
             <div className="space-y-2">
-                {/* Solicitar Orçamento (mobile) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    openWhatsAppModal({
-                      phoneNumber: getWhatsAppPhone(),
-                      title: 'Pedir Orçamento',
-                      subject: 'Pedido de Orçamento',
-                      message:
-                        'Olá! Gostaria de receber um orçamento para o meu evento.\n- Tipo de evento: \n- Data (aprox.): \n- Cidade: Belo Horizonte, MG\n- Número aproximado de pessoas: \n- Observações / referências (link ou breve descrição): ',
-                    });
-                    setIsMobileMenuOpen(false);
-                  }}
+                {/* Solicitar Orçamento (mobile): mesmo destino do botão do topo (RequestQuoteButton). */}
+                <Link
+                  to="/briefing"
+                  onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center space-x-4 p-4 rounded-2xl text-lg font-medium transition-all duration-300 hover:bg-muted/50 text-foreground/80"
                 >
-                  {/* Ícone de conversa (era um envelope, mas a ação abre o WhatsApp). */}
-                  <ChatBubbleLeftRightIcon className="w-6 h-6" strokeWidth={1.75} aria-hidden="true" />
+                  <ClipboardDocumentListIcon className="w-6 h-6" strokeWidth={1.75} aria-hidden="true" />
                   <span>Solicitar Orçamento</span>
-                </button>
+                </Link>
 
                 {/* Favoritos */}
                 <Link

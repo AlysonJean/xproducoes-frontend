@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
 import ReactGA from 'react-ga4';
 import { v4 as uuidv4 } from 'uuid';
-import { MapPin, Calendar, Clock, Info, User, Phone, Navigation2, Building2, Tag, X, Mail } from 'lucide-react';
+import { MapPin, Calendar, Clock, Info, User, Phone, Navigation2, Building2, Tag, X, Mail, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -17,8 +17,10 @@ import {
   Card,
   Form,
   Alert,
-  Grid
+  Grid,
+  buttonVariants
 } from '../../components/ui/StandardComponents';
+import { BrandLoader } from '../../components/ui/BrandLoader';
 import { quoteRequestSchema } from '../../validators/bookingSchema';
 import type { Booking } from '../../types/types';
 import { z } from 'zod';
@@ -80,14 +82,16 @@ function getEquipmentUnitPrice(item: { pricePerHour?: number | string; equipment
 }
 
 export const QuoteRequestPage: React.FC = () => {
-  const { cart, clearCart } = useCart();
+  const { cart, clearCart, isLoading: cartLoading } = useCart();
   const equipments = useMemo(() => cart?.equipments ?? [], [cart]);
   const services = useMemo(() => cart?.services ?? [], [cart]);
   const kit = cart?.kit;
   const navigate = useNavigate();
-  const { user, setAuthenticatedUser } = useAuth();
+  const { user, setAuthenticatedUser, isLoading: authLoading } = useAuth();
   const { addNotification } = useNotifications();
   const [serverError, setServerError] = useState<string | null>(null);
+  // O envio esvazia o carrinho antes de ir para a tela de sucesso: sem isto, a tela de carrinho vazio piscaria.
+  const [sent, setSent] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
@@ -234,6 +238,7 @@ export const QuoteRequestPage: React.FC = () => {
       const resp = await api.post(endpoint, bookingData, {
         headers: { 'Idempotency-Key': idempotencyKey }
       });
+      setSent(true);
 
       // api.ts desembrulha { success, data } automaticamente, então resp.data já é o `data`
       // do backend. Para /bookings ele é a própria reserva; para /bookings/guest ele é
@@ -297,6 +302,41 @@ export const QuoteRequestPage: React.FC = () => {
       });
     }
   };
+
+  // Achado: com o carrinho vazio (o link de indicação cai aqui), a pessoa preenchia o formulário
+  // inteiro e só no envio descobria que precisava de itens. Agora escolhe o caminho antes.
+  if (!sent && !equipments.length && !services.length && !kit?.id) {
+    if (cartLoading || authLoading) {
+      return (
+        <ClientPage width="4xl">
+          <BrandLoader label="Carregando seu carrinho…" />
+        </ClientPage>
+      );
+    }
+    return (
+      <ClientPage width="4xl">
+        <Card className="space-y-8 p-6 text-center shadow-xl sm:p-12">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden="true">
+            <ShoppingBag className="h-10 w-10" />
+          </div>
+          <div className="space-y-4">
+            <h1 className="text-3xl font-bold text-foreground sm:text-4xl">Seu carrinho está vazio</h1>
+            <p className="mx-auto max-w-md text-lg text-muted-foreground">
+              Para receber um orçamento, conte como vai ser o seu evento ou escolha os equipamentos que você quer.
+            </p>
+          </div>
+          <div className="flex flex-col justify-center gap-4 pt-2 sm:flex-row">
+            <Link to="/briefing" className={buttonVariants({ size: 'lg' })}>
+              Conte como é o evento
+            </Link>
+            <Link to="/equipamentos" className={buttonVariants({ variant: 'outline', size: 'lg' })}>
+              Ver Equipamentos
+            </Link>
+          </div>
+        </Card>
+      </ClientPage>
+    );
+  }
 
   return (
     <ClientPage

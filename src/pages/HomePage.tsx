@@ -10,7 +10,6 @@ import type { Category, Kit, PortfolioItem } from '../types/types';
 import { transformKit } from '../utils/transformKit';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { InteractiveQuiz } from '../components/ui/InteractiveQuiz';
-import { getWhatsAppPhone } from '../utils/whatsapp';
 
 import { Grid, buttonVariants } from '../components/ui/StandardComponents';
 import { TestimonialCard } from '../components/ui/TestimonialCard';
@@ -168,14 +167,9 @@ export const HomePage = () => {
             Transformamos sua ideia em realidade com equipamentos de alta performance e tecnologia de ponta para experiências sensoriais inesquecíveis.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a
-              href={`https://wa.me/${getWhatsAppPhone()}?text=${encodeURIComponent('Olá! Vim pelo site e gostaria de um orçamento para locação de equipamentos em BH...')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={buttonVariants({ size: 'lg', className: 'w-full sm:w-auto rounded-full' })}
-            >
+            <Link to="/briefing" className={buttonVariants({ size: 'lg', className: 'w-full sm:w-auto rounded-full' })}>
               Solicitar Orçamento
-            </a>
+            </Link>
           </div>
           <TrustStrip className="mt-10" />
         </div>
