@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { normalizeString } from '../../utils/string';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePendingRequests, formatPendingAge, PENDING_LEVEL_CLASSES } from '../../hooks/usePendingRequests';
 
 interface MenuGroup {
   name: string;
@@ -129,6 +130,20 @@ export const AdminSidebar: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
   const sidebarRef = useRef<HTMLDivElement>(null);
+  // P3: número de pedidos de clientes aguardando resposta no item "Reservas", com a cor da idade do
+  // mais antigo (cinza até 4 h, amarelo até 24 h, vermelho depois). Os outros itens seguem com o
+  // badge fixo do menu, se houver.
+  const pending = usePendingRequests(user?.role === 'ADMIN');
+  const isReservas = (item: MenuItem) => item.href === '/admin/reservas';
+  const badgeFor = (item: MenuItem) => (isReservas(item) ? pending?.count || 0 : item.badge || 0);
+  const badgeClassFor = (item: MenuItem) =>
+    isReservas(item) && pending?.level
+      ? PENDING_LEVEL_CLASSES[pending.level]
+      : 'bg-destructive/10 text-destructive border-destructive/20';
+  const badgeTitleFor = (item: MenuItem) =>
+    isReservas(item) && pending?.count
+      ? `${pending.count} ${pending.count === 1 ? 'pedido aguardando' : 'pedidos aguardando'} resposta, o mais antigo ${formatPendingAge(pending.oldestAgeHours)}`
+      : undefined;
 
   // Restaurar posição do scroll
   useEffect(() => {
@@ -273,11 +288,16 @@ export const AdminSidebar: React.FC = () => {
                           </div>
                         </div>
 
-                        {item.badge && (
-                          <span className="px-2 py-0.5 text-xs font-medium bg-destructive/10 text-destructive rounded-full">
-                            {item.badge}
+                        {/* Ternário: com `&&`, badge 0 aparecia como um "0" solto no menu. */}
+                        {badgeFor(item) ? (
+                          <span
+                            className={`px-2 py-0.5 text-xs font-medium rounded-full border ${badgeClassFor(item)}`}
+                            title={badgeTitleFor(item)}
+                          >
+                            {badgeFor(item)}
+                            <span className="sr-only"> {badgeTitleFor(item)}</span>
                           </span>
-                        )}
+                        ) : null}
                       </Link>
                     );
                   })}

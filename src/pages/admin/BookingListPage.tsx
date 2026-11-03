@@ -9,7 +9,7 @@ import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
 import { normalizeString } from '../../utils/string';
 import { bookingPhone, toWhatsAppNumber } from '../../utils/bookingContact';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import {
@@ -75,7 +75,13 @@ export const BookingListPage = () => {
   const [bookings, setBookings] = useState<BookingListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  // ?status=PENDING vem do cartão "pedidos aguardando resposta" do painel (P3): a lista já abre
+  // filtrada. Valor fora das opções do filtro é ignorado.
+  const [searchParams] = useSearchParams();
+  const [filterStatus, setFilterStatus] = useState<string>(() => {
+    const fromUrl = searchParams.get('status');
+    return fromUrl && STATUS_FILTER_OPTIONS.some((o) => o.value === fromUrl) ? fromUrl : 'all';
+  });
   const [filterPayment, setFilterPayment] = useState<string>('all');
   const [exporting, setExporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
