@@ -601,7 +601,18 @@ export interface BookingDetails {
   services?: Service[];
   totalPrice?: number | string;
   discount?: number;
+  // Legado (D8a): o valor final é só o totalPrice; o serviceValue não é mais gravado.
   serviceValue?: number;
+  // Itens da proposta (técnico, montagem e frete entram aqui como itens).
+  items?: Array<{
+    id?: string;
+    description: string;
+    quantity?: number;
+    unitPrice?: number | string;
+    discount?: number | string | null;
+    totalPrice?: number | string;
+    itemType?: 'EQUIPMENT' | 'SERVICE' | 'KIT' | 'CUSTOM';
+  }>;
   paymentProofUrl?: string;
   eventLocation?: string;
   location?: string;

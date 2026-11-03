@@ -112,6 +112,12 @@ describe('AdminQuickProposalPage — gerar link da proposta', { timeout: 20000 }
     expect(corpo).not.toHaveProperty('userId');
     expect(corpo).not.toHaveProperty('clientId');
     expect(corpo).toMatchObject({ clientName: 'Ana Souza', clientContact: '31988887777' });
+    // D8a: os itens da proposta vão como itens da reserva (antes, os personalizados viravam texto nas
+    // observações e sumiam da página do cliente e do PDF).
+    expect(corpo.items).toEqual([
+      expect.objectContaining({ description: mesa.name, itemType: 'EQUIPMENT', equipmentId: mesa.id, quantity: 1 }),
+    ]);
+    expect(corpo.notes ?? '').not.toContain('Itens personalizados');
   });
 
   it('tentar de novo o mesmo envio repete a Idempotency-Key; com o formulário alterado, a chave é outra', async () => {

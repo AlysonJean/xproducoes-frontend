@@ -386,26 +386,34 @@ export const BookingDetailsPage = () => {
           <Card padding>
             <h2 className="text-xl font-semibold mb-4 text-foreground">Resumo Financeiro</h2>
             <div className="space-y-3">
-              <div className="flex justify-between gap-3">
-                <span className="text-muted-foreground">Equipamentos:</span>
-                <span className="font-medium text-foreground">
-                  {formatPrice(booking.totalPrice || 0)}
-                </span>
-              </div>
-              {/* Ternário: com `&&`, serviceValue = 0 aparecia como um "0" solto na tela. */}
-              {booking.serviceValue ? (
+              {/* D8a (aprovado em 02/11/2026): um valor final só. Antes a tela mostrava "Equipamentos"
+                  com o totalPrice e "Serviços" com o serviceValue, e o Total somava os dois — como
+                  texto, porque o valor chega do banco como "1500.00": R$ 15.001.500,00. Agora os itens
+                  da proposta (técnico, montagem e frete inclusive) e um Total só, o mesmo do PDF, do
+                  WhatsApp e da confirmação. */}
+              {booking.items && booking.items.length > 0 ? (
+                <ul className="space-y-2" aria-label="Itens da proposta">
+                  {booking.items.map((item, i) => (
+                    <li key={item.id ?? i} className="flex justify-between gap-3">
+                      <span className="text-muted-foreground min-w-0 break-words">
+                        {item.quantity && item.quantity > 1 ? `${item.quantity}× ` : ''}{item.description}
+                      </span>
+                      <span className="font-medium text-foreground shrink-0">{formatPrice(Number(item.totalPrice) || 0)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {Number(booking.discountAmount) > 0 ? (
                 <div className="flex justify-between gap-3">
-                  <span className="text-muted-foreground">Serviços:</span>
-                  <span className="font-medium text-foreground">
-                    {formatPrice(booking.serviceValue)}
-                  </span>
+                  <span className="text-muted-foreground">Desconto{booking.coupon?.code ? ` (${booking.coupon.code})` : ''}:</span>
+                  <span className="font-medium text-foreground">− {formatPrice(Number(booking.discountAmount))}</span>
                 </div>
               ) : null}
-              <div className="border-t border-border pt-3">
+              <div className={booking.items?.length || Number(booking.discountAmount) > 0 ? 'border-t border-border pt-3' : ''}>
                 <div className="flex justify-between gap-3 text-lg font-bold">
                   <span className="text-foreground">Total:</span>
                   <span className="text-primary">
-                    {formatPrice((Number(booking.totalPrice) || 0) + (booking.serviceValue || 0))}
+                    {formatPrice(Number(booking.totalPrice) || 0)}
                   </span>
                 </div>
               </div>

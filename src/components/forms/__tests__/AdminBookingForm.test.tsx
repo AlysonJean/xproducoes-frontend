@@ -32,7 +32,7 @@ const EVENTO: Array<[string, string]> = [
   ['Estado', 'MG'],
   ['CEP', '30110-000'],
   ['Número', '123'],
-  ['Valor do Serviço (R$)', '500'],
+  ['Valor final (R$)', '500'],
 ];
 
 const novaReservaManual = async () => {
@@ -58,7 +58,7 @@ const reservaDigitada = (extra: Record<string, unknown> = {}) => ({
   clientContact: '31988887777',
   clientEmail: 'ana@cliente.test',
   ...ENDERECO,
-  status: 'CONFIRMED', deliveryStatus: 'PENDING', serviceValue: 500,
+  status: 'CONFIRMED', deliveryStatus: 'PENDING', totalPrice: 500,
   ...extra,
 }) as unknown as Booking;
 // Cliente cadastrado: o nome da conta é diferente do digitado no orçamento (a tela mostra o da conta).
@@ -308,6 +308,30 @@ describe('AdminBookingForm — a edição grava o que mostra', () => {
     const corpo = await salvar(onSuccess);
     expect(corpo).not.toHaveProperty('clientName');
     expect(corpo).not.toHaveProperty('equipmentIds');
+    // D8a: o "Valor do Serviço" do rascunho antigo volta como valor final (totalPrice).
+    expect(corpo).toMatchObject({ totalPrice: 500 });
+    expect(corpo).not.toHaveProperty('serviceValue');
+  });
+
+  // D8a (aprovado em 02/11/2026): um valor final só. O campo "Valor final (R$)" é opcional, vai como
+  // totalPrice e nunca como serviceValue; em branco, o servidor calcula pelos itens.
+  it('valor final: vem preenchido com o total da reserva e vai como totalPrice', async () => {
+    const onSuccess = await editar(reservaDigitada({ totalPrice: '1250.00' }));
+    expect(screen.getByLabelText('Valor final (R$)')).toHaveValue(1250);
+    fireEvent.change(screen.getByLabelText('Valor final (R$)'), { target: { value: '1400' } });
+
+    const corpo = await salvar(onSuccess);
+    expect(corpo).toMatchObject({ totalPrice: 1400 });
+    expect(corpo).not.toHaveProperty('serviceValue');
+  });
+
+  it('valor final em branco: salva sem totalPrice (o total atual fica como está)', async () => {
+    const onSuccess = await editar(reservaDigitada({ totalPrice: 0 }));
+    expect(screen.getByLabelText('Valor final (R$)')).toHaveValue(null);
+
+    const corpo = await salvar(onSuccess);
+    expect(corpo).not.toHaveProperty('totalPrice');
+    expect(corpo).not.toHaveProperty('serviceValue');
   });
 
   it('criação continua com tipo de cliente, escolha de kit e status (que vai no corpo)', async () => {

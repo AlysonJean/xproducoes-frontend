@@ -69,8 +69,10 @@ const bookingFormSchema = (isEditing: boolean) => z
     notes: z.string(),
     status: z.string(),
     deliveryStatus: z.string(),
-    // Campos admin-only
-    serviceValue: z.number().positive('Valor do serviço deve ser positivo'),
+    // Campos admin-only. D8a: um valor final só, opcional. Em branco, o servidor calcula pelos itens
+    // (kit e equipamentos pelas horas do evento, serviços com preço fixo). Antes era "Valor do
+    // Serviço", obrigatório e gravado à parte do total, e a página do cliente somava os dois.
+    finalValue: z.number().positive('O valor final deve ser maior que zero').optional(),
     paymentProof: z.unknown(), // FileList será tratado no submit
     paymentStatus: z.string(), // '' = não informado
   })
@@ -111,7 +113,7 @@ interface ClientResponse {
 // Reserva como a API devolve: cliente cadastrado em clientId/client (nome em client.user, ou em
 // client.name como a lista de Reservas monta), contato do cliente digitado na própria reserva
 // (clientName/clientContact/clientEmail), kit em `kit`, equipamentos e serviços em listas.
-interface RawBooking extends Omit<Booking, 'kits' | 'equipments'> {
+interface RawBooking extends Omit<Booking, 'kits' | 'equipments' | 'totalPrice'> {
   clientId?: string | null;
   client?: { name?: string; user?: { name?: string } };
   clientName?: string | null;
@@ -121,7 +123,7 @@ interface RawBooking extends Omit<Booking, 'kits' | 'equipments'> {
   venue?: { street?: string; neighborhood?: string; city?: string; state?: string; zipCode?: string; addressNumber?: string; addressComplement?: string };
   equipments?: Array<{ name?: string }>;
   services?: Array<{ name?: string }>;
-  serviceValue?: number;
+  totalPrice?: number | string | null;
 }
 
 // Na edição: o tipo de cliente é o da reserva, e os itens dela aparecem só para leitura.
@@ -182,7 +184,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
       equipmentIds: [],
       status: 'PENDING',
       deliveryStatus: 'PENDING',
-      serviceValue: undefined,
+      finalValue: undefined,
       paymentStatus: '',
     },
   });
@@ -213,7 +215,11 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
     if (!draftPrompt) return;
     // Na edição o tipo de cliente é o da reserva (o seletor não aparece), mesmo com rascunho da
     // versão anterior do formulário, que deixava trocar.
-    reset(editedBooking ? { ...draftPrompt.values, clientType: editClientTypeOf(editedBooking) } : draftPrompt.values);
+    // D8a: rascunho da versão anterior guardava o "Valor do Serviço" (serviceValue); ele volta como
+    // valor final, para não perder o que foi digitado.
+    const legacy = draftPrompt.values as typeof draftPrompt.values & { serviceValue?: number };
+    const values = legacy.finalValue === undefined && legacy.serviceValue ? { ...legacy, finalValue: legacy.serviceValue } : legacy;
+    reset(editedBooking ? { ...values, clientType: editClientTypeOf(editedBooking) } : values);
     setDraftPrompt(null);
   };
 
@@ -298,7 +304,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
             notes: (booking.notes as string) || '',
             status: (booking.status as string) || 'PENDING',
             deliveryStatus: (booking.deliveryStatus as string) || 'PENDING',
-            serviceValue: booking.serviceValue || undefined,
+            finalValue: Number(booking.totalPrice) || undefined,
             paymentStatus: booking.paymentStatus || '',
           });
         }
@@ -379,8 +385,10 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
 
       // Adicionar campos admin se for admin
       if (isAdmin) {
-        if (data.serviceValue) {
-          payload.serviceValue = data.serviceValue;
+        // D8a: o valor final vai como totalPrice; em branco, o servidor calcula (na edição, o total
+        // atual fica como está).
+        if (data.finalValue) {
+          payload.totalPrice = data.finalValue;
         }
         if (paymentProofUrl) {
           payload.paymentProofUrl = paymentProofUrl;
@@ -577,13 +585,17 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
           <FormSection title="Configurações Admin" description="Campos disponíveis apenas para administradores">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="Valor do Serviço (R$)"
+                label="Valor final (R$)"
                 type="number"
                 step="0.01"
-                {...register('serviceValue', { valueAsNumber: true })}
-                error={errors.serviceValue?.message}
-                placeholder="0.00"
-                description="Valor total do serviço para esta reserva"
+                min="0"
+                {...register('finalValue', {
+                  // Em branco vira "sem valor final" (o servidor calcula), não NaN.
+                  setValueAs: (v: unknown) => (v === '' || v === null || v === undefined ? undefined : Number(v)),
+                })}
+                error={errors.finalValue?.message}
+                placeholder="Calculado pelos itens"
+                description="O valor que o cliente paga, em todo lugar (página, PDF, WhatsApp, agenda). Em branco, o valor é calculado pelos itens."
               />
               <Input
                 type="file"

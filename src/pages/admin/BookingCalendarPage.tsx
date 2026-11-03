@@ -89,7 +89,8 @@ const BookingDetailsModal = ({
   const canConfirm = booking.status === 'DRAFT' || booking.status === 'PENDING';
 
   const equipmentCount = (booking.equipments?.length || 0) + (booking.kits?.length || 0);
-  const totalValue = booking.serviceValue || booking.totalPrice || 0;
+  // D8a: um valor final só, o totalPrice (antes: serviceValue || totalPrice, e cada tela mostrava um).
+  const totalValue = booking.totalPrice || 0;
 
   return (
     <Modal
@@ -258,7 +259,7 @@ const DayEventsModal = ({
     <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto pr-2">
       {events.map((ev) => {
         const b = ev.resource;
-        const totalValue = b.serviceValue || b.totalPrice || 0;
+        const totalValue = b.totalPrice || 0;
         return (
           <button
              type="button"
@@ -784,7 +785,7 @@ export const BookingCalendarPage = () => {
                             </div>
                             <div className="flex items-center justify-between text-sm text-muted-foreground">
                                 <span>Valor</span>
-                                <span className="text-foreground">{formatPrice(toNumber(hovered.resource.serviceValue || hovered.resource.totalPrice))}</span>
+                                <span className="text-foreground">{formatPrice(toNumber(hovered.resource.totalPrice))}</span>
                             </div>
                         </div>
                     </Card>

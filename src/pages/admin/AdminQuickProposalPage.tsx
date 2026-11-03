@@ -192,7 +192,8 @@ export const AdminQuickProposalPage = () => {
     setItems(prev => prev.map(item => {
       if (item.id !== id) return item;
       const updated = { ...item, [field]: value };
-      updated.totalPrice = (updated.unitPrice * updated.quantity) - updated.discount;
+      // Nunca negativo: desconto maior que o item zera a linha (o servidor recusa total negativo).
+      updated.totalPrice = Math.max(0, (updated.unitPrice * updated.quantity) - updated.discount);
       return updated;
     }));
   };
@@ -240,12 +241,20 @@ export const AdminQuickProposalPage = () => {
       const serviceIds = items.filter(i => i.type === 'SERVICE' && i.sourceId).map(i => i.sourceId!);
       const kitIdItem = items.find(i => i.type === 'KIT' && i.sourceId);
 
-      // Itens CUSTOM entram nas observações
-      const customItemsText = items
-        .filter(i => i.type === 'CUSTOM')
-        .map(i => `• ${i.description} (R$ ${i.unitPrice} x ${i.quantity})`)
-        .join('\n');
-      const fullNotes = customItemsText ? `${notes}\n\nItens personalizados:\n${customItemsText}`.trim() : notes;
+      // D8a (aprovado em 02/11/2026): os itens vão como itens da reserva. Antes, os personalizados
+      // (técnico, montagem, frete) iam só como texto nas observações e não apareciam na página do
+      // cliente nem no PDF da reserva; agora aparecem em todo lugar e somam o total.
+      const proposalItems = items.map((i) => ({
+        description: i.description,
+        quantity: Math.max(1, Math.round(i.quantity) || 1),
+        unitPrice: Math.max(0, i.unitPrice),
+        discount: Math.max(0, i.discount),
+        totalPrice: Math.max(0, i.totalPrice),
+        itemType: i.type,
+        ...(i.type === 'EQUIPMENT' && i.sourceId ? { equipmentId: i.sourceId } : {}),
+        ...(i.type === 'SERVICE' && i.sourceId ? { serviceId: i.sourceId } : {}),
+        ...(i.type === 'KIT' && i.sourceId ? { kitId: i.sourceId } : {}),
+      }));
 
       // Achado (auditoria ponta a ponta): ia também `userId: user?.id`, o id do admin logado. Com
       // cliente manual, o backend pendurava a reserva no perfil de cliente do próprio admin (telefone
@@ -268,7 +277,8 @@ export const AdminQuickProposalPage = () => {
         zipCode,
         eventDate: new Date(eventDate).toISOString(),
         eventEndDate: new Date(eventEndDate).toISOString(),
-        notes: fullNotes,
+        notes,
+        items: proposalItems,
         totalPrice: subtotal,
         status,
         ...(equipmentIds.length > 0 && { equipmentIds }),

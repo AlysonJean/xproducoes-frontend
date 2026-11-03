@@ -29,6 +29,9 @@ const manualBookingSchema = z
     addressNumber: z.string().min(1, 'Número é obrigatório.'),
     addressComplement: z.string().optional(),
     notes: z.string().optional(),
+    // D8a: valor final opcional, o mesmo do formulário completo. Em branco, o servidor calcula pelo
+    // kit ou equipamentos e pelas horas do evento.
+    finalValue: z.number().positive('O valor final deve ser maior que zero.').optional(),
   })
   .refine(
         (data) => {
@@ -159,8 +162,10 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
     setServerError(null);
     try {
       // Converter as datas para formato ISO datetime
+      const { finalValue, ...rest } = data;
       const payload = {
-        ...data,
+        ...rest,
+        ...(finalValue ? { totalPrice: finalValue } : {}),
         eventDate: new Date(data.eventDate).toISOString(),
         eventEndDate: new Date(data.eventEndDate).toISOString(),
         status: 'CONFIRMED' as const,
@@ -307,6 +312,20 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
           <Input
             {...register('addressComplement')}
             label="Complemento (opcional)"
+            className="w-full"
+          />
+
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            {...register('finalValue', {
+              setValueAs: (v: unknown) => (v === '' || v === null || v === undefined ? undefined : Number(v)),
+            })}
+            label="Valor final (R$, opcional)"
+            placeholder="Calculado pelos itens"
+            description="Em branco, o valor é calculado pelo kit ou pelos equipamentos e pelas horas do evento."
+            error={errors.finalValue?.message}
             className="w-full"
           />
 

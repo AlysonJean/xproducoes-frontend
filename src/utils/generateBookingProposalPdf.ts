@@ -70,16 +70,27 @@ export async function generateBookingProposalPdf(booking: BookingDetails): Promi
   const addressLines = doc.splitTextToSize(`Endereço: ${fullAddress || '-'}`, 180);
   doc.text(addressLines, 14, 102);
 
+  // D8a (aprovado em 02/11/2026): com itens na proposta, o PDF lista os itens (técnico, montagem e
+  // frete inclusive), que somam o Total abaixo. Sem itens (reserva antiga ou pedido do site), lista o
+  // kit, os equipamentos e os serviços do catálogo, como antes.
+  const ITEM_TYPE_LABEL: Record<string, string> = { EQUIPMENT: 'EQUIPAMENTO', SERVICE: 'SERVIÇO', KIT: 'KIT', CUSTOM: 'OUTRO' };
   const rows: string[][] = [];
-  if (booking.kit) {
-    rows.push([booking.kit.name || 'Kit', 'KIT', formatPrice(booking.kit.price ?? 0)]);
+  if (booking.items && booking.items.length > 0) {
+    booking.items.forEach((item) => {
+      const qty = item.quantity && item.quantity > 1 ? `${item.quantity}× ` : '';
+      rows.push([`${qty}${item.description}`, ITEM_TYPE_LABEL[item.itemType ?? ''] ?? 'ITEM', formatPrice(Number(item.totalPrice) || 0)]);
+    });
+  } else {
+    if (booking.kit) {
+      rows.push([booking.kit.name || 'Kit', 'KIT', formatPrice(booking.kit.price ?? 0)]);
+    }
+    (booking.equipments || []).forEach((eq) => {
+      rows.push([eq.name, 'EQUIPAMENTO', `${formatPrice(eq.pricePerHour ?? 0)}/h`]);
+    });
+    (booking.services || []).forEach((s) => {
+      rows.push([s.name, 'SERVIÇO', formatPrice(s.price ?? 0)]);
+    });
   }
-  (booking.equipments || []).forEach((eq) => {
-    rows.push([eq.name, 'EQUIPAMENTO', `${formatPrice(eq.pricePerHour ?? 0)}/h`]);
-  });
-  (booking.services || []).forEach((s) => {
-    rows.push([s.name, 'SERVIÇO', formatPrice(s.price ?? 0)]);
-  });
 
   autoTable(doc, {
     startY: 112,
