@@ -82,6 +82,9 @@ const ComparePage = lazy(() =>
 const QuoteRequestPage = lazy(() =>
   import('./pages/client/QuoteRequestPage').then((m) => ({ default: m.QuoteRequestPage }))
 );
+const BriefingPage = lazy(() =>
+  import('./pages/client/BriefingPage').then((m) => ({ default: m.BriefingPage }))
+);
 const QuoteSuccessPage = lazy(() =>
   import('./pages/client/QuoteSuccessPage').then((m) => ({ default: m.QuoteSuccessPage }))
 );
@@ -248,6 +251,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/comparar" element={<ComparePage />} />
       <Route path="/carrinho" element={<CartPage />} />
       <Route path="/orcamento" element={<QuoteRequestPage />} />
+      <Route path="/briefing" element={<BriefingPage />} />
       <Route path="/orcamento-sucesso" element={<QuoteSuccessPage />} />
       <Route path="/orcamento-sucesso/:bookingId" element={<QuoteSuccessPage />} />
       <Route path="/reserva-sucesso" element={<LegacyQuoteSuccessRedirect />} />

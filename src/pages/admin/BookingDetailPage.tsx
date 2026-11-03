@@ -1168,6 +1168,19 @@ export const BookingDetailPage = () => {
                 </li>
               </ol>
 
+              {/* Respostas da página /briefing: o pedido chega sem itens do catálogo, e é daqui que sai a proposta. */}
+              {booking.specialRequests?.trim() && (
+                <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20">
+                  <div className="flex items-center gap-2 text-primary">
+                    <FileText size={16} />
+                    <h4 className="text-xs font-medium uppercase tracking-wider">Briefing do cliente</h4>
+                  </div>
+                  <p className="text-sm text-foreground mt-3 leading-relaxed whitespace-pre-line break-words">
+                    {booking.specialRequests}
+                  </p>
+                </div>
+              )}
+
               <div className="p-4 rounded-2xl bg-muted/30 border border-border">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <FileText size={16} />

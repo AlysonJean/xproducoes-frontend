@@ -68,6 +68,8 @@ export interface QuoteSuccessState {
   booking?: QuoteBooking | null;
   formData?: QuoteFormValues;
   cartItems?: MessageItem[];
+  /** Vindo da página /briefing, sem sessão antes do envio: o acesso foi criado agora ou o e-mail já tinha conta. */
+  briefingAccount?: 'created' | 'existing';
   /** Marcado depois de abrir o WhatsApp sozinho, para não abrir de novo ao recarregar a página. */
   whatsAppOpened?: boolean;
 }
@@ -122,6 +124,12 @@ export const QuoteSuccessPage = () => {
   const [loadingBooking, setLoadingBooking] = useState(false);
   const autoOpened = useRef(false);
   const [openedNow, setOpenedNow] = useState(false);
+  // Num efeito, como o resto do que depende do state da navegação: o servidor não o tem, e um texto
+  // que dependesse dele no primeiro render divergiria ao recarregar (erro de hidratação).
+  const [briefingAccount, setBriefingAccount] = useState<QuoteSuccessState['briefingAccount']>(undefined);
+  useEffect(() => {
+    setBriefingAccount(state?.briefingAccount);
+  }, [state?.briefingAccount]);
 
   useEffect(() => {
     if (!shouldFetch) return;
@@ -203,6 +211,15 @@ export const QuoteSuccessPage = () => {
         <p>
           Número do pedido: <strong className="break-all text-foreground">{bookingId}</strong>
         </p>
+      )}
+      {briefingAccount === 'created' && (
+        <p>
+          Criamos seu acesso com o e-mail informado. Em "Ver meus pedidos" você acompanha tudo. Para entrar
+          de outro aparelho, use "Esqueceu sua senha?" na tela de login.
+        </p>
+      )}
+      {briefingAccount === 'existing' && (
+        <p>Este e-mail já tem cadastro: o pedido entrou na sua conta. Entre para acompanhar.</p>
       )}
       {openedNow && (
         <p role="status" className="text-sm font-semibold text-success">

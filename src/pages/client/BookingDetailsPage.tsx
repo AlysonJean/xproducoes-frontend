@@ -220,6 +220,9 @@ export const BookingDetailsPage = () => {
     );
   }
 
+  // Pedido do briefing chega sem itens: o total fica zerado até a equipe preparar o orçamento.
+  const hasPrice = Number(booking.totalPrice) > 0 || Boolean(booking.serviceValue);
+
   return (
     <ClientPage
       width="6xl"
@@ -389,7 +392,7 @@ export const BookingDetailsPage = () => {
               <div className="flex justify-between gap-3">
                 <span className="text-muted-foreground">Equipamentos:</span>
                 <span className="font-medium text-foreground">
-                  {formatPrice(booking.totalPrice || 0)}
+                  {hasPrice ? formatPrice(booking.totalPrice || 0) : 'Em preparação'}
                 </span>
               </div>
               {/* Ternário: com `&&`, serviceValue = 0 aparecia como um "0" solto na tela. */}
@@ -405,7 +408,7 @@ export const BookingDetailsPage = () => {
                 <div className="flex justify-between gap-3 text-lg font-bold">
                   <span className="text-foreground">Total:</span>
                   <span className="text-primary">
-                    {formatPrice((Number(booking.totalPrice) || 0) + (booking.serviceValue || 0))}
+                    {hasPrice ? formatPrice((Number(booking.totalPrice) || 0) + (booking.serviceValue || 0)) : 'Em preparação'}
                   </span>
                 </div>
               </div>

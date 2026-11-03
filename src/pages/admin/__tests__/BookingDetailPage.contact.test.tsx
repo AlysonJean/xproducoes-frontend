@@ -55,14 +55,18 @@ const reservaDigitada = {
   clientName: 'Bruno Lima', clientContact: '31977776666', clientEmail: null,
 };
 
-const renderFicha = async (reserva: object) => {
+const renderFichaUnmountable = async (reserva: object) => {
   bookingAPI.getById.mockResolvedValue({ data: reserva });
-  render(
+  const view = render(
     <MemoryRouter initialEntries={['/admin/reservas/XP']}>
       <Routes><Route path="/admin/reservas/:id" element={<BookingDetailPage />} /></Routes>
     </MemoryRouter>,
   );
   await screen.findByRole('heading', { name: /^Reserva / });
+  return view;
+};
+const renderFicha = async (reserva: object) => {
+  await renderFichaUnmountable(reserva);
 };
 
 const waMe = (open: MockInstance<typeof window.open>) => {
@@ -158,5 +162,15 @@ describe('BookingDetailPage — contato do cliente nos botões manuais', () => {
 
     expect(screen.getByText(/Para mudar o status, use os botões de Logística ou a lista de Reservas/)).toBeInTheDocument();
     expect(screen.queryByText(/Use o botão Editar para mudar o status/)).not.toBeInTheDocument();
+  });
+
+  it('mostra as respostas do briefing na ficha; sem briefing, o cartão não aparece', async () => {
+    const first = await renderFichaUnmountable({ ...reservaDigitada, specialRequests: 'Evento: Casamento\nPrecisa de: Som, DJ' });
+    expect(screen.getByRole('heading', { name: 'Briefing do cliente' })).toBeInTheDocument();
+    expect(screen.getByText(/Precisa de: Som, DJ/)).toBeInTheDocument();
+    first.unmount();
+
+    await renderFicha(reservaDigitada);
+    expect(screen.queryByRole('heading', { name: 'Briefing do cliente' })).not.toBeInTheDocument();
   });
 });

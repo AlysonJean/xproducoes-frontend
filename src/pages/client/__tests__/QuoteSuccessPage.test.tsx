@@ -94,4 +94,19 @@ describe('QuoteSuccessPage', () => {
     expect(openWhatsApp.mock.calls[0][1]).toContain('Kit Som');
     expect(screen.getByRole('link', { name: 'Ver meus pedidos' })).toHaveAttribute('href', '/minhas-reservas');
   });
+
+  it('vindo do briefing: conta que o acesso foi criado ou que o e-mail já tinha cadastro', async () => {
+    const first = renderAt({ pathname: '/orcamento-sucesso/XP-1', state: { ...FORM_STATE, briefingAccount: 'created' } });
+    expect(await screen.findByText(/Criamos seu acesso com o e-mail informado/)).toBeInTheDocument();
+    first.unmount();
+
+    const second = renderAt({ pathname: '/orcamento-sucesso/XP-1', state: { ...FORM_STATE, briefingAccount: 'existing' } });
+    expect(await screen.findByText(/Este e-mail já tem cadastro/)).toBeInTheDocument();
+    second.unmount();
+
+    renderAt({ pathname: '/orcamento-sucesso/XP-1', state: FORM_STATE });
+    await screen.findByText(/Recebemos seu pedido/);
+    expect(screen.queryByText(/Criamos seu acesso/)).toBeNull();
+    expect(screen.queryByText(/Este e-mail já tem cadastro/)).toBeNull();
+  });
 });
