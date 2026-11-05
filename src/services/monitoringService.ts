@@ -96,6 +96,14 @@ export interface ResourceUsage {
 }
 
 // ===== MONITORING API SERVICE =====
+// Resposta de POST /monitoring/email/test (D1): o e-mail de teste ao dono saiu, ou o motivo.
+export interface EmailTestResult {
+  success: boolean;
+  to?: string;
+  message: string;
+  error?: { code?: string; responseCode?: number; message: string };
+}
+
 export const monitoringAPI = {
   // Dashboard executivo
   getDashboard: (): Promise<DashboardData> => 
@@ -114,6 +122,18 @@ export const monitoringAPI = {
 
   testIntegration: (name: string): Promise<IntegrationHealth> => 
     api.post(`/monitoring/integrations/${name}/test`).then(res => res.data.result || res.data),
+
+  // D1: manda na hora um e-mail de teste para ADMIN_EMAIL. Falha também devolve o corpo (motivo e
+  // erro do servidor de e-mail), em vez de só lançar.
+  sendTestEmail: (): Promise<EmailTestResult> =>
+    api.post('/monitoring/email/test').then(
+      res => res.data as EmailTestResult,
+      (error: { response?: { data?: Partial<EmailTestResult> } }) => {
+        const body = error?.response?.data;
+        if (body && typeof body.message === 'string') return { success: false, ...body } as EmailTestResult;
+        throw error;
+      },
+    ),
 
   // Métricas
   getPerformanceMetrics: (): Promise<PerformanceMetrics> => 
