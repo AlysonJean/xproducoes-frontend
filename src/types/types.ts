@@ -555,7 +555,10 @@ export interface CalendarBooking {
     collaborator?: ICollaborator & { avatar?: string };
     role?: string;
   }>;
-  internalNotes?: string;
+  // Só admin recebe a agenda: observação interna e a observação que o cliente vê (reservas antigas
+  // guardavam a interna em notes).
+  internalNotes?: string | null;
+  notes?: string | null;
   serviceValue?: number;
   totalPrice?: number;
 }

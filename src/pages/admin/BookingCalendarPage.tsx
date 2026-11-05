@@ -449,7 +449,9 @@ export const BookingCalendarPage = () => {
         const s = filters.search.toLowerCase();
         const client = booking.client?.name?.toLowerCase() || '';
         const title = booking.eventTitle?.toLowerCase() || '';
-        const notes = booking.internalNotes?.toLowerCase() || '';
+        // Observação interna (Proposta Rápida, desde d3fe9fc) e a observação das reservas antigas, que
+        // guardavam esse texto em notes. A rota da agenda é só do admin.
+        const notes = [booking.internalNotes, booking.notes].filter(Boolean).join(' ').toLowerCase();
         const phone = booking.client?.phone?.toLowerCase() || '';
         if (![client, title, notes, phone].some((x) => x.includes(s))) return false;
       }
