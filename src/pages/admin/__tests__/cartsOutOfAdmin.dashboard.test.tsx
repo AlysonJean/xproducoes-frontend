@@ -87,7 +87,8 @@ describe('AdminDashboardPage — Próximos eventos', () => {
     expect(screen.queryByText('Cliente E')).not.toBeInTheDocument();
 
     const urls = apiFetch.mock.calls.map(([url]) => String(url));
-    const bookingCalls = urls.filter((url) => url.startsWith('/admin/bookings'));
+    // O resumo de pedidos pendentes (P3, cartão do topo) é outra consulta e fica fora desta conta.
+    const bookingCalls = urls.filter((url) => url.startsWith('/admin/bookings') && !url.startsWith('/admin/bookings/pending-summary'));
     expect(bookingCalls).toHaveLength(1);
     const params = new URL(bookingCalls[0], 'http://x').searchParams;
     expect(params.get('startDate')).toBe('2026-11-18T03:00:00.000Z'); // meia-noite de 18/11 em Brasília

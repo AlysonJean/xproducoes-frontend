@@ -9,6 +9,8 @@ import { fetchUpcomingAdminBookings } from '../../services/adminBookings';
 import { bookingStatusLabel, bookingStatusVariant } from '../../utils/bookingStatus';
 import { collaboratorRoleLabel } from '../../utils/collaboratorRoles';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { PendingRequestsCard } from '../../components/admin/PendingRequestsCard';
+import { usePendingRequests } from '../../hooks/usePendingRequests';
 import {
   Users,
   Calendar,
@@ -232,6 +234,7 @@ const EfficiencyStats = ({ stats, loading }: { stats: AdminDashboardStats | null
 export const AdminDashboardPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const pendingRequests = usePendingRequests(user?.role === 'ADMIN');
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [activities, setActivities] = useState<DashboardActivity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -352,6 +355,9 @@ export const AdminDashboardPage = () => {
             </div>
           </div>
         </div>
+
+        {/* P3: pedidos de clientes aguardando resposta (mesma consulta do número no menu). */}
+        <PendingRequestsCard summary={pendingRequests} />
 
         {error && (
           <Alert
