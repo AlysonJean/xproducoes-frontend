@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { bookingEmail, bookingPhone, toWhatsAppNumber } from '../bookingContact';
 
-// Mesma regra do servidor (whatsappService.bookingPhone, e-mail de aprovação em bookingStatusService):
-// o contato informado na reserva vem antes do cadastro; contato que é e-mail não serve de telefone.
+// Mesma regra do servidor (utils/bookingContact.bookingPhone, que o WhatsApp e a agenda usam, e o e-mail
+// de aprovação em bookingStatusService): o contato informado na reserva vem antes do cadastro; contato
+// que é e-mail não serve de telefone.
 describe('bookingContact', () => {
   const cadastro = { phone: '31911112222', user: { email: 'conta@cliente.test' } };
 

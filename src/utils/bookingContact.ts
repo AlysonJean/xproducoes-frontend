@@ -4,9 +4,10 @@
 // de cliente digitado (sem cadastro, contato na própria reserva) abria o WhatsApp sem destinatário. A
 // ficha punha o telefone e o e-mail do cadastro antes dos informados na reserva: a reserva que a
 // Proposta Rápida pendurou no cadastro de cliente do próprio admin (antes de 89ef066) mandava a
-// proposta para o telefone de outro cliente. Mesma regra do servidor (whatsappService.bookingPhone e o
-// e-mail de aprovação em bookingStatusService): o contato desta reserva vem antes; o do cadastro fica
-// para quando ele falta ou é um e-mail (o orçamento do site sem telefone manda o e-mail no contato).
+// proposta para o telefone de outro cliente. Mesma regra do servidor (utils/bookingContact.bookingPhone,
+// que o WhatsApp e a agenda usam, e o e-mail de aprovação em bookingStatusService): o contato desta
+// reserva vem antes; o do cadastro fica para quando ele falta ou é um e-mail (o orçamento do site sem
+// telefone manda o e-mail no contato).
 
 type BookingContactSource = {
   clientContact?: string | null;

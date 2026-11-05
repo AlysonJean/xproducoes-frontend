@@ -13,6 +13,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { BookingChatPanel } from '../../components/client/BookingChatPanel';
 import { generateBookingProposalPdf } from '../../utils/generateBookingProposalPdf';
+import { bookingEmail, bookingPhone } from '../../utils/bookingContact';
 
 export const BookingDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -490,15 +491,18 @@ export const BookingDetailsPage = () => {
             <dl className="space-y-2">
               <div>
                 <dt className="text-sm text-muted-foreground">Nome</dt>
-                <dd className="font-medium text-foreground">{booking.client?.name || 'Não informado'}</dd>
+                <dd className="font-medium text-foreground">{booking.client?.user?.name || booking.clientName || 'Não informado'}</dd>
               </div>
+              {/* Achado (auditoria ponta a ponta): o telefone era só o do cadastro, e o e-mail lia client.email,
+                  que a API não manda (o do cadastro é o da conta), e saía sempre "Não informado". Agora é o
+                  mesmo contato do PDF desta tela: o informado na reserva antes do cadastro (utils/bookingContact). */}
               <div>
                 <dt className="text-sm text-muted-foreground">Telefone</dt>
-                <dd className="font-medium text-foreground">{booking.client?.phone || 'Não informado'}</dd>
+                <dd className="font-medium text-foreground">{bookingPhone(booking) || 'Não informado'}</dd>
               </div>
               <div>
                 <dt className="text-sm text-muted-foreground">E-mail</dt>
-                <dd className="font-medium text-foreground break-all">{booking.client?.email || 'Não informado'}</dd>
+                <dd className="font-medium text-foreground break-all">{bookingEmail(booking) || 'Não informado'}</dd>
               </div>
             </dl>
           </Card>

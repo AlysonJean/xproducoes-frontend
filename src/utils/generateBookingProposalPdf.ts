@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatPrice } from './formatPrice';
+import { bookingEmail, bookingPhone } from './bookingContact';
 import type { BookingDetails } from '../types/types';
 
 // Achado (auditoria de produto): o gerador de proposta em PDF (jsPDF + branding) só existia
@@ -46,8 +47,11 @@ export async function generateBookingProposalPdf(booking: BookingDetails): Promi
   doc.text(`Reserva: #${booking.id}`, 14, 43);
 
   const clientName = booking.client?.user?.name || booking.client?.name || booking.clientName || 'Cliente';
-  const clientPhone = booking.client?.phone || booking.clientContact || '-';
-  const clientEmail = booking.client?.email || booking.client?.user?.email || booking.clientEmail || '-';
+  // Achado (auditoria ponta a ponta): o telefone e o e-mail do cadastro vinham antes dos informados na
+  // reserva, o contrário do servidor e do PDF do painel. Mesma regra de utils/bookingContact (a API não
+  // manda client.email: o e-mail do cadastro é o da conta, client.user.email).
+  const clientPhone = bookingPhone(booking) || '-';
+  const clientEmail = bookingEmail(booking) || '-';
 
   doc.setFontSize(11);
   doc.text('Cliente', 14, 52);

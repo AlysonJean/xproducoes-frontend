@@ -2,6 +2,7 @@ import type { BookingListItem } from '../types/types';
 import type { BookingStatus } from '../types/enums';
 import { formatBookingPaymentStatus, formatBookingStatus } from './typeSafeFormatters';
 import { DELIVERY_STATUS_LABELS } from './bookingStatus';
+import { bookingEmail, bookingPhone } from './bookingContact';
 import { downloadSheet, formatDateTimeBR as formatDateTime, toMoney as money, type SheetRow } from './spreadsheet';
 
 // Exportação das reservas da tela de Reservas (o que estiver filtrado) para planilha .xlsx —
@@ -28,8 +29,12 @@ export function bookingsToSheetRows(bookings: BookingExportSource[]): SheetRow[]
     'Evento': b.eventTitle || '',
     'Cliente': b.client?.user?.name || b.clientName || '',
     'Empresa': b.client?.companyName || '',
-    'E-mail': b.client?.user?.email || b.clientEmail || '',
-    'Telefone': b.client?.phone || b.clientContact || '',
+    // Achado (auditoria ponta a ponta): o e-mail e o telefone do cadastro vinham antes dos informados
+    // na reserva; a reserva que a Proposta Rápida pendurou no cadastro do próprio admin (antes de
+    // 89ef066) saía com o telefone de outro cliente e o e-mail da conta do admin. Mesma regra da ficha
+    // e do WhatsApp (utils/bookingContact); contato que é e-mail não vai mais para a coluna Telefone.
+    'E-mail': bookingEmail(b) || '',
+    'Telefone': bookingPhone(b) || '',
     'Cidade': b.city || '',
     'Status': formatBookingStatus(b.status as BookingStatus),
     'Entrega': (b.deliveryStatus && DELIVERY_LABELS[b.deliveryStatus]) || b.deliveryStatus || '',
