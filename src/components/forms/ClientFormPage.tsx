@@ -103,7 +103,14 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
     return Object.keys(e).length === 0;
   };
 
+  // Achado (auditoria ponta a ponta): "Reenviar convite" chamava uma rota que não existia e, mesmo com ela,
+  // a janela seguiria mostrando o link do cadastro, que o reenvio derruba (o servidor troca o token). Agora a
+  // janela mostra o link novo, o aviso diz se o e-mail saiu e a recusa do servidor aparece com o motivo. Um
+  // reenvio por vez: com dois cliques seguidos, a janela podia ficar com o link do pedido que respondeu por
+  // último, já derrubado pelo outro. A trava fica na função, não no estado do formulário, que fecha logo
+  // depois de criar o cliente (ClientListPage).
   const openInviteModal = (data: { tempPassword?: string; inviteUrl?: string; clientId?: string }) => {
+    let resending = false;
     openModal('invite', {
       inviteUrl: data.inviteUrl,
       tempPassword: data.tempPassword,
@@ -112,11 +119,24 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
           addNotification({ type: 'error', title: 'Erro', message: 'ID do cliente não disponível para reenviar' });
           return;
         }
+        if (resending) return;
+        resending = true;
         try {
-          await apiFetch(`/admin/clients/${data.clientId}/resend-invite`, { method: 'POST' });
-          addNotification({ type: 'success', title: 'Sucesso', message: 'Convite reenviado' });
-        } catch {
-          addNotification({ type: 'error', title: 'Erro', message: 'Falha ao reenviar convite' });
+          const result = await apiFetch<{ inviteUrl?: string; emailSent?: boolean }>(
+            `/admin/clients/${data.clientId}/resend-invite`,
+            { method: 'POST' },
+          );
+          if (result?.inviteUrl) openInviteModal({ ...data, inviteUrl: result.inviteUrl });
+          if (result?.emailSent === false) {
+            addNotification({ type: 'warning', title: 'Atenção', message: 'Novo link gerado, mas o e-mail não foi enviado. O link anterior deixou de valer: copie o novo e mande ao cliente.' });
+          } else {
+            addNotification({ type: 'success', title: 'Sucesso', message: 'Convite reenviado. O link anterior deixou de valer.' });
+          }
+        } catch (err: unknown) {
+          const message = err instanceof Error && err.message ? err.message : 'Falha ao reenviar convite';
+          addNotification({ type: 'error', title: 'Erro', message });
+        } finally {
+          resending = false;
         }
       },
     });
