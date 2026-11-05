@@ -245,7 +245,6 @@ export const AdminQuickProposalPage = () => {
         .filter(i => i.type === 'CUSTOM')
         .map(i => `• ${i.description} (R$ ${i.unitPrice} x ${i.quantity})`)
         .join('\n');
-      const fullNotes = customItemsText ? `${notes}\n\nItens personalizados:\n${customItemsText}`.trim() : notes;
 
       // Achado (auditoria ponta a ponta): ia também `userId: user?.id`, o id do admin logado. Com
       // cliente manual, o backend pendurava a reserva no perfil de cliente do próprio admin (telefone
@@ -268,7 +267,11 @@ export const AdminQuickProposalPage = () => {
         zipCode,
         eventDate: new Date(eventDate).toISOString(),
         eventEndDate: new Date(eventEndDate).toISOString(),
-        notes: fullNotes,
+        // Achado (auditoria ponta a ponta): o campo diz "Não aparecem na proposta", mas ia para `notes`, que sai no
+        // PDF e na área do cliente. Agora vai para internalNotes, que o cliente não recebe. Os itens personalizados
+        // ficam em `notes`: são parte do que foi proposto.
+        notes: customItemsText ? `Itens personalizados:\n${customItemsText}` : undefined,
+        internalNotes: notes.trim() || undefined,
         totalPrice: subtotal,
         status,
         ...(equipmentIds.length > 0 && { equipmentIds }),
@@ -436,12 +439,8 @@ export const AdminQuickProposalPage = () => {
     doc.setFontSize(12);
     doc.text(`Total estimado: ${formatPrice(subtotal)}`, 14, tableEndY + 10);
 
-    doc.setFontSize(10);
-    const notesText = notes?.trim() ? notes.trim() : 'Sem observacoes internas.';
-    const notesLines = doc.splitTextToSize(`Observacoes: ${notesText}`, 180);
-    doc.text(notesLines, 14, tableEndY + 18);
-
-    const inviteTitleY = tableEndY + 34;
+    // Este PDF vai para o cliente: as observações internas não entram nele.
+    const inviteTitleY = tableEndY + 22;
     doc.setFontSize(11);
     doc.text('Mensagem sugerida para WhatsApp', 14, inviteTitleY);
     doc.setFontSize(10);

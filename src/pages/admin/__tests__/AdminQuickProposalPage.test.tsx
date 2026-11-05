@@ -11,6 +11,7 @@ vi.mock('../../../contexts/AuthContext', () => ({ useAuth }));
 vi.mock('jspdf', () => ({ jsPDF: vi.fn() }));
 vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
 
+import { jsPDF } from 'jspdf';
 import AdminQuickProposalPage from '../AdminQuickProposalPage';
 
 const mesa = { id: 'eq-mesa', name: 'Mesa de Som', dailyPrice: 300 };
@@ -93,6 +94,67 @@ describe('AdminQuickProposalPage — gerar link da proposta', { timeout: 20000 }
 
     await waitFor(() => expect(chamadasPost()).toHaveLength(1));
     expect(JSON.parse(chamadasPost()[0][1].body)).not.toHaveProperty('clientEmail');
+  });
+
+  // Achado (auditoria ponta a ponta): o campo diz "Não aparecem na proposta", mas ia para `notes`, que sai
+  // no PDF e na área do cliente.
+  it('observações internas vão para internalNotes, fora de notes', async () => {
+    apiFetch.mockImplementation((url: string, opts?: { method?: string }) => {
+      if (url === '/bookings' && opts?.method === 'POST') return Promise.resolve({ id: 'XP-NOVA' });
+      return Promise.resolve(url === '/equipments' ? [mesa] : []);
+    });
+    renderPage();
+    await preencherProposta();
+    fireEvent.change(screen.getByLabelText(/Observações Internas/), { target: { value: 'Cliente pede desconto' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /gerar link da proposta/i }));
+
+    await waitFor(() => expect(chamadasPost()).toHaveLength(1));
+    const corpo = JSON.parse(chamadasPost()[0][1].body);
+    expect(corpo.internalNotes).toBe('Cliente pede desconto');
+    expect(corpo).not.toHaveProperty('notes');
+  });
+
+  it('sem observações internas, o corpo não leva o campo', async () => {
+    apiFetch.mockImplementation((url: string, opts?: { method?: string }) => {
+      if (url === '/bookings' && opts?.method === 'POST') return Promise.resolve({ id: 'XP-NOVA' });
+      return Promise.resolve(url === '/equipments' ? [mesa] : []);
+    });
+    renderPage();
+    await preencherProposta();
+    fireEvent.change(screen.getByLabelText(/Observações Internas/), { target: { value: '   ' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /gerar link da proposta/i }));
+
+    await waitFor(() => expect(chamadasPost()).toHaveLength(1));
+    expect(JSON.parse(chamadasPost()[0][1].body)).not.toHaveProperty('internalNotes');
+  });
+
+  // O PDF desta tela vai para o cliente.
+  it('o PDF da proposta não leva as observações internas', async () => {
+    const textos: string[] = [];
+    const doc = new Proxy(
+      { lastAutoTable: { finalY: 120 } } as Record<string | symbol, unknown>,
+      {
+        get(alvo, chave) {
+          if (chave in alvo) return alvo[chave];
+          if (chave === 'text') return (texto: string | string[]) => textos.push(...[texto].flat());
+          if (chave === 'splitTextToSize') return (texto: string) => [texto];
+          return () => undefined;
+        },
+      },
+    );
+    vi.mocked(jsPDF).mockImplementation(function construtor() { return doc; } as never);
+    apiFetch.mockImplementation((url: string) => Promise.resolve(url === '/equipments' ? [mesa] : []));
+    renderPage();
+    await preencherProposta();
+    fireEvent.change(screen.getByLabelText(/Observações Internas/), { target: { value: 'Cliente pede desconto' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar PDF' }));
+
+    await waitFor(() => expect(textos.some((t) => t.includes('Ana Souza'))).toBe(true));
+    expect(textos.join(' ')).not.toContain('Cliente pede desconto');
+    expect(textos.join(' ')).not.toMatch(/observa[cç][oõ]es/i);
   });
 
   // Achado (auditoria ponta a ponta): o corpo levava `userId: user?.id`, o id do admin logado, e o
