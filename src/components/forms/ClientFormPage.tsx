@@ -26,6 +26,8 @@ interface DraftableClientData {
 interface CreateClientResponse {
   tempPassword?: string;
   inviteUrl?: string;
+  /** Se o e-mail do convite saiu (adminController.createClient). false: o cliente só recebe o link copiado. */
+  emailSent?: boolean;
   /** Aviso do servidor quando o cliente foi criado, mas a foto não subiu (adminController.createClient). */
   warning?: string;
   client?: { id?: string };
@@ -207,6 +209,15 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
         // responde 201 com um aviso); a tela dizia só "Cliente criado!" e a falta da foto passava despercebida.
         if (responseData?.warning) {
           addNotification({ type: 'warning', title: 'Atenção', message: responseData.warning });
+        }
+        // Item C (05/11/2026): o servidor diz se o e-mail do convite saiu, e a tela ignorava. Com false, o
+        // cliente só recebe o convite se alguém mandar o link (a janela do convite abre logo abaixo).
+        if (responseData?.emailSent === false) {
+          addNotification({
+            type: 'warning',
+            title: 'Atenção',
+            message: 'Cliente criado, mas o e-mail do convite não foi enviado. Copie o link na janela do convite e mande ao cliente.',
+          });
         }
         clearDraft();
         onSuccess();
