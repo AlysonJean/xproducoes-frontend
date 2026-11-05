@@ -249,18 +249,26 @@ export const apiFetch = async <T = unknown>(
     // don't block the request on CSRF fetch failures
   }
 
-  // Retry logic para falhas de rede transitórias
+  // Repete falhas de rede e 502/503/504 em GET/HEAD. São 3 tentativas em cerca de 1 s: cobre uma falha
+  // passageira, não um servidor reiniciando. POST e afins não repetem aqui: podem já ter gravado.
   const MAX_RETRIES = 3;
   const RETRY_DELAY_MS = 300; // inicial, exponencial
   let attempt = 0;
-    let lastError: unknown = null;
+  let lastError: unknown = null;
   let response: Response | null = null;
+  const isIdempotent = ['GET', 'HEAD'].includes((config.method || 'GET').toUpperCase());
 
   while (attempt < MAX_RETRIES) {
     try {
       response = await makeRequest(url, config);
+      if (isIdempotent && [502, 503, 504].includes(response.status) && attempt < MAX_RETRIES - 1) {
+        attempt++;
+        const delay = RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
       break;
-        } catch (err: unknown) {
+    } catch (err: unknown) {
       lastError = err;
       // Só retry em erros de rede (ex.: TypeError: Failed to fetch)
       if (err instanceof TypeError || (err && /failed to fetch|network error/i.test(String((err as Error).message || err)))) {
@@ -298,21 +306,34 @@ export const apiFetch = async <T = unknown>(
 
   if (!response.ok) {
     // Tentar extrair mensagem detalhada do servidor
-    let message = `HTTP ${response.status}: ${response.statusText}`;
+    let message = '';
     try {
       const text = await response.text();
       if (text) {
         try {
           const data = JSON.parse(text);
-          message = (data.message || data.error || message) as string;
+          message = (data.message || data.error || '') as string;
         } catch {
-          // não é JSON, usa texto puro
-          message = text;
+          // Página de erro do proxy (502/503/504 da Vercel, com tags e fontes): não vai para a tela.
+          const isHtml = text.trim().startsWith('<') || /<!doctype|<html/i.test(text);
+          if (!isHtml) {
+            message = text;
+          }
         }
       }
     } catch {
       // ignore
     }
+
+    if (!message) {
+      // Esta mensagem aparece para o cliente: sem código HTTP nem nome de fornecedor.
+      if ([502, 503, 504].includes(response.status)) {
+        message = 'Não conseguimos falar com o servidor agora. Aguarde alguns instantes e tente de novo.';
+      } else {
+        message = `HTTP ${response.status}: ${response.statusText || 'Erro no servidor'}`;
+      }
+    }
+
     throw new Error(message);
   }
 
