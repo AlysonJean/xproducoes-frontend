@@ -6,7 +6,8 @@ import { ptBR } from 'date-fns/locale/pt-BR';
 import { apiFetch } from '@/services/api';
 import { asArray } from '@/utils/normalize';
 import { toNumber } from '@/utils/typeSafeFormatters';
-import { formatPrice } from '@/utils/formatPrice';
+import { formatBookingTotal } from '@/utils/formatPrice';
+import { formatBookingCode } from '@/utils/bookingCode';
 import { bookingStatusLabel, bookingStatusVariant } from '@/utils/bookingStatus';
 import type { SafeBooking } from '@/types/types';
 import {
@@ -79,7 +80,7 @@ function generateGoogleCalendarUrl(booking: SafeBooking): string {
   const details = [
     equipNames ? `Equipamentos: ${equipNames}` : '',
     `Status: ${bookingStatusLabel(booking.status)}`,
-    `Valor: ${formatPrice(toNumber(booking.totalPrice))}`,
+    `Valor: ${formatBookingTotal(toNumber(booking.totalPrice))}`,
   ]
     .filter(Boolean)
     .join('\n');
@@ -104,7 +105,7 @@ const getStatus = (status: string | undefined) => ({
 
 // ─── Booking Details Modal ───────────────────────────────────
 
-const BookingDetailsModal = ({
+export const BookingDetailsModal = ({
   event,
   onClose,
 }: {
@@ -156,7 +157,7 @@ const BookingDetailsModal = ({
                 {booking.eventTitle || 'Reserva'}
               </h3>
               <p className="text-xs text-muted-foreground">
-                #{booking.id.slice(0, 8)}
+                #{formatBookingCode(booking.id)}
               </p>
             </div>
           </div>
@@ -188,7 +189,7 @@ const BookingDetailsModal = ({
           <div className="flex items-center gap-2 text-sm">
             <DollarSign className="h-4 w-4 text-muted-foreground" />
             <span className="font-semibold">
-              {formatPrice(totalValue)}
+              {formatBookingTotal(totalValue)}
             </span>
           </div>
           {booking.venue && (
@@ -673,7 +674,7 @@ export const ClientCalendarPage = () => {
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <DollarSign className="h-3 w-3" aria-hidden="true" />
-                      {formatPrice(toNumber(hovered.resource.totalPrice))}
+                      {formatBookingTotal(toNumber(hovered.resource.totalPrice))}
                     </div>
                     {hovered.resource.venue && (
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">

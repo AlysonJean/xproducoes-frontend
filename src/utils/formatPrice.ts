@@ -19,3 +19,9 @@ export function formatPrice(value: number | string | null | undefined): string {
     minimumFractionDigits: 2,
   });
 }
+
+// Pedido ainda sem valor (o do briefing chega sem itens e o valor sai na confirmação): "R$ 0,00" pareceria de graça.
+export function formatBookingTotal(value: number | string | null | undefined): string {
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  return numValue && numValue > 0 ? formatPrice(numValue) : 'Em preparação';
+}

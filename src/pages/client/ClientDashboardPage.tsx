@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { bookingAPI, authAPI, kitAPI } from '../../services/api';
 import { asArray } from '../../utils/normalize';
-import { formatPrice } from '../../utils/formatPrice';
+import { formatBookingTotal, formatPrice } from '../../utils/formatPrice';
 import { bookingStatusLabel, bookingStatusVariant } from '../../utils/bookingStatus';
 import { clsx } from 'clsx';
 import {
@@ -360,7 +360,7 @@ export const ClientDashboardPage = () => {
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
-                              {booking.equipments.length} equipamento(s) - {formatCurrency(booking.totalPrice)}
+                              {booking.equipments.length} equipamento(s) - {formatBookingTotal(booking.totalPrice)}
                             </p>
                           </div>
                           <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" aria-hidden="true" />
