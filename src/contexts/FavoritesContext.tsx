@@ -61,16 +61,17 @@ const writeLocalFavorites = (favorites: FavoriteItem[]) => {
   }
 };
 
+// O apiFetch já desembrulha { success, data }: a resposta é a própria lista.
 interface RemoteFavoritesResponse {
-  data?: {
-    equipments?: Array<{ id: string }>;
-    kits?: Array<{ id: string }>;
-    services?: Array<{ id: string }>;
-  };
+  equipments?: Array<{ id: string }>;
+  kits?: Array<{ id: string }>;
+  services?: Array<{ id: string }>;
 }
 
 const remoteResponseToItems = (resp: RemoteFavoritesResponse): FavoriteItem[] => {
-  const data = resp?.data ?? {};
+  // Achado (auditoria ponta a ponta): aqui se lia resp.data, que não existe depois do apiFetch. Quem estava
+  // logado via sempre a lista vazia, mesmo com os favoritos salvos no servidor.
+  const data = resp ?? {};
   return [
     ...(data.equipments ?? []).map((e) => ({ id: e.id, type: 'equipment' as FavoriteType })),
     ...(data.kits ?? []).map((k) => ({ id: k.id, type: 'kit' as FavoriteType })),
@@ -84,13 +85,16 @@ const remoteResponseToItems = (resp: RemoteFavoritesResponse): FavoriteItem[] =>
 // verdade; visitante anônimo continua com localStorage (mesmo padrão do carrinho de
 // convidado). Ao logar com favoritos locais pendentes, eles são mesclados para a conta.
 export const FavoritesProvider = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  // Decisão D14 do guia: só conta de cliente tem perfil de cliente, e o servidor recusa favorito da equipe.
+  // Para a equipe, os favoritos ficam neste navegador, como os do visitante.
+  const usesServer = isAuthenticated && user?.role === 'CLIENT';
   const [favorites, setFavorites] = useState<FavoriteItem[]>(() => readLocalFavorites());
-  const wasAuthenticated = useRef(isAuthenticated);
+  const wasUsingServer = useRef(usesServer);
 
   // Usuário autenticado: servidor é a fonte da verdade.
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!usesServer) return;
     (async () => {
       try {
         const resp = await apiFetch<RemoteFavoritesResponse>('/user/favorites');
@@ -99,20 +103,20 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
         logger.error('Erro ao buscar favoritos', 'FavoritesContext', e);
       }
     })();
-  }, [isAuthenticated]);
+  }, [usesServer]);
 
   // Visitante: persiste em localStorage a cada mudança.
   useEffect(() => {
-    if (isAuthenticated) return;
+    if (usesServer) return;
     writeLocalFavorites(favorites);
-  }, [favorites, isAuthenticated]);
+  }, [favorites, usesServer]);
 
   // Ao logar com favoritos já coletados como convidado, mescla para a conta antes de
   // descartar o armazenamento local — evita perder o que a pessoa já tinha marcado.
   useEffect(() => {
-    const justAuthenticated = isAuthenticated && !wasAuthenticated.current;
-    wasAuthenticated.current = isAuthenticated;
-    if (!justAuthenticated) return;
+    const justStarted = usesServer && !wasUsingServer.current;
+    wasUsingServer.current = usesServer;
+    if (!justStarted) return;
 
     const guestFavorites = readLocalFavorites();
     if (guestFavorites.length === 0) return;
@@ -132,11 +136,11 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
         logger.error('Erro ao mesclar favoritos de convidado após login', 'FavoritesContext', e);
       }
     })();
-  }, [isAuthenticated]);
+  }, [usesServer]);
 
   const addToFavorites = (id: string, type: FavoriteType = 'equipment') => {
     setFavorites((prev) => (prev.some((f) => f.id === id) ? prev : [...prev, { id, type }]));
-    if (isAuthenticated) {
+    if (usesServer) {
       apiFetch('/user/favorites', { method: 'POST', body: JSON.stringify({ itemId: id, itemType: type }) })
         .catch((e) => logger.error('Erro ao adicionar favorito', 'FavoritesContext', e));
     }
@@ -145,7 +149,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
   const removeFromFavorites = (id: string) => {
     const existing = favorites.find((f) => f.id === id);
     setFavorites((prev) => prev.filter((item) => item.id !== id));
-    if (isAuthenticated && existing) {
+    if (usesServer && existing) {
       apiFetch(`/user/favorites/${id}?itemType=${existing.type}`, { method: 'DELETE' })
         .catch((e) => logger.error('Erro ao remover favorito', 'FavoritesContext', e));
     }
