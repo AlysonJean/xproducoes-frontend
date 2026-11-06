@@ -47,7 +47,10 @@ export const RegisterPage = () => {
     setError(null);
     setLoading(true);
     try {
-      await authAPI.register({ ...data, bookingId: bookingId || undefined });
+      const resposta = await authAPI.register({ ...data, bookingId: bookingId || undefined });
+      // N1 (02/11/2026): o servidor diz se o login vai esperar a confirmação do e-mail
+      // (loginRequiresVerification, quando REQUIRE_EMAIL_VERIFICATION estiver ligado).
+      const exigeConfirmacao = Boolean((resposta as { data?: { loginRequiresVerification?: boolean } } | undefined)?.data?.loginRequiresVerification);
       
       ReactGA.event({
         category: "auth",
@@ -58,7 +61,9 @@ export const RegisterPage = () => {
       addNotification({
         type: 'success',
         title: 'Conta criada!',
-        message: 'Sua conta foi criada com sucesso. Faça login para continuar.'
+        message: exigeConfirmacao
+          ? `Confirme no seu e-mail para entrar: enviamos um link para ${data.email}.`
+          : 'Sua conta foi criada com sucesso. Faça login para continuar.'
       });
       navigate('/login');
     } catch (err: unknown) {

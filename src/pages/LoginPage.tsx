@@ -18,6 +18,7 @@ import {
 import { AuthLayout } from '../components/layouts/AuthLayout';
 import { LogIn, User as UserIcon, Users } from 'lucide-react';
 import { logger } from '../utils/logger';
+import { apiFetch } from '../services/api';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -31,6 +32,9 @@ export const LoginPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [userType, setUserType] = useState<'client' | 'collaborator'>('client');
+  // N1 (02/11/2026): e-mail de quem tentou entrar sem ter confirmado o endereço; mostra "Reenviar confirmação".
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
   const { loginWithCredentials } = useAuth();
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
@@ -50,6 +54,7 @@ export const LoginPage = () => {
 
   const onSubmit = async (data: LoginFormData) => {
     setError(null);
+    setUnverifiedEmail(null);
     setLoading(true);
     try {
       const redirectTo = await loginWithCredentials?.({ 
@@ -76,6 +81,9 @@ export const LoginPage = () => {
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Falha no login. Verifique as suas credenciais.';
+      if ((err as { code?: string } | null)?.code === 'EMAIL_NOT_VERIFIED') {
+        setUnverifiedEmail(data.email.toLowerCase().trim());
+      }
       
       ReactGA.event({
         category: "auth",
@@ -91,6 +99,25 @@ export const LoginPage = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // N1: manda de novo o link de confirmação. A resposta do servidor é a mesma para qualquer e-mail.
+  const handleResendConfirmation = async () => {
+    if (!unverifiedEmail) return;
+    setResending(true);
+    try {
+      await apiFetch('/auth/resend-verification', { method: 'POST', body: JSON.stringify({ email: unverifiedEmail }) });
+      addNotification({
+        type: 'success',
+        title: 'Link enviado',
+        message: 'Se houver uma conta com este e-mail ainda sem confirmação, enviamos um novo link. Confira também o spam.',
+      });
+    } catch (resendError) {
+      logger.error('Erro ao reenviar a confirmação:', 'LoginPage', resendError);
+      addNotification({ type: 'error', title: 'Não deu certo', message: 'Não foi possível reenviar agora. Tente de novo em alguns minutos.' });
+    } finally {
+      setResending(false);
     }
   };
 
@@ -204,6 +231,13 @@ export const LoginPage = () => {
       {error && (
         <Alert variant="error">
           {error}
+          {unverifiedEmail && (
+            <div className="mt-2">
+              <Button type="button" variant="outline" size="sm" isLoading={resending} onClick={handleResendConfirmation}>
+                Reenviar confirmação
+              </Button>
+            </div>
+          )}
         </Alert>
       )}
 

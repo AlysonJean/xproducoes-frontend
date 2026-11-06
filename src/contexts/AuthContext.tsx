@@ -202,8 +202,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Login failed' }));
-        throw new Error(errorData.message || 'Login failed');
+        // N1 (02/11/2026): o servidor manda o motivo em `error` e o código em `code` (globalErrorHandler);
+        // aqui só se lia `message`, e toda recusa virava "Login failed". O código vai junto no erro para a
+        // tela oferecer "Reenviar confirmação" quando for EMAIL_NOT_VERIFIED.
+        const errorData = await response.json().catch(() => ({})) as { error?: string; message?: string; code?: string };
+        const loginError = new Error(errorData.error || errorData.message || 'Não foi possível entrar. Tente de novo.') as Error & { code?: string };
+        if (typeof errorData.code === 'string') loginError.code = errorData.code;
+        throw loginError;
       }
 
       const { user: userData, redirectTo } = await response.json();
