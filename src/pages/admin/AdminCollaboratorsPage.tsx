@@ -11,12 +11,13 @@ import {
   Settings,
   XCircle,
   Briefcase,
+  KeyRound,
 } from 'lucide-react';
 import { useCollaborators } from '../../hooks';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { useModal } from '@/components/modals/ModalContext';
-import { api } from '@/services/api';
+import { api, apiFetch } from '@/services/api';
 import type { CollaboratorDashboard } from '../../types/types';
 import { toNumber } from '../../utils/typeSafeFormatters';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -55,6 +56,16 @@ const STATUS_OPTIONS = [
   { value: 'INACTIVE', label: 'Inativo' },
 ];
 
+// D3: "Aguardando ativação" e "Reenviar link de acesso" valem só para conta de colaborador, ativa, que ainda
+// não criou a senha pelo link: as mesmas regras com que o servidor aceita o reenvio (POST
+// /collaborators/:id/resend-access responde 409 para conta já ativada, conta de admin ou conta desativada).
+// O painel do colaborador cria um perfil para o admin que o abre; sem esta regra, esse perfil podia aparecer
+// com o selo e com um botão que sempre falha.
+const isAwaitingActivation = (c: CollaboratorDashboard) =>
+  c.user?.verified === false &&
+  (c.user.role === undefined || c.user.role === 'COLLABORATOR') &&
+  c.user.isActive !== false;
+
 export const AdminCollaboratorsPage: React.FC = () => {
   const { addNotification } = useNotifications();
   const { openModal } = useModal();
@@ -76,6 +87,7 @@ export const AdminCollaboratorsPage: React.FC = () => {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   const {
     collaborators: rawCollaborators,
@@ -186,6 +198,45 @@ export const AdminCollaboratorsPage: React.FC = () => {
       addNotification({ type: 'error', title: 'Convite não enviado', message: 'Não foi possível enviar o convite. Tente de novo.' });
     } finally {
       setInviteLoading(false);
+    }
+  };
+
+  // D3 (aprovada em 02/11/2026): quem ainda não criou a senha ("Aguardando ativação") recebe um link de
+  // acesso novo, de 72 h; o anterior deixa de valer. A janela do convite mostra o link para copiar e, se o
+  // e-mail não saiu, avisa para mandar pelo WhatsApp. Conta já ativada: o servidor recusa (409) e a
+  // mensagem dele aparece. Um reenvio por vez: com dois cliques, a janela podia ficar com um link já
+  // derrubado pelo outro pedido (mesmo achado do "Reenviar convite" do cliente).
+  const handleResendAccess = async (collaborator: CollaboratorDashboard) => {
+    if (resendingId) return;
+    setResendingId(collaborator.id);
+    try {
+      const result = await apiFetch<{ inviteUrl?: string; emailSent?: boolean }>(
+        `/collaborators/${collaborator.id}/resend-access`,
+        { method: 'POST' },
+      );
+      if (result?.inviteUrl) {
+        openModal('invite', {
+          inviteUrl: result.inviteUrl,
+          notice: result.emailSent === false
+            ? 'O e-mail não foi enviado. O link anterior deixou de valer: copie este link e mande ao colaborador, por WhatsApp por exemplo.'
+            : undefined,
+        });
+      }
+      if (result?.emailSent) {
+        addNotification({
+          type: 'success',
+          title: 'Link reenviado',
+          message: `Novo link de acesso enviado para ${collaborator.email}. O link anterior deixou de valer.`,
+        });
+      }
+    } catch (err: unknown) {
+      addNotification({
+        type: 'error',
+        title: 'Link não reenviado',
+        message: err instanceof Error && err.message ? err.message : 'Não foi possível reenviar o link de acesso. Tente de novo.',
+      });
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -384,12 +435,24 @@ export const AdminCollaboratorsPage: React.FC = () => {
                         <Badge variant="primary">{collaboratorRoleLabel(c.role)}</Badge>
                       </td>
                       <td className="px-6 py-4">
-                        <Badge variant={c.status === 'ACTIVE' ? 'success' : 'ghost'}>
-                          {c.status === 'ACTIVE' ? 'Ativo' : 'Inativo'}
-                        </Badge>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant={c.status === 'ACTIVE' ? 'success' : 'ghost'}>
+                            {c.status === 'ACTIVE' ? 'Ativo' : 'Inativo'}
+                          </Badge>
+                          {/* D3: conta criada pelo painel que ainda não criou a senha pelo link. */}
+                          {isAwaitingActivation(c) && <Badge variant="warning">Aguardando ativação</Badge>}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <span className="text-sm font-bold text-foreground">{formatPrice(c.hourlyRate || 0)}</span>
+                        {/* D3: sem valor definido aparece "—" (antes: R$ 0,00, como se o valor fosse zero). */}
+                        {c.hourlyRate == null ? (
+                          <span className="text-sm text-muted-foreground">
+                            <span aria-hidden="true">—</span>
+                            <span className="sr-only">Sem valor definido</span>
+                          </span>
+                        ) : (
+                          <span className="text-sm font-bold text-foreground">{formatPrice(c.hourlyRate)}</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className="inline-block px-2.5 py-1 rounded-lg bg-muted border border-border text-sm font-bold text-foreground">
@@ -398,6 +461,19 @@ export const AdminCollaboratorsPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                          {isAwaitingActivation(c) && (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-9 w-9"
+                              onClick={() => handleResendAccess(c)}
+                              disabled={resendingId === c.id}
+                              title="Reenviar link de acesso"
+                              aria-label={`Reenviar link de acesso para ${c.name}`}
+                            >
+                              <KeyRound className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="icon"

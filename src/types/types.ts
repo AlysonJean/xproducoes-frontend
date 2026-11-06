@@ -292,13 +292,16 @@ export interface EventAssignment {
   collaboratorId: string;
   role: ECollaboratorRole;
   estimatedHours: number;
-  hourlyRate: number;
+  /** D3: null quando o colaborador não tem valor por hora definido (a escala não inventa R$ 50). */
+  hourlyRate: number | null;
 }
 
 export interface SelectedCollaboratorAssignment {
   collaborator: ICollaborator;
-  role: ECollaboratorRole;
-  hourlyRate: number;
+  /** D3: começa com a função do próprio colaborador; vazia, precisa ser escolhida antes de salvar. */
+  role: ECollaboratorRole | '';
+  /** D3: começa com o valor por hora do colaborador; vazio quando ele não tem. */
+  hourlyRate: number | '';
   estimatedHours: number;
 }
 
@@ -313,6 +316,9 @@ export interface CollaboratorDashboard {
   totalEarnings?: number;
   totalEvents?: number;
   createdAt: string;
+  /** D3: conta do colaborador (GET /collaborators). verified false = ainda não criou a senha pelo link;
+   * role e isActive dizem se o servidor aceita o reenvio do link (só conta de colaborador, ativa). */
+  user?: { verified?: boolean; role?: string; isActive?: boolean };
 }
 
 // ================================
@@ -911,6 +917,8 @@ export type ModalPropsMap = {
     onResend?: () => void;
     inviteUrl?: string;
     tempPassword?: string;
+    /** D3: aviso na janela, junto do link (ex.: o e-mail com o link não saiu). */
+    notice?: string;
   };
 };
 

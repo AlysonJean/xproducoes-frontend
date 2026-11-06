@@ -27,6 +27,12 @@ const schema = z
 
 type FormValues = z.infer<typeof schema>;
 
+// D3 (aprovada em 02/11/2026): link vencido ou já usado. O servidor responde 400 "Token inválido ou
+// expirado" nos dois casos, e a tela repetia só isso, sem dizer o que fazer. Os links do painel (convite do
+// cliente e acesso do colaborador) valem 72 h e servem uma vez; um link novo derruba o anterior.
+const LINK_INVALID_MESSAGE =
+  'Este link não vale mais: ele venceu ou já foi usado. Peça um link novo à X Produções (o link novo vale 72 horas). Se você já criou sua senha, entre pelo login ou use “Esqueceu sua senha?”.';
+
 export const CompleteRegistrationPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -57,9 +63,10 @@ export const CompleteRegistrationPage: React.FC = () => {
       navigate('/login?registered=1');
     } catch (err: unknown) {
       logger.error('Erro', 'CompleteRegistrationPage', err);
-      const message = axios.isAxiosError(err)
-        ? err.response?.data?.message || 'Erro ao completar registro'
-        : 'Erro ao completar registro';
+      const serverMessage = axios.isAxiosError(err) ? err.response?.data?.message : undefined;
+      const linkInvalid =
+        axios.isAxiosError(err) && err.response?.status === 400 && /token/i.test(String(serverMessage || ''));
+      const message = linkInvalid ? LINK_INVALID_MESSAGE : serverMessage || 'Erro ao completar registro';
       setError(message);
       addNotification({ type: 'error', title: 'Erro', message });
     }

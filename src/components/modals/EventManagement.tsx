@@ -53,13 +53,16 @@ export const EventManagement: React.FC<EventManagementProps> = ({
     return { totalHours, totalCost, totalCollaborators };
   }, [selectedCollaborators]);
 
+  // D3 (aprovada em 02/11/2026): a escala deixa de inventar "Fotógrafo" e R$ 50. A função começa com a do
+  // próprio colaborador (sem função, fica vazia e precisa ser escolhida antes de salvar) e o valor por hora
+  // com o dele (sem valor, fica vazio e conta como zero no total). O valor chega do banco como texto ("45").
   const handleAddCollaborator = (collaborator: ICollaborator) => {
     setSelectedCollaborators((prev) => ({
       ...prev,
       [collaborator.id]: {
         collaborator,
-        role: ECollaboratorRole.PHOTOGRAPHER,
-        hourlyRate: collaborator.hourlyRate || 50,
+        role: collaborator.role ?? '',
+        hourlyRate: collaborator.hourlyRate == null ? '' : toNumber(collaborator.hourlyRate),
         estimatedHours: 4,
       },
     }));
@@ -89,13 +92,17 @@ export const EventManagement: React.FC<EventManagementProps> = ({
     }
   };
 
+  // Alguém da equipe ainda sem função: o "Salvar" fica desligado até escolher.
+  const missingRole = Object.values(selectedCollaborators).some((item) => !item.role);
+
   const handleSave = () => {
+    if (missingRole) return;
     const newAssignments: EventAssignment[] = Object.values(selectedCollaborators).map((item) => ({
       id: `assignment-${item.collaborator.id}`,
       collaboratorId: item.collaborator.id,
-      role: item.role,
+      role: item.role as ECollaboratorRole,
       estimatedHours: item.estimatedHours,
-      hourlyRate: item.hourlyRate,
+      hourlyRate: item.hourlyRate === '' ? null : item.hourlyRate,
     }));
     onSave(newAssignments);
   };
@@ -268,6 +275,8 @@ export const EventManagement: React.FC<EventManagementProps> = ({
                           value={assignment.role}
                           onChange={(e) => updateAssignment(id, 'role', e.target.value as ECollaboratorRole)}
                           aria-label={`Função de ${assignment.collaborator.name}`}
+                          placeholder="Escolha a função"
+                          error={assignment.role ? undefined : 'Escolha a função para salvar'}
                           options={COLLABORATOR_ROLE_OPTIONS}
                         />
                         <Input
@@ -287,7 +296,9 @@ export const EventManagement: React.FC<EventManagementProps> = ({
                           min="0"
                           step="0.01"
                           value={assignment.hourlyRate}
-                          onChange={(e) => updateAssignment(id, 'hourlyRate', parseFloat(e.target.value) || 0)}
+                          // Apagar deixa vazio (antes virava 0).
+                          onChange={(e) => updateAssignment(id, 'hourlyRate', e.target.value === '' ? '' : Number(e.target.value))}
+                          placeholder="Sem valor"
                           aria-label={`Valor/hora (R$) de ${assignment.collaborator.name}`}
                         />
                       </div>
@@ -338,7 +349,7 @@ export const EventManagement: React.FC<EventManagementProps> = ({
             type="button"
             size="sm"
             onClick={handleSave}
-            disabled={selectedCount === 0}
+            disabled={selectedCount === 0 || missingRole}
           >
             Salvar Equipe ({selectedCount})
           </Button>

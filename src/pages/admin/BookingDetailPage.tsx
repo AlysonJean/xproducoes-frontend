@@ -1281,16 +1281,18 @@ export const BookingDetailPage = () => {
             if (!booking?.id) return;
             try {
               setActionLoading(true);
+              // D3 (aprovada em 02/11/2026): a escala não inventa função nem valor. A função vem da janela
+              // (a do colaborador ou a escolhida); sem valor por hora, valor e total não vão (antes iam 0).
+              // E o custo da equipe não vira o preço da reserva: antes, reserva sem valor era confirmada com
+              // o preço = soma dos cachês estimados. O preço fica como está (define-se em "Confirmar
+              // reserva" ou em "Editar"); o servidor só troca o valor quando recebe totalPrice.
               const payload = assignments.map((a) => ({
                 collaboratorId: a.collaboratorId,
-                role: a.role || 'PHOTOGRAPHER',
-                totalHours: a.estimatedHours || 0,
-                hourlyRate: a.hourlyRate || 0,
-                totalPayment: Number(a.hourlyRate || 0) * (a.estimatedHours || 0)
+                role: a.role,
+                totalHours: a.estimatedHours,
+                ...(a.hourlyRate != null ? { hourlyRate: a.hourlyRate, totalPayment: a.hourlyRate * a.estimatedHours } : {}),
               }));
-              let totalPrice = Number(booking.totalPrice ?? 0);
-              if (!totalPrice) totalPrice = payload.reduce((sum, c) => sum + Number(c.totalPayment || 0), 0);
-              await bookingAPI.confirmWithDetails(booking.id, { totalPrice, collaborators: payload });
+              await bookingAPI.confirmWithDetails(booking.id, { collaborators: payload });
               await fetchBooking();
               setEventModalOpen(false);
               addNotification({ type: 'success', title: 'Equipe salva', message: 'Equipe alocada e reserva confirmada.' });

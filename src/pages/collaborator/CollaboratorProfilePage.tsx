@@ -38,7 +38,8 @@ interface CollaboratorProfileData {
   totalEvents?: number;
   completedEvents?: number;
   totalEarnings?: number;
-  hourlyRate?: number;
+  // Decimal no banco: chega como texto ("45"); null quando a administração ainda não definiu.
+  hourlyRate?: number | string | null;
   phone?: string;
   specialties?: string[];
   equipment?: string[];
@@ -51,9 +52,10 @@ interface CollaboratorProfileData {
 // Só os campos que PUT /collaborators/me/profile realmente grava (collaboratorController.updateMyProfile
 // + collaboratorUpdateSchema). Achado (auditoria): o formulário também editava biografia, localização,
 // site e experiência — o backend descartava esses campos e a tela dizia "Perfil atualizado".
+// Q2 (02/11/2026): o valor por hora é remuneração combinada, então só a administração define; o campo
+// saiu daqui e aparece só para leitura.
 interface CollaboratorFormData {
   phone: string;
-  hourlyRate: number | string;
   workingRadius: number | string;
   languages: string[];
   specialties: string[];
@@ -75,7 +77,6 @@ const TABS = [
 
 const toFormData = (data: CollaboratorProfileData | null): CollaboratorFormData => ({
   phone: data?.phone || '',
-  hourlyRate: data?.hourlyRate ?? '',
   workingRadius: data?.workingRadius ?? '',
   languages: data?.languages || [],
   specialties: data?.specialties || [],
@@ -149,13 +150,10 @@ const CollaboratorProfilePage: React.FC = () => {
   const handleSaveProfile = async () => {
     try {
       setSaving(true);
-      const hourlyRate = Number(formData.hourlyRate);
       const workingRadius = Number(formData.workingRadius);
       await collaboratorProfileAPI.updateProfile({
         phone: formData.phone,
-        // O schema do backend exige valor positivo: vazio/zero vai como "não alterar" (antes, um
-        // campo vazio virava 0 e a validação recusava o formulário inteiro).
-        hourlyRate: hourlyRate > 0 ? hourlyRate : undefined,
+        // Vazio ou zero vai como "não alterar". O valor por hora não vai: só a administração define (Q2).
         workingRadius: workingRadius > 0 ? Math.round(workingRadius) : undefined,
         // Listas vão sempre: o backend grava [] quando a lista não é enviada.
         languages: formData.languages,
@@ -235,6 +233,8 @@ const CollaboratorProfilePage: React.FC = () => {
     const rating = Number(profile.averageRating) || 0;
     const roundedRating = Math.round(rating);
     const name = profile.user.name || 'Nome não disponível';
+    // Q2: valor definido pela administração; sem valor, a tela não mostra R$ 0,00 como se fosse zero.
+    const hourlyRateText = profile.hourlyRate == null ? 'Ainda não definido' : formatPrice(profile.hourlyRate);
 
     return (
       <div className="space-y-6">
@@ -318,7 +318,7 @@ const CollaboratorProfilePage: React.FC = () => {
                     { label: 'Eventos totais', value: String(profile.totalEvents ?? 0), tone: 'text-primary' },
                     { label: 'Concluídos', value: String(profile.completedEvents ?? 0), tone: 'text-success' },
                     { label: 'Total ganho', value: formatPrice(Number(profile.totalEarnings) || 0), tone: 'text-foreground' },
-                    { label: 'Valor/hora', value: `${formatPrice(Number(profile.hourlyRate) || 0)}/h`, tone: 'text-foreground' },
+                    { label: 'Valor/hora', value: profile.hourlyRate == null ? '—' : `${formatPrice(profile.hourlyRate)}/h`, tone: 'text-foreground' },
                   ].map((stat) => (
                     <div key={stat.label} className="flex flex-col-reverse gap-1 text-center p-3 bg-card rounded-lg border border-border min-w-0">
                       <dt className="text-sm font-medium text-muted-foreground">{stat.label}</dt>
@@ -437,16 +437,9 @@ const CollaboratorProfilePage: React.FC = () => {
                     {editMode ? (
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <Input
-                            size="sm"
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            label="Valor por hora (R$)"
-                            value={formData.hourlyRate}
-                            onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
-                            placeholder="0,00"
-                          />
+                          <dl>
+                            <InfoRow label="Valor por hora (definido pela administração)">{hourlyRateText}</InfoRow>
+                          </dl>
                           <Input
                             size="sm"
                             type="number"
@@ -490,7 +483,7 @@ const CollaboratorProfilePage: React.FC = () => {
                     ) : (
                       <dl className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <InfoRow label="Valor por hora">{formatPrice(profile.hourlyRate ?? 0)}</InfoRow>
+                          <InfoRow label="Valor por hora (definido pela administração)">{hourlyRateText}</InfoRow>
                           <InfoRow label="Raio de atuação">{profile.workingRadius ? `${profile.workingRadius} km` : 'Não informado'}</InfoRow>
                         </div>
                         {profile.experience && <InfoRow label="Experiência">{profile.experience}</InfoRow>}

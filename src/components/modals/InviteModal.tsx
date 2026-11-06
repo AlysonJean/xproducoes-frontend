@@ -3,6 +3,7 @@ import { Check, Copy } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { Alert } from '../ui/Alert';
 import { logger } from '../../utils/logger';
 
 // Achado (auditoria do design system): a senha temporária ficava num `bg-gray-100` sem cor de texto
@@ -14,7 +15,9 @@ export const InviteModal: React.FC<{
   onResend?: () => void;
   inviteUrl?: string;
   tempPassword?: string;
-}> = ({ isOpen, onClose, onResend, inviteUrl, tempPassword }) => {
+  /** D3: aviso junto do link (ex.: o e-mail com o link não saiu e o admin precisa mandar). */
+  notice?: string;
+}> = ({ isOpen, onClose, onResend, inviteUrl, tempPassword, notice }) => {
   const [copied, setCopied] = useState(false);
 
   const copy = async (text: string) => {
@@ -30,6 +33,8 @@ export const InviteModal: React.FC<{
   return (
     <Modal isOpen={isOpen} onClose={() => onClose?.()} title="Convite criado" size="md">
       <div className="space-y-4">
+        {notice && <Alert variant="warning" description={notice} />}
+
         {tempPassword && (
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">Senha temporária:</p>

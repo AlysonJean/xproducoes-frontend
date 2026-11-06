@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { asArray } from '@/utils/normalize';
 import { apiFetch, collaboratorFunctionsAPI } from '@/services/api';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { useModal } from '@/components/modals/ModalContext';
 import { CollaboratorFunction } from '@/types/types';
 import { logger } from '../../utils/logger';
 import {
@@ -14,6 +15,7 @@ import {
   FormActions,
   Input,
   Select,
+  Checkbox,
   Button
 } from '@/components/ui/StandardComponents';
 import { COLLABORATOR_ROLE_OPTIONS } from '../../utils/collaboratorRoles';
@@ -24,10 +26,13 @@ import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
 const collaboratorSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   email: z.string().email('Email inválido'),
+  phone: z.string().optional(),
   role: z.string().optional(),
   functionId: z.string().optional(),
   hourlyRate: z.union([z.string(), z.number()]).optional(), // Input HTML sempre envia string; number cobre valores vindos de initialData
   status: z.string(), // default 'ACTIVE' já é aplicado via defaultValues do useForm
+  // D3: só no cadastro novo ("Enviar link de acesso por e-mail", marcada por padrão).
+  sendAccessLink: z.boolean().optional(),
 });
 
 type CollaboratorFormValues = z.infer<typeof collaboratorSchema>;
@@ -36,11 +41,25 @@ interface CollaboratorInitialData {
   id?: string;
   name?: string;
   email?: string;
+  phone?: string | null;
   role?: string;
-  functionId?: string;
-  hourlyRate?: string | number;
+  functionId?: string | null;
+  hourlyRate?: string | number | null;
   status?: string;
 }
+
+// Resposta de POST /collaborators (D3): o colaborador criado, mais o link de acesso (só com a caixa
+// marcada) e se o e-mail com o link saiu.
+interface CreatedCollaborator {
+  id?: string;
+  inviteUrl?: string;
+  emailSent?: boolean;
+}
+
+// D3: o aviso fica na janela, junto do link. A notificação some em 5 s, e sem o aviso o admin podia
+// fechar a janela achando que o e-mail tinha saído.
+const EMAIL_NOT_SENT_NOTICE =
+  'O e-mail com o link não foi enviado. Copie o link e mande ao colaborador, por WhatsApp por exemplo.';
 
 interface CollaboratorFormProps {
     initialData?: CollaboratorInitialData | null;
@@ -58,6 +77,7 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
   onDirtyChange,
 }) => {
   const { addNotification } = useNotifications();
+  const { openModal } = useModal();
   const isEditing = Boolean(initialData);
   const [functions, setFunctions] = useState<CollaboratorFunction[]>([]);
 
@@ -78,10 +98,12 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
     defaultValues: {
       name: '',
       email: '',
+      phone: '',
       role: 'OTHER',
       functionId: '',
       hourlyRate: '',
       status: 'ACTIVE',
+      sendAccessLink: true,
     },
   });
 
@@ -102,6 +124,7 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
       reset({
         name: initialData.name || '',
         email: initialData.email || '',
+        phone: initialData.phone || '',
         role: initialData.role || 'OTHER',
         functionId: initialData.functionId || '',
         hourlyRate: initialData.hourlyRate || '',
@@ -140,36 +163,76 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
     setDraftPrompt(null);
   };
 
-    const onSubmit = async (data: CollaboratorFormValues) => {
+  const onSubmit = async (data: CollaboratorFormValues) => {
     try {
-      // Tratamento manual dos dados para garantir que tipos como hourlyRate vão corretamente para o backend
-      const payload = {
-        ...data,
-        hourlyRate: (data.hourlyRate === '' || data.hourlyRate === null) ? undefined : Number(data.hourlyRate),
-        // Sem função personalizada o select manda '', que a validação de id do backend recusa (400).
-        functionId: data.functionId || undefined,
-      };
+      const phone = (data.phone || '').trim();
+      const hourlyRate = data.hourlyRate === '' || data.hourlyRate == null ? null : Number(data.hourlyRate);
 
       // Achado (revisão antes do deploy): gravava em /admin/collaborators, rota que o backend nunca
       // teve (404 em todo "Salvar"). As rotas reais, só de admin, são POST/PUT /collaborators.
       if (isEditing && initialData?.id) {
+        // D3 (aprovada em 02/11/2026): na edição, apagar a função ou o valor grava vazio. Antes o campo
+        // apagado ia como undefined (fica fora do JSON): o servidor mantinha o valor antigo e a tela dizia
+        // "Colaborador atualizado!". Função, valor e telefone vão vazios só quando havia um e ele foi
+        // apagado; campo que já estava vazio não vai (o servidor não precisa "desligar" o que não existe).
+        const hadRate = initialData.hourlyRate != null && initialData.hourlyRate !== '';
         await apiFetch(`/collaborators/${initialData.id}`, {
           method: 'PUT',
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email,
+            phone: phone || (initialData.phone ? '' : undefined),
+            role: data.role,
+            functionId: data.functionId || (initialData.functionId ? null : undefined),
+            hourlyRate: hourlyRate ?? (hadRate ? null : undefined),
+            status: data.status,
+          }),
         });
         addNotification({ type: 'success', title: 'Sucesso', message: 'Colaborador atualizado!' });
-      } else {
-        await apiFetch('/collaborators', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
-        addNotification({ type: 'success', title: 'Sucesso', message: 'Colaborador criado!' });
+        clearDraft();
+        onSuccess();
+        return;
       }
+
+      // D3: "Novo colaborador" cria a conta e o perfil juntos. Com a caixa marcada, o servidor gera o link
+      // de acesso (72 h, para a pessoa criar a senha), manda por e-mail e devolve o link, que a janela do
+      // convite mostra para copiar. Com a caixa desmarcada, não há link nem janela.
+      const created = await apiFetch<CreatedCollaborator>('/collaborators', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          phone: phone || undefined,
+          role: data.role,
+          // Sem função personalizada o select manda '', que a validação de id do backend recusa (400).
+          functionId: data.functionId || undefined,
+          hourlyRate: hourlyRate ?? undefined,
+          status: data.status,
+          sendAccessLink: data.sendAccessLink === true,
+        }),
+      });
+      addNotification({
+        type: 'success',
+        title: 'Sucesso',
+        message: !created?.inviteUrl
+          ? 'Colaborador criado, sem link de acesso. Para mandar depois, use “Reenviar link de acesso” na lista.'
+          : created.emailSent
+            ? 'Colaborador criado. O link de acesso foi enviado por e-mail.'
+            : 'Colaborador criado!',
+      });
       clearDraft();
       onSuccess();
+      if (created?.inviteUrl) {
+        openModal('invite', {
+          inviteUrl: created.inviteUrl,
+          notice: created.emailSent === false ? EMAIL_NOT_SENT_NOTICE : undefined,
+        });
+      }
     } catch (err) {
       logger.error('Erro', 'CollaboratorFormPage', err);
-      addNotification({ type: 'error', title: 'Erro', message: 'Falha ao salvar colaborador' });
+      // D3: a recusa do servidor aparece com o motivo (ex.: 409 "Já existe uma conta com este e-mail.").
+      const message = err instanceof Error && err.message ? err.message : 'Falha ao salvar colaborador';
+      addNotification({ type: 'error', title: 'Erro', message });
     }
   };
 
@@ -196,6 +259,14 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
             placeholder="email@exemplo.com"
             {...register('email')}
             error={errors.email?.message as string}
+          />
+          {/* D3: o telefone entra no cadastro (é por ele que o admin manda o link pelo WhatsApp). */}
+          <Input
+            label="Telefone"
+            type="tel"
+            placeholder="(31) 99999-9999"
+            {...register('phone')}
+            error={errors.phone?.message as string}
           />
         </div>
       </FormSection>
@@ -240,6 +311,16 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
           />
         </div>
       </FormSection>
+
+      {!isEditing && (
+        <FormSection title="Acesso ao painel" description="Como o colaborador entra no painel da equipe">
+          <Checkbox
+            label="Enviar link de acesso por e-mail"
+            description="A pessoa cria a própria senha pelo link, que vale 72 horas. Depois de criar, o link também aparece aqui para copiar. Desmarque se ela ainda não vai usar o painel; dá para mandar depois em “Reenviar link de acesso”."
+            {...register('sendAccessLink')}
+          />
+        </FormSection>
+      )}
 
       <FormActions>
         <Button type="button" variant="outline" onClick={onCancel}>
