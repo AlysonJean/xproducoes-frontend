@@ -51,7 +51,12 @@ const SOLID_STATUS_CLASS: Record<StandardVariant, string> = {
 
 const solidStatus = (status?: string) => SOLID_STATUS_CLASS[bookingStatusVariant(status)];
 
-const bookingTitle = (booking: Booking) => booking.eventTitle || booking.client?.name || 'Evento';
+// D4: o servidor não manda mais dados do cliente para a equipe; o título vem só do evento.
+const bookingTitle = (booking: Booking) => booking.eventTitle || 'Evento';
+const eventLocation = (booking: Booking) => {
+  const location = (booking as Booking & { location?: string | null }).location;
+  return typeof location === 'string' && location.trim() ? location : null;
+};
 
 const axisTick = { fill: 'hsl(var(--muted-foreground))', fontSize: 12 };
 
@@ -164,16 +169,11 @@ const BookingDetails: React.FC<{ booking: Booking }> = ({ booking }) => (
           <dd>{new Date(booking.eventEndDate).toLocaleDateString('pt-BR')}</dd>
         </div>
       )}
-      {booking.client?.name && booking.eventTitle && (
-        <div className="flex gap-1">
-          <dt className="font-medium text-foreground">Cliente:</dt>
-          <dd>{booking.client.name}</dd>
-        </div>
-      )}
-      {typeof booking.venue === 'string' && booking.venue && (
+      {/* D4: "venue" não existia na reserva (o local nunca aparecia); o campo é location. */}
+      {eventLocation(booking) && (
         <div className="flex gap-1">
           <dt className="font-medium text-foreground">Local:</dt>
-          <dd>{booking.venue}</dd>
+          <dd>{eventLocation(booking)}</dd>
         </div>
       )}
     </dl>

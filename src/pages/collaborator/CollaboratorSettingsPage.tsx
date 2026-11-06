@@ -24,7 +24,7 @@ import { Textarea } from '../../components/ui/Textarea';
 import { Badge } from '../../components/ui/Badge';
 import { collaboratorProfileAPI, authAPI } from '../../services/api';
 
-import { ProfileSettings, SecuritySettings, PrivacySettings, PaymentSettings } from '@/types/types';
+import { ProfileSettings, SecuritySettings, PaymentSettings } from '@/types/types';
 
 import { useNotifications } from '@/contexts/NotificationContext';
 import { logger } from '../../utils/logger';
@@ -43,12 +43,6 @@ const TABS = [
   { id: 'security' as const, label: 'Segurança', icon: Lock },
   { id: 'privacy' as const, label: 'Privacidade', icon: Shield },
   { id: 'payment' as const, label: 'Pagamento', icon: CreditCard },
-];
-
-const VISIBILITY_OPTIONS = [
-  { value: 'public', label: 'Público' },
-  { value: 'clients_only', label: 'Apenas clientes' },
-  { value: 'private', label: 'Privado' },
 ];
 
 const PAYMENT_METHOD_OPTIONS = [
@@ -84,7 +78,6 @@ const CollaboratorSettingsPage: React.FC = () => {
     loginNotifications: true
   });
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [privacySettings, setPrivacySettings] = useState<PrivacySettings | null>(null);
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
   const [newSpecialty, setNewSpecialty] = useState('');
   const [loading, setLoading] = useState(true);
@@ -129,7 +122,6 @@ const CollaboratorSettingsPage: React.FC = () => {
         // Configurações salvas em User.profileSettings (JSON) — vindas da rota de settings — ou padrões
         const userSettings = (settingsResponse?.data ?? {}) as {
           security?: { twoFactorEnabled?: boolean; loginNotifications?: boolean };
-          privacy?: Partial<PrivacySettings>;
           payment?: Partial<PaymentSettings>;
         };
 
@@ -138,14 +130,6 @@ const CollaboratorSettingsPage: React.FC = () => {
           twoFactorEnabled: userSettings.security?.twoFactorEnabled ?? false,
           loginNotifications: userSettings.security?.loginNotifications ?? true
         }));
-
-        setPrivacySettings({
-            profileVisibility: userSettings.privacy?.profileVisibility || 'public',
-            showEmail: userSettings.privacy?.showEmail ?? false,
-            showPhone: userSettings.privacy?.showPhone ?? true,
-            allowReviews: userSettings.privacy?.allowReviews ?? true,
-            allowMessages: userSettings.privacy?.allowMessages ?? true
-        });
 
         setPaymentSettings({
             pixKey: userSettings.payment?.pixKey || '',
@@ -214,10 +198,8 @@ const CollaboratorSettingsPage: React.FC = () => {
         await authAPI.changePassword(securitySettings.currentPassword, securitySettings.newPassword);
         setSecuritySettings((prev) => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
       } else {
-        // Só a seção da aba ativa: o backend mescla por seção, então enviar as duas regravava a outra.
-        await collaboratorProfileAPI.updateSettings(
-          activeTab === 'privacy' ? { privacy: privacySettings } : { payment: paymentSettings }
-        );
+        // Só a seção de pagamento (a aba Privacidade não grava nada; ver D4 abaixo).
+        await collaboratorProfileAPI.updateSettings({ payment: paymentSettings });
       }
 
       addNotification({
@@ -557,47 +539,19 @@ const CollaboratorSettingsPage: React.FC = () => {
           </CollaboratorTabPanel>
         )}
 
-        {/* Aba Privacidade */}
-        {activeTab === 'privacy' && privacySettings && (
+        {/* Aba Privacidade. D4 (aprovada em 02/11/2026): as chaves "Mostrar e-mail", "Mostrar telefone"
+            etc. não faziam nada (nenhuma tela as lia). Agora o texto diz quem vê o quê, que é o que o
+            servidor de fato aplica. */}
+        {activeTab === 'privacy' && (
           <CollaboratorTabPanel idBase="config" id="privacy" className="space-y-6">
-            <SimpleCard title="Visibilidade do perfil">
-              <div className="space-y-4">
-                <Select
-                  size="sm"
-                  label="Quem pode ver seu perfil?"
-                  options={VISIBILITY_OPTIONS}
-                  value={privacySettings.profileVisibility}
-                  onChange={(e) => setPrivacySettings({
-                    ...privacySettings,
-                    profileVisibility: e.target.value as 'public' | 'private' | 'clients_only'
-                  })}
-                />
-
-                <div className="divide-y divide-border">
-                  <ToggleSwitch
-                    label="Mostrar e-mail"
-                    checked={privacySettings.showEmail}
-                    onChange={(checked) => setPrivacySettings({ ...privacySettings, showEmail: checked })}
-                  />
-                  <ToggleSwitch
-                    label="Mostrar telefone"
-                    checked={privacySettings.showPhone}
-                    onChange={(checked) => setPrivacySettings({ ...privacySettings, showPhone: checked })}
-                  />
-                  <ToggleSwitch
-                    label="Permitir avaliações"
-                    checked={privacySettings.allowReviews}
-                    onChange={(checked) => setPrivacySettings({ ...privacySettings, allowReviews: checked })}
-                  />
-                  <ToggleSwitch
-                    label="Permitir mensagens"
-                    checked={privacySettings.allowMessages}
-                    onChange={(checked) => setPrivacySettings({ ...privacySettings, allowMessages: checked })}
-                  />
-                </div>
-              </div>
+            <SimpleCard title="Quem vê seus dados">
+              <ul className="list-disc space-y-3 pl-5 text-sm text-foreground">
+                <li>A administração da X Produções vê seu cadastro completo: nome, contato, função, valor combinado e seus eventos.</li>
+                <li>Os colegas escalados no mesmo evento veem só seu nome, foto, função, horário e situação na escala. Seu telefone e seu e-mail não aparecem para eles.</li>
+                <li>Clientes não veem seus dados.</li>
+                <li>No Roteiro, você vê o que precisa para trabalhar: endereço, horários, contato do local, rider, tarefas e o seu cachê. Dados e valores do cliente não aparecem.</li>
+              </ul>
             </SimpleCard>
-            {saveButton('Salvar privacidade')}
           </CollaboratorTabPanel>
         )}
 
