@@ -466,7 +466,6 @@ export const ProfilePage = () => {
                 setGeneralPreferences={setGeneralPreferences}
                 saving={saving}
                 handleSavePreferences={handleSavePreferences}
-                googleCalendarEmail={profile?.googleCalendarEmail}
               />
             )}
           </div>

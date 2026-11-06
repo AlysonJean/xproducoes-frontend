@@ -1,59 +1,26 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { clsx } from 'clsx';
-import { CheckCircle2, Calendar } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { Card, Button, Checkbox, Select } from '../../../components/ui/StandardComponents';
 import { ProfileGeneralPreferences } from '../../../types/types';
-import { apiFetch } from '../../../services/api';
-import { logger } from '../../../utils/logger';
-import { useNotifications } from '../../../contexts/NotificationContext';
 
 interface PreferencesTabProps {
   generalPreferences: ProfileGeneralPreferences;
   setGeneralPreferences: React.Dispatch<React.SetStateAction<ProfileGeneralPreferences>>;
   saving: boolean;
   handleSavePreferences: () => void;
-  googleCalendarEmail?: string | null;
 }
+
+// D9 (aprovada em 02/11/2026): a conexão com a Google Agenda saiu das preferências do cliente; ela é
+// só do admin (painel). O cliente tem o botão "Google Agenda" na agenda dele, que abre o evento sem
+// guardar nada.
 
 export const PreferencesTab: React.FC<PreferencesTabProps> = ({
   generalPreferences,
   setGeneralPreferences,
   saving,
   handleSavePreferences,
-  googleCalendarEmail
 }) => {
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const { addNotification } = useNotifications();
-
-  const handleConnectGoogle = async () => {
-    try {
-      setGoogleLoading(true);
-      const data = await apiFetch<{ url: string }>('/google/connect');
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      logger.error('Erro ao conectar Google:', 'PreferencesTab', error);
-      // Antes a falha era silenciosa (o botão só parava de girar).
-      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível conectar ao Google Agenda agora.' });
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-
-  const handleDisconnectGoogle = async () => {
-    try {
-      setGoogleLoading(true);
-      await apiFetch('/google/disconnect', { method: 'POST' });
-      window.location.reload(); // Recarregar para atualizar estado
-    } catch (error) {
-      logger.error('Erro ao desconectar Google:', 'PreferencesTab', error);
-      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível desconectar o Google Agenda agora.' });
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-
   const profileTypes = [
     { id: 'individual' as const, label: 'Pessoa física' },
     { id: 'business' as const, label: 'Produtora' },
@@ -70,49 +37,6 @@ export const PreferencesTab: React.FC<PreferencesTabProps> = ({
         <div className="border-b border-border pb-4">
           <h3 className="text-lg font-semibold text-foreground">Configurações de Conta</h3>
           <p className="text-sm text-muted-foreground">Personalize sua experiência na plataforma</p>
-        </div>
-
-        {/* Integrações */}
-        <div className="pb-4 border-b border-border">
-          <h4 className="text-sm font-medium text-foreground mb-4">Integrações</h4>
-          <div className="flex flex-col gap-4 p-4 border border-border rounded-lg bg-card sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-center gap-4">
-              {/* Antes: bg-blue-50 text-blue-600 (quadrado claro no tema escuro) */}
-              <div className="shrink-0 p-2 bg-info/10 text-info rounded-lg" aria-hidden="true">
-                <Calendar className="h-6 w-6" />
-              </div>
-              <div className="min-w-0">
-                <div className="font-medium text-foreground">Google Agenda</div>
-                <div className="text-sm text-muted-foreground break-all">
-                  {googleCalendarEmail
-                    ? `Conectado como ${googleCalendarEmail}`
-                    : 'Sincronize suas reservas automaticamente'}
-                </div>
-              </div>
-            </div>
-            <div className="shrink-0">
-              {googleCalendarEmail ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-destructive text-destructive hover:bg-destructive/10"
-                  onClick={handleDisconnectGoogle}
-                  isLoading={googleLoading}
-                >
-                  Desconectar
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleConnectGoogle}
-                  isLoading={googleLoading}
-                >
-                  Conectar
-                </Button>
-              )}
-            </div>
-          </div>
         </div>
 
         {/* Tipo de Perfil e Identidade Fiscal */}

@@ -30,11 +30,9 @@ import {
   ExternalLink,
   Star,
   CalendarPlus,
-  RefreshCw,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/contexts/NotificationContext';
-import { logger } from '../../utils/logger';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import '@/styles/booking-calendar.css';
 
@@ -114,34 +112,11 @@ export const BookingDetailsModal = ({
 }) => {
   const booking = event.resource;
   const navigate = useNavigate();
-  const { addNotification } = useNotifications();
-  const [syncing, setSyncing] = useState(false);
-  
   const status = getStatus(booking.status);
   const equipmentCount = (booking.equipments?.length || 0) + (booking.kits?.length || 0);
   const totalValue = booking.totalPrice || 0;
   const googleUrl = generateGoogleCalendarUrl(booking);
 
-  const handleSync = async () => {
-    try {
-      setSyncing(true);
-      await apiFetch(`/google/bookings/${booking.id}/sync`, { method: 'POST' });
-      addNotification({
-        type: 'success',
-        title: 'Sucesso',
-        message: 'Reserva sincronizada com o Google Calendar!',
-      });
-    } catch (error) {
-      logger.error('Erro', 'ClientCalendarPage', error);
-      addNotification({
-        type: 'error',
-        title: 'Erro',
-        message: 'Erro ao sincronizar. Verifique se sua conta Google está conectada no perfil.',
-      });
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   return (
     <Modal isOpen={true} onClose={onClose} title="Detalhes da Reserva" size="lg">
@@ -246,6 +221,9 @@ export const BookingDetailsModal = ({
             Ver Detalhes
           </Button>
 
+          {/* D9: o botão de sincronizar (que exigia a Google Agenda conectada pelo cliente) saiu; a
+              conexão com a Google Agenda é só do admin. Este link abre o evento no Google Agenda da
+              pessoa e não guarda nada. */}
           <div className="flex gap-2 sm:flex-1">
             <Button
               variant="outline"
@@ -255,17 +233,6 @@ export const BookingDetailsModal = ({
               title="Abrir no Google Agenda"
             >
               Google Agenda
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-12 w-12"
-              onClick={handleSync}
-              isLoading={syncing}
-              title="Sincronizar automaticamente com o Google Agenda"
-              aria-label="Sincronizar automaticamente com o Google Agenda"
-            >
-              {!syncing && <RefreshCw className="h-4 w-4" aria-hidden="true" />}
             </Button>
           </div>
         </div>

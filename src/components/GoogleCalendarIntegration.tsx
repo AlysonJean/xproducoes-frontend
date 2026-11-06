@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Calendar } from 'lucide-react';
 import { Button } from './ui/StandardComponents';
 import { apiFetch } from '../services/api';
@@ -8,15 +8,35 @@ import { useNotifications } from '../contexts/NotificationContext';
 
 interface GoogleCalendarIntegrationProps {
   googleCalendarEmail?: string | null;
+  // D9: conectada antes, mas o Google recusou a permissão (revogada ou vencida).
+  needsReconnect?: boolean;
   onDisconnect?: () => void;
 }
 
+// D9 (aprovada em 02/11/2026): a Google Agenda é só do admin. A volta do Google cai no painel com
+// ?google_agenda=conectada ou =erro; o aviso aparece uma vez e o parâmetro sai do endereço.
+const RETURN_PARAM = 'google_agenda';
+
 export const GoogleCalendarIntegration: React.FC<GoogleCalendarIntegrationProps> = ({
   googleCalendarEmail,
+  needsReconnect,
   onDisconnect
 }) => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const { addNotification } = useNotifications();
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const result = url.searchParams.get(RETURN_PARAM);
+    if (!result) return;
+    if (result === 'conectada') {
+      addNotification({ type: 'success', title: 'Google Agenda conectada', message: 'As reservas confirmadas passam a entrar na sua agenda.' });
+    } else {
+      addNotification({ type: 'error', title: 'Google Agenda não conectada', message: 'O Google não confirmou a conexão. Tente de novo.' });
+    }
+    url.searchParams.delete(RETURN_PARAM);
+    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+  }, [addNotification]);
 
   const handleConnectGoogle = async () => {
     try {
@@ -37,7 +57,14 @@ export const GoogleCalendarIntegration: React.FC<GoogleCalendarIntegrationProps>
   const handleDisconnectGoogle = async () => {
     try {
       setGoogleLoading(true);
-      await apiFetch('/google/disconnect', { method: 'POST' });
+      const result = await apiFetch<{ revokedAtGoogle?: boolean }>('/google/disconnect', { method: 'POST' });
+      if (result && result.revokedAtGoogle === false) {
+        addNotification({
+          type: 'warning',
+          title: 'Desconectada aqui',
+          message: 'O Google não respondeu ao cancelamento da permissão. Para garantir, remova o acesso da X Produções em myaccount.google.com/permissions.',
+        });
+      }
       if (onDisconnect) {
           onDisconnect();
       } else {
@@ -61,15 +88,26 @@ export const GoogleCalendarIntegration: React.FC<GoogleCalendarIntegrationProps>
             </div>
             <div className="min-w-0">
                 <div className="font-medium text-foreground">Google Agenda</div>
-                <div className="text-sm text-muted-foreground break-words">
-                    {googleCalendarEmail
+                <div className={needsReconnect ? 'text-sm text-warning break-words' : 'text-sm text-muted-foreground break-words'} role={needsReconnect ? 'status' : undefined}>
+                    {needsReconnect
+                        ? `Reconecte sua Google Agenda${googleCalendarEmail ? ` (${googleCalendarEmail})` : ''}: o Google deixou de aceitar a permissão.`
+                        : googleCalendarEmail
                         ? `Conectado como ${googleCalendarEmail}`
                         : 'Sincronize sua agenda automaticamente'}
                 </div>
             </div>
         </div>
         <div className="shrink-0">
-            {googleCalendarEmail ? (
+            {needsReconnect ? (
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleConnectGoogle}
+                    isLoading={googleLoading}
+                >
+                    Reconectar
+                </Button>
+            ) : googleCalendarEmail ? (
                 <Button
                     variant="outline"
                     size="sm"

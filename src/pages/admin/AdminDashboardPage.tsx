@@ -432,7 +432,10 @@ export const AdminDashboardPage = () => {
               Sincronize automaticamente todas as reservas confirmadas com o calendário oficial da X Produções.
             </p>
           </div>
-          <GoogleCalendarIntegration googleCalendarEmail={user?.googleCalendarEmail} />
+          <GoogleCalendarIntegration
+            googleCalendarEmail={user?.googleCalendarEmail}
+            needsReconnect={user?.googleCalendarNeedsReconnect}
+          />
         </Card>
 
         {/* Revenue Chart Section */}

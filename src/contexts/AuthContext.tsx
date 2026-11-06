@@ -22,6 +22,8 @@ export interface AuthUser {
   bio?: string;
   location?: string;
   googleCalendarEmail?: string | null;
+  // D9: a Google Agenda estava conectada e o Google recusou a permissão (revogada ou vencida).
+  googleCalendarNeedsReconnect?: boolean;
 }
 
 export interface AuthTokens {
