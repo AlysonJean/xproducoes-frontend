@@ -231,7 +231,8 @@ export const CartPage = () => {
                   <h2 className="mb-1 break-words text-lg font-bold text-foreground sm:text-2xl">{item.name}</h2>
                   <p className="text-lg font-bold text-primary sm:text-xl">
                     {formatPrice(item.price)}{' '}
-                    <span className="text-sm font-normal text-muted-foreground">{item.type === 'service' ? '/ serviço' : '/ hora'}</span>
+                    {/* Decisão do dono de 06/11: kit por evento; equipamento avulso segue por hora (EQUIPMENT_PRICE_UNIT). */}
+                    <span className="text-sm font-normal text-muted-foreground">{item.type === 'service' ? '/ serviço' : item.type === 'kit' ? 'por evento' : '/ hora'}</span>
                   </p>
                 </div>
               </div>
@@ -257,7 +258,7 @@ export const CartPage = () => {
                 {formatPrice(subtotal)}
               </div>
               <p className="leading-relaxed text-muted-foreground">
-                Este valor é uma estimativa parcial. Equipamentos e Kits serão multiplicados pela duração final (horas) do seu evento, enquanto os serviços possuem valor fixo. Taxas de transporte serão validadas por nossa equipe.
+                Este valor é uma estimativa parcial. Kits têm preço por evento; equipamentos avulsos são multiplicados pela duração do seu evento, e os serviços possuem valor fixo. Taxas de transporte serão validadas por nossa equipe.
               </p>
             </div>
 

@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatPrice } from './formatPrice';
+import { bookingPricing, PRICING_LINE_TYPE_LABEL } from './bookingPricing';
 import { bookingEmail, bookingPhone } from './bookingContact';
 import type { BookingDetails } from '../types/types';
 
@@ -74,16 +75,21 @@ export async function generateBookingProposalPdf(booking: BookingDetails): Promi
   const addressLines = doc.splitTextToSize(`Endereço: ${fullAddress || '-'}`, 180);
   doc.text(addressLines, 14, 102);
 
-  const rows: string[][] = [];
-  if (booking.kit) {
-    rows.push([booking.kit.name || 'Kit', 'KIT', formatPrice(booking.kit.price ?? 0)]);
+  // D8a e P16 (aprovadas em 02/11/2026): as linhas e o total são os da reserva (pricing da API), os mesmos
+  // da página do cliente e do PDF do painel. Antes este PDF listava os preços de HOJE do catálogo (o
+  // equipamento por hora) e o total não batia com as linhas. Reserva antiga sem itens gravados lista só os
+  // nomes: o preço combinado é o Total.
+  const pricing = bookingPricing(booking);
+  const rows: string[][] = pricing.lines.map((line) => [
+    `${line.quantity > 1 ? `${line.quantity}× ` : ''}${line.description}`,
+    PRICING_LINE_TYPE_LABEL[line.type] ?? 'Item',
+    formatPrice(line.total),
+  ]);
+  if (rows.length === 0) {
+    if (booking.kit) rows.push([booking.kit.name || 'Kit', 'Kit', 'Incluído no total']);
+    (booking.equipments || []).forEach((eq) => rows.push([eq.name, 'Equipamento', 'Incluído no total']));
+    (booking.services || []).forEach((s) => rows.push([s.name, 'Serviço', 'Incluído no total']));
   }
-  (booking.equipments || []).forEach((eq) => {
-    rows.push([eq.name, 'EQUIPAMENTO', `${formatPrice(eq.pricePerHour ?? 0)}/h`]);
-  });
-  (booking.services || []).forEach((s) => {
-    rows.push([s.name, 'SERVIÇO', formatPrice(s.price ?? 0)]);
-  });
 
   autoTable(doc, {
     startY: 112,
@@ -96,19 +102,25 @@ export async function generateBookingProposalPdf(booking: BookingDetails): Promi
   const tableEndY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || 120;
   let y = tableEndY + 10;
 
-  const totalPrice = Number(booking.totalPrice || 0);
-  const discountAmount = Number(booking.discountAmount || 0);
-
+  // Subtotal, cupom e ajuste só quando há o que explicar; o Total é o valor final da reserva.
+  const subtotal = pricing.lines.length > 0 ? pricing.itemsSubtotal : pricing.total + (pricing.couponDiscount?.amount ?? 0);
   doc.setFontSize(10);
-  if (discountAmount > 0) {
-    doc.text(`Subtotal: ${formatPrice(totalPrice + discountAmount)}`, 14, y);
+  if (pricing.couponDiscount || pricing.adjustment !== 0) {
+    doc.text(`Subtotal: ${formatPrice(subtotal)}`, 14, y);
     y += 6;
-    doc.text(`Desconto${booking.coupon?.code ? ` (${booking.coupon.code})` : ''}: - ${formatPrice(discountAmount)}`, 14, y);
-    y += 8;
+    if (pricing.couponDiscount) {
+      doc.text(`Desconto${pricing.couponDiscount.code ? ` (${pricing.couponDiscount.code})` : ''}: - ${formatPrice(pricing.couponDiscount.amount)}`, 14, y);
+      y += 6;
+    }
+    if (pricing.adjustment !== 0) {
+      doc.text(`Ajuste no valor final: ${pricing.adjustment < 0 ? '-' : '+'} ${formatPrice(Math.abs(pricing.adjustment))}`, 14, y);
+      y += 6;
+    }
+    y += 2;
   }
 
   doc.setFontSize(12);
-  doc.text(`Total: ${formatPrice(totalPrice)}`, 14, y);
+  doc.text(`Total: ${formatPrice(pricing.total)}`, 14, y);
   y += 10;
 
   doc.setFontSize(10);

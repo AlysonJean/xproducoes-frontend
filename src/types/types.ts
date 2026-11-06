@@ -19,6 +19,7 @@ export interface Banner {
 }
 
 import { ItemStatus, EquipmentStatus, BookingStatus, BookingPaymentStatus, PaymentStatus, UserRole, ECollaboratorRole, ExperienceLevel } from './enums';
+import type { BookingItemLike, BookingPricing } from '../utils/bookingPricing';
 
 export { ItemStatus, EquipmentStatus, BookingStatus, PaymentStatus, UserRole, ECollaboratorRole, ExperienceLevel };
 
@@ -565,7 +566,6 @@ export interface CalendarBooking {
   // guardavam a interna em notes).
   internalNotes?: string | null;
   notes?: string | null;
-  serviceValue?: number;
   totalPrice?: number;
 }
 
@@ -610,7 +610,10 @@ export interface BookingDetails {
   services?: Service[];
   totalPrice?: number | string;
   discount?: number;
-  serviceValue?: number;
+  // D8a e P16: o valor final é só o totalPrice. Itens da proposta como gravados (técnico, montagem e frete
+  // entram como itens) e o resumo de preço que a ficha (GET /bookings/:id) traz.
+  items?: BookingItemLike[];
+  pricing?: BookingPricing | null;
   paymentProofUrl?: string;
   eventLocation?: string;
   location?: string;

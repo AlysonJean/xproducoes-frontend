@@ -209,7 +209,7 @@ export function ExperienceLevelsEditor({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Input
-                      label="Preço/hora"
+                      label="Preço por evento"
                       type="number"
                       step="0.01"
                       min="0"

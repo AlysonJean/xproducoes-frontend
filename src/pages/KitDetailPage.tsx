@@ -257,7 +257,7 @@ export const KitDetailPage = () => {
             )}
             {savings > 0 && (
               <div className="absolute top-4 left-4 bg-success text-success-foreground px-4 py-1.5 rounded-full text-sm font-black shadow-lg">
-                ECONOMIZE {formatPrice(savings)}/h
+                ECONOMIZE {formatPrice(savings)}
               </div>
             )}
             {/* Ações sempre visíveis abaixo de lg (antes só no hover); no desktop ficam ao lado do título. */}
@@ -292,7 +292,8 @@ export const KitDetailPage = () => {
                   </div>
                   <div className="text-4xl font-black text-foreground">
                       {formatPrice(Number(kit.price ?? 0))}
-                      <span className="text-sm font-normal ml-1">/ hora</span>
+                      {/* Decisão do dono de 06/11: o preço do kit é por evento, nunca vezes as horas. */}
+                      <span className="text-sm font-normal ml-1">por evento</span>
                   </div>
                 </div>
               </div>
@@ -300,7 +301,7 @@ export const KitDetailPage = () => {
               {savings > 0 && (
                   <div className="flex flex-wrap justify-between items-center gap-2 text-success font-bold bg-success/10 p-3 rounded-xl border border-success/20">
                       <span>Sua economia imediata:</span>
-                      <span>{formatPrice(savings)} / hora</span>
+                      <span>{formatPrice(savings)}</span>
                   </div>
               )}
             </div>

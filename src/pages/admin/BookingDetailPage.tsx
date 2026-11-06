@@ -32,6 +32,7 @@ import {
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatPrice } from '@/utils/formatPrice';
+import { bookingPricing, PRICING_LINE_TYPE_LABEL, type BookingPricingLine } from '@/utils/bookingPricing';
 import { formatBookingPaymentStatus } from '@/utils/typeSafeFormatters';
 import { bookingStatusLabel, bookingStatusVariant, deliveryStatusLabel, DELIVERY_STATUS_OPTIONS } from '@/utils/bookingStatus';
 import { COLLABORATOR_ROLE_OPTIONS } from '@/utils/collaboratorRoles';
@@ -448,11 +449,15 @@ export const BookingDetailPage = () => {
       curY += (addrLines.length - 1) * 4.5;
     }
 
-    // ── Montagem da tabela de itens ───────────────────────────────────────────
+    // ── Itens da proposta ─────────────────────────────────────────────────────
+    // D8a e P16 (aprovadas em 02/11/2026): as linhas e o valor final vêm da reserva (pricing da API), os
+    // mesmos da página do cliente e do PDF da área do cliente. Antes este PDF, que vai ao cliente pelo
+    // "PDF + WhatsApp", recalculava pelo catálogo × (eventDuration || 4): serviço multiplicado por horas,
+    // equipamento e kit por campos que não existem no cadastro (R$ 0), desconto de um campo inexistente e
+    // os cachês da equipe como linhas do cliente. Reserva antiga sem itens gravados lista só os nomes.
+    const pricing = bookingPricing(booking);
     const itemRows: string[][] = [];
     const itemImages: string[] = [];
-    let subtotalBruto = 0;
-    let totalDescontos = 0;
 
     const fetchItemImage = async (url: string): Promise<string | null> => {
       if (!url) return null;
@@ -468,54 +473,27 @@ export const BookingDetailPage = () => {
       } catch { return null; }
     };
 
-    // Equipamentos → preço/hora × duração do evento
-    for (const e of booking.equipments || []) {
-      const qtd = duracao;
-      const unitVal = Number(e.hourlyRate || 0) || Number(e.dailyPrice || 0);
-      const subtotal = unitVal * qtd;
-      const desc = Number(e.discount || 0);
-      subtotalBruto += subtotal;
-      totalDescontos += desc;
-      itemRows.push(['', e.name || 'Equipamento', 'Equipamento', `${qtd}h`, formatPrice(unitVal), formatPrice(desc), formatPrice(subtotal - desc)]);
-      itemImages.push(e.imageUrl || '');
-    }
+    const imageOf = (line: BookingPricingLine): string =>
+      (line.equipmentId ? booking.equipments?.find((e) => e.id === line.equipmentId)?.imageUrl : undefined)
+      || (line.serviceId ? booking.services?.find((s) => s.id === line.serviceId)?.imageUrl : undefined)
+      || (line.kitId && booking.kit?.id === line.kitId ? booking.kit.imageUrl : undefined)
+      || '';
 
-    // Kits → preço/hora × duração do evento
-    for (const k of booking.kits || (booking.kit ? [booking.kit] : [])) {
-      const kit = ('kit' in k ? k.kit : undefined) ?? (k as Kit);
-      const qtd = duracao;
-      const unitVal = Number(kit.hourlyRate || 0) || Number(kit.price || 0);
-      const subtotal = unitVal * qtd;
-      const desc = Number(kit.discount || 0);
-      subtotalBruto += subtotal;
-      totalDescontos += desc;
-      itemRows.push(['', kit.name || 'Kit', 'Kit', `${qtd}h`, formatPrice(unitVal), formatPrice(desc), formatPrice(subtotal - desc)]);
-      itemImages.push(kit.imageUrl || '');
+    for (const line of pricing.lines) {
+      itemRows.push(['', line.description, PRICING_LINE_TYPE_LABEL[line.type] ?? 'Item', String(line.quantity), formatPrice(line.unitPrice), formatPrice(line.discount), formatPrice(line.total)]);
+      itemImages.push(imageOf(line));
     }
-
-    // Serviços → preço/hora × duração do evento
-    for (const s of booking.services || []) {
-      const qtd = duracao;
-      const unitVal = Number(s.hourlyRate || 0) || Number(s.price || 0);
-      const subtotal = unitVal * qtd;
-      const desc = Number(s.discount || 0);
-      subtotalBruto += subtotal;
-      totalDescontos += desc;
-      itemRows.push(['', s.name || 'Servico', 'Servico', `${qtd}h`, formatPrice(unitVal), formatPrice(desc), formatPrice(subtotal - desc)]);
-      itemImages.push(s.imageUrl || '');
-    }
-
-    // Colaboradores → valor/hora × horas contratadas
-    for (const ec of booking.eventCollaborators || []) {
-      const qtd = ec.totalHours || duracao;
-      const unitVal = Number(ec.hourlyRate || 0) || Number(ec.fixedRate || 0);
-      const subtotal = unitVal * qtd;
-      const desc = Number(ec.discount || 0);
-      subtotalBruto += subtotal;
-      totalDescontos += desc;
-      const cName = ec.collaborator?.name || ec.collaborator?.user?.name || 'Colaborador';
-      itemRows.push(['', cName, ec.role || 'Assistente', `${qtd}h`, formatPrice(unitVal), formatPrice(desc), formatPrice(subtotal - desc)]);
-      itemImages.push(ec.collaborator?.avatar || '');
+    if (itemRows.length === 0) {
+      const addName = (name: string, type: string, image?: string) => {
+        itemRows.push(['', name, type, '-', '-', '-', 'Incluído']);
+        itemImages.push(image || '');
+      };
+      for (const k of booking.kits || (booking.kit ? [booking.kit] : [])) {
+        const kit = ('kit' in k ? k.kit : undefined) ?? (k as Kit);
+        addName(kit.name || 'Kit', 'Kit', kit.imageUrl);
+      }
+      for (const e of booking.equipments || []) addName(e.name || 'Equipamento', 'Equipamento', e.imageUrl);
+      for (const s of booking.services || []) addName(s.name || 'Serviço', 'Serviço', s.imageUrl);
     }
 
     const loadedImages = await Promise.all(itemImages.map(fetchItemImage));
@@ -524,10 +502,10 @@ export const BookingDetailPage = () => {
     const tableStartY = curY + 8;
     autoTable(doc, {
       startY: tableStartY,
-      head: [['', 'Item / Descricao', 'Tipo', 'Qtd', 'Vlr/h', 'Desconto', 'Total']],
+      head: [['', 'Item / Descricao', 'Tipo', 'Qtd', 'Unitario', 'Desconto', 'Total']],
       body: itemRows.length > 0
         ? itemRows
-        : [['', '(conforme contrato)', '', `${duracao}h`, '-', '-', formatPrice(booking.totalPrice || 0)]],
+        : [['', '(conforme contrato)', '', '-', '-', '-', formatPrice(pricing.total)]],
       styles: { fontSize: 8.5, cellPadding: 2.5, textColor: C_TEXT },
       headStyles: { fillColor: C_DARK, textColor: C_WHITE, fontStyle: 'bold', fontSize: 8 },
       alternateRowStyles: { fillColor: C_LIGHT },
@@ -551,8 +529,18 @@ export const BookingDetailPage = () => {
     const tableEndY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? tableStartY + 20;
 
     // ── Resumo financeiro (caixa à direita) ──────────────────────────────────
-    const valorFinal = Number(booking.totalPrice || 0) || Math.max(0, subtotalBruto - totalDescontos);
-    const descontoExibido = Number(booking.discount || 0) || totalDescontos;
+    // Subtotal, cupom e ajuste só quando há o que explicar; o valor final é o da reserva.
+    const summaryRows: Array<[string, string, boolean]> = [];
+    if (pricing.couponDiscount || pricing.adjustment !== 0) {
+      summaryRows.push(['Subtotal dos itens:', formatPrice(pricing.itemsSubtotal), false]);
+    }
+    if (pricing.couponDiscount) {
+      const code = pricing.couponDiscount.code ? ` (${pricing.couponDiscount.code})` : '';
+      summaryRows.push([`Desconto${code}:`, `- ${formatPrice(pricing.couponDiscount.amount)}`, true]);
+    }
+    if (pricing.adjustment !== 0) {
+      summaryRows.push(['Ajuste no valor final:', `${pricing.adjustment < 0 ? '-' : '+'} ${formatPrice(Math.abs(pricing.adjustment))}`, pricing.adjustment < 0]);
+    }
 
     const boxX = PAGE_W - MARGIN - 86;
     const boxW = 86;
@@ -561,24 +549,23 @@ export const BookingDetailPage = () => {
     doc.setFillColor(...C_CARD);
     doc.setDrawColor(...C_BLUE);
     doc.setLineWidth(0.4);
-    doc.rect(boxX, finY, boxW, 34, 'FD');
+    doc.rect(boxX, finY, boxW, summaryRows.length * 6 + (summaryRows.length > 0 ? 3 : 0) + 14, 'FD');
 
-    finY += 6;
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C_TEXT);
-    doc.text('Subtotal bruto:', boxX + 4, finY);
-    doc.text(formatPrice(subtotalBruto), boxX + boxW - 4, finY, { align: 'right' });
+    for (const [label, value, red] of summaryRows) {
+      finY += 6;
+      doc.setTextColor(...(red ? C_RED : C_TEXT));
+      doc.text(label, boxX + 4, finY);
+      doc.text(value, boxX + boxW - 4, finY, { align: 'right' });
+    }
 
-    finY += 6;
-    doc.setTextColor(...C_RED);
-    doc.text('Desconto concedido ao cliente:', boxX + 4, finY);
-    doc.text(`- ${formatPrice(descontoExibido)}`, boxX + boxW - 4, finY, { align: 'right' });
-
-    finY += 3;
-    doc.setDrawColor(...C_MUTED);
-    doc.setLineWidth(0.2);
-    doc.line(boxX + 4, finY + 1, boxX + boxW - 4, finY + 1);
+    if (summaryRows.length > 0) {
+      finY += 3;
+      doc.setDrawColor(...C_MUTED);
+      doc.setLineWidth(0.2);
+      doc.line(boxX + 4, finY + 1, boxX + boxW - 4, finY + 1);
+    }
 
     finY += 5;
     doc.setFillColor(...C_BLUE);
@@ -587,7 +574,7 @@ export const BookingDetailPage = () => {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.text('VALOR FINAL DA PROPOSTA:', boxX + 4, finY + 5.5);
-    doc.text(formatPrice(valorFinal), boxX + boxW - 4, finY + 5.5, { align: 'right' });
+    doc.text(formatPrice(pricing.total), boxX + boxW - 4, finY + 5.5, { align: 'right' });
 
     // ── Observações (à esquerda do resumo financeiro) ─────────────────────────
     if (booking.notes?.trim()) {

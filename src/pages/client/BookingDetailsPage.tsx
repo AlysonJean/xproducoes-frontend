@@ -6,6 +6,7 @@ import { ArrowLeft, FileDown, FileText, Mail, MessageCircle, Plus, Trash2, Uploa
 import { apiFetch } from '@/services/api';
 import type { BookingDetails } from '@/types/types';
 import { formatPrice } from '@/utils/formatPrice';
+import { bookingPricing } from '@/utils/bookingPricing';
 import { bookingStatusLabel, bookingStatusVariant } from '@/utils/bookingStatus';
 import { Badge, Button, Card, ConfirmModal, Modal, buttonVariants } from '@/components/ui/StandardComponents';
 import { ClientPage, ClientPageError, ClientPageLoading } from '../../components/client/ClientPage';
@@ -225,8 +226,10 @@ export const BookingDetailsPage = () => {
     );
   }
 
+  // D8a e P16: o resumo de preço da API (linhas, desconto, ajuste e o valor final), o mesmo dos PDFs.
+  const pricing = bookingPricing(booking);
   // Pedido do briefing chega sem itens: o total fica zerado até a equipe preparar o orçamento.
-  const hasPrice = Number(booking.totalPrice) > 0 || Boolean(booking.serviceValue);
+  const hasPrice = pricing.total > 0;
   // D20: texto pronto do contato com a equipe (o nome informado na reserva ou o da conta, o código inteiro
   // e a data do evento em Brasília), o mesmo no WhatsApp e no corpo do e-mail.
   const bookingCode = formatBookingCode(booking.id);
@@ -334,7 +337,9 @@ export const BookingDetailsPage = () => {
                       {booking.equipments?.map((eq, idx) => (
                         <div key={idx} className="flex flex-wrap items-center justify-between gap-2 p-3 bg-muted/30 rounded-lg">
                           <p className="font-medium text-foreground">{eq.name}</p>
-                          <p className="text-sm text-primary font-semibold">{formatPrice(Number(eq.pricePerHour || 0))}/h</p>
+                          {/* D8a/P16: o preço combinado está no Resumo Financeiro; o preço de hoje do catálogo não
+                              aparece (nem na reserva antiga sem itens gravados, como no PDF). */}
+                          <p className="text-sm text-primary font-semibold">Incluído no Total</p>
                         </div>
                       ))}
                     </div>
@@ -349,7 +354,7 @@ export const BookingDetailsPage = () => {
                       {booking.services?.map((s, idx) => (
                         <div key={idx} className="flex flex-wrap items-center justify-between gap-2 p-3 bg-muted/30 rounded-lg">
                           <p className="font-medium text-foreground">{s.name}</p>
-                          <p className="text-sm text-primary font-semibold">{formatPrice(Number(s.price || 0))}</p>
+                          <p className="text-sm text-primary font-semibold">Incluído no Total</p>
                         </div>
                       ))}
                     </div>
@@ -400,30 +405,41 @@ export const BookingDetailsPage = () => {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Resumo Financeiro */}
+          {/* D8a e P16 (aprovadas em 02/11/2026): um valor final só. Antes a tela mostrava "Equipamentos" com o
+              totalPrice e "Serviços" com o serviceValue, e o Total somava os dois — como texto, porque o valor
+              chega como "1500.00": R$ 15.001.500,00. Agora as linhas da proposta (técnico, montagem e frete
+              inclusive), o desconto, o ajuste e um Total só, os mesmos do PDF e do painel (pricing da API). */}
           <Card padding>
             <h2 className="text-xl font-semibold mb-4 text-foreground">Resumo Financeiro</h2>
             <div className="space-y-3">
-              <div className="flex justify-between gap-3">
-                <span className="text-muted-foreground">Equipamentos:</span>
-                <span className="font-medium text-foreground">
-                  {hasPrice ? formatPrice(booking.totalPrice || 0) : 'Em preparação'}
-                </span>
-              </div>
-              {/* Ternário: com `&&`, serviceValue = 0 aparecia como um "0" solto na tela. */}
-              {booking.serviceValue ? (
+              {pricing.lines.length > 0 && (
+                <ul className="space-y-2" aria-label="Itens da proposta">
+                  {pricing.lines.map((line, idx) => (
+                    <li key={idx} className="flex justify-between gap-3">
+                      <span className="text-muted-foreground min-w-0 break-words">
+                        {line.quantity > 1 ? `${line.quantity}× ` : ''}{line.description}
+                      </span>
+                      <span className="font-medium text-foreground shrink-0">{formatPrice(line.total)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {pricing.couponDiscount && (
                 <div className="flex justify-between gap-3">
-                  <span className="text-muted-foreground">Serviços:</span>
-                  <span className="font-medium text-foreground">
-                    {formatPrice(booking.serviceValue)}
-                  </span>
+                  <span className="text-muted-foreground">Desconto{pricing.couponDiscount.code ? ` (${pricing.couponDiscount.code})` : ''}:</span>
+                  <span className="font-medium text-foreground shrink-0">− {formatPrice(pricing.couponDiscount.amount)}</span>
                 </div>
-              ) : null}
-              <div className="border-t border-border pt-3">
+              )}
+              {pricing.adjustment !== 0 && (
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Ajuste no valor final:</span>
+                  <span className="font-medium text-foreground shrink-0">{pricing.adjustment < 0 ? '− ' : '+ '}{formatPrice(Math.abs(pricing.adjustment))}</span>
+                </div>
+              )}
+              <div className={pricing.lines.length > 0 || pricing.couponDiscount ? 'border-t border-border pt-3' : ''}>
                 <div className="flex justify-between gap-3 text-lg font-bold">
                   <span className="text-foreground">Total:</span>
-                  <span className="text-primary">
-                    {hasPrice ? formatPrice((Number(booking.totalPrice) || 0) + (booking.serviceValue || 0)) : 'Em preparação'}
-                  </span>
+                  <span className="text-primary">{hasPrice ? formatPrice(pricing.total) : 'Em preparação'}</span>
                 </div>
               </div>
             </div>

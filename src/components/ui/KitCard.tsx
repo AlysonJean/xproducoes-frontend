@@ -161,7 +161,8 @@ export const KitCard: React.FC<KitCardProps> = ({
         <div className="flex flex-col">
             <span className="text-xs text-muted-foreground">a partir de</span>
             <span className="text-lg font-bold text-primary">
-              {formatPrice(kit.price || 0)} <span className="text-xs font-normal">/ hora</span>
+              {/* Decisão do dono de 06/11: o preço do kit é por evento, nunca por hora. */}
+              {formatPrice(kit.price || 0)} <span className="text-xs font-normal">por evento</span>
             </span>
         </div>
         <Button

@@ -26,6 +26,7 @@ import type { Booking } from '../../types/types';
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
+import { useEquipmentPriceUnit } from '../../hooks/usePricingRules';
 import { quoteSuccessMessage } from '../../utils/quoteSubmission';
 import { TrustStrip } from '../../components/ui/TrustStrip';
 import { ClientPage } from '../../components/client/ClientPage';
@@ -112,16 +113,20 @@ export const QuoteRequestPage: React.FC = () => {
     },
   });
 
-  // Estimativa de subtotal no front (mesma fórmula do backend: kit/equipamentos por hora,
-  // serviços fixos) — só para pré-visualizar o desconto do cupom antes do envio. O valor
-  // final e autoritativo continua sendo calculado e validado no servidor.
+  // Estimativa de subtotal no front, com a regra do servidor (backend/src/services/booking/bookingPricing.ts;
+  // decisões do dono de 06/11): kit pelo preço do evento, nunca vezes as horas; equipamento por hora ou por
+  // diária (24 h para cima), conforme EQUIPMENT_PRICE_UNIT; serviços fixos. Só pré-visualiza o desconto do
+  // cupom antes do envio; o valor final e autoritativo continua sendo calculado e validado no servidor.
+  const equipmentUnit = useEquipmentPriceUnit();
   const durationValue = Number(watch('duration')) || 0;
   const subtotal = useMemo(() => {
-    const kitsPrice = kit?.price ? Number(kit.price) * durationValue : 0;
-    const equipmentsPrice = equipments.reduce((sum, it) => sum + getEquipmentUnitPrice(it), 0) * durationValue;
+    const kitsPrice = kit?.price ? Number(kit.price) : 0;
+    // Horas cheias, como o servidor (hoursBetween): 4,5 h contam 5 h do equipamento.
+    const equipmentUnits = equipmentUnit === 'day' ? Math.max(1, Math.ceil(durationValue / 24)) : Math.ceil(durationValue);
+    const equipmentsPrice = equipments.reduce((sum, it) => sum + getEquipmentUnitPrice(it), 0) * equipmentUnits;
     const servicesPrice = services.reduce((sum, it) => sum + Number((it as { price?: number | string }).price || 0), 0);
     return kitsPrice + equipmentsPrice + servicesPrice;
-  }, [kit, equipments, services, durationValue]);
+  }, [kit, equipments, services, durationValue, equipmentUnit]);
 
   const handleApplyCoupon = async () => {
     const code = couponInput.trim();

@@ -29,6 +29,8 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { formatPrice } from '@/utils/formatPrice';
 import { toNumber } from '@/utils/typeSafeFormatters';
+import { equipmentUnits, equipmentUnitSuffix, equipmentUnitText, type EquipmentPriceUnit } from '@/utils/bookingPricing';
+import { useEquipmentPriceUnit } from '@/hooks/usePricingRules';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -68,7 +70,39 @@ interface ProposalItem {
   discount: number;
   totalPrice: number;
   imageUrl?: string;
+  // D8a e P16: equipamento do catálogo tem preço por hora ou por diária; o preço da linha acompanha as
+  // datas do evento até alguém digitar outro preço. minimumUnits: o mínimo de diárias do cadastro.
+  ratePerUnit?: number;
+  minimumUnits?: number;
+  priceEdited?: boolean;
 }
+
+// Preço do catálogo: equipamento pelo preço da unidade (a coluna pricePerHour guarda o da hora ou o da
+// diária); kit (preço por evento) e serviço pelo preço do cadastro.
+const catalogPrice = (type: string, item: Equipment | Kit | Service): number =>
+  Number((type === 'EQUIPMENT' ? (item as Equipment).pricePerHour : (item as Kit | Service).price) || 0);
+
+// D8a e P16 (aprovadas em 02/11/2026) e decisões do dono de 06/11: o kit tem preço por evento (nunca vezes
+// as horas); o equipamento avulso custa por hora ou por diária (EQUIPMENT_PRICE_UNIT no servidor), vezes as
+// unidades tiradas do início e do término; o serviço tem preço fixo. Antes o equipamento entrava com
+// dailyPrice, que não existe no cadastro: R$ 0. O preço digitado à mão vence. Sem as datas ainda, conta 1
+// unidade (ou o mínimo de diárias).
+const unitsFor = (item: ProposalItem, unit: EquipmentPriceUnit, start: string, end: string): number =>
+  equipmentUnits(unit, start, end, item.minimumUnits) ?? Math.max(1, unit === 'day' ? item.minimumUnits ?? 1 : 1);
+
+const priceItems = (items: ProposalItem[], unit: EquipmentPriceUnit, start: string, end: string): ProposalItem[] =>
+  items.map((item) => {
+    if (item.ratePerUnit === undefined || item.priceEdited) return item;
+    const unitPrice = Math.round(item.ratePerUnit * unitsFor(item, unit, start, end) * 100) / 100;
+    return { ...item, unitPrice, totalPrice: Math.max(0, Math.round((unitPrice * item.quantity - item.discount) * 100) / 100) };
+  });
+
+// Descrição que vai para a reserva, o PDF e a página do cliente: com as horas ou diárias, quando o preço
+// acompanha as datas.
+const lineDescription = (item: ProposalItem, unit: EquipmentPriceUnit, start: string, end: string): string => {
+  const n = item.ratePerUnit !== undefined && !item.priceEdited ? equipmentUnits(unit, start, end, item.minimumUnits) : null;
+  return n ? `${item.description} (${equipmentUnitText(n, unit)})` : item.description;
+};
 
 export const AdminQuickProposalPage = () => {
   const navigate = useNavigate();
@@ -148,9 +182,15 @@ export const AdminQuickProposalPage = () => {
     fetchData();
   }, [reloadKey]);
 
+  const equipmentUnit = useEquipmentPriceUnit();
+  const pricedItems = useMemo(
+    () => priceItems(items, equipmentUnit, eventDate, eventEndDate),
+    [items, equipmentUnit, eventDate, eventEndDate]
+  );
+
   const subtotal = useMemo(() => {
-    return items.reduce((sum, item) => sum + toNumber(item.totalPrice), 0);
-  }, [items]);
+    return pricedItems.reduce((sum, item) => sum + toNumber(item.totalPrice), 0);
+  }, [pricedItems]);
 
   const filteredCatalogItems = useMemo(() => {
     const source = searchType === 'EQUIPMENT' ? equipments : searchType === 'KIT' ? kits : services;
@@ -160,26 +200,33 @@ export const AdminQuickProposalPage = () => {
   }, [searchType, searchTerm, equipments, kits, services]);
 
   const addItemToProposal = (type: ProposalItem['type'], item: Equipment | Kit | Service) => {
+    // Kit: as "horas incluídas no preço" ficam em minimumRentalDuration (decisão do dono de 06/11).
+    const includedHours = (item as Kit & { minimumRentalDuration?: number | null }).minimumRentalDuration;
     const newItem: ProposalItem = {
       id: Math.random().toString(36).substr(2, 9),
       type,
       sourceId: item.id,
-      description: item.name,
+      description: type === 'KIT' && includedHours ? `${item.name} (${includedHours} h incluídas)` : item.name,
       quantity: 1,
-      unitPrice: Number((item as Equipment).dailyPrice || (item as Kit | Service).price || 0),
+      unitPrice: catalogPrice(type, item),
       discount: 0,
-      totalPrice: Number((item as Equipment).dailyPrice || (item as Kit | Service).price || 0),
-      imageUrl: item.imageUrl
+      totalPrice: catalogPrice(type, item),
+      imageUrl: item.imageUrl,
+      ...(type === 'EQUIPMENT'
+        ? { ratePerUnit: catalogPrice(type, item), minimumUnits: (item as Equipment & { minimumRentalDuration?: number | null }).minimumRentalDuration ?? undefined }
+        : {}),
     };
     setItems(prev => [...prev, newItem]);
     addNotification({ type: 'success', title: 'Item adicionado', message: item.name });
   };
 
-  const addCustomItem = () => {
+  // Q12 (respostas de 03/11): técnico, montagem e frete são cobrados à parte, como itens; frete dentro de
+  // BH entra como item de R$ 0. Decisão de 06/11: a hora extra do kit também entra como item, à mão.
+  const addCustomItem = (description = 'Novo Serviço/Item') => {
     const newItem: ProposalItem = {
       id: Math.random().toString(36).substr(2, 9),
       type: 'CUSTOM',
-      description: 'Novo Serviço/Item',
+      description,
       quantity: 1,
       unitPrice: 0,
       discount: 0,
@@ -191,8 +238,9 @@ export const AdminQuickProposalPage = () => {
   const updateItem = (id: string, field: keyof ProposalItem, value: string | number) => {
     setItems(prev => prev.map(item => {
       if (item.id !== id) return item;
-      const updated = { ...item, [field]: value };
-      updated.totalPrice = (updated.unitPrice * updated.quantity) - updated.discount;
+      // Preço digitado à mão deixa de acompanhar as datas do evento. Linha nunca negativa (o servidor recusa).
+      const updated = { ...item, [field]: value, ...(field === 'unitPrice' ? { priceEdited: true } : {}) };
+      updated.totalPrice = Math.max(0, (updated.unitPrice * updated.quantity) - updated.discount);
       return updated;
     }));
   };
@@ -203,6 +251,7 @@ export const AdminQuickProposalPage = () => {
 
   const validate = (): string | null => {
     if (items.length === 0) return 'Adicione pelo menos um item ao orçamento.';
+    if (items.some((i) => !i.description.trim())) return 'Dê um nome a cada item do orçamento.';
     if (!eventDate) return 'Informe a data de início do evento.';
     if (!eventEndDate) return 'Informe a data de término do evento.';
     if (new Date(eventEndDate) <= new Date(eventDate)) return 'A data de término deve ser posterior à data de início.';
@@ -240,11 +289,20 @@ export const AdminQuickProposalPage = () => {
       const serviceIds = items.filter(i => i.type === 'SERVICE' && i.sourceId).map(i => i.sourceId!);
       const kitIdItem = items.find(i => i.type === 'KIT' && i.sourceId);
 
-      // Itens CUSTOM entram nas observações
-      const customItemsText = items
-        .filter(i => i.type === 'CUSTOM')
-        .map(i => `• ${i.description} (R$ ${i.unitPrice} x ${i.quantity})`)
-        .join('\n');
+      // D8a e P16: os itens vão como itens da reserva, com o preço usado (técnico, montagem, frete e hora
+      // extra inclusive), e o servidor soma o total pela mesma função das outras telas: o corpo não leva
+      // totalPrice. Antes os personalizados iam como texto em `notes` e o total era só a conta desta tela.
+      const proposalItems = pricedItems.map((i) => ({
+        description: lineDescription(i, equipmentUnit, eventDate, eventEndDate),
+        quantity: Math.max(1, Math.round(i.quantity) || 1),
+        unitPrice: Math.max(0, i.unitPrice),
+        discount: Math.max(0, i.discount),
+        totalPrice: Math.max(0, i.totalPrice),
+        itemType: i.type,
+        ...(i.type === 'EQUIPMENT' && i.sourceId ? { equipmentId: i.sourceId } : {}),
+        ...(i.type === 'SERVICE' && i.sourceId ? { serviceId: i.sourceId } : {}),
+        ...(i.type === 'KIT' && i.sourceId ? { kitId: i.sourceId } : {}),
+      }));
 
       // Achado (auditoria ponta a ponta): ia também `userId: user?.id`, o id do admin logado. Com
       // cliente manual, o backend pendurava a reserva no perfil de cliente do próprio admin (telefone
@@ -268,11 +326,9 @@ export const AdminQuickProposalPage = () => {
         eventDate: new Date(eventDate).toISOString(),
         eventEndDate: new Date(eventEndDate).toISOString(),
         // Achado (auditoria ponta a ponta): o campo diz "Não aparecem na proposta", mas ia para `notes`, que sai no
-        // PDF e na área do cliente. Agora vai para internalNotes, que o cliente não recebe. Os itens personalizados
-        // ficam em `notes`: são parte do que foi proposto.
-        notes: customItemsText ? `Itens personalizados:\n${customItemsText}` : undefined,
+        // PDF e na área do cliente. Agora vai para internalNotes, que o cliente não recebe.
         internalNotes: notes.trim() || undefined,
-        totalPrice: subtotal,
+        items: proposalItems,
         status,
         ...(equipmentIds.length > 0 && { equipmentIds }),
         ...(serviceIds.length > 0 && { serviceIds }),
@@ -417,9 +473,9 @@ export const AdminQuickProposalPage = () => {
     autoTable(doc, {
       startY: 112,
       head: [['Item', 'Tipo', 'Qtd', 'Unitario', 'Desconto', 'Total']],
-      body: items.map((item) => [
-        item.description,
-        item.type,
+      body: pricedItems.map((item) => [
+        lineDescription(item, equipmentUnit, eventDate, eventEndDate),
+        ITEM_TYPE_LABELS[item.type] || item.type,
         String(item.quantity),
         formatPrice(item.unitPrice),
         formatPrice(item.discount),
@@ -609,10 +665,25 @@ export const AdminQuickProposalPage = () => {
                  <h3 className="flex items-center gap-2 text-primary font-semibold uppercase text-xs tracking-wider">
                    <Calculator className="h-4 w-4" aria-hidden="true" /> Itens do orçamento
                  </h3>
-                 <Button variant="outline" size="xs" onClick={addCustomItem} leftIcon={<Plus className="h-3 w-3" />}>
-                   Item personalizado
-                 </Button>
+                 <div className="flex flex-wrap gap-2">
+                   <Button variant="outline" size="xs" onClick={() => addCustomItem('Técnico')} leftIcon={<Plus className="h-3 w-3" />}>
+                     Técnico
+                   </Button>
+                   <Button variant="outline" size="xs" onClick={() => addCustomItem('Montagem e desmontagem')} leftIcon={<Plus className="h-3 w-3" />}>
+                     Montagem
+                   </Button>
+                   <Button variant="outline" size="xs" onClick={() => addCustomItem('Frete (dentro de BH)')} leftIcon={<Plus className="h-3 w-3" />}>
+                     Frete
+                   </Button>
+                   <Button variant="outline" size="xs" onClick={() => addCustomItem('Hora extra')} leftIcon={<Plus className="h-3 w-3" />}>
+                     Hora extra
+                   </Button>
+                   <Button variant="outline" size="xs" onClick={() => addCustomItem()} leftIcon={<Plus className="h-3 w-3" />}>
+                     Item personalizado
+                   </Button>
+                 </div>
                </div>
+               <p className="-mt-4 mb-6 text-xs text-muted-foreground">Técnico, montagem, frete e hora extra são cobrados à parte, como itens. Frete dentro de BH: R$ 0,00.</p>
 
                <div className="space-y-4">
                  {items.length === 0 ? (
@@ -622,7 +693,7 @@ export const AdminQuickProposalPage = () => {
                    </div>
                  ) : (
                    <div className="space-y-3">
-                     {items.map((item) => (
+                     {pricedItems.map((item) => (
                        <div key={item.id} className="group relative flex flex-col md:flex-row gap-4 p-4 rounded-xl border border-border bg-card hover:border-primary/30 transition-all hover:shadow-md">
                          <div className="flex-grow space-y-2">
                            <Input
@@ -636,6 +707,11 @@ export const AdminQuickProposalPage = () => {
                               <Badge variant="outline" size="sm">
                                 {ITEM_TYPE_LABELS[item.type] || item.type}
                               </Badge>
+                              {item.ratePerUnit !== undefined && !item.priceEdited && (
+                                <span className="text-xs text-muted-foreground">
+                                  {formatPrice(item.ratePerUnit)}{equipmentUnitSuffix(equipmentUnit)} × {equipmentUnitText(unitsFor(item, equipmentUnit, eventDate, eventEndDate), equipmentUnit)}
+                                </span>
+                              )}
                            </div>
                          </div>
 
@@ -761,7 +837,7 @@ export const AdminQuickProposalPage = () => {
                            <div className="min-w-0">
                              <p className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">{item.name}</p>
                              <p className="text-xs text-muted-foreground font-mono">
-                               {formatPrice(Number(((item as Equipment).dailyPrice || (item as Kit | Service).price) || 0))}
+                               {formatPrice(catalogPrice(searchType, item))}{searchType === 'EQUIPMENT' ? equipmentUnitSuffix(equipmentUnit) : ''}
                              </p>
                            </div>
                            <div className="h-6 w-6 shrink-0 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground flex items-center justify-center transition-all" aria-hidden="true">

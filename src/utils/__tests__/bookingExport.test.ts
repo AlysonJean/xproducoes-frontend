@@ -43,7 +43,7 @@ describe('bookingsToSheetRows', () => {
       'Pagamento': 'Pago',
       'Valor total (R$)': 1500.5,
       'Desconto (R$)': 150,
-      'Valor de serviço (R$)': 900,
+      // D8a: um valor só por reserva; o serviceValue que ainda vier não vira coluna.
       'Criado em': '01/10/2026 12:00',
     });
   });

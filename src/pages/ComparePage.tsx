@@ -206,7 +206,8 @@ export const ComparePage = () => {
                     {formatPrice(item.price ?? 0)}
                   </span>
                   <span className="text-xs text-muted-foreground ml-1">
-                    {item.type === 'service' ? '/ serviço' : '/ hora'}
+                    {/* Decisão do dono de 06/11: kit por evento. */}
+                    {item.type === 'service' ? '/ serviço' : item.type === 'kit' ? 'por evento' : '/ hora'}
                   </span>
                 </td>
               ))}

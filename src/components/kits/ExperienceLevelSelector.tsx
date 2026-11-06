@@ -98,7 +98,8 @@ export function ExperienceLevelSelector({
                 <span className="text-3xl font-extrabold text-foreground">
                   {formatPrice(Number(level.price))}
                 </span>
-                <span className="text-sm text-muted-foreground">/hora</span>
+                {/* Decisão do dono de 06/11: o preço do kit (e de cada nível) é por evento. */}
+                <span className="text-sm text-muted-foreground ml-1">por evento</span>
                 {/* A diferença é sobre o preço base do kit (o texto dizia "do Silver"). */}
                 {aboveBase > 0 && level.level !== ExperienceLevel.SILVER && (
                   <p className="text-xs text-muted-foreground mt-1">

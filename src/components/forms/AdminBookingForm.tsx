@@ -69,8 +69,10 @@ const bookingFormSchema = (isEditing: boolean) => z
     notes: z.string(),
     status: z.string(),
     deliveryStatus: z.string(),
-    // Campos admin-only
-    serviceValue: z.number().positive('Valor do serviço deve ser positivo'),
+    // Campos admin-only. D8a (aprovada em 02/11/2026): um valor final só, opcional. Em branco, o servidor
+    // calcula pelos itens, com as horas tiradas das datas. Antes era o "Valor do Serviço", obrigatório e
+    // gravado à parte do total (e a página do cliente somava os dois).
+    finalValue: z.number().positive('O valor final deve ser maior que zero.').optional(),
     paymentProof: z.unknown(), // FileList será tratado no submit
     paymentStatus: z.string(), // '' = não informado
   })
@@ -121,7 +123,6 @@ interface RawBooking extends Omit<Booking, 'kits' | 'equipments'> {
   venue?: { street?: string; neighborhood?: string; city?: string; state?: string; zipCode?: string; addressNumber?: string; addressComplement?: string };
   equipments?: Array<{ name?: string }>;
   services?: Array<{ name?: string }>;
-  serviceValue?: number;
 }
 
 // Na edição: o tipo de cliente é o da reserva, e os itens dela aparecem só para leitura.
@@ -182,7 +183,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
       equipmentIds: [],
       status: 'PENDING',
       deliveryStatus: 'PENDING',
-      serviceValue: undefined,
+      finalValue: undefined,
       paymentStatus: '',
     },
   });
@@ -213,7 +214,11 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
     if (!draftPrompt) return;
     // Na edição o tipo de cliente é o da reserva (o seletor não aparece), mesmo com rascunho da
     // versão anterior do formulário, que deixava trocar.
-    reset(editedBooking ? { ...draftPrompt.values, clientType: editClientTypeOf(editedBooking) } : draftPrompt.values);
+    // D8a: o rascunho salvo pela versão anterior do formulário guarda o "Valor do Serviço" (serviceValue);
+    // ele volta no "Valor final", para não perder o que foi digitado.
+    const { serviceValue: legacyValue, ...saved } = draftPrompt.values as typeof draftPrompt.values & { serviceValue?: number | null };
+    const values = saved.finalValue === undefined && legacyValue ? { ...saved, finalValue: legacyValue } : saved;
+    reset(editedBooking ? { ...values, clientType: editClientTypeOf(editedBooking) } : values);
     setDraftPrompt(null);
   };
 
@@ -298,7 +303,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
             notes: (booking.notes as string) || '',
             status: (booking.status as string) || 'PENDING',
             deliveryStatus: (booking.deliveryStatus as string) || 'PENDING',
-            serviceValue: booking.serviceValue || undefined,
+            finalValue: Number(booking.totalPrice) || undefined,
             paymentStatus: booking.paymentStatus || '',
           });
         }
@@ -379,8 +384,10 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
 
       // Adicionar campos admin se for admin
       if (isAdmin) {
-        if (data.serviceValue) {
-          payload.serviceValue = data.serviceValue;
+        // D8a: o valor final vai como totalPrice; em branco, o servidor calcula pelos itens (na edição, o
+        // total atual fica como está).
+        if (data.finalValue) {
+          payload.totalPrice = data.finalValue;
         }
         if (paymentProofUrl) {
           payload.paymentProofUrl = paymentProofUrl;
@@ -577,13 +584,20 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
           <FormSection title="Configurações Admin" description="Campos disponíveis apenas para administradores">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="Valor do Serviço (R$)"
+                label="Valor final (R$)"
                 type="number"
                 step="0.01"
-                {...register('serviceValue', { valueAsNumber: true })}
-                error={errors.serviceValue?.message}
-                placeholder="0.00"
-                description="Valor total do serviço para esta reserva"
+                min="0"
+                {...register('finalValue', {
+                  // Em branco vira "sem valor final" (o servidor calcula), não NaN.
+                  setValueAs: (v: unknown) => (v === '' || v === null || v === undefined ? undefined : Number(v)),
+                })}
+                error={errors.finalValue?.message}
+                placeholder={isEditing ? 'Valor atual mantido' : 'Calculado pelos itens'}
+                // Na edição o servidor não recalcula: sem valor final, o total da reserva fica como está.
+                description={isEditing
+                  ? 'Opcional. O valor que o cliente paga, o mesmo em todo lugar. Em branco, o valor atual da reserva fica como está.'
+                  : 'Opcional. O valor que o cliente paga, o mesmo em todo lugar. Em branco, é calculado pelos itens e pelas horas do evento.'}
               />
               <Input
                 type="file"

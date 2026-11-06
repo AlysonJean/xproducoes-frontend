@@ -32,7 +32,7 @@ const EVENTO: Array<[string, string]> = [
   ['Estado', 'MG'],
   ['CEP', '30110-000'],
   ['Número', '123'],
-  ['Valor do Serviço (R$)', '500'],
+  ['Valor final (R$)', '500'],
 ];
 
 const novaReservaManual = async () => {
@@ -58,7 +58,7 @@ const reservaDigitada = (extra: Record<string, unknown> = {}) => ({
   clientContact: '31988887777',
   clientEmail: 'ana@cliente.test',
   ...ENDERECO,
-  status: 'CONFIRMED', deliveryStatus: 'PENDING', serviceValue: 500,
+  status: 'CONFIRMED', deliveryStatus: 'PENDING', totalPrice: 500,
   ...extra,
 }) as unknown as Booking;
 // Cliente cadastrado: o nome da conta é diferente do digitado no orçamento (a tela mostra o da conta).

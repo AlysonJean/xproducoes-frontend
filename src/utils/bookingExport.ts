@@ -14,7 +14,6 @@ export type BookingExportSource = BookingListItem & Partial<{
   clientEmail: string | null;
   clientContact: string | null;
   discountAmount: string | number | null;
-  serviceValue: string | number | null;
   createdAt: string;
 }>;
 
@@ -41,7 +40,7 @@ export function bookingsToSheetRows(bookings: BookingExportSource[]): SheetRow[]
     'Pagamento': formatBookingPaymentStatus(b.paymentStatus),
     'Valor total (R$)': money(b.totalPrice),
     'Desconto (R$)': money(b.discountAmount),
-    'Valor de serviço (R$)': money(b.serviceValue),
+    // D8a: um valor só por reserva; a coluna "Valor de serviço" saiu (nenhuma reserva tem esse valor).
     'Criado em': formatDateTime(b.createdAt),
   }));
 }
