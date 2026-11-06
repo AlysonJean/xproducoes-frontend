@@ -15,6 +15,8 @@ interface EventManagementProps {
   collaborators: ICollaborator[];
   onSave: (assignments: EventAssignment[]) => void;
   onClose: () => void;
+  /** Conteúdo extra no rodapé, ao lado de "Salvar" (D11: "Avisar o cliente por e-mail" quando salvar confirma). */
+  footerExtra?: React.ReactNode;
 }
 
 // Achado (auditoria do design system):
@@ -29,6 +31,7 @@ export const EventManagement: React.FC<EventManagementProps> = ({
   collaborators = [],
   onSave,
   onClose,
+  footerExtra,
 }) => {
   const [selectedCollaborators, setSelectedCollaborators] = useState<
     Record<string, SelectedCollaboratorAssignment>
@@ -345,6 +348,7 @@ export const EventManagement: React.FC<EventManagementProps> = ({
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             Cancelar
           </Button>
+          {footerExtra}
           <Button
             type="button"
             size="sm"

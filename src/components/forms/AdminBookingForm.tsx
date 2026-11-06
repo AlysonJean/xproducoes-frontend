@@ -22,6 +22,8 @@ import { BrandLoader } from '../ui/BrandLoader';
 import { logger } from '../../utils/logger';
 import { useFormDraft } from '../../hooks/useFormDraft';
 import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
+import { NotifyClientCheckbox } from '../bookings/NotifyClientCheckbox';
+import { notifyClientPayload } from '../../utils/notifyClient';
 
 const idSchema = z.union([
   z.string().uuid(),
@@ -157,6 +159,9 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
   const [kitSearch, setKitSearch] = useState('');
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [equipSearch, setEquipSearch] = useState('');
+  // D11 (aprovada em 02/11/2026): reserva criada já Confirmada avisa o cliente uma vez, com "Avisar o cliente por
+  // e-mail" marcada por padrão. Fora do rascunho do formulário: a escolha vale para este envio.
+  const [notifyClient, setNotifyClient] = useState(true);
 
   const draftKey = `xp-draft-admin-booking-${initialData?.id || 'new'}`;
   const { save: saveDraft, load: loadDraft, clear: clearDraft } = useFormDraft<Omit<BookingFormData, 'paymentProof'>>(draftKey);
@@ -398,6 +403,8 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
         }
       }
       
+      if (!isEditing && data.status === 'CONFIRMED') Object.assign(payload, notifyClientPayload(notifyClient));
+
       if (isEditing && initialData) {
         await apiFetch(`/bookings/${initialData.id}`, { method: 'PUT', body: JSON.stringify(payload) });
         addNotification({ type: 'success', title: 'Reserva atualizada', message: 'As alterações foram salvas.' });
@@ -636,6 +643,11 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
               />
             </div>
           </div>
+          {!isEditing && watchedValues.status === 'CONFIRMED' && (
+            <div className="mt-4">
+              <NotifyClientCheckbox checked={notifyClient} onChange={setNotifyClient} />
+            </div>
+          )}
         </FormSection>
 
         <FormActions>

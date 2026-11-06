@@ -8,7 +8,9 @@ import { BOOKING_STATUS_OPTIONS, DELIVERY_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS
 import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
 import { normalizeString } from '../../utils/string';
-import { bookingPhone, toWhatsAppNumber } from '../../utils/bookingContact';
+import { bookingEmail, bookingPhone, toWhatsAppNumber } from '../../utils/bookingContact';
+import { notifyClientPayload } from '../../utils/notifyClient';
+import { NotifyClientCheckbox } from '../../components/bookings/NotifyClientCheckbox';
 import { Link, useSearchParams } from 'react-router-dom';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { AdminLayout } from '../../components/admin/AdminLayout';
@@ -107,6 +109,9 @@ export const BookingListPage = () => {
   );
   const [initialClientType, setInitialClientType] = useState<'registered' | 'manual'>('registered');
   const [isFormDirty, setIsFormDirty] = useState(false);
+  // D11: escolher "Confirmada" no status da linha abre a confirmação com "Avisar o cliente por e-mail".
+  const [confirmingBooking, setConfirmingBooking] = useState<BookingListItem | null>(null);
+  const [notifyClient, setNotifyClient] = useState(true);
   const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
 
   const fetchBookings = useCallback(async () => {
@@ -158,7 +163,8 @@ export const BookingListPage = () => {
   const handleStatusChange = async (
     bookingId: string,
     field: 'status' | 'deliveryStatus',
-    value: string
+    value: string,
+    extra?: { notifyClient?: false }
   ) => {
     try {
       const endpoint =
@@ -169,7 +175,7 @@ export const BookingListPage = () => {
       await apiFetch(endpoint, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: value }),
+        body: JSON.stringify({ status: value, ...extra }),
       });
 
       setBookings((prev) =>
@@ -188,6 +194,18 @@ export const BookingListPage = () => {
         message: err instanceof Error ? err.message : 'Erro ao atualizar o status.'
       });
     }
+  };
+
+  // D11 (aprovada em 02/11/2026): passar para Confirmada avisa o cliente, então a tela pergunta antes de gravar,
+  // com "Avisar o cliente por e-mail" marcada. Devolver a Confirmada um evento em andamento ou concluído não
+  // avisa ninguém (o servidor não repete a confirmação) e grava direto, como os outros status.
+  const handleStatusSelect = (booking: BookingListItem, value: string) => {
+    if (value === 'CONFIRMED' && !['CONFIRMED', 'IN_PROGRESS', 'COMPLETED'].includes(booking.status)) {
+      setNotifyClient(true);
+      setConfirmingBooking(booking);
+      return;
+    }
+    void handleStatusChange(booking.id, 'status', value);
   };
 
   // Situação do pagamento: PUT só com o campo (vazio = "não informado"). Não passa pelo formulário
@@ -529,7 +547,7 @@ export const BookingListPage = () => {
                         <Select
                           className="h-9 min-w-[130px] border-border text-xs"
                           value={booking.status}
-                                                    onChange={(e: ChangeEvent<HTMLSelectElement>) => handleStatusChange(booking.id, 'status', e.target.value)}
+                                                    onChange={(e: ChangeEvent<HTMLSelectElement>) => handleStatusSelect(booking, e.target.value)}
                           aria-label={`Status da reserva ${booking.id}`}
                           options={STATUS_OPTIONS}
                         />
@@ -632,6 +650,28 @@ export const BookingListPage = () => {
           />
         </div>
       </Modal>
+
+      <ConfirmModal
+        isOpen={!!confirmingBooking}
+        onClose={() => setConfirmingBooking(null)}
+        onConfirm={() => {
+          const target = confirmingBooking;
+          setConfirmingBooking(null);
+          if (target) void handleStatusChange(target.id, 'status', 'CONFIRMED', notifyClientPayload(notifyClient));
+        }}
+        title="Confirmar a reserva?"
+        message="A reserva passa para Confirmada."
+        variant="success"
+        confirmText="Confirmar"
+        cancelText="Cancelar"
+      >
+        {/* A lista traz o contato da reserva (clientEmail, contato e a conta do cliente). */}
+        <NotifyClientCheckbox
+          checked={notifyClient}
+          onChange={setNotifyClient}
+          hasEmail={confirmingBooking ? Boolean(bookingEmail(confirmingBooking)) : undefined}
+        />
+      </ConfirmModal>
 
       <HistoryImportModal
         isOpen={isImportOpen}

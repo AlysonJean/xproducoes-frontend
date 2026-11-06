@@ -10,6 +10,8 @@ import type { Equipment, Kit } from '../../types/types';
 import { Button, Input, Textarea, FormActions, Alert, Select, Checkbox } from '../ui/StandardComponents';
 import { Modal } from '../ui/Modal';
 import { formatPrice } from '../../utils/typeSafeFormatters';
+import { notifyClientPayload } from '../../utils/notifyClient';
+import { NotifyClientCheckbox } from '../bookings/NotifyClientCheckbox';
 
 const manualBookingSchema = z
   .object({
@@ -76,6 +78,9 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
   const [clients, setClients] = useState<Array<{id: string, name: string, email?: string, phone?: string}>>([]);
   const [kitSearch, setKitSearch] = useState('');
   const [equipSearch, setEquipSearch] = useState('');
+  // D11 (aprovada em 02/11/2026): a reserva deste modal nasce Confirmada e avisa o cliente uma vez, com
+  // "Avisar o cliente por e-mail" marcada por padrão.
+  const [notifyClient, setNotifyClient] = useState(true);
 
   const {
     register,
@@ -155,6 +160,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
     setSelectedKit('');
     setValue('equipmentIds', []);
     setValue('kitId', '');
+    setNotifyClient(true);
     onClose();
   };
 
@@ -174,7 +180,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
       };
   await apiFetch('/bookings', {
         method: 'POST',
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, ...notifyClientPayload(notifyClient) }),
       });
       onSuccess();
       handleModalClose();
@@ -420,6 +426,8 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
 
           {errors.kitId && <p role="alert" className="text-sm text-destructive font-medium">{errors.kitId.message}</p>}
           {errors.equipmentIds && <p role="alert" className="text-sm text-destructive font-medium">{errors.equipmentIds.message}</p>}
+
+          <NotifyClientCheckbox checked={notifyClient} onChange={setNotifyClient} />
 
           {serverError && <Alert variant="error" title="Erro" description={serverError} />}
 

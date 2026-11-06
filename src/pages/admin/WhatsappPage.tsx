@@ -25,10 +25,11 @@ export default function WhatsappPage() {
       const data = await apiFetch('/whatsapp/status') as { isReady: boolean; qrCode: string | null };
       setStatus(data);
       setStatusError(null);
-    } catch {
+    } catch (err) {
       // Antes o erro era silenciado e a tela ficava em "Carregando QR Code..." para sempre.
       // O polling continua tentando; o aviso some quando uma consulta der certo.
-      setStatusError('Não foi possível consultar o serviço do WhatsApp.');
+      // P14: com a automação desligada no servidor, o aviso diz isso (a mensagem vem da API).
+      setStatusError(err instanceof Error && err.message ? err.message : 'Não foi possível consultar o serviço do WhatsApp.');
     }
   }, []);
 

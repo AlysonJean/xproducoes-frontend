@@ -46,6 +46,8 @@ import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useCollaborators } from '@/hooks/useCollaborators';
+import { NotifyClientCheckbox } from '@/components/bookings/NotifyClientCheckbox';
+import { notifyClientPayload } from '@/utils/notifyClient';
 import { logger } from '../../utils/logger';
 
 const locales = { 'pt-BR': ptBR };
@@ -347,6 +349,8 @@ export const BookingCalendarPage = () => {
   const [confirmPrice, setConfirmPrice] = useState<string>('');
   const [confirmCollaboratorId, setConfirmCollaboratorId] = useState<string>('');
   const [confirmRole, setConfirmRole] = useState<string>('ASSISTANT');
+  // D11: "Avisar o cliente por e-mail" do modal "Confirmar reserva", marcada a cada abertura.
+  const [confirmNotifyClient, setConfirmNotifyClient] = useState(true);
 
   const calendarStats = useMemo(() => {
     const total = events.length;
@@ -510,7 +514,7 @@ export const BookingCalendarPage = () => {
       await apiFetch(`/bookings/${confirmBookingId}/confirm-details`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, ...notifyClientPayload(confirmNotifyClient) }),
       });
       fetchCalendarBookings();
       setConfirmOpen(false);
@@ -565,6 +569,7 @@ export const BookingCalendarPage = () => {
 
   const openConfirm = (b: CalendarBooking) => {
     setConfirmBookingId(b.id);
+    setConfirmNotifyClient(true);
     // Achado (auditoria ponta a ponta): o "Valor final" vinha do "Valor do serviço" (serviceValue)
     // quando havia, e o confirm-details o grava como totalPrice: confirmar sem mexer no campo trocava
     // o preço da reserva sem ninguém ver (e a página do cliente ainda somava o serviceValue de novo).
@@ -838,6 +843,8 @@ export const BookingCalendarPage = () => {
                     </div>
                   )}
                </div>
+               {/* A agenda não traz o e-mail do cliente: o servidor confere se a reserva tem um. */}
+               <NotifyClientCheckbox checked={confirmNotifyClient} onChange={setConfirmNotifyClient} />
                <div className="flex flex-wrap justify-end gap-3 pt-4">
                   <Button variant="outline" size="sm" onClick={() => setConfirmOpen(false)}>Cancelar</Button>
                   <Button variant="success" size="sm" isLoading={!!actionLoading} onClick={confirmWithDetails}>Confirmar reserva</Button>

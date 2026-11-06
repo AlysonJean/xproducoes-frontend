@@ -50,6 +50,8 @@ import { createAndClickAnchor } from '../../utils/dom';
 import { SUPPORT_EMAIL } from '../../data/site';
 import { formatBookingCode } from '../../utils/bookingCode';
 import { bookingEmail, bookingPhone, toWhatsAppNumber } from '../../utils/bookingContact';
+import { notifyClientPayload } from '../../utils/notifyClient';
+import { NotifyClientCheckbox } from '../../components/bookings/NotifyClientCheckbox';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { BookingCollaborators } from '../../components/bookings/BookingCollaborators';
 import { BookingFinancialSummary } from '../../components/bookings/BookingFinancialSummary';
@@ -183,6 +185,10 @@ export const BookingDetailPage = () => {
   const [confirmPrice, setConfirmPrice] = useState('');
   const [confirmCollaboratorId, setConfirmCollaboratorId] = useState('');
   const [confirmRole, setConfirmRole] = useState('ASSISTANT');
+  // D11 (aprovada em 02/11/2026): "Avisar o cliente por e-mail", marcada por padrão. É a mesma escolha no cartão
+  // Confirmação (vale para "Confirmar e avisar pelo WhatsApp"), no modal "Confirmar reserva" e em "Alocar equipe e
+  // confirmar".
+  const [notifyClient, setNotifyClient] = useState(true);
   // Achado (revisão antes do deploy): "Confirmar reserva" e "Alocar equipe" buscavam
   // /admin/collaborators, rota que não existe (404 — a lista abria sempre vazia). O hook da tela de
   // Colaboradores já busca a rota real e põe em `name` o nome que vem dentro de `user`; sem isso o
@@ -234,7 +240,7 @@ export const BookingDetailPage = () => {
       setActionLoading(true);
       // "A caminho" é status de entrega (DeliveryStatus), não de reserva.
       if (value === 'ON_THE_WAY') await bookingAPI.updateDeliveryStatus(bookingId, value);
-      else await bookingAPI.updateStatus(bookingId, value);
+      else await bookingAPI.updateStatus(bookingId, value, value === 'CONFIRMED' ? notifyClientPayload(notifyClient) : undefined);
       await fetchBooking();
       addNotification({ type: 'success', title: 'Status atualizado', message: 'O status da reserva foi atualizado.' });
         } catch (error: unknown) {
@@ -260,7 +266,7 @@ export const BookingDetailPage = () => {
           },
         ];
       }
-      await bookingAPI.confirmWithDetails(booking.id, payload);
+      await bookingAPI.confirmWithDetails(booking.id, { ...payload, ...notifyClientPayload(notifyClient) });
       await fetchBooking();
       setConfirmModalOpen(false);
       addNotification({ type: 'success', title: 'Reserva confirmada', message: 'Valor e equipe salvos.' });
@@ -870,6 +876,7 @@ export const BookingDetailPage = () => {
                 >
                   Confirmar e avisar pelo WhatsApp
                 </Button>
+                <NotifyClientCheckbox checked={notifyClient} onChange={setNotifyClient} hasEmail={Boolean(clientEmail)} />
               </div>
             ) : (
               // Antes mandava usar o Editar, que nunca gravou o status (e agora nem o mostra).
@@ -1244,6 +1251,7 @@ export const BookingDetailPage = () => {
               />
             )}
           </div>
+          <NotifyClientCheckbox checked={notifyClient} onChange={setNotifyClient} hasEmail={Boolean(clientEmail)} />
           <div className="flex flex-col gap-2 pt-2">
             <Button onClick={handleConfirmWithDetails} isLoading={actionLoading} fullWidth size="sm">
               Confirmar reserva
@@ -1264,6 +1272,8 @@ export const BookingDetailPage = () => {
             location: booking.location || booking.eventLocation || '',
           }}
           collaborators={availableCollaborators}
+          // Salvar aqui também confirma a reserva pendente (/confirm-details): a caixa aparece só nesse caso.
+          footerExtra={canConfirm ? <NotifyClientCheckbox checked={notifyClient} onChange={setNotifyClient} hasEmail={Boolean(clientEmail)} /> : undefined}
           onSave={async (assignments) => {
             if (!booking?.id) return;
             try {
@@ -1279,7 +1289,7 @@ export const BookingDetailPage = () => {
                 totalHours: a.estimatedHours,
                 ...(a.hourlyRate != null ? { hourlyRate: a.hourlyRate, totalPayment: a.hourlyRate * a.estimatedHours } : {}),
               }));
-              await bookingAPI.confirmWithDetails(booking.id, { collaborators: payload });
+              await bookingAPI.confirmWithDetails(booking.id, { collaborators: payload, ...notifyClientPayload(notifyClient) });
               await fetchBooking();
               setEventModalOpen(false);
               addNotification({ type: 'success', title: 'Equipe salva', message: 'Equipe alocada e reserva confirmada.' });

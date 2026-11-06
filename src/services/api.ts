@@ -395,7 +395,9 @@ export const bookingAPI = {
   toggleTask: (taskId: string, isCompleted: boolean) =>
     api.put(`/bookings/tasks/${taskId}/toggle`, { isCompleted }),
   // PUT: o backend só expõe PUT /bookings/:id/status — o PATCH dava 404 (o PATCH existe só em /admin/bookings).
-  updateStatus: (id: string, status: string) => api.put(`/bookings/${id}/status`, { status }),
+  // D11: extra leva o notifyClient: false da caixa "Avisar o cliente por e-mail" (ver utils/notifyClient).
+  updateStatus: (id: string, status: string, extra?: { notifyClient?: false }) =>
+    api.put(`/bookings/${id}/status`, { status, ...extra }),
   updateDeliveryStatus: (id: string, status: string) => api.put(`/bookings/${id}/delivery-status`, { status }),
   confirm: (id: string) => api.post(`/bookings/${id}/confirm`),
   // Confirma a reserva com preço e colaboradores (admin)
