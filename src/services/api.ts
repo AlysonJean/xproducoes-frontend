@@ -477,7 +477,6 @@ export const authAPI = {
   resetPassword: (token: string, newPassword: string) =>
     api.post('/auth/reset-password', { token, newPassword }),
   googleLogin: (token: string) => api.post('/auth/google', { token }),
-  facebookLogin: (token: string) => api.post('/auth/facebook', { token }),
 };
 
 export const reviewAPI = {

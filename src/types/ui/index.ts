@@ -67,11 +67,6 @@ export interface GoogleAuthButtonProps {
   onFailure?: (error: unknown) => void;
 }
 
-export interface FacebookAuthButtonProps {
-  onSuccess?: (response: unknown) => void;
-  onFailure?: (error: unknown) => void;
-}
-
 // ================================
 // INTERFACES PARA LAYOUT
 // ================================

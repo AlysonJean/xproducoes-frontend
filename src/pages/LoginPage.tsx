@@ -7,7 +7,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import GoogleAuthButton from '../components/ui/GoogleAuthButton';
-import FacebookAuthButton from '../components/ui/FacebookAuthButton';
 import { getDashboardRoute } from '../utils/authUtils';
 import {
   Button,
@@ -188,7 +187,6 @@ export const LoginPage = () => {
       {userType === 'client' && (
         <div className="space-y-3">
           <GoogleAuthButton onSuccess={handleSocialSuccess} onFailure={handleSocialError} />
-          <FacebookAuthButton onSuccess={handleSocialSuccess} onFailure={handleSocialError} />
         </div>
       )}
 
