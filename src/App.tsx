@@ -1,4 +1,3 @@
-import OAuthComplete from './pages/auth/OAuthComplete';
 import React, { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 
@@ -326,7 +325,6 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
-      <Route path="/auth/oauth-concluido" element={<OAuthComplete />} />
 
       {/* Protected User Routes - Role specific dashboards only */}
       <Route

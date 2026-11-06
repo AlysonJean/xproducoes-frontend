@@ -1,6 +1,7 @@
 // Achado (revisão antes do deploy): os links dos e-mails levam credenciais na URL (?token= em
 // /redefinir-senha, /verify-email e /complete-registration; ?token=&email= em /cadastro-convite;
-// ?code= em /data-deletion-status; #token= na volta do OAuth em /auth/oauth-concluido), e o Sentry
+// ?code= em /data-deletion-status; #token= na antiga volta do OAuth em /auth/oauth-concluido, que saiu
+// na D12), e o Sentry
 // e o Vercel Analytics recebiam a URL inteira. Estes três parâmetros saem da query e do fragmento;
 // o resto (caminho, utm_*, filtros como ?categoryId=) fica como veio, para o erro continuar
 // rastreável. O Google Analytics tem filtro próprio, mais restrito (useGoogleAnalytics.ts).
