@@ -84,18 +84,19 @@ export const RegisterPage = () => {
     <>
       {/* Mantém o <title>/description que o PageLayout dava a esta rota (o h1 agora é do AuthLayout). */}
       <Helmet>
-        <title>{bookingId ? 'Rastrear Proposta' : 'Criar Conta'}</title>
+        <title>Criar Conta</title>
         <meta
           name="description"
-          content={bookingId ? 'Finalize seu cadastro para acompanhar seu orçamento' : 'Preencha os dados abaixo para criar sua conta e aproveitar todos os benefícios.'}
+          content="Preencha os dados abaixo para criar sua conta e aproveitar todos os benefícios."
         />
       </Helmet>
       <AuthLayout
         icon={<UserPlus className="h-6 w-6" />}
-        title={bookingId ? 'Rastrear meu orçamento' : 'Criar conta'}
-        subtitle={bookingId
-          ? `Finalize seu cadastro para acompanhar a proposta #${bookingId}`
-          : 'Junte-se à nossa comunidade'}
+        // D6, parte 1 (02/11/2026): com ?bookingId= (vindo da página da proposta), a tela dizia "Rastrear meu
+        // orçamento" e "Finalize seu cadastro para acompanhar a proposta". O cadastro não vincula proposta
+        // (ver linkBookingsToUser no backend, sem chamador); o título agora é sempre o mesmo.
+        title="Criar conta"
+        subtitle="Junte-se à nossa comunidade"
         footer={
           <p>
             Já tem uma conta?{' '}

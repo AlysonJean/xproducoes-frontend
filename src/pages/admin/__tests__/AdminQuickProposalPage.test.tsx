@@ -205,3 +205,60 @@ describe('AdminQuickProposalPage — gerar link da proposta', { timeout: 20000 }
     expect(await screen.findByText('Página da reserva /admin/reservas/XP-NOVA')).toBeInTheDocument();
   });
 });
+
+// D6, parte 1 (aprovada em 02/11/2026): o texto que a Proposta Rápida põe no PDF e na mensagem do
+// WhatsApp dizia "Se ainda não tiver cadastro, crie aqui ... Assim que concluir, nossa equipe vincula
+// sua proposta ao seu acesso" e mandava "acompanhar em tempo real" no painel do cliente. Nada disso
+// acontece: o cadastro não vincula proposta nenhuma (linkBookingsToUser não tem chamador) e a equipe não
+// tem tela para isso. O texto agora só fala do PDF e de responder pela conversa.
+describe('AdminQuickProposalPage — texto do PDF e do WhatsApp sem promessa de vínculo (D6)', { timeout: 20000 }, () => {
+  const PROMESSAS = [/vincul/i, /\/cadastro/, /\/cliente\/painel/, /tempo real/i, /crie aqui/i];
+
+  const docQueGuardaTexto = (textos: string[]) =>
+    new Proxy({ lastAutoTable: { finalY: 120 } } as Record<string | symbol, unknown>, {
+      get(alvo, chave) {
+        if (chave in alvo) return alvo[chave];
+        if (chave === 'text') return (texto: string | string[]) => textos.push(...[texto].flat());
+        if (chave === 'splitTextToSize') return (texto: string) => [texto];
+        return () => undefined;
+      },
+    });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAuth.mockReturnValue({ user: { id: 'admin-1', role: 'ADMIN' } });
+    apiFetch.mockImplementation((url: string) => Promise.resolve(url === '/equipments' ? [mesa] : []));
+  });
+
+  it('PDF: sem convite de cadastro nem promessa de vínculo', async () => {
+    const textos: string[] = [];
+    vi.mocked(jsPDF).mockImplementation(function construtor() { return docQueGuardaTexto(textos); } as never);
+    renderPage();
+    await preencherProposta();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar PDF' }));
+
+    await waitFor(() => expect(textos.some((t) => t.includes('Ana Souza'))).toBe(true));
+    const tudo = textos.join(' ');
+    for (const promessa of PROMESSAS) expect(tudo).not.toMatch(promessa);
+  });
+
+  it('WhatsApp: a mensagem pronta fala do PDF e de responder por ali, sem cadastro nem vínculo', async () => {
+    const textos: string[] = [];
+    vi.mocked(jsPDF).mockImplementation(function construtor() { return docQueGuardaTexto(textos); } as never);
+    const abrir = vi.spyOn(window, 'open').mockReturnValue(null);
+    renderPage();
+    await preencherProposta();
+
+    fireEvent.click(screen.getByRole('button', { name: 'PDF + WhatsApp' }));
+
+    await waitFor(() => expect(abrir).toHaveBeenCalled());
+    const url = new URL(String(abrir.mock.calls[0][0]));
+    const mensagem = url.searchParams.get('text') ?? '';
+    expect(url.hostname).toBe('wa.me');
+    expect(mensagem).toContain('proposta');
+    expect(mensagem).toMatch(/responder por aqui/i);
+    for (const promessa of PROMESSAS) expect(mensagem).not.toMatch(promessa);
+    abrir.mockRestore();
+  });
+});

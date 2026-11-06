@@ -268,15 +268,17 @@ export default function ProposalViewPage() {
 
             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
                <div className="space-y-3">
-                 <Badge className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 backdrop-blur-sm uppercase">Benefício exclusivo</Badge>
-                 <h2 className="text-2xl md:text-3xl font-black tracking-tight">Rastreie este orçamento em tempo real</h2>
+                 {/* D6, parte 1 (02/11/2026): prometia rastrear esta proposta, notificações e "baixar notas
+                     fiscais" depois do cadastro. O cadastro não traz esta proposta para a conta, e não há nota
+                     fiscal no site. O convite agora diz só o que a conta faz. */}
+                 <h2 className="text-2xl md:text-3xl font-black tracking-tight">Peça os próximos eventos com mais rapidez</h2>
                  <p className="text-primary-foreground/80 max-w-lg font-medium">
-                   Crie sua conta agora para receber notificações de status, baixar notas fiscais e gerenciar todo o seu histórico de eventos em um só lugar.
+                   Com uma conta, você acompanha os pedidos feitos por ela. Esta proposta continua neste link; para ajustar ou confirmar, fale com a nossa equipe.
                  </p>
                </div>
                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                  <Button
-                   onClick={() => navigate(`/cadastro?bookingId=${id}`)}
+                   onClick={() => navigate('/cadastro')}
                    size="lg"
                    className="px-8 bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-black rounded-2xl shadow-lg ring-4 ring-primary-foreground/10"
                    rightIcon={<ArrowRight className="h-5 w-5" aria-hidden="true" />}

@@ -354,22 +354,16 @@ export const AdminQuickProposalPage = () => {
     return clientEmail || '';
   };
 
-  const getRegistrationUrl = (): string => {
-    if (typeof window === 'undefined') return 'https://xproducoeseeventos.com.br/cadastro';
-    return `${window.location.origin}/cadastro`;
-  };
-
+  // D6, parte 1 (02/11/2026): o texto mandava criar cadastro e prometia que a equipe vincularia a
+  // proposta ao acesso do cliente e que ele acompanharia tudo "em tempo real" no painel. Nada disso
+  // acontece hoje (o cadastro não vincula proposta, e não há tela para isso). Fica só o que é verdade.
   const buildWhatsappInviteText = (): string => {
     const eventName = eventTitle || 'seu evento';
-    const registrationUrl = getRegistrationUrl();
-    const progressUrl = typeof window !== 'undefined' ? `${window.location.origin}/cliente/painel` : 'https://xproducoeseeventos.com.br/cliente/painel';
     return [
       `Olá! A proposta comercial do evento "${eventName}" está pronta.` ,
       `Total estimado: ${formatPrice(subtotal)}.`,
       'Acabei de gerar o PDF para envio neste atendimento.',
-      `Para acompanhar o progresso da reserva em tempo real, acesse: ${progressUrl}`,
-      `Se ainda não tiver cadastro, crie aqui: ${registrationUrl}`,
-      'Assim que concluir, nossa equipe vincula sua proposta ao seu acesso.',
+      'Para ajustar algo ou confirmar, é só responder por aqui.',
     ].join(' ');
   };
 
