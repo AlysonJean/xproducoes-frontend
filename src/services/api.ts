@@ -621,6 +621,9 @@ export const collaboratorProfileAPI = {
   // Adicionar despesa para reembolso
   addExpense: (bookingId: string, data: { amount: number, description: string, receiptUrl?: string }) =>
     api.post(`/bookings/${bookingId}/expenses`, data),
+
+  // P19: "Alertar produção" no Roteiro — e-mail ao dono a cada alerta; responde { emailQueued, deduplicated }
+  sendUrgentAlert: (bookingId: string) => api.post(`/bookings/${bookingId}/urgent-alert`),
 };
 
 // ✅ RECOMMENDATION ENGINE API

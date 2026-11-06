@@ -40,6 +40,8 @@ import { useNotifications } from '../../contexts/NotificationContext';
 import { logger } from '../../utils/logger';
 import { cn } from '../../utils/cn';
 import { formatBookingCode } from '../../utils/bookingCode';
+import { buildUrgentAlertText, buildWhatsAppUrl, getWhatsAppPhone } from '../../utils/whatsapp';
+import { formatPhoneDisplay } from '../../data/site';
 
 interface RoadmapTask {
   id: string;
@@ -159,7 +161,8 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<RoadmapTab>('roadmap');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
-  const [alerting, setAlerting] = useState(false);
+  // P19: situação do e-mail ao dono depois do "Alertar produção" (o WhatsApp abre pelo próprio link).
+  const [alertEmail, setAlertEmail] = useState<'sending' | 'sent' | 'failed' | null>(null);
 
   // Expense Form State
   const [showExpenseForm, setShowExpenseForm] = useState(false);
@@ -301,26 +304,24 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
     }
   };
 
-  // Achado (auditoria de produto): botão "Alertar Produção" não tinha nenhum onClick.
-  // Reaproveita o chat do evento — os admins são sempre participantes desse chat (ver
-  // chatService.getOrCreateEventChat), então a mensagem urgente chega até a equipe.
-  const handleAlertProduction = async () => {
-    if (!booking?.chats?.[0]?.id) return;
-
-    setAlerting(true);
-    try {
-      const chatId = booking.chats[0].id;
-      await collaboratorMessagesAPI.sendMessage(
-        chatId,
-        `🚨 Alerta urgente: preciso de suporte da produção agora para o evento "${booking.eventTitle || id}".`
-      );
-      addNotification({ type: 'success', title: 'Produção alertada', message: 'Sua mensagem urgente foi enviada para a equipe.' });
-    } catch (error) {
-      logger.error('Erro ao alertar produção:', 'CollaboratorEventRoadmapPage', error);
-      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível alertar a produção agora.' });
-    } finally {
-      setAlerting(false);
-    }
+  // P19 (aprovada em 02/11/2026): "Alertar produção" escrevia no chat do evento (que ninguém lê, e que o
+  // cliente lia), ficava apagado em evento sem chat e falhava calado. Agora o botão é um link do WhatsApp de
+  // plantão com o evento escrito, ao lado de "Ligar", os dois sempre ativos. O clique também pede o e-mail
+  // ao dono (POST /bookings/:id/urgent-alert) sem esperar a resposta: o WhatsApp abre pelo próprio link,
+  // sem bloqueio de pop-up. O resultado do e-mail aparece embaixo dos botões, dê certo ou não.
+  const handleAlertProduction = () => {
+    if (!id) return;
+    setAlertEmail('sending');
+    collaboratorProfileAPI
+      .sendUrgentAlert(id)
+      .then((resp) => {
+        const result = (resp.data?.data ?? resp.data) as { emailQueued?: boolean } | undefined;
+        setAlertEmail(result?.emailQueued ? 'sent' : 'failed');
+      })
+      .catch((error) => {
+        logger.error('Erro ao alertar produção:', 'CollaboratorEventRoadmapPage', error);
+        setAlertEmail('failed');
+      });
   };
 
   const handleToggleTask = async (taskId: string, currentStatus: boolean) => {
@@ -923,18 +924,50 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
             <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Voltar à agenda
           </Link>
           <div className="flex-1" />
-          <div className="flex flex-wrap items-center gap-3 p-3 bg-muted/40 rounded-2xl border border-border">
-            <span className="text-sm font-medium text-muted-foreground px-2">Precisa de ajuda agora?</span>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleAlertProduction}
-              isLoading={alerting}
-              disabled={!booking?.chats?.[0]?.id}
-              leftIcon={<AlertTriangle className="w-4 h-4" />}
+          <div className="space-y-2 p-3 bg-muted/40 rounded-2xl border border-border">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm font-medium text-muted-foreground px-2">Precisa de ajuda agora?</span>
+              {/* P19: link (não botão) para o WhatsApp abrir pelo próprio clique, sem bloqueio de pop-up. O
+                  plantão é o número do site (Q13); o campo nas configurações depende de coluna nova (lote 16). */}
+              <a
+                href={buildWhatsAppUrl(getWhatsAppPhone(), buildUrgentAlertText({
+                  collaboratorName: user?.name,
+                  eventTitle: booking.eventTitle,
+                  bookingId: booking.id,
+                  eventDate: booking.eventDate,
+                  address,
+                }))}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={handleAlertProduction}
+                className={buttonVariants({ variant: 'destructive', size: 'sm' })}
+              >
+                <AlertTriangle className="w-4 h-4" aria-hidden="true" />
+                Alertar produção
+                <span className="sr-only"> (abre o WhatsApp)</span>
+              </a>
+              <a
+                href={`tel:+${getWhatsAppPhone()}`}
+                aria-label={`Ligar para a produção: ${formatPhoneDisplay(getWhatsAppPhone())}`}
+                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+              >
+                <Phone className="w-4 h-4" aria-hidden="true" />
+                Ligar
+              </a>
+            </div>
+            <p
+              role="status"
+              className={cn(
+                'px-2 text-sm font-medium empty:hidden',
+                alertEmail === 'sent' && 'text-success',
+                alertEmail === 'failed' && 'text-destructive',
+                alertEmail === 'sending' && 'text-muted-foreground',
+              )}
             >
-              Alertar produção
-            </Button>
+              {alertEmail === 'sending' && 'Avisando a produção por e-mail…'}
+              {alertEmail === 'sent' && 'Produção avisada por e-mail.'}
+              {alertEmail === 'failed' && 'Não conseguimos avisar por e-mail. Use o WhatsApp ou ligue.'}
+            </p>
           </div>
         </div>
       </div>

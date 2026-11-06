@@ -549,6 +549,13 @@ const CollaboratorSettingsPage: React.FC = () => {
                 <li>A administração da X Produções vê seu cadastro completo: nome, contato, função, valor combinado e seus eventos.</li>
                 <li>Os colegas escalados no mesmo evento veem só seu nome, foto, função, horário e situação na escala. Seu telefone e seu e-mail não aparecem para eles.</li>
                 <li>Clientes não veem seus dados.</li>
+                {/* D20 (aprovada em 02/11/2026): o chat do evento é só da equipe; o cliente só volta a ele com a
+                    chave do chat da reserva ligada (VITE_CLIENT_BOOKING_CHAT_ENABLED). */}
+                <li>
+                  {import.meta.env.VITE_CLIENT_BOOKING_CHAT_ENABLED === 'true'
+                    ? 'No chat do evento, o cliente da reserva também lê e escreve.'
+                    : 'O chat do evento é só da equipe: os colegas escalados e a administração. O cliente não lê nem escreve nele.'}
+                </li>
                 <li>No Roteiro, você vê o que precisa para trabalhar: endereço, horários, contato do local, rider, tarefas e o seu cachê. Dados e valores do cliente não aparecem.</li>
               </ul>
             </SimpleCard>

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileDown, FileText, Plus, Trash2, Upload } from 'lucide-react';
+import ReactGA from 'react-ga4';
+import { ArrowLeft, FileDown, FileText, Mail, MessageCircle, Plus, Trash2, Upload } from 'lucide-react';
 import { apiFetch } from '@/services/api';
 import type { BookingDetails } from '@/types/types';
 import { formatPrice } from '@/utils/formatPrice';
@@ -14,6 +15,9 @@ import { useNotifications } from '../../contexts/NotificationContext';
 import { BookingChatPanel } from '../../components/client/BookingChatPanel';
 import { generateBookingProposalPdf } from '../../utils/generateBookingProposalPdf';
 import { bookingEmail, bookingPhone } from '../../utils/bookingContact';
+import { formatBookingCode } from '../../utils/bookingCode';
+import { buildBookingContactText, buildWhatsAppUrl, getWhatsAppPhone } from '../../utils/whatsapp';
+import { SUPPORT_EMAIL } from '../../data/site';
 
 export const BookingDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -223,6 +227,15 @@ export const BookingDetailsPage = () => {
 
   // Pedido do briefing chega sem itens: o total fica zerado até a equipe preparar o orçamento.
   const hasPrice = Number(booking.totalPrice) > 0 || Boolean(booking.serviceValue);
+  // D20: texto pronto do contato com a equipe (o nome informado na reserva ou o da conta, o código inteiro
+  // e a data do evento em Brasília), o mesmo no WhatsApp e no corpo do e-mail.
+  const bookingCode = formatBookingCode(booking.id);
+  const contactText = buildBookingContactText({ clientName: booking.clientName || user?.name, bookingId: booking.id, eventDate: booking.eventDate });
+  // Como no botão flutuante (FloatingWhatsApp): ao GA vai só de onde veio o clique, sem nome, código ou
+  // contato (D7). O GA só carrega depois do aceite de cookies (useGoogleAnalytics).
+  const trackWhatsAppClick = () => {
+    ReactGA.event({ category: 'contact', action: 'whatsapp_click', label: 'area_cliente' });
+  };
 
   return (
     <ClientPage
@@ -507,8 +520,40 @@ export const BookingDetailsPage = () => {
             </dl>
           </Card>
 
-          {/* Chat sobre a reserva */}
-          {id && <BookingChatPanel bookingId={id} currentUserId={user?.id} />}
+          {/* D20 (aprovada em 02/11/2026): "Mensagens sobre esta reserva" virou "Fale com a equipe". O
+              cliente escrevia num chat que ninguém lia (o painel não tem tela de chat). Agora: WhatsApp com
+              nome, código e data já escritos, e o e-mail como alternativa. O chat continua no código e só
+              aparece com VITE_CLIENT_BOOKING_CHAT_ENABLED=true (no servidor, CLIENT_BOOKING_CHAT_ENABLED). */}
+          <Card padding>
+            <h2 className="text-xl font-semibold mb-2 text-foreground">Fale com a equipe sobre esta reserva</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              A mensagem já vai com o seu nome, o código da reserva e a data do evento.
+            </p>
+            <div className="flex flex-col gap-2">
+              <a
+                href={buildWhatsAppUrl(getWhatsAppPhone(), contactText)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={trackWhatsAppClick}
+                className={buttonVariants({ size: 'sm', fullWidth: true })}
+              >
+                <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                Chamar no WhatsApp
+              </a>
+              <a
+                href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Reserva ${bookingCode}`)}&body=${encodeURIComponent(contactText)}`}
+                className={buttonVariants({ variant: 'outline', size: 'sm', fullWidth: true })}
+              >
+                <Mail className="h-4 w-4" aria-hidden="true" />
+                Enviar e-mail
+              </a>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground break-all">E-mail da equipe: {SUPPORT_EMAIL}</p>
+          </Card>
+
+          {id && import.meta.env.VITE_CLIENT_BOOKING_CHAT_ENABLED === 'true' && (
+            <BookingChatPanel bookingId={id} currentUserId={user?.id} />
+          )}
         </div>
       </div>
 

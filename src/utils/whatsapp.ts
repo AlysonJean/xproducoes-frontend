@@ -68,6 +68,60 @@ export const openWhatsApp = (phone: string, message: string): void => {
   }
 };
 
+// D20 + P19 (aprovadas em 02/11/2026): textos prontos do WhatsApp sobre uma reserva, para o cartão "Fale
+// com a equipe" do cliente e o "Alertar produção" do Roteiro, e para reaproveitar nos botões do lote 13.
+// Data e hora no horário de Brasília (o do evento), qualquer que seja o fuso do aparelho de quem clica.
+const brasiliaDate = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric',
+});
+const brasiliaTime = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+});
+
+const validDate = (value?: string | Date | null): Date | null => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+// Link do WhatsApp com o texto já escrito (o número vai só com os dígitos, já com o DDI).
+export const buildWhatsAppUrl = (phone: string, text: string): string =>
+  `https://wa.me/${normalizePhone(phone)}?text=${encodeURIComponent(text)}`;
+
+// Cliente → equipe, na página da reserva: nome, código inteiro e data do evento.
+export const buildBookingContactText = (p: {
+  clientName?: string | null;
+  bookingId: string;
+  eventDate?: string | Date | null;
+}): string => {
+  const name = p.clientName?.trim();
+  const date = validDate(p.eventDate);
+  return (
+    (name ? `Olá! Sou ${name} e quero falar sobre a reserva ` : 'Olá! Quero falar sobre a reserva ') +
+    formatBookingCode(p.bookingId) +
+    (date ? `, do evento de ${brasiliaDate.format(date)}.` : '.')
+  );
+};
+
+// Colaborador → plantão da produção ("Alertar produção" no Roteiro): quem, qual evento, quando e onde.
+export const buildUrgentAlertText = (p: {
+  collaboratorName?: string | null;
+  eventTitle?: string | null;
+  bookingId: string;
+  eventDate?: string | Date | null;
+  address?: string | null;
+}): string => {
+  const date = validDate(p.eventDate);
+  return [
+    '*Alerta urgente da equipe:* preciso de suporte da produção agora.',
+    p.collaboratorName?.trim() && `*Colaborador:* ${p.collaboratorName.trim()}`,
+    `*Evento:* ${p.eventTitle?.trim() || 'sem título'}`,
+    `*Reserva:* ${formatBookingCode(p.bookingId)}`,
+    date && `*Data e hora:* ${brasiliaDate.format(date)} às ${brasiliaTime.format(date)}`,
+    p.address?.trim() && `*Local:* ${p.address.trim()}`,
+  ].filter(Boolean).join('\n');
+};
+
 export const buildQuoteMessage = (p: QuoteMessageParams): string => {
   const equipamentos = (p.items || [])
     .map((eq) => {
