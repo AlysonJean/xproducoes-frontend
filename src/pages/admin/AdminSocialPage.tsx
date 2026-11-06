@@ -40,6 +40,17 @@ interface SponsorLogo {
 
 type ModerationTab = 'PENDING' | 'APPROVED' | 'REJECTED';
 
+// Achado (lote 12): desde adcea6a (31/03/2026) o interceptor do axios tira o envelope { success, data } das
+// respostas, e o socialService devolve o valor direto (a lista de publicações, o mural). Esta tela lia `.data`
+// de novo: a lista ficava vazia, o mural vinha undefined e a moderação caía em "Não foi possível carregar as
+// publicações do mural"; depois de salvar as configurações, o mural sumia da tela. Aceita os dois formatos.
+function withoutEnvelope<T>(value: unknown): T | undefined {
+  if (value && typeof value === 'object' && !Array.isArray(value) && 'data' in value) {
+    return (value as { data?: T }).data;
+  }
+  return value as T | undefined;
+}
+
 // Título e breadcrumb constantes (antes o título trocava de "Social Moderation" para "Mural: …"
 // quando os dados chegavam). O nome do mural aparece no cabeçalho da página.
 const PAGE_TITLE = 'Moderação do mural';
@@ -91,13 +102,14 @@ const AdminSocialPage: React.FC = () => {
             status: tab,
             limit: 100
         });
-        setPosts(response.data || []);
+        setPosts(withoutEnvelope<SocialPost[]>(response) || []);
 
-        const targetId = response.settingId || settingId;
+        // O settingId do envelope só vinha no contexto de reserva (sem rota no painel); o do endereço vale.
+        const targetId = (Array.isArray(response) ? undefined : response?.settingId) || settingId;
         if (targetId) {
-            const configRes = await socialService.getAdminWall(targetId);
-            setWall(configRes.data);
-            setSelectedSponsorIds((configRes.data.sponsors as {id: string}[] | undefined)?.map(s => s.id) || []);
+            const wallData = withoutEnvelope<Record<string, unknown>>(await socialService.getAdminWall(targetId)) ?? null;
+            setWall(wallData);
+            setSelectedSponsorIds((wallData?.sponsors as {id: string}[] | undefined)?.map(s => s.id) || []);
         }
         setLoadError(null);
     } catch (error) {
@@ -241,7 +253,7 @@ const AdminSocialPage: React.FC = () => {
         await socialService.updateWall(wall.id as string, data);
         setIsSettingsOpen(false);
         const updated = await socialService.getAdminWall(wall.id as string);
-        setWall(updated.data);
+        setWall(withoutEnvelope<Record<string, unknown>>(updated) ?? null);
         addNotification({ type: 'success', title: 'Configurações salvas', message: 'As configurações do mural foram atualizadas.' });
     } catch (err: unknown) {
         addNotification({

@@ -438,7 +438,11 @@ const TVPage: React.FC = () => {
         const fetchAnnouncments = async () => {
             try {
                 const response = await socialService.getAnnouncements(config.settingId!);
-                setAnnouncements(response.data.filter((a: SocialAnnouncement) => a.isActive));
+                // Achado (lote 12): desde adcea6a (31/03/2026) o interceptor do axios tira o envelope { success, data }
+                // e chega a lista direto; `response.data.filter` lançava e a TV nunca mostrava os avisos. Aceita os
+                // dois formatos.
+                const list: unknown = Array.isArray(response) ? response : (response as { data?: unknown } | undefined)?.data;
+                setAnnouncements((Array.isArray(list) ? (list as SocialAnnouncement[]) : []).filter((a) => a.isActive));
             } catch (err) {
                 logger.error('Erro', 'TVPage', err);
             }

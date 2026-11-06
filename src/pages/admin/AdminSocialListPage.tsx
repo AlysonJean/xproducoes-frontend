@@ -57,7 +57,11 @@ const AdminSocialListPage: React.FC = () => {
         try {
             setLoading(true);
             const response = await socialService.listWalls();
-            setWalls((response.data as unknown as SocialWall[]) || []);
+            // Achado (lote 12): desde adcea6a (31/03/2026) o interceptor do axios tira o envelope { success, data }
+            // e chega a lista de murais direto; ler `.data` de novo deixava a lista sempre vazia. Aceita os dois
+            // formatos.
+            const list: unknown = Array.isArray(response) ? response : (response as { data?: unknown } | undefined)?.data;
+            setWalls(Array.isArray(list) ? (list as SocialWall[]) : []);
             setLoadError(null);
         } catch (error) {
             // Antes: só toast, e a tela dizia "Nenhum mural sincronizado".
