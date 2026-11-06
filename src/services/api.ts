@@ -597,6 +597,9 @@ export const collaboratorProfileAPI = {
   // Obter roadmap detalhado de um evento
   getEventRoadmap: (bookingId: string) => api.get(`/bookings/roadmap/${bookingId}`),
 
+  // D5: só as tarefas do evento (o Roteiro recarrega a cada 60 s com a aba visível)
+  getEventTasks: (bookingId: string) => api.get(`/bookings/${bookingId}/tasks`),
+
   // Obter notificações do colaborador
   getMyNotifications: () => api.get('/collaborators/me/notifications'),
 

@@ -75,8 +75,16 @@ const AdminSocialListPage: React.FC = () => {
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await socialService.createWall(newWall);
-            addNotification({ type: 'success', title: 'Sucesso', message: 'Mural social criado com sucesso.' });
+            // D5 (Q4): o servidor acrescenta um código aleatório ao endereço; o aviso mostra o endereço final.
+            // O interceptor do axios já tira o envelope { success, data }: chega o mural (aceita os dois formatos).
+            const created = (await socialService.createWall(newWall)) as unknown as { slug?: unknown; data?: { slug?: unknown } } | undefined;
+            const slug = created?.slug ?? created?.data?.slug;
+            const finalSlug = typeof slug === 'string' ? slug : null;
+            addNotification({
+              type: 'success',
+              title: 'Mural criado',
+              message: finalSlug ? `Endereço do telão: /tv?slug=${finalSlug}` : 'Mural social criado com sucesso.',
+            });
             setIsFormModalOpen(false);
             setNewWall({ name: '', hashtag: '', slug: '' });
             fetchWalls();
@@ -334,7 +342,7 @@ const AdminSocialListPage: React.FC = () => {
                     {/* O texto antigo dizia "/tv/seu-slug", mas o endereço real é /tv?slug=… */}
                     <Input
                         label="Endereço do telão (opcional)"
-                        description="Endereço curto para abrir o telão: /tv?slug=seu-endereco"
+                        description="Se ficar em branco, usamos o nome do mural. No fim entra um código aleatório (ex.: casamento-ana-7k3p), para ninguém achar o mural de uma festa particular por adivinhação."
                         placeholder="casamento-joao-maria"
                         value={newWall.slug}
                         onChange={e => setNewWall({...newWall, slug: e.target.value})}

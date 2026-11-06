@@ -35,6 +35,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useSocket } from '../../hooks/useSocket';
+import { useRoadmapTaskRefresh } from '../../hooks/useRoadmapTaskRefresh';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { logger } from '../../utils/logger';
@@ -178,6 +179,20 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
   // Socket.IO Integration
   const { on, emit, isConnected } = useSocket(id ? `event:${id}` : undefined);
 
+  // D5 (aprovada em 02/11/2026): "Tempo real ativo" só depois que o servidor confirma a entrada na sala do
+  // evento (room_joined). Antes bastava a conexão abrir; em produção ela abre sem login, o servidor não deixa
+  // entrar na sala e o selo dizia "Tempo real ativo" sem que nada chegasse.
+  const [realtimeRoom, setRealtimeRoom] = useState<string | null>(null);
+  useEffect(() => {
+    const cleanupJoined = on('room_joined', (room) => setRealtimeRoom(typeof room === 'string' ? room : null));
+    const cleanupLost = on('disconnect', () => setRealtimeRoom(null));
+    return () => {
+      cleanupJoined();
+      cleanupLost();
+    };
+  }, [on]);
+  const realtimeOn = isConnected && !!id && realtimeRoom === `event:${id}`;
+
   // Listen for real-time updates
   useEffect(() => {
     if (!isConnected) return;
@@ -243,6 +258,13 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
   useEffect(() => {
     fetchRoadmap();
   }, [fetchRoadmap]);
+
+  // D5: as tarefas se atualizam sozinhas, sem a tela de carregamento (ver useRoadmapTaskRefresh). Só depois
+  // que o Roteiro abriu; o prazo conta do fim do evento.
+  const applyRefreshedTasks = React.useCallback((tasks: RoadmapTask[]) => {
+    setBooking((prev) => (prev ? { ...prev, tasks } : prev));
+  }, []);
+  useRoadmapTaskRefresh<RoadmapTask>(booking ? id : undefined, booking?.eventEndDate ?? booking?.eventDate, applyRefreshedTasks);
 
   useEffect(() => {
     if (activeTab === 'chat') {
@@ -838,10 +860,10 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
                       </div>
                     </div>
                     {/* Achado: era "Equipe Online" com um ponto piscando fixo. Agora mostra o estado real
-                        da conexão em tempo real (useSocket). */}
+                        do tempo real: só "ativo" com a sala do evento confirmada pelo servidor (D5). */}
                     <div className="flex items-center gap-2 bg-primary-foreground/10 px-3 py-1 rounded-full" role="status">
-                      <span className={cn('w-2 h-2 rounded-full', isConnected ? 'bg-success' : 'bg-primary-foreground/50')} aria-hidden="true" />
-                      <span className="text-xs font-bold">{isConnected ? 'Tempo real ativo' : 'Sem conexão em tempo real'}</span>
+                      <span className={cn('w-2 h-2 rounded-full', realtimeOn ? 'bg-success' : 'bg-primary-foreground/50')} aria-hidden="true" />
+                      <span className="text-xs font-bold">{realtimeOn ? 'Tempo real ativo' : 'Sem conexão em tempo real'}</span>
                     </div>
                   </div>
 

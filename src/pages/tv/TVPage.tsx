@@ -35,7 +35,6 @@ interface SponsorLogo {
 interface WallConfig {
     id: string;
     settingId?: string;
-    eventId?: string;
     name: string;
     hashtag: string;
     layoutMode: 'LANDSCAPE' | 'PORTRAIT';
@@ -55,7 +54,6 @@ interface WallConfig {
 interface TVConfigResponse {
     linked: boolean;
     settingId: string;
-    eventId?: string;
     eventName: string;
     hashtag?: string;
     layoutMode?: 'LANDSCAPE' | 'PORTRAIT';
@@ -66,6 +64,10 @@ interface TVConfigResponse {
     enableMosaic?: boolean;
     mosaicFrequency?: number;
     enableGamification?: boolean;
+    // D22: janela ativa pelo relógio do servidor (ver serverWindowEnd)
+    serverNow?: string;
+    activeUntil?: string | null;
+    activeRule?: 'eventEnd' | 'lastActivity';
 }
 
 interface LeaderboardItem {
@@ -274,6 +276,37 @@ const FloatingOverlay: React.FC<{ config: WallConfig }> = ({ config }) => (
 const PAIRING_POLL_MS = 5000;
 const PAIRING_WINDOW_MS = 15 * 60 * 1000;
 
+// D22 (aprovada em 02/11/2026; Q14): TV do mural esquecida ligada. Com a TV visível o tempo todo, os avisos (a
+// cada 1 min) e o ranking (a cada 5 min) mantinham o banco acordado 24 h, e a cota mensal do Neon grátis
+// acabava em cerca de 17 dias, derrubando a API inteira. Agora a TV fica ativa até o fim da janela que o
+// servidor manda (activeUntil: fim do evento + 4 h no mural com reserva; última atividade + 12 h no mural sem
+// reserva). Num mural sem reserva, abrir a TV conta como atividade (pelo menos 12 h a partir daí; senão um
+// mural montado dias antes pausaria na hora em que a TV fosse ligada na festa) e, com a TV ativa, foto nova,
+// foto tirada ou mural editado empurram a janela para 12 h a partir de agora. No fim, a TV confere a
+// configuração uma vez; se a janela acabou mesmo, pausa: para avisos e ranking, desliga o socket, segue
+// mostrando as fotos já carregadas e avisa no alto da tela. Um toque, uma tecla ou a aba voltando retomam
+// por 2 h.
+const WALL_IDLE_MS = 12 * 60 * 60 * 1000;
+const WALL_RESUME_MS = 2 * 60 * 60 * 1000;
+// O setTimeout tem teto (cerca de 24,8 dias): prazo longo (evento daqui a semanas) é conferido de hora em hora.
+const WALL_TIMER_MAX_MS = 60 * 60 * 1000;
+
+// Fim da janela do servidor no relógio desta TV: só a diferença activeUntil − serverNow vale, porque o relógio
+// da TV costuma estar errado.
+const serverWindowEnd = (res: TVConfigResponse): number | null => {
+    if (!res.activeUntil || !res.serverNow) return null;
+    const remaining = Date.parse(res.activeUntil) - Date.parse(res.serverNow);
+    return Number.isFinite(remaining) ? Date.now() + remaining : null;
+};
+
+// Aviso discreto da TV pausada, no alto da tela: o QR Code e o "Participe" ficam nas laterais, no centro ou
+// embaixo, nunca aqui.
+const PausedNotice: React.FC = () => (
+    <div role="status" className="absolute top-6 left-1/2 -translate-x-1/2 z-30 max-w-[90%] rounded-full bg-black/70 px-6 py-3 text-center text-xl text-white/80 backdrop-blur-sm pointer-events-none">
+        Mural pausado. Toque na tela ou aperte uma tecla para continuar.
+    </div>
+);
+
 const TVPage: React.FC = () => {
     const [searchParams] = useSearchParams();
     const [config, setConfig] = useState<WallConfig | null>(() => TV_DEV_FALLBACK_ENABLED ? TV_DEV_FALLBACK_CONFIG : null);
@@ -298,11 +331,16 @@ const TVPage: React.FC = () => {
         return Math.floor(1000 + Math.random() * 9000).toString();
     });
     const [pairingPaused, setPairingPaused] = useState(false);
+    // D22: fim da janela ativa no relógio desta TV (null até a primeira configuração) e a pausa.
+    const [windowEnd, setWindowEnd] = useState<number | null>(null);
+    const [wallPaused, setWallPaused] = useState(false);
+    // Mural sem reserva (a janela anda com a atividade). Ref: lida nos handlers do socket sem reconectar.
+    const standaloneRef = useRef(true);
 
     // Refs for intervals/timeouts
     const nextSlideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const fetchConfig = useCallback(async () => {
+    const fetchConfig = useCallback(async (): Promise<TVConfigResponse | null> => {
         try {
             const slug = searchParams.get('slug');
             let url = '';
@@ -312,14 +350,13 @@ const TVPage: React.FC = () => {
                 url = `/tv/config?pairingCode=${pairingCode}`;
             }
 
-            if (!url) return;
+            if (!url) return null;
 
             const res = await apiFetch<TVConfigResponse>(url);
             if (res.linked) {
                 setConfig({
                     id: res.settingId,
                     settingId: res.settingId,
-                    eventId: res.eventId,
                     name: res.eventName,
                     hashtag: res.hashtag || '',
                     layoutMode: res.layoutMode || 'LANDSCAPE',
@@ -331,9 +368,18 @@ const TVPage: React.FC = () => {
                     mosaicFrequency: res.mosaicFrequency,
                     enableGamification: res.enableGamification
                 });
+                // D22: o fim da janela no relógio desta TV. Com a TV ativa nunca encolhe; na primeira
+                // configuração de um mural sem reserva, abrir a TV conta como atividade (pelo menos 12 h).
+                const fromServer = serverWindowEnd(res);
+                const standalone = res.activeRule !== 'eventEnd';
+                standaloneRef.current = standalone;
+                const now = Date.now();
+                setWindowEnd(prev => Math.max(fromServer ?? 0, prev ?? 0, prev === null && standalone ? now + WALL_IDLE_MS : 0));
             }
+            return res;
         } catch (error) {
             logger.error("Failed to load config", 'TVPage', error);
+            return null;
         }
     }, [searchParams, pairingCode]); // fetchConfig não lê `config` — a checagem "só busca se ainda não tem" é feita pelo chamador
 
@@ -386,9 +432,9 @@ const TVPage: React.FC = () => {
         }
     }, [config?.enableQrCode, config?.slug]);
 
-    // 1.5 Fetch Announcements
+    // 1.5 Fetch Announcements (D22: parados com a TV pausada; ao retomar, busca na hora)
     useEffect(() => {
-        if (!config?.settingId) return;
+        if (!config?.settingId || wallPaused) return;
         const fetchAnnouncments = async () => {
             try {
                 const response = await socialService.getAnnouncements(config.settingId!);
@@ -404,11 +450,11 @@ const TVPage: React.FC = () => {
             fetchAnnouncments();
         }, 60000);
         return () => clearInterval(interval);
-    }, [config?.settingId]);
+    }, [config?.settingId, wallPaused]);
 
-    // Fetch Leaderboard periodically
+    // Fetch Leaderboard periodically (D22: a rota pública passou a existir; parado com a TV pausada)
     useEffect(() => {
-        if (!config?.enableGamification || !config.settingId) return;
+        if (!config?.enableGamification || !config.settingId || wallPaused) return;
 
         const fetchLeaderboard = async () => {
             try {
@@ -427,11 +473,14 @@ const TVPage: React.FC = () => {
             fetchLeaderboard();
         }, 60000 * 5); // 5 min
         return () => clearInterval(interval);
-    }, [config?.settingId, config?.enableGamification]);
+    }, [config?.settingId, config?.enableGamification, wallPaused]);
 
     // 2. Socket Connection
+    // D5 (aprovada em 02/11/2026): a TV entra só na sala do mural (wall:), a única aberta sem login. O plano B
+    // `event:<reserva>` nunca funcionava (/tv/config não manda eventId) e essa sala agora é só da equipe do
+    // evento. Sem mural (o de teste do localhost), não conecta.
     useEffect(() => {
-        if (!config) return;
+        if (!config?.settingId || wallPaused) return; // D22: pausada, sem socket (a limpeza desconecta)
 
         // Conecta sempre na porta correta do backend
         const socket = io(SOCKET_URL, {
@@ -439,7 +488,15 @@ const TVPage: React.FC = () => {
             transports: ['websocket', 'polling']
         });
 
-        const roomId = config.settingId ? `wall:${config.settingId}` : `event:${config.eventId}`;
+        const roomId = `wall:${config.settingId}`;
+
+        // D22: com a TV ativa, foto nova, foto tirada ou mural editado contam como atividade de um mural sem
+        // reserva: a janela vai para 12 h a partir de agora.
+        const extendForActivity = () => {
+            if (!standaloneRef.current) return;
+            const until = Date.now() + WALL_IDLE_MS;
+            setWindowEnd(prev => Math.max(prev ?? 0, until));
+        };
 
         socket.on('connect', () => {
             socket.emit('join', roomId);
@@ -450,6 +507,7 @@ const TVPage: React.FC = () => {
         });
 
         socket.on('post:new', (post: SocialPost) => {
+            extendForActivity();
             setPosts(prev => {
                 if (prev.find(p => p.id === post.id)) return prev;
                 // Preload
@@ -461,17 +519,66 @@ const TVPage: React.FC = () => {
         });
 
         socket.on('post:remove', ({ id }: { id: string }) => {
+            extendForActivity();
             setPosts(prev => prev.filter(p => p.id !== id));
         });
 
         socket.on('config:update', () => {
+            extendForActivity();
             fetchConfig();
         });
 
         return () => {
             socket.disconnect();
         };
-    }, [config, fetchConfig]);
+    }, [config?.settingId, wallPaused, fetchConfig]);
+
+    // D22: fim da janela ativa. Confere a configuração uma vez (pode ter havido atividade que o servidor já
+    // conta) e, se a janela acabou mesmo, pausa.
+    useEffect(() => {
+        if (!config?.settingId || wallPaused || windowEnd === null) return;
+        let cancelled = false;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const check = async () => {
+            const remaining = windowEnd - Date.now();
+            if (remaining > 0) {
+                timer = setTimeout(check, Math.min(remaining, WALL_TIMER_MAX_MS));
+                return;
+            }
+            const res = await fetchConfig();
+            if (cancelled) return;
+            const fresh = res?.linked ? serverWindowEnd(res) : null;
+            if (fresh === null || fresh <= Date.now()) setWallPaused(true);
+        };
+        timer = setTimeout(check, Math.min(Math.max(windowEnd - Date.now(), 0), WALL_TIMER_MAX_MS));
+        return () => {
+            cancelled = true;
+            if (timer) clearTimeout(timer);
+        };
+    }, [config?.settingId, wallPaused, windowEnd, fetchConfig]);
+
+    // D22: TV pausada. Um toque, uma tecla (controle remoto) ou a aba voltando retomam por 2 h: a configuração é
+    // buscada de novo (pode ter havido atividade) e os efeitos acima voltam a buscar avisos e ranking e
+    // reconectam o socket.
+    useEffect(() => {
+        if (!wallPaused) return;
+        const resume = () => {
+            setWindowEnd(Date.now() + WALL_RESUME_MS);
+            setWallPaused(false);
+            void fetchConfig();
+        };
+        const onVisibilityChange = () => {
+            if (!document.hidden) resume();
+        };
+        window.addEventListener('pointerdown', resume);
+        window.addEventListener('keydown', resume);
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return () => {
+            window.removeEventListener('pointerdown', resume);
+            window.removeEventListener('keydown', resume);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+        };
+    }, [wallPaused, fetchConfig]);
 
     // 3. Slideshow Rotation Logic (Dynamic Duration)
     useEffect(() => {
@@ -580,6 +687,7 @@ const TVPage: React.FC = () => {
         return (
             <div className="relative w-screen h-screen bg-black text-white overflow-hidden font-sans selection:bg-white selection:text-black">
                 <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-black to-black" aria-hidden="true" />
+                {wallPaused && <PausedNotice />}
                 <div className="relative z-10 h-full flex flex-col items-center justify-center gap-10 p-12 text-center">
                     <h1 className="text-6xl xl:text-7xl font-bold tracking-tight">{config.name}</h1>
                     <p className="text-3xl xl:text-4xl text-white/70">Mande sua foto e apareça no telão!</p>
@@ -645,6 +753,8 @@ const TVPage: React.FC = () => {
             {!showSidebarsAtMain && !showAnnouncement && !showMosaic && !showLeaderboard && (
                 <FloatingOverlay config={config} />
             )}
+
+            {wallPaused && <PausedNotice />}
         </div>
     );
 }

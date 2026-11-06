@@ -130,10 +130,9 @@ const AdminSocialPage: React.FC = () => {
 
     socket.on('connect', () => {
         setSocketConnected(true);
+        // D5: só a sala do mural. A sala event:<reserva> é da equipe do evento e não recebe mais as fotos.
         if (settingId) {
             socket.emit('join', `wall:${settingId}`);
-        } else if (eventId) {
-            socket.emit('join', `event:${eventId}`);
         }
     });
 
