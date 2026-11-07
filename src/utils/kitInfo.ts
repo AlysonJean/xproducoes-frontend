@@ -17,9 +17,13 @@ export const KIT_FULFILLMENT_SHORT: Record<KitFulfillment, string> = {
   CLIENT_PICKUP: 'Retirada pelo cliente',
 };
 
-/** A frase da página do kit. A montagem do kit de entrega vem no preço (premissa registrada em 06/11). */
+/**
+ * A frase da página do kit. A montagem do kit de entrega vem no preço (premissa registrada em 06/11). Lote 13, técnico
+ * durante o evento (decisão do dono de 06/11/2026): a frase da entrega cita a outra opção, o técnico durante todo o
+ * evento, cobrado à parte (a caixa do pedido).
+ */
 export const KIT_FULFILLMENT_SENTENCE: Record<KitFulfillment, string> = {
-  DELIVERY_SETUP: 'A equipe da X Produções leva o kit ao local do evento, monta e busca depois.',
+  DELIVERY_SETUP: 'A equipe da X Produções leva o kit ao local do evento, monta e busca depois. Se preferir, um técnico fica durante todo o evento, cobrado à parte.',
   CLIENT_PICKUP: 'Você retira o kit na X Produções, em Belo Horizonte, monta no local e devolve depois do evento.',
 };
 

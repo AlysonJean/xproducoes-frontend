@@ -167,6 +167,50 @@ export function kitPriceLine(kit: KitPricingInput, hours: number | null): { desc
   };
 }
 
+// Lote 13, técnico durante o evento (decisão do dono de 06/11/2026): a mesma linha do serviço do servidor
+// (serviceLine em backend/src/services/booking/bookingPricing.ts), conferida pelo mesmo vetor de casos nos dois lados.
+
+/** O que a conta do serviço lê do cadastro. */
+export interface ServicePricingInput {
+  name?: string | null;
+  price?: Money;
+  /** Minutos cobertos pelo preço (Service.duration). */
+  duration?: number | null;
+  /** "Pode acompanhar o evento todo", marcado pelo dono no cadastro do serviço. */
+  coversWholeEvent?: boolean | null;
+}
+
+/** "3 h", "1 h 30 min" ou "30 min". */
+export function serviceMinutesText(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return [h > 0 ? `${h} h` : '', m > 0 ? `${m} min` : ''].filter(Boolean).join(' ');
+}
+
+/** "3 h incluídas", "1 h incluída", "1 h 30 min incluídos". */
+const includedText = (minutes: number): string =>
+  `${serviceMinutesText(minutes)} ${minutes % 60 !== 0 ? 'incluídos' : minutes === 60 ? 'incluída' : 'incluídas'}`;
+
+/**
+ * Linha do serviço: o serviço marcado "Pode acompanhar o evento todo" (coversWholeEvent), com duração maior que
+ * zero, cobra preço × minutos do evento ÷ minutos cadastrados, nunca menos que o preço, em centavos ("o preço
+ * cobre as horas cadastradas; cada hora a mais sai proporcional"). Uma linha só, com as horas na descrição. Os
+ * outros serviços têm preço fixo, com o nome na descrição. `hours` nulo (sem a duração) cobra o preço cadastrado.
+ */
+export function serviceLine(service: ServicePricingInput, hours: number | null): { description: string; cents: number } {
+  const name = service.name || 'Serviço';
+  const priceCents = toCents(service.price);
+  const minutesValue = Number(service.duration ?? 0);
+  const covered = Number.isInteger(minutesValue) && minutesValue > 0 ? minutesValue : 0;
+  if (service.coversWholeEvent !== true || covered === 0) return { description: name, cents: priceCents };
+  const eventMinutes = hours !== null && hours > 0 ? hours * 60 : 0;
+  if (eventMinutes <= covered) return { description: `${name} (até ${serviceMinutesText(covered)} de evento)`, cents: priceCents };
+  return {
+    description: `${name} (${hours} h de evento: ${includedText(covered)} + ${serviceMinutesText(eventMinutes - covered)} a mais)`,
+    cents: Math.round((priceCents * eventMinutes) / covered),
+  };
+}
+
 /** O resumo de preço da reserva: o da API (`pricing`) quando veio; sem ele, a mesma conta do servidor. */
 export function bookingPricing(b: PricedBookingLike): BookingPricing {
   if (b.pricing && typeof b.pricing.total === 'number' && Array.isArray(b.pricing.lines)) return b.pricing;

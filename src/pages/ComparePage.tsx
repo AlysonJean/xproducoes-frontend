@@ -222,6 +222,9 @@ export const ComparePage = () => {
               <th scope="row" className="p-4 text-left font-medium text-foreground sticky left-0 z-10 bg-muted">Ações</th>
               {compareItems.map((item) => {
                 const inCart = !!(cart && isItemInCart(item as CompareItem));
+                // Lote 13: serviço que não está ativo não vai ao carrinho (o pedido de cliente só aceita serviço ativo),
+                // como no cartão e na página do serviço. Kit e equipamento seguem como antes.
+                const unavailable = item.type === 'service' && !!item.status && item.status !== 'ACTIVE';
                 return (
                   <td key={item.id} className="p-4 text-center">
                     <div className="space-y-2">
@@ -236,10 +239,10 @@ export const ComparePage = () => {
                         fullWidth
                         variant={inCart ? 'ghost' : 'outline'}
                         onClick={() => handleAddToCart(item as CompareItem)}
-                        disabled={inCart}
+                        disabled={inCart || unavailable}
                         leftIcon={inCart ? <Check className="h-4 w-4" aria-hidden="true" /> : undefined}
                       >
-                        {inCart ? 'No orçamento' : 'Adicionar ao orçamento'}
+                        {inCart ? 'No orçamento' : unavailable ? 'Indisponível no momento' : 'Adicionar ao orçamento'}
                       </Button>
                     </div>
                   </td>

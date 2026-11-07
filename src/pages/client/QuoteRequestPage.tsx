@@ -27,7 +27,11 @@ import { z } from 'zod';
 import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
 import { useEquipmentPriceUnit } from '../../hooks/usePricingRules';
-import { equipmentUnitsForHours, kitPriceLine } from '../../utils/bookingPricing';
+import { equipmentUnitsForHours, kitPriceLine, serviceLine } from '../../utils/bookingPricing';
+import { kitFulfillment } from '../../utils/kitInfo';
+import { wholeEventRuleText } from '../../utils/wholeEventService';
+import { useWholeEventServices } from '../../hooks/useWholeEventServices';
+import { Checkbox } from '../../components/ui/Checkbox';
 import { quoteSuccessMessage } from '../../utils/quoteSubmission';
 import { TrustStrip } from '../../components/ui/TrustStrip';
 import { ClientPage } from '../../components/client/ClientPage';
@@ -126,6 +130,28 @@ export const QuoteRequestPage: React.FC = () => {
   // cupom antes do envio; o valor final e autoritativo continua sendo calculado e validado no servidor.
   const equipmentUnit = useEquipmentPriceUnit();
   const durationValue = Number(watch('duration')) || 0;
+
+  // Lote 13, técnico durante o evento (decisão do dono de 06/11/2026): numa entrega o cliente escolhe entre "a equipe
+  // monta e busca depois" e "um técnico fica durante todo o evento". A caixa aparece quando o pedido tem kit de
+  // entrega ou equipamento (nunca no pedido só com kit de retirada) e o dono marcou algum serviço "Pode acompanhar o
+  // evento todo": uma caixa por serviço marcado. O serviço que já está no carrinho não ganha caixa (já vai no pedido).
+  // Marcada, o id do serviço vai em serviceIds, e o servidor cobra pelas horas do evento (serviceLine).
+  const eventHours = durationValue > 0 ? Math.max(1, Math.ceil(durationValue)) : null;
+  const wholeEventServices = useWholeEventServices();
+  const [technicianIds, setTechnicianIds] = useState<string[]>([]);
+  const technicianOffers = useMemo(() => {
+    const deliveryOrEquipment = Boolean(kit?.id && kitFulfillment(kit) === 'DELIVERY_SETUP') || equipments.length > 0;
+    return deliveryOrEquipment ? wholeEventServices.filter((s) => !services.some((it) => it.id === s.id)) : [];
+  }, [kit, equipments, services, wholeEventServices]);
+  const chosenTechnicians = useMemo(() => technicianOffers.filter((s) => technicianIds.includes(s.id)), [technicianOffers, technicianIds]);
+  // Os serviços do pedido com a marcação de agora (o carrinho salvo antes pode não ter o campo), mais os técnicos marcados.
+  const orderServices = useMemo(
+    () => [...services.map((it) => wholeEventServices.find((s) => s.id === it.id) ?? it), ...chosenTechnicians],
+    [services, wholeEventServices, chosenTechnicians],
+  );
+  const toggleTechnician = (id: string, checked: boolean) =>
+    setTechnicianIds((prev) => (checked ? [...prev.filter((x) => x !== id), id] : prev.filter((x) => x !== id)));
+
   const subtotal = useMemo(() => {
     // Lote 13 (06/11/2026): o kit com horas incluídas e valor de hora extra cobra as horas cheias a mais,
     // como o servidor (kitPriceLine). Sem a duração ainda, só o preço do evento.
@@ -136,9 +162,10 @@ export const QuoteRequestPage: React.FC = () => {
       (sum, it) => sum + getEquipmentUnitPrice(it) * (equipmentUnitsForHours(equipmentUnit, durationValue, getEquipmentMinimum(it)) ?? 0),
       0,
     );
-    const servicesPrice = services.reduce((sum, it) => sum + Number((it as { price?: number | string }).price || 0), 0);
+    // Lote 13: o serviço que acompanha o evento todo cobra pelas horas, como o servidor (serviceLine); os outros, fixos.
+    const servicesPrice = orderServices.reduce((sum, it) => sum + serviceLine(it, eventHours).cents / 100, 0);
     return kitsPrice + equipmentsPrice + servicesPrice;
-  }, [kit, equipments, services, durationValue, equipmentUnit]);
+  }, [kit, equipments, orderServices, eventHours, durationValue, equipmentUnit]);
 
   const handleApplyCoupon = async () => {
     const code = couponInput.trim();
@@ -238,7 +265,8 @@ export const QuoteRequestPage: React.FC = () => {
         return it.equipmentId;
       }).filter(Boolean);
       
-      const serviceIds = services.map((it) => it.id).filter(Boolean);
+      // Lote 13: os técnicos marcados na caixa vão junto com os serviços do carrinho, sem repetir.
+      const serviceIds = Array.from(new Set([...services.map((it) => it.id), ...chosenTechnicians.map((it) => it.id)])).filter(Boolean);
       
       if (equipmentIds.length > 0) bookingData.equipmentIds = equipmentIds;
       if (serviceIds.length > 0) bookingData.serviceIds = serviceIds;
@@ -296,7 +324,8 @@ export const QuoteRequestPage: React.FC = () => {
             if ('name' in it) return { name: it.name };
             return { name: it.equipment.name };
           }),
-          ...services.map((it) => ({ name: it.name }))
+          ...services.map((it) => ({ name: it.name })),
+          ...chosenTechnicians.map((it) => ({ name: it.name }))
         ]
       };
 
@@ -496,6 +525,34 @@ export const QuoteRequestPage: React.FC = () => {
               ))}
             </div>
           </section>
+
+          {/* Lote 13, técnico durante o evento (decisão do dono de 06/11/2026): montar e buscar depois, ou um técnico
+              durante todo o evento, cobrado pelas horas. */}
+          {technicianOffers.length > 0 && (
+            <section className={sectionClass} aria-labelledby="tecnico-no-evento">
+              <h2 id="tecnico-no-evento" className={sectionTitleClass}>
+                <span className={sectionIconClass} aria-hidden="true">
+                  <User className="h-5 w-5" />
+                </span>
+                Técnico no evento
+              </h2>
+              <div className="space-y-4">
+                {technicianOffers.map((svc) => (
+                  <Checkbox
+                    key={svc.id}
+                    id={`tecnico-${svc.id}`}
+                    label={technicianOffers.length === 1 ? 'Quero um técnico durante todo o evento' : `Quero um técnico durante todo o evento: ${svc.name}`}
+                    description={technicianOffers.length === 1 ? `${svc.name}: ${wholeEventRuleText(svc, eventHours)}` : wholeEventRuleText(svc, eventHours)}
+                    checked={technicianIds.includes(svc.id)}
+                    onChange={(e) => toggleTechnician(svc.id, e.target.checked)}
+                  />
+                ))}
+                {chosenTechnicians.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Sem técnico, a equipe monta antes do evento e busca depois que ele termina.</p>
+                )}
+              </div>
+            </section>
+          )}
 
           {/* Seção 4: Contato Adicional (se necessário) */}
           {!user?.id && (

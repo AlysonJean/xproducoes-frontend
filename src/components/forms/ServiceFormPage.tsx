@@ -9,7 +9,8 @@ import {
   Input,
   Textarea,
   Button,
-  Select
+  Select,
+  Checkbox
 } from '../ui/StandardComponents';
 import { ItemStatus, type Service } from '../../types/types';
 import { Upload, X } from 'lucide-react';
@@ -33,6 +34,8 @@ interface DraftableServiceData {
   price: number | string;
   duration: number | string;
   status: ItemStatus;
+  // Opcional: rascunho salvo antes do lote 13 não tem o campo.
+  coversWholeEvent?: boolean;
 }
 
 export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess, onCancel, onDirtyChange }) => {
@@ -46,6 +49,9 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
   const [price, setPrice] = useState<number | string>(0);
   const [duration, setDuration] = useState<number | string>(1); // Store in hours for display
   const [status, setStatus] = useState<ItemStatus>(ItemStatus.ACTIVE);
+  // Lote 13, técnico durante o evento (decisão do dono de 06/11/2026): "Pode acompanhar o evento todo". O serviço
+  // marcado aparece na caixa do técnico do pedido e cobra pelas horas do evento; o preço vale para a duração acima.
+  const [coversWholeEvent, setCoversWholeEvent] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
   // Single image state
@@ -65,6 +71,7 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
       // Convert minutes from backend to hours for display
       setDuration(initialData.duration / 60);
       setStatus((initialData.status as ItemStatus) || ItemStatus.ACTIVE);
+      setCoversWholeEvent(initialData.coversWholeEvent === true);
 
       if (initialData.imageUrl) {
         setImagePreview(initialData.imageUrl);
@@ -88,12 +95,12 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
     if (!isDirty) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      saveDraft({ name, description, price, duration, status });
+      saveDraft({ name, description, price, duration, status, coversWholeEvent });
     }, 500);
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [name, description, price, duration, status, isDirty, saveDraft]);
+  }, [name, description, price, duration, status, coversWholeEvent, isDirty, saveDraft]);
 
   const handleRestoreDraft = () => {
     if (!draftPrompt) return;
@@ -102,6 +109,7 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
     setPrice(draftPrompt.values.price);
     setDuration(draftPrompt.values.duration);
     setStatus(draftPrompt.values.status);
+    setCoversWholeEvent(draftPrompt.values.coversWholeEvent ?? coversWholeEvent);
     setDraftPrompt(null);
   };
 
@@ -161,6 +169,8 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
       // Convert hours to minutes for backend
       formData.append('duration', String(Number(duration) * 60));
       formData.append('status', status);
+      // Sempre "true" ou "false": o servidor recusa outro valor e, sem o campo, deixa como está.
+      formData.append('coversWholeEvent', String(coversWholeEvent));
 
       if (imageFile) {
         formData.append('image', imageFile);
@@ -262,6 +272,14 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
               ]}
             />
           </div>
+
+          <Checkbox
+            id="service-covers-whole-event"
+            label="Pode acompanhar o evento todo"
+            description="O preço vale para a duração cadastrada; cada hora a mais do evento sai proporcional."
+            checked={coversWholeEvent}
+            onChange={e => { setCoversWholeEvent(e.target.checked); setIsDirty(true); }}
+          />
 
           <div className="space-y-4" role="group" aria-labelledby="service-cover-label">
             <p id="service-cover-label" className="block text-sm font-medium text-foreground">Imagem de Capa</p>

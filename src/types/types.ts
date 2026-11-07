@@ -133,6 +133,8 @@ export interface Service {
   description: string;
   price: number;
   duration: number;
+  /** Lote 13: "Pode acompanhar o evento todo" (cobra pelas horas do evento; ver serviceLine em utils/bookingPricing). */
+  coversWholeEvent?: boolean;
   hourlyRate?: number;
   discount?: number;
   status?: ItemStatus | EquipmentStatus;

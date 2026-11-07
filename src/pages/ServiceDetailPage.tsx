@@ -139,7 +139,12 @@ export const ServiceDetailPage = () => {
   const status =
     service.status === 'MAINTENANCE' ? { label: 'Em Manutenção', variant: 'warning' as const } :
     service.status === 'COMING_SOON' ? { label: 'Em Breve', variant: 'info' as const } :
+    // Lote 13: o detalhe também abre serviço inativo (link direto); antes ele aparecia como "Disponível".
+    service.status === 'INACTIVE' ? { label: 'Indisponível', variant: 'secondary' as const } :
     { label: 'Disponível', variant: 'success' as const };
+  // Lote 13, técnico durante o evento: o pedido de cliente ou convidado só aceita serviço ativo (o servidor recusa o
+  // resto com 400). Serviço "em breve", em manutenção ou inativo não vai ao carrinho, como no cartão do serviço.
+  const canAdd = service.status === 'ACTIVE';
 
   return (
     <PageLayout title={service.name} hideTitle breadcrumbs={[LIST_CRUMB, { label: service.name }]}>
@@ -267,9 +272,9 @@ export const ServiceDetailPage = () => {
               fullWidth
               onClick={handleAddToCart}
               isLoading={adding}
-              disabled={service.status === 'MAINTENANCE' || isAlreadyInCart}
+              disabled={!canAdd || isAlreadyInCart}
             >
-              {adding ? 'Adicionando...' : (isAlreadyInCart ? 'Já no orçamento' : 'Adicionar ao orçamento')}
+              {adding ? 'Adicionando...' : (isAlreadyInCart ? 'Já no orçamento' : canAdd ? 'Adicionar ao orçamento' : 'Indisponível no momento')}
             </Button>
             <div className="mt-3">
               <AskOnWhatsAppButton kind="Serviço" itemName={service.name} />
