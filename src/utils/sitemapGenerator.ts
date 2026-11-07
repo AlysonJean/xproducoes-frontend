@@ -1,4 +1,5 @@
 import { TARGET_CITIES, TARGET_SERVICES } from './localSeoConfig';
+import { RESERVATION_POLICY_PATH, RESERVATION_POLICY_PUBLISHED } from '../data/reservationPolicy';
 
 const BASE_URL = 'https://www.xproducoeseeventos.com.br';
 
@@ -14,8 +15,10 @@ export const STATIC_ROUTES = [
 ];
 
 export async function generateSitemap(): Promise<string> {
-  // 1. Static Routes
-  const staticUrls = STATIC_ROUTES.map(route => {
+  // 1. Static Routes. P17 (aprovada em 02/11/2026): a política de reserva e cancelamento só entra depois de
+  // publicada (chave em src/data/reservationPolicy.ts); o rascunho fica fora do sitemap.
+  const routes = RESERVATION_POLICY_PUBLISHED ? [...STATIC_ROUTES, RESERVATION_POLICY_PATH] : STATIC_ROUTES;
+  const staticUrls = routes.map(route => {
     return `
   <url>
     <loc>${BASE_URL}${route}</loc>

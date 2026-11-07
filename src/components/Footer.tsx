@@ -19,6 +19,7 @@ import {
   SUPPORT_EMAIL,
   formatPhoneDisplay,
 } from '../data/site';
+import { RESERVATION_POLICY_PATH, RESERVATION_POLICY_PUBLISHED } from '../data/reservationPolicy';
 
 // Achado (auditoria do design system): os links "Equipamentos de Som/Luz/Acessórios" mandavam
 // `?category=sound|lighting|accessories`, mas a página de equipamentos filtra por `categoryId`
@@ -55,6 +56,9 @@ const footerSections = [
     title: 'Legal',
     links: [
       { name: 'Termos de Uso', href: '/termos' },
+      // P17 (aprovada em 02/11/2026): a política de reserva e cancelamento só ganha o link quando publicada (chave em
+      // src/data/reservationPolicy.ts); antes disso é um rascunho sem link no site.
+      ...(RESERVATION_POLICY_PUBLISHED ? [{ name: 'Reserva e Cancelamento', href: RESERVATION_POLICY_PATH }] : []),
       { name: 'Política de Privacidade', href: '/privacidade' },
       { name: 'Política de Cookies', href: '/cookies' },
       { name: 'LGPD', href: '/lgpd' },

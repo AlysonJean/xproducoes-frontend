@@ -38,6 +38,7 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import VerifyEmailPage from './pages/auth/VerifyEmailPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { RESERVATION_POLICY_PATH } from './data/reservationPolicy';
 
 // ===== LAZY LOADED PAGES (ETAPA 3 - Code Splitting) =====
 
@@ -100,6 +101,10 @@ const TermsPage = lazy(() =>
 );
 const PrivacyPage = lazy(() =>
   import('./pages/PrivacyPage').then((m) => ({ default: m.PrivacyPage }))
+);
+// P17 (aprovada em 02/11/2026): política de reserva e cancelamento; rascunho até RESERVATION_POLICY_PUBLISHED.
+const ReservationPolicyPage = lazy(() =>
+  import('./pages/ReservationPolicyPage').then((m) => ({ default: m.ReservationPolicyPage }))
 );
 const CareersPage = lazy(() => import('./pages/CareersPage').then((m) => ({ default: m.CareersPage })));
 const PressPage = lazy(() => import('./pages/PressPage').then((m) => ({ default: m.PressPage })));
@@ -286,6 +291,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/ajuda" element={<HelpPage />} />
       <Route path="/termos" element={<TermsPage />} />
       <Route path="/privacidade" element={<PrivacyPage />} />
+      <Route path={RESERVATION_POLICY_PATH} element={<ReservationPolicyPage />} />
       <Route path="/data-deletion-status" element={<DataDeletionStatusPage />} />
 
       {/* Development Modal Examples */}

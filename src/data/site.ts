@@ -8,6 +8,12 @@ export const COMPANY_LEGAL_NAME = 'X Produções e Eventos';
 export const COMPANY_CNPJ = '55.343.824/0001-56';
 export const COMPANY_ADDRESS_LINE = "Rua Flor d'Água, 407, Jardim Alvorada";
 export const COMPANY_CITY_LINE = 'Belo Horizonte - MG';
+// Q7 (respostas do dono de 03/11/2026): nome empresarial do CNPJ, ainda A CONFERIR no Cartão CNPJ (a consulta
+// pública mostra um MEI aberto em 31/05/2024). Por enquanto só a política de reserva (rascunho, P17) o usa; o rodapé
+// continua com COMPANY_LEGAL_NAME até a correção do nome empresarial (E12).
+export const COMPANY_REGISTERED_NAME = '55.343.824 ERNANE M. S.';
+// CEP do endereço do CNPJ, confirmado pelo dono em 06/11/2026 (o mesmo endereço acima, saída do frete).
+export const COMPANY_POSTAL_CODE = '30810-310';
 
 export const INSTAGRAM_URL = 'https://www.instagram.com/x_producoeseventos';
 export const INSTAGRAM_HANDLE = '@x_producoeseventos';
