@@ -113,7 +113,8 @@ describe('BookingDetailPage — "Avisar o cliente por e-mail" (D11)', () => {
 
     fireEvent.click(screen.getByLabelText(LABEL));
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar e avisar pelo WhatsApp' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Enviar via WhatsApp' }));
+    const janela = await screen.findByRole('dialog', { name: 'Confirmar a reserva?' });
+    fireEvent.click(within(janela).getByRole('button', { name: 'Confirmar' }));
 
     await waitFor(() => expect(bookingAPI.updateStatus).toHaveBeenCalledWith(pendente.id, 'CONFIRMED', { notifyClient: false }));
   });

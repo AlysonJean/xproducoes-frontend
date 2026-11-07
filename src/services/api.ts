@@ -417,6 +417,9 @@ export const bookingAPI = {
   sendProposal: (id: string, options?: { rotate?: boolean }) =>
     api.post(`/admin/bookings/${id}/proposal/send`, options?.rotate ? { rotate: true } : {}),
   getAuditHistory: (id: string) => api.get(`/admin/bookings/${id}/history`),
+  // P14 (aprovada em 02/11/2026), parte 2: "Pedir avaliação no Google" da ficha registra o pedido feito pelo WhatsApp
+  // (devolve { reviewLink, reviewRequestedAt }). Só admin.
+  requestReview: (id: string) => api.post(`/admin/bookings/${id}/review-request`, { channel: 'whatsapp' }),
 };
 
 export const clientAPI = {

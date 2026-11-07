@@ -33,6 +33,7 @@ import { equipmentUnits, equipmentUnitSuffix, equipmentUnitText, hoursBetween, k
 import { isWholeEventService } from '@/utils/wholeEventService';
 import { KIT_FULFILLMENT_LABEL, kitFulfillment } from '@/utils/kitInfo';
 import { useEquipmentPriceUnit } from '@/hooks/usePricingRules';
+import { openWhatsAppUntracked } from '@/utils/whatsapp';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -654,11 +655,11 @@ export const AdminQuickProposalPage = () => {
 
     try {
       setSendingWhatsApp(true);
+      // P14 (aprovada em 02/11/2026), parte 2: todo WhatsApp aberto pelo painel usa o abridor sem o evento de
+      // conversão do GA (D7), o mesmo da ficha da reserva, e abre no clique, antes do PDF (que espera o logo):
+      // depois de uma espera o navegador pode bloquear a aba.
+      openWhatsAppUntracked(normalizedPhone, buildWhatsappInviteText());
       await generateProposalPdf();
-
-      const whatsappText = buildWhatsappInviteText();
-      const waUrl = `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(whatsappText)}`;
-      window.open(waUrl, '_blank', 'noopener,noreferrer');
 
       addNotification({
         type: 'success',

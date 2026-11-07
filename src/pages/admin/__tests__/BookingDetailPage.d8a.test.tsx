@@ -115,15 +115,17 @@ describe('BookingDetailPage — o PDF e o WhatsApp do painel usam o total da res
     expect(escritos).toContain(`- ${formatPrice(150)}`);
   });
 
+  // P14 parte 2 (aprovada em 02/11/2026): o texto vem de utils/whatsappTemplates (proposalPdfWhatsAppText), com o
+  // total da mesma função de preço; o WhatsApp abre no clique, antes de o PDF terminar.
   it('"PDF + WhatsApp": a mensagem leva o mesmo total do PDF', async () => {
     await renderFicha();
 
     fireEvent.click(screen.getByRole('button', { name: 'PDF + WhatsApp' }));
 
-    await waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    expect(open).toHaveBeenCalledTimes(1);
     const mensagem = new URL(String(open.mock.calls[0][0])).searchParams.get('text') ?? '';
-    expect(mensagem).toContain(`Total: ${formatPrice(1350)}.`);
-    expect(valorFinalDoPdf()).toBe(formatPrice(1350));
+    expect(mensagem).toContain('Valor total: R$ 1.350,00.');
+    await waitFor(() => expect(valorFinalDoPdf()).toBe(formatPrice(1350)));
   });
 
   it('reserva antiga sem itens gravados: o PDF lista só os nomes e o valor final é o totalPrice', async () => {

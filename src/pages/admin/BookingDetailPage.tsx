@@ -50,10 +50,18 @@ import { createAndClickAnchor } from '../../utils/dom';
 import { SUPPORT_EMAIL } from '../../data/site';
 import { formatBookingCode } from '../../utils/bookingCode';
 import { bookingEmail, bookingPhone, toWhatsAppNumber } from '../../utils/bookingContact';
+import { openWhatsAppUntracked } from '../../utils/whatsapp';
+import {
+  bookingCancelledWhatsAppText,
+  bookingConfirmedWhatsAppText,
+  crewOnTheWayWhatsAppText,
+  proposalPdfWhatsAppText,
+} from '../../utils/whatsappTemplates';
 import { notifyClientPayload } from '../../utils/notifyClient';
 import { NotifyClientCheckbox } from '../../components/bookings/NotifyClientCheckbox';
 import { SendProposalPanel } from '../../components/bookings/SendProposalPanel';
 import { ProposalHistory } from '../../components/bookings/ProposalHistory';
+import { StageWhatsAppPanel } from '../../components/bookings/StageWhatsAppPanel';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { BookingCollaborators } from '../../components/bookings/BookingCollaborators';
 import { BookingFinancialSummary } from '../../components/bookings/BookingFinancialSummary';
@@ -151,6 +159,20 @@ type BookingDetails = BaseBookingDetails & {
   estimatedDuration?: string;
   createdAt?: string;
   eventCollaborators?: BookingEventCollaborator[];
+  // P14 parte 2: quem criou (pedido do cliente = conta de cliente), quando a avaliação foi pedida e o link de
+  // avaliação do Google que a API manda ao admin (null sem GOOGLE_REVIEW_LINK).
+  creator?: { role?: string | null } | null;
+  reviewRequestSentAt?: string | null;
+  reviewLink?: string | null;
+};
+
+// P14 (aprovada em 02/11/2026), parte 2: as trocas de status da ficha que podem levar um aviso pelo WhatsApp. O
+// WhatsApp é opcional (caixa na janela); sem telefone, a janela muda só o status.
+type StatusAction = 'confirm' | 'cancel' | 'on_the_way';
+const STATUS_ACTIONS: Record<StatusAction, { status: string; title: string; confirmText: string; variant: 'default' | 'danger' | 'success' }> = {
+  confirm: { status: 'CONFIRMED', title: 'Confirmar a reserva?', confirmText: 'Confirmar', variant: 'success' },
+  cancel: { status: 'CANCELLED', title: 'Cancelar a reserva?', confirmText: 'Cancelar reserva', variant: 'danger' },
+  on_the_way: { status: 'ON_THE_WAY', title: 'Equipe a caminho?', confirmText: 'Marcar a caminho', variant: 'default' },
 };
 
 export const BookingDetailPage = () => {
@@ -166,7 +188,8 @@ export const BookingDetailPage = () => {
   // States for modals
   const [isWppModalOpen, setWppModalOpen] = useState(false);
   const [wppMessage, setWppMessage] = useState('');
-  const [wppContact, setWppContact] = useState('');
+  const [wppContact, setWppContact] = useState<string | null>(null);
+  const [wppAction, setWppAction] = useState<StatusAction>('confirm');
   const [actionToConfirm, setActionToConfirm] = useState<(() => Promise<void>) | null>(null);
   
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -281,61 +304,45 @@ export const BookingDetailPage = () => {
     }
   };
 
-  const prepareWhatsAppMessage = (
-    action: 'confirm' | 'cancel' | 'complete' | 'on_the_way' | 'arrived' | 'setup_complete' | 'thank_you'
-  ) => {
+  // P14 (aprovada em 02/11/2026), parte 2: confirmar, cancelar e "equipe a caminho" funcionam sem telefone. Antes,
+  // sem telefone válido, o botão parava com "Sem telefone ... Mude o status pela lista de Reservas" e a reserva não
+  // mudava. A janela abre sempre; o aviso pelo WhatsApp é a caixa dela (marcada quando há telefone). Os textos vêm de
+  // utils/whatsappTemplates (a confirmação é a mesma do botão "Enviar confirmação no WhatsApp").
+  const prepareWhatsAppMessage = (action: StatusAction) => {
+    if (!booking?.id) return;
+    const bookingId = booking.id;
+    const messages: Record<StatusAction, () => string> = {
+      confirm: () => bookingConfirmedWhatsAppText(booking),
+      cancel: () => bookingCancelledWhatsAppText(booking),
+      on_the_way: () => crewOnTheWayWhatsAppText(booking),
+    };
+    setActionToConfirm(() => () => handleStatusChange(bookingId, STATUS_ACTIONS[action].status));
+    setWppAction(action);
+    setWppMessage(messages[action]());
     // Contato da reserva antes do cadastro, já com DDI: sem o 55, o wa.me abria outro país (31 é a
-    // Holanda). Ver utils/bookingContact.
-    const contact = booking ? toWhatsAppNumber(bookingPhone(booking)) : null;
-    if (!contact) {
-      addNotification({ type: 'warning', title: 'Sem telefone', message: 'O cliente não tem um telefone válido para o WhatsApp. Mude o status pela lista de Reservas.' });
-      return;
-    }
-
-    let message = '';
-    const name = booking?.client?.name || booking?.clientName || 'Cliente';
-    const bId = formatBookingCode(booking?.id);
-
-    switch (action) {
-      case 'confirm':
-        message = `Olá, ${name}! Sua reserva #${bId} foi CONFIRMADA. Nossa equipe já está preparada para o seu evento!`;
-        setActionToConfirm(() => () => booking?.id ? handleStatusChange(booking.id, 'CONFIRMED') : Promise.resolve());
-        break;
-      case 'cancel':
-        message = `Olá, ${name}. Informamos que sua reserva #${bId} foi CANCELADA em nosso sistema. Qualquer dúvida, estamos à disposição.`;
-        setActionToConfirm(() => () => booking?.id ? handleStatusChange(booking.id, 'CANCELLED') : Promise.resolve());
-        break;
-      case 'on_the_way':
-        message = `Olá, ${name}! Nossa equipe operacional já está A CAMINHO para o evento #${bId}. Até breve!`;
-        setActionToConfirm(() => () => booking?.id ? handleStatusChange(booking.id, 'ON_THE_WAY') : Promise.resolve());
-        break;
-      case 'complete':
-        message = `Evento #${bId} concluído com sucesso! Obrigado por confiar em nossa tecnologia e equipe. Até a próxima!`;
-        setActionToConfirm(() => () => booking?.id ? handleStatusChange(booking.id, 'COMPLETED') : Promise.resolve());
-        break;
-      default:
-        message = `Olá, ${name}! Entrando em contato sobre o evento #${bId}.`;
-        setActionToConfirm(() => async () => Promise.resolve());
-    }
-
-    setWppMessage(message);
-    setWppContact(contact);
+    // Holanda). Ver utils/bookingContact. null: sem telefone, só o status muda.
+    setWppContact(toWhatsAppNumber(bookingPhone(booking)));
     setWppModalOpen(true);
   };
 
-  // ─── PDF / WhatsApp helpers ────────────────────────────────────────────────
-  const buildWhatsappText = (b: typeof booking): string => {
-    if (!b) return '';
-    const name = b.client?.name || b.clientName || 'cliente';
-    const progressUrl = typeof window !== 'undefined' ? `${window.location.origin}/cliente/painel` : 'https://xproducoeseeventos.com.br/cliente/painel';
-    const registrationUrl = typeof window !== 'undefined' ? `${window.location.origin}/cadastro` : 'https://xproducoeseeventos.com.br/cadastro';
-    return [
-      `Olá, ${name}! Segue a proposta comercial do seu evento.`,
-      `Total: ${formatPrice(b.totalPrice || 0)}.`,
-      `Acompanhe sua reserva em: ${progressUrl}`,
-      `Ainda não tem cadastro? Crie aqui: ${registrationUrl}`,
-    ].join(' ');
+  // P14 parte 2: "Pedir avaliação no Google". O WhatsApp já abriu no clique (StageWhatsAppPanel); aqui o pedido é
+  // registrado no servidor sem segurar nada. Deu certo: a ficha mostra "Avaliação pedida em <data>" e o Histórico
+  // recarrega. Falhou: o aviso diz que o WhatsApp abriu mas o pedido não ficou registrado.
+  const handleReviewRequested = () => {
+    if (!booking?.id) return;
+    bookingAPI
+      .requestReview(booking.id)
+      .then((res) => {
+        const requestedAt = (res.data as { reviewRequestedAt?: string } | undefined)?.reviewRequestedAt;
+        if (requestedAt) setBooking((current) => (current ? { ...current, reviewRequestSentAt: current.reviewRequestSentAt || requestedAt } : current));
+        setProposalHistoryKey((key) => key + 1);
+      })
+      .catch(() => {
+        addNotification({ type: 'error', title: 'Pedido não registrado', message: 'O WhatsApp abriu, mas o pedido de avaliação não ficou registrado na reserva. Tente de novo.' });
+      });
   };
+
+  // ─── PDF / WhatsApp helpers ────────────────────────────────────────────────
 
   const generateBookingPdf = async (): Promise<void> => {
     if (!booking) return;
@@ -653,15 +660,17 @@ export const BookingDetailPage = () => {
 
   const handleDownloadAndWhatsApp = async () => {
     const normalizedPhone = booking ? toWhatsAppNumber(bookingPhone(booking)) : null;
-    if (!normalizedPhone) {
+    if (!booking || !normalizedPhone) {
       addNotification({ type: 'error', title: 'WhatsApp inválido', message: 'O cliente não tem um telefone válido cadastrado.' });
       return;
     }
     try {
       setSendingWhatsApp(true);
+      // P14 parte 2: o texto vem de utils/whatsappTemplates (saem os links de /cliente/painel e /cadastro), e o
+      // WhatsApp abre antes do PDF: depois da espera do PDF (que baixa as fotos dos itens) o navegador pode bloquear
+      // a aba. Sem o evento de conversão do GA (D7).
+      openWhatsAppUntracked(normalizedPhone, proposalPdfWhatsAppText(booking));
       await generateBookingPdf();
-      const waUrl = `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(buildWhatsappText(booking))}`;
-      window.open(waUrl, '_blank', 'noopener,noreferrer');
       addNotification({ type: 'success', title: 'WhatsApp aberto', message: 'PDF baixado. Anexe-o na conversa do WhatsApp.' });
     } catch (err: unknown) {
       addNotification({ type: 'error', title: 'Erro', message: err instanceof Error ? err.message : 'Não foi possível abrir o WhatsApp.' });
@@ -912,6 +921,10 @@ export const BookingDetailPage = () => {
               </Button>
             </div>
           </Card>
+
+          {/* P14 parte 2: botões de WhatsApp da etapa (pedido do cliente, confirmada, concluída), com texto pronto; o
+              cartão só aparece nessas etapas. */}
+          <StageWhatsAppPanel booking={booking} onReviewRequested={handleReviewRequested} />
         </Grid>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -1224,6 +1237,9 @@ export const BookingDetailPage = () => {
           setWppModalOpen(false);
           setActionToConfirm(null);
         }}
+        title={STATUS_ACTIONS[wppAction].title}
+        confirmText={STATUS_ACTIONS[wppAction].confirmText}
+        variant={STATUS_ACTIONS[wppAction].variant}
         message={wppMessage}
         contactNumber={wppContact}
         isSending={actionLoading}

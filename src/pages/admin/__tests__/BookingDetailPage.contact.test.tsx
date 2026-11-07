@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 const { bookingAPI, addNotification, pdfText } = vi.hoisted(() => ({
@@ -131,29 +131,35 @@ describe('BookingDetailPage — contato do cliente nos botões manuais', () => {
     await renderFicha(reserva);
 
     fireEvent.click(screen.getByRole('button', { name: 'Avisar: equipe a caminho' }));
-    expect(await screen.findByText(numero)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Enviar via WhatsApp' }));
+    expect(await screen.findByText(`Abre o WhatsApp do número ${numero} com a mensagem abaixo.`)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Marcar a caminho' }));
 
     expect(open).toHaveBeenCalledTimes(1);
     expect(waMe(open)).toBe(`https://wa.me/${numero}`);
     await waitFor(() => expect(bookingAPI.updateDeliveryStatus).toHaveBeenCalledWith(reserva.id, 'ON_THE_WAY'));
   });
 
-  // Sem telefone válido o botão não muda o status (antes abria o wa.me quebrado e mudava): o aviso diz
-  // onde mudar.
+  // Sem telefone válido nunca abre o wa.me quebrado (antes de 89ef066 abria e mudava). P14 parte 2 (aprovada em
+  // 02/11/2026): o status muda mesmo assim; o WhatsApp é que fica desligado, com "Sem telefone na reserva". Antes da
+  // P14 parte 2 o botão parava com o aviso "Mude o status pela lista de Reservas".
   it.each([
     ['sem contato', null],
     ['número curto, sem DDD', '9888-7777'],
-  ])('sem telefone válido (%s): avisa onde mudar o status e não abre o WhatsApp', async (_caso, contato) => {
+  ])('sem telefone válido (%s): muda o status sem abrir o WhatsApp, com a caixa do WhatsApp desligada', async (_caso, contato) => {
     await renderFicha({ ...reservaDigitada, clientContact: contato });
 
     fireEvent.click(screen.getByRole('button', { name: 'Avisar: equipe a caminho' }));
 
-    expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'warning', title: 'Sem telefone', message: expect.stringContaining('lista de Reservas'),
-    }));
-    expect(screen.queryByRole('button', { name: 'Enviar via WhatsApp' })).not.toBeInTheDocument();
+    const janela = await screen.findByRole('dialog', { name: 'Equipe a caminho?' });
+    const caixa = within(janela).getByLabelText('Avisar o cliente pelo WhatsApp');
+    expect(caixa).toBeDisabled();
+    expect(caixa).not.toBeChecked();
+    expect(within(janela).getByText('Sem telefone na reserva')).toBeInTheDocument();
+    fireEvent.click(within(janela).getByRole('button', { name: 'Marcar a caminho' }));
+
+    await waitFor(() => expect(bookingAPI.updateDeliveryStatus).toHaveBeenCalledWith(reservaDigitada.id, 'ON_THE_WAY'));
     expect(open).not.toHaveBeenCalled();
+    expect(addNotification).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Sem telefone' }));
   });
 
   // A edição nunca gravou o status e agora nem o mostra: o texto não pode mandar usar o Editar.
