@@ -15,13 +15,12 @@ vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { name
 vi.mock('../../../contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification: vi.fn() }) }));
 vi.mock('@/contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification: vi.fn() }) }));
 
-import WhatsappPage from '../WhatsappPage';
 import MonitoringPage from '../MonitoringPage';
 
 // Achado (auditoria ponta a ponta): as telas de WhatsApp e de Monitoramento do painel consultavam a
 // cada 30 s mesmo com a aba escondida — cada consulta passa por authenticateWithDB (lê o banco), e
 // uma aba esquecida mantinha o Neon (plano free) acordado. Agora pausam com a aba escondida e, ao
-// voltar, consultam na hora.
+// voltar, consultam na hora. A tela de WhatsApp saiu na P14 (parte 3); fica a de Monitoramento.
 
 let escondida = false;
 const mudarVisibilidade = (hidden: boolean) => {
@@ -38,7 +37,6 @@ const avancar = async (ms: number) => {
 };
 
 const telas = [
-  { nome: 'WhatsApp (/whatsapp/status)', Tela: WhatsappPage, consulta: apiFetch },
   { nome: 'Monitoramento (/monitoring/dashboard)', Tela: MonitoringPage, consulta: getDashboard },
 ];
 
@@ -60,7 +58,7 @@ describe.each(telas)('$nome — polling de 30 s', ({ Tela, consulta }) => {
   beforeEach(() => {
     vi.useFakeTimers();
     escondida = false;
-    apiFetch.mockReset().mockResolvedValue({ isReady: true, qrCode: null });
+    apiFetch.mockReset();
     // Sem os dados do painel, a tela mostra o aviso de erro; aqui só importa quantas vezes consulta.
     getDashboard.mockReset().mockRejectedValue(new Error('sem dados no teste'));
   });

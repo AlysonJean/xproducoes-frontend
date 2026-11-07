@@ -95,7 +95,7 @@ const menuGroups: MenuGroup[] = [
       { name: 'Contatos', href: '/admin/contatos', icon: Mail, description: 'Mensagens recebidas' },
       { name: 'Newsletter', href: '/admin/newsletter', icon: Newspaper, description: 'Inscritos para novidades' },
       // P14 (aprovada em 02/11/2026), parte 1: saiu "WhatsApp" (QR da automação não oficial, que pode banir o
-      // número da empresa e fica desligada no servidor). A rota /admin/whatsapp continua, fora do menu.
+      // número da empresa). Na parte 3 a tela saiu de vez; o endereço /admin/whatsapp leva ao painel.
     ],
   },
 ];

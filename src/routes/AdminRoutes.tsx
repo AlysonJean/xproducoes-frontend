@@ -14,9 +14,6 @@ import { PageLoadingSpinner } from '../components/ui/PageLoadingSpinner';
 const AdminDashboardPage = lazy(() =>
   import('../pages/admin/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage }))
 );
-const AdminWhatsappPage = lazy(() =>
-  import('../pages/admin/WhatsappPage').then((m) => ({ default: m.default }))
-);
 const ReviewManagementPage = lazy(() =>
   import('../pages/admin/ReviewManagementPage').then((m) => ({ default: m.default }))
 );
@@ -100,11 +97,12 @@ export default function AdminRoutes() {
             </ProtectedRoute>
           }
         />
+        {/* P14 parte 3: a tela do QR da automação não oficial do WhatsApp saiu com ela; o endereço antigo leva ao painel. */}
         <Route
           path="whatsapp"
           element={
             <ProtectedRoute adminOnly>
-              <AdminWhatsappPage />
+              <Navigate to="/admin/painel" replace />
             </ProtectedRoute>
           }
         />
