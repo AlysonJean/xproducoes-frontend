@@ -12,6 +12,7 @@ import { Modal } from '../ui/Modal';
 import { formatPrice } from '../../utils/typeSafeFormatters';
 import { notifyClientPayload } from '../../utils/notifyClient';
 import { NotifyClientCheckbox } from '../bookings/NotifyClientCheckbox';
+import { useEquipmentPriceUnit } from '../../hooks/usePricingRules';
 
 const manualBookingSchema = z
   .object({
@@ -151,6 +152,10 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
     };
     loadData();
   }, [isOpen]);
+
+  // Diária (lote 13): a unidade do preço do equipamento é a da chave do servidor (EQUIPMENT_PRICE_UNIT),
+  // consultada só com o modal aberto.
+  const equipmentUnit = useEquipmentPriceUnit(isOpen);
 
   // Reset do estado local do formulário no evento real de fechamento (não reativo a `isOpen`
   // via efeito — evita setState síncrono dentro de um efeito, react-hooks/set-state-in-effect).
@@ -330,7 +335,9 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
             })}
             label="Valor final (R$)"
             placeholder="Calculado pelos itens"
-            description="Opcional. Em branco, é calculado pelo kit ou pelos equipamentos e pelas horas do evento."
+            description={equipmentUnit === 'day'
+              ? 'Opcional. Em branco, é calculado pelo kit ou pelos equipamentos e pelas diárias do evento.'
+              : 'Opcional. Em branco, é calculado pelo kit ou pelos equipamentos e pelas horas do evento.'}
             error={errors.finalValue?.message}
             className="w-full"
           />
@@ -416,7 +423,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
                         handleEquipmentChange(eq.id!, e.target.checked)
                       }
                       disabled={selectedKit !== ''}
-                      label={`${eq.name} - ${formatPrice(eq.pricePerHour ?? 0)}/hora`}
+                      label={`${eq.name} - ${formatPrice(eq.pricePerHour ?? 0)}${equipmentUnit === 'day' ? '/diária' : '/hora'}`}
                     />
                   ) : null
                 )}

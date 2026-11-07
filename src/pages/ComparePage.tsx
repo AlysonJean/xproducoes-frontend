@@ -10,6 +10,7 @@ import { normalizeImageUrl } from '../utils/imageUtils';
 import type { Equipment } from '../types/types';
 import { PageLayout, PageEmpty } from '../components/layouts/PageLayout';
 import { Badge, Button, buttonVariants } from '../components/ui/StandardComponents';
+import { useEquipmentPriceUnit } from '../hooks/usePricingRules';
 
 type CompareItem = Equipment & {
   duration?: number;
@@ -44,6 +45,9 @@ export const ComparePage = () => {
   const { items: compareItems, removeItem: removeFromCompare, clearCompare } = useCompare();
   const { addNotification } = useNotifications();
   const { addItem, cart } = useCart();
+  // Diária (lote 13): o equipamento avulso é cobrado na unidade da chave do servidor (EQUIPMENT_PRICE_UNIT),
+  // lida na hora, também para o item guardado no navegador antes de a chave virar.
+  const equipmentUnit = useEquipmentPriceUnit();
 
   const handleRemove = (equipmentId: string, equipmentName: string) => {
     removeFromCompare(equipmentId);
@@ -207,7 +211,7 @@ export const ComparePage = () => {
                   </span>
                   <span className="text-xs text-muted-foreground ml-1">
                     {/* Decisão do dono de 06/11: kit por evento. */}
-                    {item.type === 'service' ? '/ serviço' : item.type === 'kit' ? 'por evento' : '/ hora'}
+                    {item.type === 'service' ? '/ serviço' : item.type === 'kit' ? 'por evento' : equipmentUnit === 'day' ? '/ diária' : '/ hora'}
                   </span>
                 </td>
               ))}

@@ -24,6 +24,7 @@ import { useFormDraft } from '../../hooks/useFormDraft';
 import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
 import { NotifyClientCheckbox } from '../bookings/NotifyClientCheckbox';
 import { notifyClientPayload } from '../../utils/notifyClient';
+import { useEquipmentPriceUnit } from '../../hooks/usePricingRules';
 
 const idSchema = z.union([
   z.string().uuid(),
@@ -423,6 +424,10 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
     }
   };
 
+  // Diária (lote 13): o texto do valor final diz como o servidor calcula o equipamento (por hora ou por
+  // diária, EQUIPMENT_PRICE_UNIT). Só a criação mostra esse texto, então só ela consulta.
+  const equipmentUnit = useEquipmentPriceUnit(!isEditing && !loading);
+
   if (loading) return <BrandLoader size={100} label="Carregando formulário de reserva..." />;
 
   // Na edição, só para leitura: o nome do cliente cadastrado e os itens da reserva.
@@ -604,7 +609,9 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
                 // Na edição o servidor não recalcula: sem valor final, o total da reserva fica como está.
                 description={isEditing
                   ? 'Opcional. O valor que o cliente paga, o mesmo em todo lugar. Em branco, o valor atual da reserva fica como está.'
-                  : 'Opcional. O valor que o cliente paga, o mesmo em todo lugar. Em branco, é calculado pelos itens e pelas horas do evento.'}
+                  : equipmentUnit === 'day'
+                    ? 'Opcional. O valor que o cliente paga, o mesmo em todo lugar. Em branco, é calculado pelos itens e pelas diárias do evento.'
+                    : 'Opcional. O valor que o cliente paga, o mesmo em todo lugar. Em branco, é calculado pelos itens e pelas horas do evento.'}
               />
               <Input
                 type="file"

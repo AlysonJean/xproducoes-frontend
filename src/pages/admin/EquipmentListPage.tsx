@@ -36,6 +36,8 @@ import EquipmentForm from '../../components/forms/EquipmentFormPage';
 import { StatusSelect } from '../../components/admin/StatusSelect';
 import { ItemStatus } from '../../types/types';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { useEquipmentPriceUnit } from '../../hooks/usePricingRules';
+import { equipmentUnitSuffix } from '../../utils/bookingPricing';
 
 const PAGE_TITLE = 'Equipamentos';
 const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Equipamentos' }];
@@ -90,6 +92,10 @@ export const EquipmentListPage = () => {
   useEffect(() => {
     fetchEquipments();
   }, [fetchEquipments]);
+
+  // Diária (lote 13): a coluna pricePerHour guarda o preço da unidade que o servidor cobra
+  // (EQUIPMENT_PRICE_UNIT); a tabela diz qual.
+  const equipmentUnit = useEquipmentPriceUnit();
 
   const handleDeleteClick = (id: string) => {
     setEquipmentToDelete(id);
@@ -257,7 +263,9 @@ export const EquipmentListPage = () => {
                 <h2 className="text-xl font-bold text-foreground">Inventário de equipamentos</h2>
                 <Badge variant="outline">{stats.total} unidades</Badge>
               </div>
-              <p className="text-sm text-muted-foreground">Cadastro, preço por hora e status de manutenção.</p>
+              <p className="text-sm text-muted-foreground">
+                {equipmentUnit === 'day' ? 'Cadastro, preço da diária e status de manutenção.' : 'Cadastro, preço por hora e status de manutenção.'}
+              </p>
             </div>
           </div>
 
@@ -415,7 +423,7 @@ export const EquipmentListPage = () => {
                   </th>
                   <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Equipamento</th>
                   <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Categoria</th>
-                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Preço/hora</th>
+                  <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">{equipmentUnit === 'day' ? 'Preço/diária' : 'Preço/hora'}</th>
                   <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
                   <th className="px-6 py-4 text-xs font-bold text-right text-muted-foreground uppercase tracking-wider">Ações</th>
                 </tr>
@@ -469,7 +477,7 @@ export const EquipmentListPage = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <span className="text-sm font-bold text-foreground">{formatMoney(item.pricePerHour || 0)}</span>
-                        <span className="text-xs text-muted-foreground">/h</span>
+                        <span className="text-xs text-muted-foreground">{equipmentUnitSuffix(equipmentUnit)}</span>
                       </td>
                       <td className="px-6 py-4">
                         <StatusSelect

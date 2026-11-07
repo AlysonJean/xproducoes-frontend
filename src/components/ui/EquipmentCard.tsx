@@ -8,6 +8,7 @@ import type { Equipment } from '../../types/types';
 import { FavoriteButton } from '../../components/ui/FavoriteButton';
 import CompareButton from '../../components/ui/CompareButton';
 import { memo, useCallback, useState } from 'react';
+import { useEquipmentUnitOf } from '../../hooks/usePricingRules';
 
 // Constantes para disponibilidade
 // Achado (Lighthouse/axe-core contra produção real): badge MAINTENANCE (bg-orange-500) e
@@ -117,6 +118,9 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
   className = '',
   ...rest
 }) => {
+  // Diária (lote 13, decisão do dono de 06/11): a unidade vem com o equipamento (priceUnit da API pública),
+  // então o cartão já pinta "/ diária" junto com o preço; sem o campo, vale a chave do servidor.
+  const priceUnit = useEquipmentUnitOf(equipment);
   // Achado (Lighthouse/axe-core contra produção real): este Link tinha um aria-label fixo
   // ("Ver detalhes do equipamento X") que substituía todo o nome acessível — mas o card
   // visualmente também mostra o badge de status (StatusOverlay: "Disponível"/"Em Breve"/
@@ -188,7 +192,7 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
   <div className="flex justify-between items-center mt-4">
           <span className="text-lg font-semibold text-primary">
             <span className="text-xs font-normal mr-1">a partir de</span>
-            {formatPrice(equipment.pricePerHour || 0)} / hora
+            {formatPrice(equipment.pricePerHour || 0)} {priceUnit === 'day' ? '/ diária' : '/ hora'}
           </span>
           {/* Achado (auditoria mobile-first): tinha aria-label="Adicionar ao carrinho", mas
               este é um <div> decorativo dentro do <Link> do card inteiro — clicar aqui não

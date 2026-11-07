@@ -18,6 +18,8 @@ import { KIT_FULFILLMENT_LABEL, KIT_FULFILLMENT_SENTENCE, kitFulfillment, kitHou
 import { ExperienceLevelSelector } from '../components/kits/ExperienceLevelSelector';
 import { RecommendationSection } from '../components/ui/RecommendationSection';
 import { useRecommendations } from '../hooks/useRecommendations';
+import { useEquipmentUnitOf } from '../hooks/usePricingRules';
+import { equipmentUnitSuffix, priceUnitOf } from '../utils/bookingPricing';
 import { PageLayout, PageError } from '../components/layouts/PageLayout';
 import { OptimizedImage } from '@/components/ui/OptimizedImage';
 import { ZoomableProductPhoto } from '@/components/ui/ZoomableProductPhoto';
@@ -88,6 +90,11 @@ export const KitDetailPage = () => {
     };
     fetchKit();
   }, [slug]);
+
+  // Diária (lote 13): o preço de cada equipamento do kit diz a unidade que o servidor cobra no avulso (o
+  // priceUnit que vem com o equipamento do kit; sem ele, a chave do servidor). O preço do kit é por evento.
+  const kitEquipment = kit?.items?.find((item) => item.equipment)?.equipment;
+  const kitEquipmentUnit = useEquipmentUnitOf(kitEquipment, !!kitEquipment);
 
   // Achado: o loading usava PageLayout title="Carregando..." — como o useEffect não roda no SSR,
   // era esse o <h1>/<title> entregue a crawlers.
@@ -419,7 +426,7 @@ export const KitDetailPage = () => {
                             </div>
                             <div className="flex justify-between items-center mt-2">
                               <span className="text-primary font-bold text-sm">
-                                {formatPrice(Number(price))}{isService ? '/serviço' : '/h'}
+                                {formatPrice(Number(price))}{isService ? '/serviço' : equipmentUnitSuffix(priceUnitOf(item.equipment) ?? kitEquipmentUnit)}
                               </span>
                               <Link
                                 to={isService ? `/servicos/${entity.slug || entity.id}` : `/equipamentos/${entity.slug || entity.id}`}

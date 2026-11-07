@@ -22,6 +22,8 @@ import { getWhatsAppPhone } from '../../utils/whatsapp';
 import { recommendationAPI } from '../../services/api';
 import { formatPrice } from '../../utils/formatPrice';
 import { logger } from '../../utils/logger';
+import { useEquipmentPriceUnit } from '../../hooks/usePricingRules';
+import { equipmentUnitSuffix } from '../../utils/bookingPricing';
 
 type Step = 'event_type' | 'audience_size' | 'environment' | 'result';
 
@@ -47,6 +49,10 @@ const BUDGET_RANGE_BY_AUDIENCE: Record<string, [number, number]> = {
   '300 - 600 pessoas': [400, 900],
   'Mais de 600 pessoas': [800, 2000],
 };
+
+// Diária (lote 13): com o equipamento por diária, a faixa por hora vira faixa por diária pela regra do dono de
+// 06/11 (diária = 4 × o preço da hora), e a busca por orçamento compara com os preços já gravados como diária.
+const DAY_RANGE_FACTOR = 4;
 
 export const InteractiveQuiz = () => {
   const [currentStep, setCurrentStep] = useState<Step>('event_type');
@@ -80,12 +86,16 @@ export const InteractiveQuiz = () => {
 
   const [suggestions, setSuggestions] = useState<BudgetEquipmentSuggestion[]>([]);
   const [loadingEstimate, setLoadingEstimate] = useState(false);
+  // A unidade só é consultada depois da primeira resposta: quem abre a Home sem usar o teste não gera consulta.
+  const equipmentUnit = useEquipmentPriceUnit(answers.eventType !== '');
 
   // Derivável diretamente da resposta já escolhida — não precisa de estado/efeito próprio.
   const budgetRange = useMemo<[number, number] | null>(() => {
     if (currentStep !== 'result' || !answers.audienceSize) return null;
-    return BUDGET_RANGE_BY_AUDIENCE[answers.audienceSize] ?? null;
-  }, [currentStep, answers.audienceSize]);
+    const range = BUDGET_RANGE_BY_AUDIENCE[answers.audienceSize];
+    if (!range) return null;
+    return equipmentUnit === 'day' ? [range[0] * DAY_RANGE_FACTOR, range[1] * DAY_RANGE_FACTOR] : range;
+  }, [currentStep, answers.audienceSize, equipmentUnit]);
 
   const handleSelect = (category: keyof QuizState, value: string) => {
     setAnswers(prev => ({ ...prev, [category]: value }));
@@ -125,7 +135,7 @@ export const InteractiveQuiz = () => {
 
   const generateWhatsAppMessage = () => {
     const rangeLine = budgetRange
-      ? `\n💰 Faixa estimada: ${formatPrice(budgetRange[0])} – ${formatPrice(budgetRange[1])}/hora`
+      ? `\n💰 Faixa estimada: ${formatPrice(budgetRange[0])} – ${formatPrice(budgetRange[1])}${equipmentUnit === 'day' ? '/diária' : '/hora'}`
       : '';
     const message = `Olá! Fiz o teste no site e gostaria de um orçamento pré-qualificado.\n\n*Meu evento:*\n📍 Formato: ${answers.eventType}\n👥 Público: ${answers.audienceSize}\n🏛️ Local: ${answers.environment}${rangeLine}\n\nPodem me ajudar com a infraestrutura ideal?`;
     return `https://wa.me/${getWhatsAppPhone()}?text=${encodeURIComponent(message)}`;
@@ -297,7 +307,7 @@ export const InteractiveQuiz = () => {
             {budgetRange && (
               <div className="mb-8 w-full max-w-lg">
                 <p className="text-center text-xs font-black uppercase tracking-[0.2em] text-primary mb-3">
-                  Faixa estimada de investimento por hora
+                  {equipmentUnit === 'day' ? 'Faixa estimada de investimento por diária' : 'Faixa estimada de investimento por hora'}
                 </p>
                 <p className="text-center text-3xl font-black text-foreground mb-4">
                   {formatPrice(budgetRange[0])} – {formatPrice(budgetRange[1])}
@@ -312,7 +322,7 @@ export const InteractiveQuiz = () => {
                     {suggestions.map((item) => (
                       <div key={item.id} className="flex items-center justify-between px-4 py-2 bg-muted/40 rounded-xl border border-border/50 text-sm">
                         <span className="text-foreground font-medium">{item.name}</span>
-                        <span className="text-primary font-black">{formatPrice(item.pricePerHour)}/h</span>
+                        <span className="text-primary font-black">{formatPrice(item.pricePerHour)}{equipmentUnitSuffix(equipmentUnit)}</span>
                       </div>
                     ))}
                   </div>

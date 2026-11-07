@@ -27,7 +27,7 @@ import { z } from 'zod';
 import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
 import { useEquipmentPriceUnit } from '../../hooks/usePricingRules';
-import { kitPriceLine } from '../../utils/bookingPricing';
+import { equipmentUnitsForHours, kitPriceLine } from '../../utils/bookingPricing';
 import { quoteSuccessMessage } from '../../utils/quoteSubmission';
 import { TrustStrip } from '../../components/ui/TrustStrip';
 import { ClientPage } from '../../components/client/ClientPage';
@@ -83,6 +83,12 @@ function getEquipmentUnitPrice(item: { pricePerHour?: number | string; equipment
   return Number(('pricePerHour' in item ? item.pricePerHour : item.equipment?.pricePerHour) || 0);
 }
 
+// Diária (lote 13): o mínimo do cadastro (na diária, o mínimo de diárias), que o servidor usa na conta. O
+// carrinho de visitante guarda o equipamento inteiro; o da conta traz o campo desde este lote (cartRepository).
+function getEquipmentMinimum(item: { minimumRentalDuration?: number | null; equipment?: { minimumRentalDuration?: number | null } }): number | null {
+  return ('minimumRentalDuration' in item ? item.minimumRentalDuration : item.equipment?.minimumRentalDuration) ?? null;
+}
+
 export const QuoteRequestPage: React.FC = () => {
   const { cart, clearCart, isLoading: cartLoading } = useCart();
   const equipments = useMemo(() => cart?.equipments ?? [], [cart]);
@@ -124,9 +130,12 @@ export const QuoteRequestPage: React.FC = () => {
     // Lote 13 (06/11/2026): o kit com horas incluídas e valor de hora extra cobra as horas cheias a mais,
     // como o servidor (kitPriceLine). Sem a duração ainda, só o preço do evento.
     const kitsPrice = kit ? kitPriceLine(kit, durationValue > 0 ? Math.max(1, Math.ceil(durationValue)) : null).cents / 100 : 0;
-    // Horas cheias, como o servidor (hoursBetween): 4,5 h contam 5 h do equipamento.
-    const equipmentUnits = equipmentUnit === 'day' ? Math.max(1, Math.ceil(durationValue / 24)) : Math.ceil(durationValue);
-    const equipmentsPrice = equipments.reduce((sum, it) => sum + getEquipmentUnitPrice(it), 0) * equipmentUnits;
+    // Unidades de cada equipamento pela conta do servidor (equipmentUnits): horas cheias (4,5 h contam 5 h)
+    // ou diárias (24 h para cima, no mínimo o mínimo de diárias do cadastro de cada equipamento).
+    const equipmentsPrice = equipments.reduce(
+      (sum, it) => sum + getEquipmentUnitPrice(it) * (equipmentUnitsForHours(equipmentUnit, durationValue, getEquipmentMinimum(it)) ?? 0),
+      0,
+    );
     const servicesPrice = services.reduce((sum, it) => sum + Number((it as { price?: number | string }).price || 0), 0);
     return kitsPrice + equipmentsPrice + servicesPrice;
   }, [kit, equipments, services, durationValue, equipmentUnit]);

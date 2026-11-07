@@ -11,6 +11,7 @@ import { SEO } from '../components/SEO';
 import { SearchAndFilters, FilterSelect, FilterPriceRange, Grid, Badge } from '../components/ui/StandardComponents';
 import { BrandLoader } from '../components/ui/BrandLoader';
 import { logger } from '../utils/logger';
+import { useEquipmentUnitOf } from '../hooks/usePricingRules';
 
 export const EquipmentListPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -50,6 +51,10 @@ export const EquipmentListPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Diária (lote 13): o filtro compara pricePerHour, o preço da unidade que o servidor cobra; o rótulo diz a
+  // mesma unidade dos cartões (priceUnit da API; sem ele, a chave do servidor).
+  const priceUnit = useEquipmentUnitOf(equipments[0], !loading);
 
   // Filter and search logic
   const filteredEquipments = useMemo(() => {
@@ -185,7 +190,7 @@ export const EquipmentListPage: React.FC = () => {
               ]}
             />
             <FilterPriceRange
-              label="Preço por hora (R$)"
+              label={priceUnit === 'day' ? 'Preço da diária (R$)' : 'Preço por hora (R$)'}
               min={priceMinInput}
               max={priceMaxInput}
               onMinChange={(value) => handlePriceChange(value, priceMaxInput)}

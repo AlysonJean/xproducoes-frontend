@@ -12,6 +12,7 @@ import { SEO } from '../components/SEO';
 import { transformEquipment } from '../utils/transformEquipment';
 import { RecommendationSection } from '../components/ui/RecommendationSection';
 import { useRecommendations } from '../hooks/useRecommendations';
+import { useEquipmentUnitOf } from '../hooks/usePricingRules';
 import { useNotifications } from '../contexts/NotificationContext';
 import { generateProductSchema } from '../utils/schemaGenerator';
 import { FavoriteButton } from '../components/ui/FavoriteButton';
@@ -86,6 +87,11 @@ export const EquipmentDetailPage = () => {
     };
     fetchEquipment();
   }, [slug]);
+
+  // Diária (lote 13, decisão do dono de 06/11): a unidade do preço vem com o equipamento (priceUnit da API),
+  // então a primeira pintura com o preço já diz "/ diária" quando o servidor cobra por diária. O servidor
+  // (SSR) não busca o equipamento: pinta o carregando, sem preço nem unidade, e nada diverge na hidratação.
+  const priceUnit = useEquipmentUnitOf(equipment, !loading);
 
   // Achado: havia um seletor de quantidade (−/+) que nunca era enviado — addItem do carrinho não
   // aceita quantidade. O seletor foi removido; o carrinho trabalha por item (sem quantidade).
@@ -245,7 +251,7 @@ export const EquipmentDetailPage = () => {
                 <div className="text-right">
                   <div className="text-4xl font-black text-foreground">
                     {formatPrice(Number(equipment.pricePerHour ?? 0))}
-                    <span className="text-sm font-normal ml-1">/ hora</span>
+                    <span className="text-sm font-normal ml-1">{priceUnit === 'day' ? '/ diária' : '/ hora'}</span>
                   </div>
                 </div>
               </div>

@@ -20,6 +20,7 @@ import { generateSeoFilename } from '../../utils/seoUtils';
 import { logger } from '../../utils/logger';
 import { useFormDraft } from '../../hooks/useFormDraft';
 import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
+import { useEquipmentPriceUnit } from '../../hooks/usePricingRules';
 
 // Schema simplificado para o formulário de equipamento
 const equipmentFormSchema = z.object({
@@ -212,6 +213,10 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
     }
   };
 
+  // Diária (lote 13): a coluna continua pricePerHour, mas guarda o preço da unidade que o servidor cobra
+  // (EQUIPMENT_PRICE_UNIT); o rótulo diz qual, para o cadastro gravar o preço da diária quando a chave é "day".
+  const equipmentUnit = useEquipmentPriceUnit(!loading);
+
   if (loading) {
     return (
       <div className="flex justify-center py-6">
@@ -265,7 +270,7 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Preço por Hora (R$)"
+              label={equipmentUnit === 'day' ? 'Preço da Diária (R$)' : 'Preço por Hora (R$)'}
               type="number"
               step="0.01"
               {...register('pricePerHour', { valueAsNumber: true })}

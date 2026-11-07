@@ -90,6 +90,10 @@ export interface Equipment {
   monthlyPrice?: number;
   price?: number;
   pricePerHour?: number;
+  /** Diária (lote 13): unidade do preço de pricePerHour, que o servidor põe nas respostas públicas (EQUIPMENT_PRICE_UNIT). */
+  priceUnit?: 'hour' | 'day';
+  /** Mínimo de unidades do cadastro; na diária, o mínimo de diárias que o servidor cobra. */
+  minimumRentalDuration?: number;
   hourlyRate?: number;
   discount?: number;
   category?: string | Category;

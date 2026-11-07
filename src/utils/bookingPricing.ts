@@ -104,6 +104,21 @@ export function equipmentUnitSuffix(unit: EquipmentPriceUnit): string {
   return unit === 'hour' ? '/h' : '/diária';
 }
 
+/** A unidade que o servidor pôs no equipamento (priceUnit das respostas públicas); null quando não veio. */
+export function priceUnitOf(item: unknown): EquipmentPriceUnit | null {
+  const unit = (item as { priceUnit?: unknown } | null | undefined)?.priceUnit;
+  return unit === 'hour' || unit === 'day' ? unit : null;
+}
+
+/**
+ * Unidades pelo tempo de operação em horas (o orçamento do site pede a duração, não o término): a mesma conta
+ * de equipmentUnits, com o término `hours` horas depois do início. null sem duração positiva.
+ */
+export function equipmentUnitsForHours(unit: EquipmentPriceUnit, hours: number, minimumDays?: number | null): number | null {
+  if (!Number.isFinite(hours) || hours <= 0) return null;
+  return equipmentUnits(unit, new Date(0).toISOString(), new Date(hours * HOUR_MS).toISOString(), minimumDays);
+}
+
 // Lote 13, campos do kit (aprovados pelo dono em 06/11/2026): a mesma linha do kit do servidor (kitPriceLine
 // em backend/src/services/booking/bookingPricing.ts), conferida pelo mesmo vetor de casos nos dois lados.
 export type KitFulfillment = 'DELIVERY_SETUP' | 'CLIENT_PICKUP';
