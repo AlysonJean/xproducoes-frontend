@@ -26,13 +26,14 @@ import type { Booking } from '../../types/types';
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
-import { useEquipmentPriceUnit } from '../../hooks/usePricingRules';
+import { useEquipmentPriceUnit, useFreightRules } from '../../hooks/usePricingRules';
 import { equipmentUnitsForHours, kitPriceLine, serviceLine } from '../../utils/bookingPricing';
 import { kitFulfillment } from '../../utils/kitInfo';
 import { wholeEventRuleText } from '../../utils/wholeEventService';
 import { useWholeEventServices } from '../../hooks/useWholeEventServices';
 import { Checkbox } from '../../components/ui/Checkbox';
 import { quoteSuccessMessage } from '../../utils/quoteSubmission';
+import { freightRulesText, orderNeedsDelivery } from '../../utils/freightInfo';
 import { TrustStrip } from '../../components/ui/TrustStrip';
 import { ClientPage } from '../../components/client/ClientPage';
 
@@ -166,6 +167,12 @@ export const QuoteRequestPage: React.FC = () => {
     const servicesPrice = orderServices.reduce((sum, it) => sum + serviceLine(it, eventHours).cents / 100, 0);
     return kitsPrice + equipmentsPrice + servicesPrice;
   }, [kit, equipments, orderServices, eventHours, durationValue, equipmentUnit]);
+
+  // Frete por km (decisões do dono de 06/11/2026, item frete-km): o site não calcula o frete (o cálculo consulta
+  // o Google e fica no servidor, e o valor vem na proposta); só explica a regra, com os valores do servidor.
+  // Pedido só com kit de retirada não tem frete, e o texto não aparece.
+  const freightRules = useFreightRules();
+  const freightText = freightRules && orderNeedsDelivery(kit, equipments.length) ? freightRulesText(freightRules) : null;
 
   const handleApplyCoupon = async () => {
     const code = couponInput.trim();
@@ -496,6 +503,7 @@ export const QuoteRequestPage: React.FC = () => {
                 <Input label="Estado *" autoComplete="address-level1" {...register('state')} error={errors.state?.message} placeholder="UF" />
               </Grid>
             </Grid>
+            {freightText && <p className="mt-6 text-sm text-muted-foreground">{freightText}</p>}
           </section>
 
           {/* Seção 3: Logística */}

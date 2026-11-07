@@ -132,6 +132,9 @@ export const AdminQuickProposalPage = () => {
   const [saving, setSaving] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [quotingFreight, setQuotingFreight] = useState(false);
+  // Ids das linhas que o botão Frete pôs da última vez (frete, pedágio ou "Frete a combinar"): o próximo clique as troca.
+  const freightLineIds = useRef<string[]>([]);
 
   // Form State - Cliente
   const [clientType, setClientType] = useState<'registered' | 'manual'>('manual');
@@ -291,8 +294,58 @@ export const AdminQuickProposalPage = () => {
     }));
   };
 
-  // Lote 13: o frete automático ainda não existe; com um kit de retirada, o botão Frete só avisa.
+  // Frete por km (decisões do dono de 06/11/2026, item frete-km): o botão Frete pede ao servidor o frete do
+  // endereço do evento (POST /admin/freight/quote, só admin; a chave do Google fica só no servidor), com a regra e
+  // os valores do servidor (padrão do dono: R$ 3,50 por km rodado acima de 15 km em cada trecho, mínimo de R$ 50)
+  // e o pedágio estimado à parte. As linhas entram como itens personalizados e o valor continua editável. Com um
+  // kit de retirada, o aviso abaixo do botão continua: o frete só vale se houver outra entrega.
   const pickupKit = items.find((i) => i.kit && kitFulfillment(i.kit) === 'CLIENT_PICKUP');
+
+  const freightLine = (description: string, price: number): ProposalItem => ({
+    id: Math.random().toString(36).substr(2, 9),
+    type: 'CUSTOM',
+    description,
+    quantity: 1,
+    unitPrice: price,
+    discount: 0,
+    totalPrice: price,
+  });
+
+  // Decisão de 07/11/2026: clicar de novo em Frete (outro endereço, outro cálculo) troca as linhas que o botão pôs da
+  // última vez, mesmo editadas, em vez de repetir o frete. As outras linhas da proposta ficam como estão.
+  const replaceFreightLines = (lines: ProposalItem[]) => {
+    const previous = freightLineIds.current;
+    freightLineIds.current = lines.map((line) => line.id);
+    setItems((prev) => [...prev.filter((item) => !previous.includes(item.id)), ...lines]);
+  };
+
+  const quoteFreight = async () => {
+    const address = { street, addressNumber, neighborhood, city, state, zipCode };
+    if (Object.values(address).some((value) => !value.trim())) {
+      addNotification({ type: 'warning', title: 'Endereço incompleto', message: 'Preencha o endereço do evento (rua, número, bairro, cidade, UF e CEP) para calcular o frete.' });
+      return;
+    }
+    setQuotingFreight(true);
+    try {
+      const quote = await apiFetch<{ status?: string; items?: Array<{ description?: string; unitPrice?: number | string }> }>('/admin/freight/quote', {
+        method: 'POST',
+        body: JSON.stringify(address),
+      });
+      const lines = (Array.isArray(quote?.items) ? quote.items : []).map((line) =>
+        freightLine(line.description || 'Frete', Math.max(0, toNumber(line.unitPrice))),
+      );
+      if (lines.length === 0) throw new Error('Resposta do frete sem linhas.');
+      replaceFreightLines(lines);
+      if (quote?.status !== 'OK') {
+        addNotification({ type: 'warning', title: 'Frete a combinar', message: 'Não deu para calcular a distância agora. Combine o frete com o cliente ou digite o valor na linha.' });
+      }
+    } catch {
+      replaceFreightLines([freightLine('Frete a combinar', 0)]);
+      addNotification({ type: 'error', title: 'Frete não calculado', message: 'Não foi possível calcular o frete agora. Digite o valor na linha "Frete a combinar".' });
+    } finally {
+      setQuotingFreight(false);
+    }
+  };
 
   const removeItem = (id: string) => {
     setItems(items.filter(i => i.id !== id));
@@ -732,7 +785,7 @@ export const AdminQuickProposalPage = () => {
                    <Button variant="outline" size="xs" onClick={() => addCustomItem('Montagem e desmontagem')} leftIcon={<Plus className="h-3 w-3" />}>
                      Montagem
                    </Button>
-                   <Button variant="outline" size="xs" onClick={() => addCustomItem('Frete (dentro de BH)')} leftIcon={<Plus className="h-3 w-3" />} aria-describedby={pickupKit ? 'frete-kit-retirada' : undefined}>
+                   <Button variant="outline" size="xs" onClick={quoteFreight} isLoading={quotingFreight} leftIcon={<Plus className="h-3 w-3" />} aria-describedby={pickupKit ? 'frete-kit-retirada' : undefined}>
                      Frete
                    </Button>
                    <Button variant="outline" size="xs" onClick={() => addCustomItem('Hora extra')} leftIcon={<Plus className="h-3 w-3" />}>
@@ -743,7 +796,7 @@ export const AdminQuickProposalPage = () => {
                    </Button>
                  </div>
                </div>
-               <p className="-mt-4 mb-6 text-xs text-muted-foreground">Técnico, montagem, frete e hora extra são cobrados à parte, como itens (a hora extra do kit com valor cadastrado já entra na linha do kit). Frete dentro de BH: R$ 0,00.</p>
+               <p className="-mt-4 mb-6 text-xs text-muted-foreground">Técnico, montagem, frete e hora extra são cobrados à parte, como itens (a hora extra do kit com valor cadastrado já entra na linha do kit). O botão Frete calcula pela distância até o endereço do evento (preencha o endereço antes), com o pedágio estimado à parte.</p>
                {pickupKit && (
                  <p id="frete-kit-retirada" role="note" className="-mt-4 mb-6 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-foreground">
                    O kit "{pickupKit.description}" é de retirada: o cliente busca e devolve na X Produções. Só adicione frete se houver outra entrega.

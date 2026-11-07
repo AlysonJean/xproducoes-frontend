@@ -21,6 +21,10 @@ const renderPage = (kits: object[]) => {
   apiFetch.mockImplementation((url: string, opts?: { method?: string }) => {
     if (url === '/bookings' && opts?.method === 'POST') return Promise.resolve({ id: 'XP-NOVA' });
     if (url === '/equipments/pricing-rules') return Promise.resolve({ equipmentPriceUnit: 'hour', kitPrice: 'PER_EVENT' });
+    // Frete por km (item frete-km): o botão Frete pede o frete do endereço ao servidor.
+    if (url === '/admin/freight/quote' && opts?.method === 'POST') {
+      return Promise.resolve({ status: 'OK', items: [{ description: 'Frete (12 km por trecho, dentro dos 15 km sem cobrança)', quantity: 1, unitPrice: 0, discount: 0, totalPrice: 0, itemType: 'CUSTOM' }] });
+    }
     if (url === '/kits') return Promise.resolve(kits);
     return Promise.resolve([]);
   });
@@ -99,8 +103,11 @@ describe('Proposta Rápida — linha do kit com horas extras e o tipo do kit', {
     const frete = screen.getByRole('button', { name: 'Frete' });
     expect(frete).toHaveAttribute('aria-describedby', aviso.id);
 
+    // Frete por km (item frete-km): com o endereço preenchido, o botão pede o frete ao servidor; o kit de retirada
+    // não bloqueia.
+    preencher('2027-01-10T18:00', '2027-01-10T23:00');
     fireEvent.click(frete);
-    expect(screen.getByDisplayValue('Frete (dentro de BH)')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('Frete (12 km por trecho, dentro dos 15 km sem cobrança)')).toBeInTheDocument();
   });
 
   it('kit de entrega: o tipo na linha e nenhum aviso no Frete', async () => {

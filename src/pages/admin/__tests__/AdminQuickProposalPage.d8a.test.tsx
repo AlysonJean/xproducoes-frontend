@@ -61,17 +61,16 @@ describe('AdminQuickProposalPage — itens com o preço usado (D8a/P16)', { time
     useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
   });
 
-  it('equipamento por hora × horas do evento, kit pelo preço do evento e técnico, frete de BH e hora extra como itens', async () => {
+  it('equipamento por hora × horas do evento, kit pelo preço do evento e técnico e hora extra como itens (o Frete pelo endereço: AdminQuickProposalPage.frete.test.tsx)', async () => {
     renderPage('hour');
     fireEvent.click(await screen.findByRole('button', { name: 'Adicionar Mesa de Som' }));
     fireEvent.click(screen.getByRole('button', { name: 'Kits' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Adicionar Kit Festa' }));
     fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Frete' }));
     fireEvent.click(screen.getByRole('button', { name: 'Hora extra' }));
     const precos = screen.getAllByLabelText('Preço unit.');
     fireEvent.change(precos[2], { target: { value: '300' } });
-    fireEvent.change(precos[4], { target: { value: '150' } });
+    fireEvent.change(precos[3], { target: { value: '150' } });
     preencher('2027-01-10T18:00', '2027-01-10T23:00');
 
     const corpo = await corpoDoPost();
@@ -80,7 +79,6 @@ describe('AdminQuickProposalPage — itens com o preço usado (D8a/P16)', { time
       ['Mesa de Som (5 h)', 250, 250, 'EQUIPMENT'],
       ['Kit Festa (5 h incluídas)', 1200, 1200, 'KIT'],
       ['Técnico', 300, 300, 'CUSTOM'],
-      ['Frete (dentro de BH)', 0, 0, 'CUSTOM'],
       ['Hora extra', 150, 150, 'CUSTOM'],
     ]);
     expect(corpo.items[0]).toMatchObject({ equipmentId: MESA.id });
