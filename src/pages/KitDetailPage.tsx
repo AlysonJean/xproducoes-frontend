@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ChevronRight, ChevronLeft, User, Package, Shield, Zap } from 'lucide-react';
+import { ChevronRight, ChevronLeft, User, Package, Shield, Zap, Truck, Store } from 'lucide-react';
 import { TrustBenefits } from '../components/ui/TrustBenefits';
 import ReactGA from 'react-ga4';
 import { apiFetch } from '../services/api';
@@ -14,6 +14,7 @@ import { toNumber, calculateSavingsAmount } from '../utils/typeSafeFormatters';
 import type { Kit, ExperienceLevel, Equipment } from '../types/types';
 import { SEO } from '../components/SEO';
 import { transformKit } from '../utils/transformKit';
+import { KIT_FULFILLMENT_LABEL, KIT_FULFILLMENT_SENTENCE, kitFulfillment, kitHours } from '../utils/kitInfo';
 import { ExperienceLevelSelector } from '../components/kits/ExperienceLevelSelector';
 import { RecommendationSection } from '../components/ui/RecommendationSection';
 import { useRecommendations } from '../hooks/useRecommendations';
@@ -122,6 +123,8 @@ export const KitDetailPage = () => {
   }, 0);
   const savings = calculateSavingsAmount(totalItemsPrice, kit.price ?? 0);
   const isKitInCart = !!(cart?.kit && cart.kit.id === kit.id);
+  const fulfillment = kitFulfillment(kit);
+  const { included: includedHours, extraHourPrice } = kitHours(kit);
 
   const handleAddToCart = async () => {
     if (!kit) return;
@@ -295,6 +298,12 @@ export const KitDetailPage = () => {
                       {/* Decisão do dono de 06/11: o preço do kit é por evento, nunca vezes as horas. */}
                       <span className="text-sm font-normal ml-1">por evento</span>
                   </div>
+                  {/* Lote 13 (06/11/2026): as horas que o preço cobre e o valor da hora extra, como a conta da reserva. */}
+                  {includedHours && (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {includedHours} h incluídas no preço{extraHourPrice ? ` · hora extra: ${formatPrice(extraHourPrice)}` : ''}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -304,6 +313,17 @@ export const KitDetailPage = () => {
                       <span>{formatPrice(savings)}</span>
                   </div>
               )}
+            </div>
+
+            {/* Lote 13 (aprovado pelo dono em 06/11/2026): cada kit é de um tipo só, dito numa frase simples. */}
+            <div className="mb-8 flex items-start gap-3 rounded-xl border border-border bg-muted/20 p-4">
+              {fulfillment === 'CLIENT_PICKUP'
+                ? <Store className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+                : <Truck className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />}
+              <div>
+                <p className="font-semibold text-foreground">{KIT_FULFILLMENT_LABEL[fulfillment]}</p>
+                <p className="text-sm text-muted-foreground">{KIT_FULFILLMENT_SENTENCE[fulfillment]}</p>
+              </div>
             </div>
 
             {/* Seletor de nível, quando o kit tem */}
@@ -337,9 +357,12 @@ export const KitDetailPage = () => {
         {/* Benefícios */}
         <TrustBenefits
           items={[
-            { icon: Package, iconColor: 'success', title: 'Kit Completo e Testado', description: 'Todos os itens do combo revisados e configurados juntos antes da entrega.' },
+            { icon: Package, iconColor: 'success', title: 'Kit Completo e Testado', description: `Todos os itens do combo revisados e configurados juntos antes da ${fulfillment === 'CLIENT_PICKUP' ? 'retirada' : 'entrega'}.` },
             { icon: Shield, iconColor: 'info', title: 'Compatibilidade Garantida', description: 'Equipamentos do kit já testados em conjunto — sem surpresas na hora da montagem.' },
-            { icon: Zap, iconColor: 'primary', title: 'Entrega Ágil', description: 'Logística otimizada para garantir que o material chegue sempre no horário.' },
+            // Lote 13: o kit de retirada não tem entrega; o benefício fala da retirada.
+            fulfillment === 'CLIENT_PICKUP'
+              ? { icon: Zap, iconColor: 'primary', title: 'Retirada Combinada', description: 'Você busca o kit pronto para usar, no horário combinado com a equipe.' }
+              : { icon: Zap, iconColor: 'primary', title: 'Entrega Ágil', description: 'Logística otimizada para garantir que o material chegue sempre no horário.' },
           ]}
         />
 

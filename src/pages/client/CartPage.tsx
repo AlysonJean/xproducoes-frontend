@@ -14,6 +14,7 @@ import type { Equipment, Service } from '../../types/types';
 import type { StandardVariant } from '../../components/ui/StandardComponents';
 import { Badge, Button, Card, ConfirmModal, buttonVariants } from '../../components/ui/StandardComponents';
 import { ClientPage } from '../../components/client/ClientPage';
+import { kitCompactInfo } from '../../utils/kitInfo';
 
 // Selo do tipo de item (antes: blue/emerald/orange fixos em 10px).
 const itemTypeBadge: Record<'equipment' | 'service' | 'kit', { label: string; variant: StandardVariant }> = {
@@ -234,6 +235,10 @@ export const CartPage = () => {
                     {/* Decisão do dono de 06/11: kit por evento; equipamento avulso segue por hora (EQUIPMENT_PRICE_UNIT). */}
                     <span className="text-sm font-normal text-muted-foreground">{item.type === 'service' ? '/ serviço' : item.type === 'kit' ? 'por evento' : '/ hora'}</span>
                   </p>
+                  {/* Lote 13 (06/11/2026): o tipo do kit e as horas incluídas, como no cartão do kit. */}
+                  {item.type === 'kit' && cart?.kit && (
+                    <p className="text-xs text-muted-foreground">{kitCompactInfo(cart.kit)}</p>
+                  )}
                 </div>
               </div>
 
@@ -258,7 +263,7 @@ export const CartPage = () => {
                 {formatPrice(subtotal)}
               </div>
               <p className="leading-relaxed text-muted-foreground">
-                Este valor é uma estimativa parcial. Kits têm preço por evento; equipamentos avulsos são multiplicados pela duração do seu evento, e os serviços possuem valor fixo. Taxas de transporte serão validadas por nossa equipe.
+                Este valor é uma estimativa parcial. Kits têm preço por evento, com hora extra quando o evento passa das horas incluídas no kit; equipamentos avulsos são multiplicados pela duração do seu evento, e os serviços possuem valor fixo. Taxas de transporte serão validadas por nossa equipe.
               </p>
             </div>
 

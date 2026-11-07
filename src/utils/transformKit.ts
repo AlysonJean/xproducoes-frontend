@@ -24,6 +24,10 @@ export function transformKit(kit: Kit): Kit {
     description: kit.description ?? '',
     // Garante que o preço seja um número, mesmo que venha como string
     price: toNumber(kit.price),
+    // Lote 13 (06/11/2026): o Decimal da hora extra chega como texto; sem o tipo (API antiga), o padrão do banco.
+    minimumRentalDuration: kit.minimumRentalDuration ?? null,
+    extraHourPrice: kit.extraHourPrice === null || kit.extraHourPrice === undefined || kit.extraHourPrice === '' ? null : toNumber(kit.extraHourPrice),
+    fulfillment: kit.fulfillment === 'CLIENT_PICKUP' ? 'CLIENT_PICKUP' : 'DELIVERY_SETUP',
     imageUrl: sanitizeImageUrl(kit.imageUrl),
     equipments: Array.isArray(kit.equipments) 
       ? kit.equipments 

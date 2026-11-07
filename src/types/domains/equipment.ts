@@ -79,6 +79,10 @@ export interface Kit {
   price?: number;
   hourlyRate?: number;
   discount?: number;
+  // Lote 13 (06/11/2026): horas incluídas no preço, valor da hora extra e tipo do kit.
+  minimumRentalDuration?: number | null;
+  extraHourPrice?: number | string | null;
+  fulfillment?: 'DELIVERY_SETUP' | 'CLIENT_PICKUP';
   status?: ItemStatus | EquipmentStatus;
   isActive?: boolean;
   createdAt?: Date | string;

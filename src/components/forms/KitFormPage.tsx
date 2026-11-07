@@ -22,6 +22,8 @@ import {
 import { Search, Plus, Trash2, ShoppingBag, Calculator, Package, User } from 'lucide-react';
 import { ExperienceLevelsEditor } from '../kits/ExperienceLevelsEditor';
 import { useFormDraft } from '../../hooks/useFormDraft';
+import { KIT_FULFILLMENT_LABEL } from '../../utils/kitInfo';
+import type { KitFulfillment } from '../../utils/bookingPricing';
 import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
 
 // Combined item type for UI
@@ -51,7 +53,21 @@ const kitFormSchema = z.object({
   items: z.array(kitItemSchema).min(1, 'Selecione pelo menos um item'),
   status: z.nativeEnum(ItemStatus),
   images: z.any(),
-});
+  // Lote 13, campos do kit (aprovados pelo dono em 06/11/2026). Ficam como texto (o input number devolve
+  // texto) e vão sempre no envio, "" quando vazios, para apagar no servidor, que confere de novo (400).
+  minimumRentalDuration: z.string().refine(
+    (v) => v.trim() === '' || (/^\d+$/.test(v.trim()) && Number(v) >= 1 && Number(v) <= 240),
+    'Use um número inteiro de horas, de 1 a 240, ou deixe em branco.'
+  ),
+  extraHourPrice: z.string().refine(
+    (v) => v.trim() === '' || /^\d+([.,]\d{1,2})?$/.test(v.trim()),
+    'Use um valor em reais, como 50 ou 50,00, ou deixe em branco.'
+  ),
+  fulfillment: z.enum(['DELIVERY_SETUP', 'CLIENT_PICKUP'], { message: 'Escolha o tipo do kit.' }),
+}).refine(
+  (data) => data.extraHourPrice.trim() === '' || data.minimumRentalDuration.trim() !== '',
+  { path: ['extraHourPrice'], message: 'Para cobrar hora extra, preencha também "Horas incluídas no preço".' }
+);
 
 type KitFormData = z.infer<typeof kitFormSchema>;
 
@@ -71,6 +87,9 @@ interface DraftableKitData {
   items: KitItemField[];
   status: ItemStatus;
   experienceLevels: Partial<KitExperienceLevel>[];
+  minimumRentalDuration?: string;
+  extraHourPrice?: string;
+  fulfillment?: KitFulfillment;
 }
 
 export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCancel, onDirtyChange }) => {
@@ -105,6 +124,9 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
       price: 0,
       items: [],
       status: ItemStatus.ACTIVE,
+      minimumRentalDuration: '',
+      extraHourPrice: '',
+      fulfillment: 'DELIVERY_SETUP',
     },
   });
 
@@ -184,6 +206,12 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
             description: initialData.description || '',
             price: Number(initialData.price) || 0,
             items: formItems,
+            minimumRentalDuration: initialData.minimumRentalDuration ? String(initialData.minimumRentalDuration) : '',
+            extraHourPrice:
+              initialData.extraHourPrice === null || initialData.extraHourPrice === undefined || initialData.extraHourPrice === ''
+                ? ''
+                : String(Number(initialData.extraHourPrice)),
+            fulfillment: initialData.fulfillment === 'CLIENT_PICKUP' ? 'CLIENT_PICKUP' : 'DELIVERY_SETUP',
           });
         }
 
@@ -218,6 +246,9 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
         items: watchedValues.items as KitItemField[],
         status: watchedValues.status,
         experienceLevels,
+        minimumRentalDuration: watchedValues.minimumRentalDuration,
+        extraHourPrice: watchedValues.extraHourPrice,
+        fulfillment: watchedValues.fulfillment,
       });
     }, 500);
     return () => {
@@ -234,6 +265,9 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
       price: draftPrompt.values.price,
       items: draftPrompt.values.items,
       status: draftPrompt.values.status,
+      minimumRentalDuration: draftPrompt.values.minimumRentalDuration ?? '',
+      extraHourPrice: draftPrompt.values.extraHourPrice ?? '',
+      fulfillment: draftPrompt.values.fulfillment ?? 'DELIVERY_SETUP',
     });
     setExperienceLevels(draftPrompt.values.experienceLevels);
     setDraftPrompt(null);
@@ -293,6 +327,10 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
     formData.append('name', data.name);
     formData.append('description', data.description);
     formData.append('price', String(data.price));
+    // Lote 13: sempre no envio; "" apaga no servidor. A vírgula vira ponto (o servidor aceita os dois).
+    formData.append('minimumRentalDuration', data.minimumRentalDuration.trim());
+    formData.append('extraHourPrice', data.extraHourPrice.trim().replace(',', '.'));
+    formData.append('fulfillment', data.fulfillment);
     
     // Send items as JSON string with type info, converting back to 'id' for backend
     const mappedItems = data.items.map(item => ({
@@ -635,6 +673,42 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                   className="text-xl font-bold"
                   placeholder="0.00"
                   error={errors.price?.message}
+                />
+
+                {/* Lote 13 (aprovado pelo dono em 06/11/2026): o preço é por evento; as horas incluídas e a hora
+                    extra entram na conta da reserva, e o tipo aparece no site e na proposta. step="any": quem
+                    confere é o schema, com a mensagem em português (o navegador barraria 4,5 com a dele). */}
+                <Input
+                  id="kit-included-hours"
+                  label="Horas incluídas no preço"
+                  type="number"
+                  step="any"
+                  inputMode="numeric"
+                  {...register('minimumRentalDuration')}
+                  placeholder="Ex.: 4"
+                  helperText="Opcional. Quantas horas de evento o preço do kit cobre."
+                  error={errors.minimumRentalDuration?.message}
+                />
+                <Input
+                  id="kit-extra-hour-price"
+                  label="Valor da hora extra (R$)"
+                  type="number"
+                  step="any"
+                  inputMode="decimal"
+                  {...register('extraHourPrice')}
+                  placeholder="Ex.: 50"
+                  helperText="Opcional. Cobrado por hora que passar das horas incluídas. Em branco, o kit não cobra hora extra."
+                  error={errors.extraHourPrice?.message}
+                />
+                <Select
+                  id="kit-fulfillment"
+                  label="Tipo do kit"
+                  {...register('fulfillment')}
+                  options={[
+                    { value: 'DELIVERY_SETUP', label: KIT_FULFILLMENT_LABEL.DELIVERY_SETUP },
+                    { value: 'CLIENT_PICKUP', label: KIT_FULFILLMENT_LABEL.CLIENT_PICKUP },
+                  ]}
+                  error={errors.fulfillment?.message}
                 />
 
                 {/* Discount Strategy Visualization */}

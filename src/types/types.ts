@@ -19,7 +19,7 @@ export interface Banner {
 }
 
 import { ItemStatus, EquipmentStatus, BookingStatus, BookingPaymentStatus, PaymentStatus, UserRole, ECollaboratorRole, ExperienceLevel } from './enums';
-import type { BookingItemLike, BookingPricing } from '../utils/bookingPricing';
+import type { BookingItemLike, BookingPricing, KitFulfillment } from '../utils/bookingPricing';
 
 export { ItemStatus, EquipmentStatus, BookingStatus, PaymentStatus, UserRole, ECollaboratorRole, ExperienceLevel };
 
@@ -178,6 +178,11 @@ export interface Kit {
   price?: number;
   hourlyRate?: number;
   discount?: number;
+  // Lote 13 (aprovado pelo dono em 06/11/2026): horas incluídas no preço, valor da hora extra (o Decimal chega
+  // como texto da API; transformKit converte) e o tipo do kit.
+  minimumRentalDuration?: number | null;
+  extraHourPrice?: number | string | null;
+  fulfillment?: KitFulfillment;
   status?: ItemStatus | EquipmentStatus;
   isActive?: boolean; // Deprecated, kept for compatibility
   createdAt?: Date | string;

@@ -27,6 +27,7 @@ import { z } from 'zod';
 import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
 import { useEquipmentPriceUnit } from '../../hooks/usePricingRules';
+import { kitPriceLine } from '../../utils/bookingPricing';
 import { quoteSuccessMessage } from '../../utils/quoteSubmission';
 import { TrustStrip } from '../../components/ui/TrustStrip';
 import { ClientPage } from '../../components/client/ClientPage';
@@ -120,7 +121,9 @@ export const QuoteRequestPage: React.FC = () => {
   const equipmentUnit = useEquipmentPriceUnit();
   const durationValue = Number(watch('duration')) || 0;
   const subtotal = useMemo(() => {
-    const kitsPrice = kit?.price ? Number(kit.price) : 0;
+    // Lote 13 (06/11/2026): o kit com horas incluídas e valor de hora extra cobra as horas cheias a mais,
+    // como o servidor (kitPriceLine). Sem a duração ainda, só o preço do evento.
+    const kitsPrice = kit ? kitPriceLine(kit, durationValue > 0 ? Math.max(1, Math.ceil(durationValue)) : null).cents / 100 : 0;
     // Horas cheias, como o servidor (hoursBetween): 4,5 h contam 5 h do equipamento.
     const equipmentUnits = equipmentUnit === 'day' ? Math.max(1, Math.ceil(durationValue / 24)) : Math.ceil(durationValue);
     const equipmentsPrice = equipments.reduce((sum, it) => sum + getEquipmentUnitPrice(it), 0) * equipmentUnits;

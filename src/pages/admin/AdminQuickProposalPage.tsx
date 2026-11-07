@@ -29,7 +29,8 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { formatPrice } from '@/utils/formatPrice';
 import { toNumber } from '@/utils/typeSafeFormatters';
-import { equipmentUnits, equipmentUnitSuffix, equipmentUnitText, type EquipmentPriceUnit } from '@/utils/bookingPricing';
+import { equipmentUnits, equipmentUnitSuffix, equipmentUnitText, hoursBetween, kitPriceLine, type EquipmentPriceUnit, type KitPricingInput } from '@/utils/bookingPricing';
+import { KIT_FULFILLMENT_LABEL, kitFulfillment } from '@/utils/kitInfo';
 import { useEquipmentPriceUnit } from '@/hooks/usePricingRules';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -75,6 +76,9 @@ interface ProposalItem {
   ratePerUnit?: number;
   minimumUnits?: number;
   priceEdited?: boolean;
+  // Lote 13 (campos do kit aprovados em 06/11/2026): o kit do catálogo guarda o preço do evento, as horas
+  // incluídas, a hora extra e o tipo; a linha acompanha as datas do evento como a do equipamento.
+  kit?: KitPricingInput;
 }
 
 // Preço do catálogo: equipamento pelo preço da unidade (a coluna pricePerHour guarda o da hora ou o da
@@ -92,6 +96,10 @@ const unitsFor = (item: ProposalItem, unit: EquipmentPriceUnit, start: string, e
 
 const priceItems = (items: ProposalItem[], unit: EquipmentPriceUnit, start: string, end: string): ProposalItem[] =>
   items.map((item) => {
+    if (item.kit && !item.priceEdited) {
+      const unitPrice = kitPriceLine(item.kit, hoursBetween(start, end)).cents / 100;
+      return { ...item, unitPrice, totalPrice: Math.max(0, Math.round((unitPrice * item.quantity - item.discount) * 100) / 100) };
+    }
     if (item.ratePerUnit === undefined || item.priceEdited) return item;
     const unitPrice = Math.round(item.ratePerUnit * unitsFor(item, unit, start, end) * 100) / 100;
     return { ...item, unitPrice, totalPrice: Math.max(0, Math.round((unitPrice * item.quantity - item.discount) * 100) / 100) };
@@ -100,6 +108,8 @@ const priceItems = (items: ProposalItem[], unit: EquipmentPriceUnit, start: stri
 // Descrição que vai para a reserva, o PDF e a página do cliente: com as horas ou diárias, quando o preço
 // acompanha as datas.
 const lineDescription = (item: ProposalItem, unit: EquipmentPriceUnit, start: string, end: string): string => {
+  // Kit: a descrição da conta do servidor com o nome da linha; com o preço digitado à mão, sem hora extra.
+  if (item.kit) return kitPriceLine({ ...item.kit, name: item.description }, item.priceEdited ? null : hoursBetween(start, end)).description;
   const n = item.ratePerUnit !== undefined && !item.priceEdited ? equipmentUnits(unit, start, end, item.minimumUnits) : null;
   return n ? `${item.description} (${equipmentUnitText(n, unit)})` : item.description;
 };
@@ -200,13 +210,14 @@ export const AdminQuickProposalPage = () => {
   }, [searchType, searchTerm, equipments, kits, services]);
 
   const addItemToProposal = (type: ProposalItem['type'], item: Equipment | Kit | Service) => {
-    // Kit: as "horas incluídas no preço" ficam em minimumRentalDuration (decisão do dono de 06/11).
-    const includedHours = (item as Kit & { minimumRentalDuration?: number | null }).minimumRentalDuration;
+    // Kit: as "horas incluídas no preço" (minimumRentalDuration), a hora extra e o tipo vão para a conta do
+    // kit (kitPriceLine), que monta a descrição com as horas (decisões do dono de 06/11).
+    const catalogKit = item as Kit;
     const newItem: ProposalItem = {
       id: Math.random().toString(36).substr(2, 9),
       type,
       sourceId: item.id,
-      description: type === 'KIT' && includedHours ? `${item.name} (${includedHours} h incluídas)` : item.name,
+      description: item.name,
       quantity: 1,
       unitPrice: catalogPrice(type, item),
       discount: 0,
@@ -215,13 +226,25 @@ export const AdminQuickProposalPage = () => {
       ...(type === 'EQUIPMENT'
         ? { ratePerUnit: catalogPrice(type, item), minimumUnits: (item as Equipment & { minimumRentalDuration?: number | null }).minimumRentalDuration ?? undefined }
         : {}),
+      ...(type === 'KIT'
+        ? {
+            kit: {
+              name: item.name,
+              price: catalogPrice(type, item),
+              minimumRentalDuration: catalogKit.minimumRentalDuration ?? null,
+              extraHourPrice: catalogKit.extraHourPrice ?? null,
+              fulfillment: kitFulfillment(catalogKit),
+            },
+          }
+        : {}),
     };
     setItems(prev => [...prev, newItem]);
     addNotification({ type: 'success', title: 'Item adicionado', message: item.name });
   };
 
   // Q12 (respostas de 03/11): técnico, montagem e frete são cobrados à parte, como itens; frete dentro de
-  // BH entra como item de R$ 0. Decisão de 06/11: a hora extra do kit também entra como item, à mão.
+  // BH entra como item de R$ 0. Decisão de 06/11: a hora extra do kit sem valor cadastrado entra como item, à
+  // mão; a do kit com valor cadastrado já vem na linha do kit (lote 13).
   const addCustomItem = (description = 'Novo Serviço/Item') => {
     const newItem: ProposalItem = {
       id: Math.random().toString(36).substr(2, 9),
@@ -244,6 +267,9 @@ export const AdminQuickProposalPage = () => {
       return updated;
     }));
   };
+
+  // Lote 13: o frete automático ainda não existe; com um kit de retirada, o botão Frete só avisa.
+  const pickupKit = items.find((i) => i.kit && kitFulfillment(i.kit) === 'CLIENT_PICKUP');
 
   const removeItem = (id: string) => {
     setItems(items.filter(i => i.id !== id));
@@ -672,7 +698,7 @@ export const AdminQuickProposalPage = () => {
                    <Button variant="outline" size="xs" onClick={() => addCustomItem('Montagem e desmontagem')} leftIcon={<Plus className="h-3 w-3" />}>
                      Montagem
                    </Button>
-                   <Button variant="outline" size="xs" onClick={() => addCustomItem('Frete (dentro de BH)')} leftIcon={<Plus className="h-3 w-3" />}>
+                   <Button variant="outline" size="xs" onClick={() => addCustomItem('Frete (dentro de BH)')} leftIcon={<Plus className="h-3 w-3" />} aria-describedby={pickupKit ? 'frete-kit-retirada' : undefined}>
                      Frete
                    </Button>
                    <Button variant="outline" size="xs" onClick={() => addCustomItem('Hora extra')} leftIcon={<Plus className="h-3 w-3" />}>
@@ -683,7 +709,12 @@ export const AdminQuickProposalPage = () => {
                    </Button>
                  </div>
                </div>
-               <p className="-mt-4 mb-6 text-xs text-muted-foreground">Técnico, montagem, frete e hora extra são cobrados à parte, como itens. Frete dentro de BH: R$ 0,00.</p>
+               <p className="-mt-4 mb-6 text-xs text-muted-foreground">Técnico, montagem, frete e hora extra são cobrados à parte, como itens (a hora extra do kit com valor cadastrado já entra na linha do kit). Frete dentro de BH: R$ 0,00.</p>
+               {pickupKit && (
+                 <p id="frete-kit-retirada" role="note" className="-mt-4 mb-6 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-foreground">
+                   O kit "{pickupKit.description}" é de retirada: o cliente busca e devolve na X Produções. Só adicione frete se houver outra entrega.
+                 </p>
+               )}
 
                <div className="space-y-4">
                  {items.length === 0 ? (
@@ -703,10 +734,16 @@ export const AdminQuickProposalPage = () => {
                              value={item.description}
                              onChange={e => updateItem(item.id, 'description', e.target.value)}
                            />
-                           <div className="flex items-center gap-2">
+                           <div className="flex flex-wrap items-center gap-2">
                               <Badge variant="outline" size="sm">
                                 {ITEM_TYPE_LABELS[item.type] || item.type}
                               </Badge>
+                              {item.kit && (
+                                <>
+                                  <Badge variant="outline" size="sm">{KIT_FULFILLMENT_LABEL[kitFulfillment(item.kit)]}</Badge>
+                                  <span className="text-xs text-muted-foreground">Na proposta: {lineDescription(item, equipmentUnit, eventDate, eventEndDate)}</span>
+                                </>
+                              )}
                               {item.ratePerUnit !== undefined && !item.priceEdited && (
                                 <span className="text-xs text-muted-foreground">
                                   {formatPrice(item.ratePerUnit)}{equipmentUnitSuffix(equipmentUnit)} × {equipmentUnitText(unitsFor(item, equipmentUnit, eventDate, eventEndDate), equipmentUnit)}

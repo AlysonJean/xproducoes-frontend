@@ -12,6 +12,7 @@ import { Check, Plus } from 'lucide-react';
 import { Button } from './Button';
 import { useCart } from '../../hooks/useCart';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { kitCompactInfo } from '../../utils/kitInfo';
 
 interface KitCardProps {
   kit: Kit;
@@ -164,6 +165,8 @@ export const KitCard: React.FC<KitCardProps> = ({
               {/* Decisão do dono de 06/11: o preço do kit é por evento, nunca por hora. */}
               {formatPrice(kit.price || 0)} <span className="text-xs font-normal">por evento</span>
             </span>
+            {/* Lote 13 (06/11/2026): o tipo do kit e as horas incluídas, em poucas palavras. */}
+            <span className="text-xs text-muted-foreground">{kitCompactInfo(kit)}</span>
         </div>
         <Button
           type="button"

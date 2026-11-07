@@ -104,6 +104,54 @@ export function equipmentUnitSuffix(unit: EquipmentPriceUnit): string {
   return unit === 'hour' ? '/h' : '/diária';
 }
 
+// Lote 13, campos do kit (aprovados pelo dono em 06/11/2026): a mesma linha do kit do servidor (kitPriceLine
+// em backend/src/services/booking/bookingPricing.ts), conferida pelo mesmo vetor de casos nos dois lados.
+export type KitFulfillment = 'DELIVERY_SETUP' | 'CLIENT_PICKUP';
+
+/** "R$ 1.234,56", como o servidor escreve na descrição da linha (sem o Intl, que põe espaço não separável). */
+export function formatBRL(cents: number): string {
+  const [int, dec] = (Math.abs(cents) / 100).toFixed(2).split('.');
+  return `${cents < 0 ? '-' : ''}R$ ${int.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${dec}`;
+}
+
+/** O que a conta do kit lê do cadastro. */
+export interface KitPricingInput {
+  name?: string | null;
+  price?: Money;
+  /** Horas incluídas no preço (Kit.minimumRentalDuration). */
+  minimumRentalDuration?: number | null;
+  /** Valor da hora extra; vazio ou zero = sem cobrança de hora extra. */
+  extraHourPrice?: Money;
+  fulfillment?: string | null;
+}
+
+/**
+ * Linha do kit: preço do evento; com horas incluídas e valor de hora extra (os dois maiores que zero), cada
+ * hora cheia do evento além das incluídas soma uma hora extra, em centavos. Uma linha só, com as horas e a
+ * retirada na descrição. `hours` nulo (sem as datas) não conta hora extra.
+ */
+export function kitPriceLine(kit: KitPricingInput, hours: number | null): { description: string; cents: number; extraHours: number } {
+  const includedValue = Number(kit.minimumRentalDuration ?? 0);
+  const included = Number.isInteger(includedValue) && includedValue > 0 ? includedValue : 0;
+  const extraHourCents = Math.max(0, toCents(kit.extraHourPrice));
+  const extraHours = included > 0 && extraHourCents > 0 && hours !== null && hours > included ? hours - included : 0;
+  const notes: string[] = [];
+  if (included > 0) {
+    notes.push(
+      extraHours > 0
+        ? `${included} h incluídas + ${extraHours} ${extraHours === 1 ? 'hora extra' : 'horas extras'} de ${formatBRL(extraHourCents)}`
+        : `${included} h incluídas`
+    );
+  }
+  if (kit.fulfillment === 'CLIENT_PICKUP') notes.push('retirada e montagem pelo cliente');
+  const name = kit.name || 'Kit';
+  return {
+    description: notes.length > 0 ? `${name} (${notes.join('; ')})` : name,
+    cents: toCents(kit.price) + extraHours * extraHourCents,
+    extraHours,
+  };
+}
+
 /** O resumo de preço da reserva: o da API (`pricing`) quando veio; sem ele, a mesma conta do servidor. */
 export function bookingPricing(b: PricedBookingLike): BookingPricing {
   if (b.pricing && typeof b.pricing.total === 'number' && Array.isArray(b.pricing.lines)) return b.pricing;
