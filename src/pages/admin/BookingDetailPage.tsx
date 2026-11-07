@@ -52,6 +52,8 @@ import { formatBookingCode } from '../../utils/bookingCode';
 import { bookingEmail, bookingPhone, toWhatsAppNumber } from '../../utils/bookingContact';
 import { notifyClientPayload } from '../../utils/notifyClient';
 import { NotifyClientCheckbox } from '../../components/bookings/NotifyClientCheckbox';
+import { SendProposalPanel } from '../../components/bookings/SendProposalPanel';
+import { ProposalHistory } from '../../components/bookings/ProposalHistory';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { BookingCollaborators } from '../../components/bookings/BookingCollaborators';
 import { BookingFinancialSummary } from '../../components/bookings/BookingFinancialSummary';
@@ -189,6 +191,8 @@ export const BookingDetailPage = () => {
   // Confirmação (vale para "Confirmar e avisar pelo WhatsApp"), no modal "Confirmar reserva" e em "Alocar equipe e
   // confirmar".
   const [notifyClient, setNotifyClient] = useState(true);
+  // D11: cada "Enviar proposta" recarrega os envios do cartão Histórico.
+  const [proposalHistoryKey, setProposalHistoryKey] = useState(0);
   // Achado (revisão antes do deploy): "Confirmar reserva" e "Alocar equipe" buscavam
   // /admin/collaborators, rota que não existe (404 — a lista abria sempre vazia). O hook da tela de
   // Colaboradores já busca a rota real e põe em `name` o nome que vem dentro de `user`; sem isso o
@@ -858,6 +862,14 @@ export const BookingDetailPage = () => {
             <h3 className="text-xs font-medium text-primary uppercase tracking-wider mb-4">Confirmação</h3>
             {canConfirm ? (
               <div className="space-y-3">
+                {/* D11 (aprovada em 02/11/2026): link seguro da proposta, e-mail pela fila e WhatsApp com o mesmo link. */}
+                <SendProposalPanel
+                  booking={booking}
+                  onSent={() => {
+                    setProposalHistoryKey((key) => key + 1);
+                    void fetchBooking();
+                  }}
+                />
                 <Button
                   fullWidth
                   size="sm"
@@ -1160,6 +1172,7 @@ export const BookingDetailPage = () => {
                     <p className="text-sm text-muted-foreground">{bookingStatusLabel(status)}</p>
                   </div>
                 </li>
+                {booking.id && <ProposalHistory bookingId={booking.id} refreshKey={proposalHistoryKey} />}
               </ol>
 
               {/* Respostas da página /briefing: o pedido chega sem itens do catálogo, e é daqui que sai a proposta. */}

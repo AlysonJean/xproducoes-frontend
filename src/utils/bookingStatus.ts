@@ -59,3 +59,15 @@ export const bookingStatusVariant = (status?: string | null): StandardVariant =>
   (status && BOOKING_STATUS_VARIANT[status]) || 'ghost';
 export const deliveryStatusLabel = (status?: string | null) =>
   (status && DELIVERY_STATUS_LABELS[status]) || status || '—';
+
+// D11 (aprovada em 02/11/2026): "o cliente vê 'Proposta enviada, aguardando sua resposta'". Na área do cliente, a
+// reserva pendente cuja proposta a equipe enviou ("Enviar proposta" da ficha; a API manda proposal.sentAt) ganha este
+// rótulo; sem envio, o de sempre ("Pendente"). O valor ainda sem preço continua "Em preparação" (formatBookingTotal):
+// só dá para enviar proposta com valor.
+export const PROPOSAL_SENT_LABEL = 'Proposta enviada — aguardando sua resposta';
+
+export const clientBookingStatusLabel = (booking: {
+  status?: string | null;
+  proposal?: { sentAt?: string | null } | null;
+}): string =>
+  booking.status === 'PENDING' && booking.proposal?.sentAt ? PROPOSAL_SENT_LABEL : bookingStatusLabel(booking.status);

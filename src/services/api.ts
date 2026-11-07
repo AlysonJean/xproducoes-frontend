@@ -334,7 +334,9 @@ export const apiFetch = async <T = unknown>(
       }
     }
 
-    throw new Error(message);
+    // P15: o status vai junto para a tela que precisa separar os casos (a página da proposta mostra uma mensagem para
+    // link inválido, outra para link vencido ou trocado e outra para o serviço fora do ar). A mensagem não muda.
+    throw Object.assign(new Error(message), { status: response.status });
   }
 
   if (response.status === 204) {
@@ -410,6 +412,11 @@ export const bookingAPI = {
   getDashboardStats: () => api.get('/bookings/stats'),
   getCalendar: (month: string, year: string) =>
     api.get(`/bookings/calendar?month=${month}&year=${year}`),
+  // P15 e D11 (aprovadas em 02/11/2026): "Enviar proposta" da ficha (rotate: o "Gerar novo link") e o cartão
+  // Histórico. Só admin.
+  sendProposal: (id: string, options?: { rotate?: boolean }) =>
+    api.post(`/admin/bookings/${id}/proposal/send`, options?.rotate ? { rotate: true } : {}),
+  getAuditHistory: (id: string) => api.get(`/admin/bookings/${id}/history`),
 };
 
 export const clientAPI = {

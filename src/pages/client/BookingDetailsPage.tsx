@@ -7,7 +7,7 @@ import { apiFetch } from '@/services/api';
 import type { BookingDetails } from '@/types/types';
 import { formatPrice } from '@/utils/formatPrice';
 import { bookingPricing } from '@/utils/bookingPricing';
-import { bookingStatusLabel, bookingStatusVariant } from '@/utils/bookingStatus';
+import { bookingStatusVariant, clientBookingStatusLabel } from '@/utils/bookingStatus';
 import { Badge, Button, Card, ConfirmModal, Modal, buttonVariants } from '@/components/ui/StandardComponents';
 import { ClientPage, ClientPageError, ClientPageLoading } from '../../components/client/ClientPage';
 import { logger } from '../../utils/logger';
@@ -292,7 +292,7 @@ export const BookingDetailsPage = () => {
                 <dt className="text-sm text-muted-foreground">Status</dt>
                 <dd className="mt-1">
                   <Badge variant={bookingStatusVariant(booking.status)} size="lg">
-                    {bookingStatusLabel(booking.status)}
+                    {clientBookingStatusLabel(booking)}
                   </Badge>
                 </dd>
               </div>

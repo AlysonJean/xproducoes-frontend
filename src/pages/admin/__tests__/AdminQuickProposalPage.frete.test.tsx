@@ -79,7 +79,7 @@ describe('Proposta Rápida — botão Frete calcula pelo endereço do evento', {
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body as string)).toEqual({ street: 'Av. Amazonas', addressNumber: '1000', neighborhood: 'Centro', city: 'Betim', state: 'MG', zipCode: '32600-000' });
 
-    fireEvent.click(screen.getByRole('button', { name: /gerar link da proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /salvar proposta/i }));
     await waitFor(() => expect(apiFetch.mock.calls.some((c) => c[0] === '/bookings' && c[1]?.method === 'POST')).toBe(true));
     expect(corpoDaReserva().items.map((i: Record<string, unknown>) => [i.description, i.unitPrice, i.totalPrice, i.itemType])).toEqual([
       ['Mesa de Som (4 h)', 200, 200, 'EQUIPMENT'],
@@ -118,7 +118,7 @@ describe('Proposta Rápida — botão Frete calcula pelo endereço do evento', {
     expect(descricoes()).toEqual(['Mesa de Som', 'Montagem e desmontagem', LINHA_CONTAGEM.description]);
     expect(chamadasDoFrete()).toHaveLength(2);
 
-    fireEvent.click(screen.getByRole('button', { name: /gerar link da proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /salvar proposta/i }));
     await waitFor(() => expect(apiFetch.mock.calls.some((c) => c[0] === '/bookings' && c[1]?.method === 'POST')).toBe(true));
     expect(corpoDaReserva().items.map((i: Record<string, unknown>) => [i.description, i.totalPrice])).toEqual([
       ['Mesa de Som (4 h)', 200],

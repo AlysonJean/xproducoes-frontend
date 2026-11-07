@@ -1,5 +1,6 @@
-import type { BookingStatus, SafeBooking } from '../../types/types';
-import { formatPrice } from '../../utils/formatPrice';
+import type { SafeBooking } from '../../types/types';
+import { formatBookingTotal } from '../../utils/formatPrice';
+import { clientBookingStatusLabel } from '../../utils/bookingStatus';
 
 interface BookingListItemProps {
   booking: SafeBooking;
@@ -12,24 +13,24 @@ const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleDateString('pt-BR');
 };
 
-// Função para obter o chip do status com as cores corretas
-const getStatusChip = (status: BookingStatus) => {
-  const statusConfig = {
-    DRAFT: { bg: 'bg-muted/40', text: 'text-muted-foreground', label: 'Rascunho' },
-    PENDING: { bg: 'bg-warning/20', text: 'text-warning', label: 'Pendente' },
-    CONFIRMED: { bg: 'bg-success/20', text: 'text-success', label: 'Confirmado' },
-    IN_PROGRESS: { bg: 'bg-primary/20', text: 'text-primary', label: 'Em Progresso' },
-    COMPLETED: { bg: 'bg-primary/20', text: 'text-primary', label: 'Concluído' },
-    CANCELLED: { bg: 'bg-destructive/20', text: 'text-destructive', label: 'Cancelado' },
-  };
-
-  const config = statusConfig[status as keyof typeof statusConfig];
-  return (
-    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${config.bg} ${config.text}`}>
-      {config.label}
-    </span>
-  );
+// Cor do selo por status. Achado (mapeamento do lote 13): faltava REFUNDED, e "Minhas Reservas" e o painel do
+// cliente quebravam (config undefined) com uma reserva reembolsada. D11 (aprovada em 02/11/2026): o texto vem de
+// clientBookingStatusLabel, o mesmo das outras telas do cliente, com "Proposta enviada — aguardando sua resposta".
+const STATUS_CHIP_CLASSES: Record<string, string> = {
+  DRAFT: 'bg-muted/40 text-muted-foreground',
+  PENDING: 'bg-warning/20 text-warning',
+  CONFIRMED: 'bg-success/20 text-success',
+  IN_PROGRESS: 'bg-primary/20 text-primary',
+  COMPLETED: 'bg-primary/20 text-primary',
+  CANCELLED: 'bg-destructive/20 text-destructive',
+  REFUNDED: 'bg-muted/40 text-muted-foreground',
 };
+
+const StatusChip = ({ booking }: { booking: SafeBooking }) => (
+  <span className={`px-3 py-1 text-xs font-semibold rounded-full ${STATUS_CHIP_CLASSES[booking.status] ?? STATUS_CHIP_CLASSES.DRAFT}`}>
+    {clientBookingStatusLabel(booking)}
+  </span>
+);
 
 export const BookingListItem = ({ booking, onReviewClick, onViewDetails }: BookingListItemProps) => {
   return (
@@ -45,8 +46,9 @@ export const BookingListItem = ({ booking, onReviewClick, onViewDetails }: Booki
           )}
         </div>
         <div className="flex items-center gap-4">
-          {getStatusChip(booking.status as BookingStatus)}
-          <span className="text-xl font-bold text-primary">{formatPrice(booking.totalPrice)}</span>
+          <StatusChip booking={booking} />
+          {/* Pedido ainda sem valor: "Em preparação", como no painel e na agenda do cliente (ca2f815). */}
+          <span className="text-xl font-bold text-primary">{formatBookingTotal(booking.totalPrice)}</span>
           {booking.review && (
             <span className="px-2 py-1 text-xs rounded bg-primary/10 text-primary font-semibold" title="Avaliado">
               ★ {booking.review.rating}

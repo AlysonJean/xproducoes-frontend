@@ -38,18 +38,10 @@ export const getWhatsAppPhone = (opts?: { countryCode?: string }): string => {
   return digits;
 };
 
-export const openWhatsApp = (phone: string, message: string): void => {
-  // GA4 Event Tracking
-  try {
-    ReactGA.event({
-      category: 'Conversion',
-      action: 'whatsapp_click',
-      label: 'whatsapp_contact',
-    });
-  } catch (error) {
-    logger.warn('GA4 Event Error:', 'whatsapp', error);
-  }
-
+// P15 e D11 (aprovadas em 02/11/2026): abre o WhatsApp sem o evento de conversão do GA. É o abridor dos botões do
+// painel (o clique do admin não é conversão de cliente) e o que a P14 parte 2 reaproveita nos botões de cada etapa.
+// Tem de rodar dentro do clique, não depois de um await: fora do gesto do clique o bloqueador de pop-up segura a aba.
+export const openWhatsAppUntracked = (phone: string, message: string): void => {
   const cleaned = normalizePhone(phone);
   const url = `https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`;
   // Tenta abrir em nova aba sem sair do site. Achado (revisão): com "noopener" o window.open
@@ -66,6 +58,21 @@ export const openWhatsApp = (phone: string, message: string): void => {
         logger.warn('Não foi possível abrir o WhatsApp automaticamente.', 'whatsapp');
       }
   }
+};
+
+export const openWhatsApp = (phone: string, message: string): void => {
+  // GA4 Event Tracking
+  try {
+    ReactGA.event({
+      category: 'Conversion',
+      action: 'whatsapp_click',
+      label: 'whatsapp_contact',
+    });
+  } catch (error) {
+    logger.warn('GA4 Event Error:', 'whatsapp', error);
+  }
+
+  openWhatsAppUntracked(phone, message);
 };
 
 // D20 + P19 (aprovadas em 02/11/2026): textos prontos do WhatsApp sobre uma reserva, para o cartão "Fale
@@ -100,6 +107,25 @@ export const buildBookingContactText = (p: {
     (name ? `Olá! Sou ${name} e quero falar sobre a reserva ` : 'Olá! Quero falar sobre a reserva ') +
     formatBookingCode(p.bookingId) +
     (date ? `, do evento de ${brasiliaDate.format(date)}.` : '.')
+  );
+};
+
+// "10/11/2026" no horário de Brasília; '' para data vazia ou inválida.
+export const formatBrasiliaDate = (value?: string | Date | null): string => {
+  const date = validDate(value);
+  return date ? brasiliaDate.format(date) : '';
+};
+
+// P15 (aprovada em 02/11/2026): cliente → equipe, na página da proposta. Título e data do evento, nunca o link nem o
+// código dele (a mensagem fica no histórico do WhatsApp do cliente e da empresa).
+export const buildProposalReplyText = (p: { eventTitle?: string | null; eventDate?: string | Date | null }): string => {
+  const title = p.eventTitle?.trim();
+  const date = formatBrasiliaDate(p.eventDate);
+  return (
+    'Olá! Vi a proposta ' +
+    (title ? `do evento "${title}"` : 'do meu evento') +
+    (date ? `, de ${date},` : '') +
+    ' e quero falar com a equipe.'
   );
 };
 

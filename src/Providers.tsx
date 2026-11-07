@@ -2,6 +2,7 @@ import React from 'react'
 import { Analytics, type BeforeSend } from '@vercel/analytics/react'
 import { initSentry } from './utils/sentry'
 import { stripSensitiveParams } from './utils/sensitiveParams'
+import { isAnalyticsExcludedUrl } from './utils/analyticsExclusions'
 import { useWebVitals } from './hooks/useWebVitals'
 import './styles/themes/theme-variables.css'
 import './index.css'
@@ -19,7 +20,10 @@ const SentryErrorBoundary = (sentry && sentry.ErrorBoundary) || (({ children }: 
 // Achado (revisão antes do deploy): o Vercel Analytics manda a URL inteira da barra em cada page
 // view, e os links dos e-mails levam token, e-mail e código nela. Mesmo filtro do Sentry. Fica fora
 // do componente porque o <Analytics /> registra o beforeSend de novo sempre que a função muda.
-const analyticsBeforeSend: BeforeSend = (event) => ({ ...event, url: stripSensitiveParams(event.url) })
+// P15 e D7 (aprovadas em 02/11/2026): as visitas à página da proposta e às áreas da equipe (/admin, /colaborador,
+// /freelancer) não vão (null descarta o evento; ver utils/analyticsExclusions).
+const analyticsBeforeSend: BeforeSend = (event) =>
+  isAnalyticsExcludedUrl(event.url) ? null : { ...event, url: stripSensitiveParams(event.url) }
 
 // ✅ Web Vitals monitoring wrapper component
 const WebVitalsMonitor: React.FC<{ children: React.ReactNode }> = ({ children }) => {

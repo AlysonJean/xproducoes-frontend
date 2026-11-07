@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 
@@ -17,7 +17,7 @@ vi.mock('@/components/layouts/PageLayout', () => ({ PageLayout: ({ children }: {
 vi.mock('@/components/SEO', () => ({ SEO: () => null }));
 
 import { RegisterPage } from '../RegisterPage';
-import ProposalViewPage from '../ProposalViewPage';
+import LegacyProposalLinkPage from '../ProposalViewPage';
 
 const Destino = () => {
   const { pathname, search } = useLocation();
@@ -29,7 +29,7 @@ const montar = (rota: string) =>
     <HelmetProvider>
       <MemoryRouter initialEntries={[rota]}>
         <Routes>
-          <Route path="/proposta/:id" element={<ProposalViewPage />} />
+          <Route path="/proposta/:id" element={<LegacyProposalLinkPage />} />
           <Route path="/cadastro" element={<><RegisterPage /><Destino /></>} />
         </Routes>
       </MemoryRouter>
@@ -45,16 +45,14 @@ const semPromessas = () => {
 beforeEach(() => vi.clearAllMocks());
 
 describe('D6 — sem promessa de vínculo depois do cadastro', () => {
-  it('página da proposta sem cliente: convite sem rastreio nem nota fiscal, e o botão leva ao cadastro comum', async () => {
-    apiFetch.mockResolvedValue({
-      id: 'XP-ANA-1', eventTitle: 'Festa da Ana', eventDate: '2027-01-10T21:00:00Z', totalPrice: 900,
-      status: 'PENDING', equipments: [], clientName: 'Ana',
-    });
+  // P15 (aprovada em 02/11/2026): a página antiga da proposta saiu, com o convite de conta. O endereço antigo
+  // /proposta/<número> só diz que o link não vale mais (sem chamar a API) e continua sem promessa nenhuma.
+  it('endereço antigo da proposta: aviso de link vencido, sem convite de conta, rastreio nem nota fiscal', async () => {
     montar('/proposta/XP-ANA-1');
 
-    fireEvent.click(await screen.findByRole('button', { name: /Criar minha conta/ }));
-
-    expect(await screen.findByText('destino /cadastro')).toBeInTheDocument();
+    expect(await screen.findByText('Este link não vale mais. Peça um novo link à equipe.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Criar minha conta/ })).toBeNull();
+    expect(apiFetch).not.toHaveBeenCalled();
     semPromessas();
   });
 

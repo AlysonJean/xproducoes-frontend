@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import ReactGA from 'react-ga4';
 import { useCookieConsent } from '../contexts/CookieConsentContext';
+import { isAnalyticsExcludedPath } from '../utils/analyticsExclusions';
 
 // Achado (revisão antes do deploy): a página ia para o GA com a query string inteira, e os links
 // dos e-mails levam credenciais nela (?token= em /redefinir-senha, /verify-email e
@@ -22,6 +23,10 @@ export const useGoogleAnalytics = () => {
   const location = useLocation();
   const { consent } = useCookieConsent();
   const [initialized, setInitialized] = useState(false);
+  // P15 e D7 (aprovadas em 02/11/2026): na página da proposta e nas áreas da equipe (/admin, /colaborador,
+  // /freelancer) o GA não carrega nem manda page view, mesmo com o aceite (utils/analyticsExclusions). Saindo delas
+  // pelo site, o GA carrega normalmente.
+  const excluded = isAnalyticsExcludedPath(location.pathname);
 
   // Achado (auditoria): antes, ReactGA.initialize() rodava incondicionalmente para todo
   // visitante — cookies de analytics (_ga/_ga_*) eram gravados sem consentimento algum.
@@ -33,7 +38,7 @@ export const useGoogleAnalytics = () => {
   useEffect(() => {
     const gaId = import.meta.env.VITE_GOOGLE_ANALYTICS_ID;
 
-    if (gaId && consent === 'accepted' && !initialized) {
+    if (gaId && consent === 'accepted' && !initialized && !excluded) {
       // Defer initialization to avoid blocking main thread on initial load
       const timeoutId = setTimeout(() => {
         // Achado (revisão antes do deploy): sem send_page_view: false, o `config` do GA4 manda
@@ -45,10 +50,10 @@ export const useGoogleAnalytics = () => {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [consent, initialized]);
+  }, [consent, initialized, excluded]);
 
   useEffect(() => {
-    if (initialized) {
+    if (initialized && !excluded) {
       // Todo hit do GA4 leva por padrão page_location = URL completa da barra, inclusive os
       // ReactGA.event() das páginas (ex.: clique no WhatsApp numa página com token). O `set` troca
       // esse padrão pela URL filtrada para os eventos seguintes; o page_view já vai com ela.
@@ -57,5 +62,5 @@ export const useGoogleAnalytics = () => {
       ReactGA.set({ page_location: pageLocation });
       ReactGA.send({ hitType: "pageview", page, location: pageLocation });
     }
-  }, [initialized, location]);
+  }, [initialized, location, excluded]);
 };

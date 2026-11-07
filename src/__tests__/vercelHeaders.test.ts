@@ -38,6 +38,22 @@ describe('vercel.json — Cache-Control efetivo por caminho', () => {
     expect(effectiveHeaders('/api/v1/auth/me')['x-frame-options']).toBe('DENY');
   });
 
+  // P15 (aprovada em 02/11/2026): a página da proposta (/proposta#token=... e o endereço antigo /proposta/<número>)
+  // sai marcada para não indexar e sem Referer. As regras vêm depois da regra geral, então valem sobre ela; os outros
+  // cabeçalhos de segurança da regra geral continuam.
+  it('página da proposta: noindex, nofollow e Referrer-Policy no-referrer, só nela', () => {
+    for (const path of ['/proposta', '/proposta/XP-ANA-20271220-2200-AB1']) {
+      const headers = effectiveHeaders(path);
+      expect(headers['x-robots-tag']).toBe('noindex, nofollow');
+      expect(headers['referrer-policy']).toBe('no-referrer');
+      expect(headers['x-frame-options']).toBe('DENY');
+    }
+    for (const path of ['/', '/propostas', '/equipamentos', '/api/v1/proposals/view']) {
+      expect(effectiveHeaders(path)['x-robots-tag']).toBeUndefined();
+      expect(effectiveHeaders(path)['referrer-policy']).toBe('strict-origin-when-cross-origin');
+    }
+  });
+
   it('páginas mantêm o cache do HTML do SSR e o service worker continua sem cache', () => {
     expect(effectiveHeaders('/')['cache-control']).toBe('s-maxage=3600, stale-while-revalidate=86400');
     expect(effectiveHeaders('/equipamentos')['cache-control']).toBe('s-maxage=3600, stale-while-revalidate=86400');

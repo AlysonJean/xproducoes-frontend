@@ -555,6 +555,8 @@ export interface SafeBooking {
     reported?: boolean;
     createdAt: string;
   } | null;
+  // D11: quando a equipe enviou a proposta ("Enviar proposta" da ficha); null sem envio.
+  proposal?: { sentAt: string | null } | null;
 }
 
 export interface CalendarBooking {
@@ -625,6 +627,8 @@ export interface BookingDetails {
   // entram como itens) e o resumo de preço que a ficha (GET /bookings/:id) traz.
   items?: BookingItemLike[];
   pricing?: BookingPricing | null;
+  // D11: quando a equipe enviou a proposta ("Enviar proposta" da ficha); null sem envio.
+  proposal?: { sentAt: string | null } | null;
   paymentProofUrl?: string;
   eventLocation?: string;
   location?: string;

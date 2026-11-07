@@ -8,7 +8,7 @@ import { asArray } from '@/utils/normalize';
 import { toNumber } from '@/utils/typeSafeFormatters';
 import { formatBookingTotal } from '@/utils/formatPrice';
 import { formatBookingCode } from '@/utils/bookingCode';
-import { bookingStatusLabel, bookingStatusVariant } from '@/utils/bookingStatus';
+import { bookingStatusVariant, clientBookingStatusLabel } from '@/utils/bookingStatus';
 import type { SafeBooking } from '@/types/types';
 import {
   Card,
@@ -77,7 +77,7 @@ function generateGoogleCalendarUrl(booking: SafeBooking): string {
 
   const details = [
     equipNames ? `Equipamentos: ${equipNames}` : '',
-    `Status: ${bookingStatusLabel(booking.status)}`,
+    `Status: ${clientBookingStatusLabel(booking)}`,
     `Valor: ${formatBookingTotal(toNumber(booking.totalPrice))}`,
   ]
     .filter(Boolean)
@@ -95,10 +95,11 @@ function generateGoogleCalendarUrl(booking: SafeBooking): string {
 }
 
 // Rótulo e cor do status vêm do módulo compartilhado (antes: um statusConfig local, diferente das
-// outras telas — "Em Andamento" em azul primário aqui, outra cor no painel).
-const getStatus = (status: string | undefined) => ({
-  variant: bookingStatusVariant(status),
-  label: bookingStatusLabel(status),
+// outras telas — "Em Andamento" em azul primário aqui, outra cor no painel). D11: o rótulo do cliente, com
+// "Proposta enviada — aguardando sua resposta" (clientBookingStatusLabel).
+const getStatus = (booking: SafeBooking) => ({
+  variant: bookingStatusVariant(booking.status),
+  label: clientBookingStatusLabel(booking),
 });
 
 // ─── Booking Details Modal ───────────────────────────────────
@@ -112,7 +113,7 @@ export const BookingDetailsModal = ({
 }) => {
   const booking = event.resource;
   const navigate = useNavigate();
-  const status = getStatus(booking.status);
+  const status = getStatus(booking);
   const equipmentCount = (booking.equipments?.length || 0) + (booking.kits?.length || 0);
   const totalValue = booking.totalPrice || 0;
   const googleUrl = generateGoogleCalendarUrl(booking);
@@ -256,7 +257,7 @@ const DayEventsModal = ({
     <div className="space-y-2 py-2">
       {events.map((ev) => {
         const booking = ev.resource;
-        const status = getStatus(booking.status);
+        const status = getStatus(booking);
         return (
           <button
             key={booking.id}
@@ -618,8 +619,8 @@ export const ClientCalendarPage = () => {
                       <h3 className="min-w-0 truncate text-sm font-bold text-foreground">
                         {hovered.resource.eventTitle || 'Reserva'}
                       </h3>
-                      <Badge variant={getStatus(hovered.resource.status).variant} size="sm" className="shrink-0">
-                        {getStatus(hovered.resource.status).label}
+                      <Badge variant={getStatus(hovered.resource).variant} size="sm" className="shrink-0">
+                        {getStatus(hovered.resource).label}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">

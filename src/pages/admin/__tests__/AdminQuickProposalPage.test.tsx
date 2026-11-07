@@ -59,7 +59,9 @@ const chamadasPost = () => apiFetch.mock.calls.filter((c) => c[0] === '/bookings
 // retornado." e o novo clique, com outra Idempotency-Key, gravava a reserva de novo.
 // A página é grande e cada teste preenche 11 campos: com a cobertura ligada (npm run test:coverage) e a
 // máquina ocupada, dois testes passavam dos 5 s padrão do vitest e falhavam por tempo, não por erro.
-describe('AdminQuickProposalPage — gerar link da proposta', { timeout: 20000 }, () => {
+// D11 (aprovada em 02/11/2026): o botão "Gerar link da proposta" virou "Salvar proposta" (o link seguro sai do
+// "Enviar proposta" da página da reserva).
+describe('AdminQuickProposalPage — salvar proposta', { timeout: 20000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
@@ -74,10 +76,14 @@ describe('AdminQuickProposalPage — gerar link da proposta', { timeout: 20000 }
     renderPage();
     await preencherProposta();
 
-    fireEvent.click(screen.getByRole('button', { name: /gerar link da proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /salvar proposta/i }));
 
     expect(await screen.findByText('Página da reserva /admin/reservas/XP-NOVA')).toBeInTheDocument();
     expect(addNotification).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
+    // Antes: "Proposta gerada! O link de proposta está disponível na página da reserva", e a página não mostrava link.
+    expect(addNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'success', title: 'Proposta salva', message: 'Use "Enviar proposta" na página da reserva.' }),
+    );
   });
 
   // Achado (revisão antes do deploy): o e-mail do cliente manual é opcional, mas a tela mandava
@@ -90,7 +96,7 @@ describe('AdminQuickProposalPage — gerar link da proposta', { timeout: 20000 }
     renderPage();
     await preencherProposta();
 
-    fireEvent.click(screen.getByRole('button', { name: /gerar link da proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /salvar proposta/i }));
 
     await waitFor(() => expect(chamadasPost()).toHaveLength(1));
     expect(JSON.parse(chamadasPost()[0][1].body)).not.toHaveProperty('clientEmail');
@@ -107,7 +113,7 @@ describe('AdminQuickProposalPage — gerar link da proposta', { timeout: 20000 }
     await preencherProposta();
     fireEvent.change(screen.getByLabelText(/Observações Internas/), { target: { value: 'Cliente pede desconto' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /gerar link da proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /salvar proposta/i }));
 
     await waitFor(() => expect(chamadasPost()).toHaveLength(1));
     const corpo = JSON.parse(chamadasPost()[0][1].body);
@@ -124,7 +130,7 @@ describe('AdminQuickProposalPage — gerar link da proposta', { timeout: 20000 }
     await preencherProposta();
     fireEvent.change(screen.getByLabelText(/Observações Internas/), { target: { value: '   ' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /gerar link da proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /salvar proposta/i }));
 
     await waitFor(() => expect(chamadasPost()).toHaveLength(1));
     expect(JSON.parse(chamadasPost()[0][1].body)).not.toHaveProperty('internalNotes');
@@ -167,7 +173,7 @@ describe('AdminQuickProposalPage — gerar link da proposta', { timeout: 20000 }
     renderPage();
     await preencherProposta();
 
-    fireEvent.click(screen.getByRole('button', { name: /gerar link da proposta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /salvar proposta/i }));
 
     await waitFor(() => expect(chamadasPost()).toHaveLength(1));
     const corpo = JSON.parse(chamadasPost()[0][1].body);
@@ -187,7 +193,7 @@ describe('AdminQuickProposalPage — gerar link da proposta', { timeout: 20000 }
     });
     renderPage();
     await preencherProposta();
-    const botao = screen.getByRole('button', { name: /gerar link da proposta/i });
+    const botao = screen.getByRole('button', { name: /salvar proposta/i });
 
     fireEvent.click(botao); // 1ª tentativa: falha
     await waitFor(() => expect(botao).not.toBeDisabled());

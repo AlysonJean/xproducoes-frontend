@@ -130,7 +130,9 @@ const ProfilePage = lazy(() =>
 
 // TV Page
 const TVPage = lazy(() => import('./pages/tv/TVPage'));
-const ProposalViewPage = lazy(() => import('./pages/ProposalViewPage'));
+// P15: /proposta#token=... (link seguro) e o aviso do endereço antigo /proposta/<número>.
+const PublicProposalPage = lazy(() => import('./pages/PublicProposalPage'));
+const LegacyProposalLinkPage = lazy(() => import('./pages/ProposalViewPage'));
 
 // Social Interaction Pages
 const ParticipatePage = lazy(() => import('./pages/social/ParticipatePage'));
@@ -191,7 +193,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   // Páginas do convidado do mural (QR code no evento, no celular): sem o cabeçalho, rodapé e WhatsApp
   // de marketing do site — o cabeçalho fixo cobria o topo da tela de envio. O aviso de cookies fica.
-  if (/^\/(participate|upload)\//.test(location.pathname)) {
+  // P15 (aprovada em 02/11/2026): a página da proposta (/proposta e o endereço antigo /proposta/<número>) também,
+  // como um documento para o cliente: sem a navegação de marketing e sem o WhatsApp flutuante do site.
+  if (/^\/(participate|upload)\//.test(location.pathname) || /^\/proposta(\/|$)/.test(location.pathname)) {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <ScrollToTop />
@@ -255,7 +259,8 @@ const AppRoutes: React.FC = () => {
       <Route path="/orcamento-sucesso/:bookingId" element={<QuoteSuccessPage />} />
       <Route path="/reserva-sucesso" element={<LegacyQuoteSuccessRedirect />} />
       <Route path="/reserva-sucesso/:id" element={<LegacyQuoteSuccessRedirect />} />
-      <Route path="/proposta/:id" element={<ProposalViewPage />} />
+      <Route path="/proposta" element={<PublicProposalPage />} />
+      <Route path="/proposta/:id" element={<LegacyProposalLinkPage />} />
 
       {/* Blog / Guides Routes */}
       <Route path="/guias" element={<GuideListPage />} />

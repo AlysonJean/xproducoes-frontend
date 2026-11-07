@@ -174,7 +174,7 @@ export const AdminQuickProposalPage = () => {
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
-  // Achado (revisão antes do deploy): cada clique em "Gerar link da proposta" mandava uma
+  // Achado (revisão antes do deploy): cada clique em "Salvar proposta" mandava uma
   // Idempotency-Key nova, então tentar de novo depois de um erro podia gravar a reserva duas
   // vezes. O mesmo envio (mesmo corpo) repete a chave e o backend devolve a reserva já gravada;
   // se o formulário mudou, é outro envio e ganha chave nova.
@@ -454,12 +454,15 @@ export const AdminQuickProposalPage = () => {
       const bookingId = booking?.id;
       if (!bookingId) throw new Error('Reserva criada mas ID não retornado.');
 
-      addNotification({ type: 'success', title: 'Proposta gerada!', message: 'O link de proposta está disponível na página da reserva.' });
+      // D11 (aprovada em 02/11/2026): salvar não manda nada ao cliente. O link seguro, o e-mail e o WhatsApp saem do
+      // "Enviar proposta" da página da reserva, para onde a tela vai agora. Antes o aviso prometia um link que a
+      // página da reserva não mostrava.
+      addNotification({ type: 'success', title: 'Proposta salva', message: 'Use "Enviar proposta" na página da reserva.' });
       navigate(`/admin/reservas/${bookingId}`);
     } catch (error: unknown) {
       const err = error as { message?: string } | null;
       const msg = err?.message || 'Falha ao salvar. Verifique os campos e tente novamente.';
-      addNotification({ type: 'error', title: 'Erro ao gerar proposta', message: msg });
+      addNotification({ type: 'error', title: 'Erro ao salvar a proposta', message: msg });
     } finally {
       setSaving(false);
     }
@@ -709,7 +712,7 @@ export const AdminQuickProposalPage = () => {
               PDF + WhatsApp
              </Button>
              <Button size="sm" onClick={() => handleSave('PENDING')} isLoading={saving} leftIcon={<Send className="h-4 w-4" />}>
-                Gerar link da proposta
+                Salvar proposta
              </Button>
           </div>
         </header>

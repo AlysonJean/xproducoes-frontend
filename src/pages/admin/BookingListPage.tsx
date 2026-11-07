@@ -8,7 +8,7 @@ import { BOOKING_STATUS_OPTIONS, DELIVERY_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS
 import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
 import { normalizeString } from '../../utils/string';
-import { bookingEmail, bookingPhone, toWhatsAppNumber } from '../../utils/bookingContact';
+import { bookingEmail } from '../../utils/bookingContact';
 import { notifyClientPayload } from '../../utils/notifyClient';
 import { NotifyClientCheckbox } from '../../components/bookings/NotifyClientCheckbox';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -581,26 +581,19 @@ export const BookingListPage = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Link>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-9 w-9 text-success border-success/30 hover:bg-success/10"  
-                            onClick={() => {
-                              // Contato da reserva antes do cadastro, com DDI (ver utils/bookingContact).
-                              const phone = toWhatsAppNumber(bookingPhone(booking));
-                              if (!phone) {
-                                addNotification({ type: 'warning', title: 'Sem telefone', message: 'A reserva não tem um telefone válido para o WhatsApp.' });
-                                return;
-                              }
-                              const url = `${window.location.origin}/proposta/${booking.id}`;
-                              const text = `Olá! Sou da X Produções. Segue o link com a sua proposta comercial exclusiva para o evento: ${url}`;
-                              window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
-                            }} 
-                            title="WhatsApp"
-                            aria-label={`Enviar proposta da reserva ${booking.id} pelo WhatsApp`}
-                          >
-                            <MessageSquare className="h-4 w-4" />
-                          </Button>
+                          {/* D11 (aprovada em 02/11/2026): este botão mandava pelo WhatsApp /proposta/<número da reserva>,
+                              que exige login e dá para adivinhar. O envio agora é o "Enviar proposta" da página da
+                              reserva (link seguro, e-mail e registro do envio); aqui fica o atalho para lá. */}
+                          {(booking.status === 'DRAFT' || booking.status === 'PENDING') && (
+                            <Link
+                              to={`/admin/reservas/${booking.id}`}
+                              className={buttonVariants({ variant: 'outline', size: 'icon', className: 'h-9 w-9 text-success border-success/30 hover:bg-success/10' })}
+                              title="Enviar proposta (na página da reserva)"
+                              aria-label={`Enviar proposta da reserva ${booking.id} (abre a página da reserva)`}
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                            </Link>
+                          )}
                           <Button 
                             variant="outline" 
                             size="icon" 

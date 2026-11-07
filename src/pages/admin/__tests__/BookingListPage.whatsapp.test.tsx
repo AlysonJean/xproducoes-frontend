@@ -22,17 +22,19 @@ const reservas = [
   { ...base, id: 'XP-DIGITADO', client: null, clientName: 'Ana Souza', clientContact: '(31) 98888-7777' },
   { ...base, id: 'XP-PERFIL-ADMIN', client: conta('c1', '31911112222'), clientName: 'Bruno Lima', clientContact: '31977776666' },
   { ...base, id: 'XP-SO-EMAIL', client: conta('c2', '31955554444'), clientName: 'Carla Dias', clientContact: 'carla@cliente.test' },
-  { ...base, id: 'XP-SEM-TELEFONE', client: null, clientName: 'Dani Rocha', clientContact: null },
+  { ...base, id: 'XP-RASCUNHO', status: 'DRAFT', client: null, clientName: 'Dani Rocha', clientContact: null },
+  { ...base, id: 'XP-CONFIRMADA', status: 'CONFIRMED', client: null, clientName: 'Eva Reis', clientContact: '31944443333' },
 ];
 
-const abrirWhatsApp = (id: string) =>
-  fireEvent.click(screen.getByRole('button', { name: `Enviar proposta da reserva ${id} pelo WhatsApp` }));
+const atalho = (id: string) =>
+  screen.queryByRole('link', { name: `Enviar proposta da reserva ${id} (abre a página da reserva)` });
 
 // Achado (auditoria ponta a ponta): o botão de WhatsApp da lista só olhava o telefone do cadastro e o
-// mandava ao wa.me sem DDI. Proposta de cliente digitado abria o WhatsApp sem destinatário; número
-// digitado como "(31) 9..." ia para a Holanda (DDI 31); a reserva pendurada no cadastro do admin ia
-// para o telefone de outro cliente.
-describe('BookingListPage — WhatsApp da proposta', () => {
+// mandava ao wa.me sem DDI (a regra do contato ficou em utils/bookingContact, com testes próprios).
+// D11 (aprovada em 02/11/2026): o botão ainda mandava /proposta/<número da reserva>, uma página que exige login e um
+// número que dá para adivinhar. A lista agora só leva à página da reserva, onde fica o "Enviar proposta" (link
+// seguro, e-mail pela fila e registro do envio); nada de WhatsApp com /proposta/<número>.
+describe('BookingListPage — atalho para "Enviar proposta"', () => {
   let open: MockInstance<typeof window.open>;
 
   beforeEach(() => {
@@ -48,30 +50,28 @@ describe('BookingListPage — WhatsApp da proposta', () => {
 
   const renderLista = async () => {
     render(<MemoryRouter initialEntries={['/admin/reservas']}><BookingListPage /></MemoryRouter>);
-    await screen.findByText(/Mostrando 4 de 4 registros/);
+    await screen.findByText(/Mostrando 5 de 5 registros/);
   };
 
-  it.each([
-    ['cliente digitado (sem cadastro): o contato da reserva', 'XP-DIGITADO', '5531988887777'],
-    ['reserva no cadastro de outra pessoa: o contato da reserva vem antes', 'XP-PERFIL-ADMIN', '5531977776666'],
-    ['contato que é e-mail: o telefone do cadastro', 'XP-SO-EMAIL', '5531955554444'],
-  ])('%s, com DDI', async (_caso, id, numero) => {
+  it.each(['XP-DIGITADO', 'XP-PERFIL-ADMIN', 'XP-SO-EMAIL', 'XP-RASCUNHO'])(
+    'rascunho ou pendente (%s): o atalho abre a página da reserva, sem WhatsApp e sem /proposta/<número>',
+    async (id) => {
+      await renderLista();
+
+      const link = atalho(id);
+
+      expect(link).toHaveAttribute('href', `/admin/reservas/${id}`);
+      fireEvent.click(link as HTMLElement);
+      expect(open).not.toHaveBeenCalled();
+      expect(addNotification).not.toHaveBeenCalled();
+      expect(document.body.innerHTML).not.toContain('/proposta/');
+    },
+  );
+
+  it('reserva confirmada: sem o atalho (a proposta já não se envia)', async () => {
     await renderLista();
 
-    abrirWhatsApp(id);
-
-    expect(open).toHaveBeenCalledTimes(1);
-    const url = new URL(String(open.mock.calls[0][0]));
-    expect(`${url.origin}${url.pathname}`).toBe(`https://wa.me/${numero}`);
-    expect(url.searchParams.get('text')).toContain(`/proposta/${id}`);
-  });
-
-  it('sem telefone: avisa e não abre o WhatsApp sem destinatário', async () => {
-    await renderLista();
-
-    abrirWhatsApp('XP-SEM-TELEFONE');
-
-    expect(open).not.toHaveBeenCalled();
-    expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'warning', title: 'Sem telefone' }));
+    expect(atalho('XP-CONFIRMADA')).toBeNull();
+    expect(screen.queryByRole('button', { name: /pelo WhatsApp/ })).toBeNull();
   });
 });

@@ -6,7 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { bookingAPI, authAPI, kitAPI } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import { formatBookingTotal, formatPrice } from '../../utils/formatPrice';
-import { bookingStatusLabel, bookingStatusVariant } from '../../utils/bookingStatus';
+import { bookingStatusVariant, clientBookingStatusLabel } from '../../utils/bookingStatus';
 import { clsx } from 'clsx';
 import {
   Button,
@@ -356,7 +356,7 @@ export const ClientDashboardPage = () => {
                                 {formatDate(booking.eventDate)}
                               </span>
                               <Badge variant={bookingStatusVariant(booking.status)} size="sm">
-                                {bookingStatusLabel(booking.status)}
+                                {clientBookingStatusLabel(booking)}
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">

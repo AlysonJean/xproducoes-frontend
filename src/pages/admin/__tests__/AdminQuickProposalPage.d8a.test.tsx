@@ -44,7 +44,7 @@ const preencher = (inicio: string, termino: string) => {
 };
 
 const corpoDoPost = async () => {
-  fireEvent.click(screen.getByRole('button', { name: /gerar link da proposta/i }));
+  fireEvent.click(screen.getByRole('button', { name: /salvar proposta/i }));
   await waitFor(() => expect(apiFetch.mock.calls.some((c) => c[0] === '/bookings' && c[1]?.method === 'POST')).toBe(true));
   const call = apiFetch.mock.calls.find((c) => c[0] === '/bookings' && c[1]?.method === 'POST')!;
   return JSON.parse(call[1].body as string) as { items: Array<Record<string, unknown>>; [k: string]: unknown };
