@@ -731,7 +731,12 @@ export const BookingDetailPage = () => {
     });
     if (booking.kit?.items) process(booking.kit.items);
         if (booking.kits) booking.kits.forEach((k) => process(k.items || ('kit' in k ? k.kit?.items : undefined) || []));
-    if (booking.services) process(booking.services);
+    // Conferência de 07/11/2026: booking.services são os serviços do cadastro ligados à reserva (o técnico marcado
+    // no pedido, os da Proposta Rápida), sem itemType: o process acima os ignorava, e a seção dizia "Nenhum serviço
+    // nesta reserva" com o técnico nos itens.
+    booking.services?.forEach((s) => {
+      if (s?.name) services.add(s.name);
+    });
     return Array.from(services);
   }, [booking]);
 

@@ -46,6 +46,20 @@ import { logger } from '../../utils/logger';
 const PAGE_TITLE = 'Painel de Controle';
 const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Painel' }];
 
+// Conferência de 07/11/2026: a frase dizia "Você tem N eventos programados para hoje", mas o número (todayBookings
+// do /dashboard/live-stats) conta os pedidos FEITOS hoje: dois pedidos para dezembro apareceram como "2 eventos
+// programados para hoje". A frase passa a dizer o que o número conta.
+const TodayOrdersText = ({ count }: { count: number }) =>
+  count === 0 ? (
+    <>Nenhum pedido novo hoje.</>
+  ) : (
+    <>
+      Você recebeu{' '}
+      <span className="font-bold text-primary-foreground">{count === 1 ? '1 pedido novo' : `${count} pedidos novos`}</span>{' '}
+      hoje.
+    </>
+  );
+
 // Mapa literal de tons. Antes: `bg-${color}/10` com color="indigo"/"emerald"/"amber" — classe montada
 // em tempo de execução (o Tailwind não gera) e sem tom de cor: os ícones dos cards ficavam sem cor.
 type StatTone = 'primary' | 'success' | 'info' | 'warning';
@@ -318,7 +332,7 @@ export const AdminDashboardPage = () => {
               </h2>
               <p className="text-primary-foreground/80 max-w-md">
                 {liveStats
-                  ? <>Você tem <span className="font-bold text-primary-foreground">{liveStats.todayBookings || 0} eventos</span> programados para hoje.</>
+                  ? <TodayOrdersText count={liveStats.todayBookings || 0} />
                   : 'Acompanhe aqui as reservas e os indicadores do mês.'}
               </p>
             </div>

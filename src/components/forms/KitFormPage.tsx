@@ -115,6 +115,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
     handleSubmit,
     watch,
     reset,
+    setError,
     formState: { errors, isSubmitting, isDirty: isFormDirty },
   } = useForm<KitFormData>({
     resolver: zodResolver(kitFormSchema),
@@ -212,6 +213,10 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                 ? ''
                 : String(Number(initialData.extraHourPrice)),
             fulfillment: initialData.fulfillment === 'CLIENT_PICKUP' ? 'CLIENT_PICKUP' : 'DELIVERY_SETUP',
+            // Conferência de 07/11/2026: a edição abria sempre em "Ativo", qualquer que fosse o status do kit.
+            status: (Object.values(ItemStatus) as string[]).includes(String(initialData.status))
+              ? (initialData.status as ItemStatus)
+              : ItemStatus.ACTIVE,
           });
         }
 
@@ -316,6 +321,13 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
 
   const onSubmit: SubmitHandler<KitFormData> = async (data) => {
     setServerError(null);
+    const file = data.images instanceof FileList && data.images.length > 0 ? data.images[0] : undefined;
+    // Conferência de 07/11/2026: a capa é obrigatória no banco, e o kit novo sem imagem voltava 500 "Erro interno
+    // do servidor". O servidor agora responde 400 com o motivo; aqui o aviso aparece antes do envio.
+    if (!isEditing && !file) {
+      setError('images', { type: 'required', message: 'Escolha a imagem de capa do kit.' });
+      return;
+    }
     const formData = new FormData();
     
     // SEO Filename
@@ -331,6 +343,8 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
     formData.append('minimumRentalDuration', data.minimumRentalDuration.trim());
     formData.append('extraHourPrice', data.extraHourPrice.trim().replace(',', '.'));
     formData.append('fulfillment', data.fulfillment);
+    // Conferência de 07/11/2026: o Status escolhido aqui não ia no envio (o kit "Inativo" nascia Ativo).
+    formData.append('status', data.status);
     
     // Send items as JSON string with type info, converting back to 'id' for backend
     const mappedItems = data.items.map(item => ({
@@ -345,11 +359,8 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
       formData.append('experienceLevels', JSON.stringify(experienceLevels));
     }
 
-    if (data.images && data.images instanceof FileList && data.images.length > 0) {
-      const file = data.images[0];
-      if (file) {
-        formData.append('image', file);
-      }
+    if (file) {
+      formData.append('image', file);
     }
 
     try {
@@ -624,7 +635,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
               />
               
               <div className="pt-4 border-t">
-                 <FormSection title="Imagem" description="Capa do kit" className="space-y-2">
+                 <FormSection title="Imagem" description={isEditing ? 'Capa do kit. Escolha outra só para trocar.' : 'Capa do kit (obrigatória).'} className="space-y-2">
                     <Input
                       type="file"
                       aria-label="Imagem de capa do kit"

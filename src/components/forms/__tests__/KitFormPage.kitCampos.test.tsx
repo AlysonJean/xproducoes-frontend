@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 const { apiFetch } = vi.hoisted(() => ({ apiFetch: vi.fn() }));
 vi.mock('../../../services/api', () => ({ apiFetch }));
@@ -32,6 +33,8 @@ const preencherBasico = async () => {
   fireEvent.change(screen.getByLabelText('Preço de Venda do Kit'), { target: { value: '149.99' } });
   fireEvent.change(screen.getByLabelText('Adicionar Itens'), { target: { value: 'Caixa' } });
   fireEvent.click(await screen.findByRole('button', { name: /Caixa Ativa/ }));
+  // Kit novo exige a capa (conferência de 07/11/2026; ver KitFormPage.capaEStatus.test.tsx).
+  await userEvent.upload(screen.getByLabelText('Imagem de capa do kit'), new File(['png'], 'capa.png', { type: 'image/png' }));
 };
 
 const campos = () => ({
