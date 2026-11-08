@@ -1,5 +1,5 @@
 // Componente para editar níveis de experiência de um kit no admin
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ExperienceLevel, type KitExperienceLevel } from '../../types/types';
 import { formatPrice } from '../../utils/typeSafeFormatters';
 import { Plus, Trash2, Star, Sparkles } from 'lucide-react';
@@ -7,7 +7,7 @@ import { Button, Input, Checkbox } from '../ui/StandardComponents';
 
 interface ExperienceLevelsEditorProps {
   kitId: string;
-  initialLevels?: KitExperienceLevel[];
+  initialLevels?: Partial<KitExperienceLevel>[];
   onChange: (levels: Partial<KitExperienceLevel>[]) => void;
   basePrice?: number;
 }
@@ -62,9 +62,15 @@ export function ExperienceLevelsEditor({
 
   const [showAddPanel, setShowAddPanel] = useState(false);
 
-  useEffect(() => {
-    onChange(levels);
-  }, [levels, onChange]);
+  // Conferência de 08/11/2026: o aviso ao formulário vinha de um efeito com onChange nas dependências. O formulário
+  // passa uma função nova a cada render, então o efeito rodava depois de cada render dele (a cada tecla) e mexia no
+  // estado dele, e já ao abrir marcava "alterado": fechar sem mudar nada perguntava "Descartar alterações?". Agora só
+  // as ações da pessoa avisam. O formulário remonta o editor (key) quando o nível vem de outro lugar (rascunho).
+  const apply = (update: (prev: Partial<KitExperienceLevel>[]) => Partial<KitExperienceLevel>[]) => {
+    const next = update(levels);
+    setLevels(next);
+    onChange(next);
+  };
 
   const handleAddLevel = (level: ExperienceLevel) => {
     const info = LEVEL_INFO[level];
@@ -79,7 +85,7 @@ export function ExperienceLevelsEditor({
       kitId,
     };
 
-    setLevels(prev => [...prev, newLevel].sort((a, b) => {
+    apply(prev => [...prev, newLevel].sort((a, b) => {
       const order = { SILVER: 0, GOLD: 1, PLATINUM: 2 };
       return order[a.level!] - order[b.level!];
     }));
@@ -87,17 +93,17 @@ export function ExperienceLevelsEditor({
   };
 
   const handleRemoveLevel = (index: number) => {
-    setLevels(prev => prev.filter((_, i) => i !== index));
+    apply(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleUpdateLevel = (index: number, field: keyof KitExperienceLevel, value: unknown) => {
-    setLevels(prev => prev.map((lvl, i) =>
+    apply(prev => prev.map((lvl, i) =>
       i === index ? { ...lvl, [field]: value } : lvl
     ));
   };
 
   const handleUpdateIncludes = (index: number, includeIndex: number, value: string) => {
-    setLevels(prev => prev.map((lvl, i) => {
+    apply(prev => prev.map((lvl, i) => {
       if (i === index) {
         const newIncludes = [...(lvl.includes || [])];
         newIncludes[includeIndex] = value;
@@ -108,7 +114,7 @@ export function ExperienceLevelsEditor({
   };
 
   const handleAddInclude = (index: number) => {
-    setLevels(prev => prev.map((lvl, i) => {
+    apply(prev => prev.map((lvl, i) => {
       if (i === index) {
         return { ...lvl, includes: [...(lvl.includes || []), ''] };
       }
@@ -117,7 +123,7 @@ export function ExperienceLevelsEditor({
   };
 
   const handleRemoveInclude = (levelIndex: number, includeIndex: number) => {
-    setLevels(prev => prev.map((lvl, i) => {
+    apply(prev => prev.map((lvl, i) => {
       if (i === levelIndex) {
         const newIncludes = (lvl.includes || []).filter((_, j) => j !== includeIndex);
         return { ...lvl, includes: newIncludes };
@@ -142,7 +148,7 @@ export function ExperienceLevelsEditor({
         kitId,
       };
     });
-    setLevels(allLevels);
+    apply(() => allLevels);
     setShowAddPanel(false);
   };
 

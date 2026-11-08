@@ -130,11 +130,14 @@ export const KitDetailPage = () => {
   }, 0);
   const savings = calculateSavingsAmount(totalItemsPrice, kit.price ?? 0);
   const isKitInCart = !!(cart?.kit && cart.kit.id === kit.id);
+  // Conferência de 08/11/2026: o kit inativo abre pelo link direto (decisão do dono), e o botão seguia ativo; o
+  // pedido entrava. Como na página do serviço, só o kit ATIVO entra no orçamento (o servidor também recusa).
+  const canAdd = !kit.status || kit.status === 'ACTIVE';
   const fulfillment = kitFulfillment(kit);
   const { included: includedHours, extraHourPrice } = kitHours(kit);
 
   const handleAddToCart = async () => {
-    if (!kit) return;
+    if (!kit || !canAdd) return;
     setAdding(true);
     try {
       await addItem(kit, 'kit');
@@ -351,9 +354,9 @@ export const KitDetailPage = () => {
               fullWidth
               onClick={handleAddToCart}
               isLoading={adding}
-              disabled={isKitInCart}
+              disabled={isKitInCart || !canAdd}
             >
-              {adding ? 'Adicionando...' : (isKitInCart ? 'Kit já no orçamento' : 'Adicionar combo ao orçamento')}
+              {adding ? 'Adicionando...' : isKitInCart ? 'Kit já no orçamento' : canAdd ? 'Adicionar combo ao orçamento' : 'Indisponível no momento'}
             </Button>
             <div className="mt-3">
               <AskOnWhatsAppButton kind="Kit" itemName={kit.name} />

@@ -34,7 +34,9 @@ export const KitListPage = () => {
       setError(null);
       const kitsData = await apiFetch('/kits');
       const rawKits = asArray<Kit>(kitsData);
-      setKits(rawKits.map(transformKit));
+      // Conferência de 08/11/2026: logado como admin, GET /kits traz também os INATIVOS (o painel usa a mesma rota), e
+      // a página pública os mostrava sem selo. A página pública mostra o que o visitante vê.
+      setKits(rawKits.map(transformKit).filter((kit) => kit.status !== 'INACTIVE'));
     } catch (err) {
       logger.error('Erro ao carregar dados:', 'KitListPage', err);
       setError('Erro ao carregar kits. Tente novamente.');

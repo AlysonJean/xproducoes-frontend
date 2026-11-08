@@ -103,6 +103,9 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
     initialData?.experienceLevels || []
   );
   const [experienceLevelsDirty, setExperienceLevelsDirty] = useState(false);
+  // O editor de níveis guarda o próprio estado a partir de initialLevels: ao restaurar um rascunho, a key nova o
+  // remonta com os níveis do rascunho (antes ele seguia com os de antes e os devolvia ao formulário).
+  const [levelsEditorKey, setLevelsEditorKey] = useState(0);
 
   const draftKey = `xp-draft-kit-${initialData?.id || 'new'}`;
   const { save: saveDraft, load: loadDraft, clear: clearDraft } = useFormDraft<DraftableKitData>(draftKey);
@@ -275,6 +278,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
       fulfillment: draftPrompt.values.fulfillment ?? 'DELIVERY_SETUP',
     });
     setExperienceLevels(draftPrompt.values.experienceLevels);
+    setLevelsEditorKey((k) => k + 1);
     setDraftPrompt(null);
   };
 
@@ -607,8 +611,9 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
             <div className="bg-card border rounded-2xl shadow-sm overflow-visible relative">
               <div className="p-6">
                 <ExperienceLevelsEditor
+                  key={levelsEditorKey}
                   kitId={initialData?.id || 'new'}
-                  initialLevels={initialData?.experienceLevels}
+                  initialLevels={experienceLevels}
                   onChange={handleExperienceLevelsChange}
                   basePrice={kitPrice || 0}
                 />
