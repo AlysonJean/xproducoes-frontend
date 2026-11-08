@@ -1,6 +1,7 @@
 import type React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 
 const { apiFetch, addNotification } = vi.hoisted(() => ({ apiFetch: vi.fn(), addNotification: vi.fn() }));
 vi.mock('../../../services/api', () => ({ apiFetch }));
@@ -63,8 +64,17 @@ const filtrarPor = (rotulo: string) => {
   fireEvent.change(select, { target: { value: opcao.value } });
 };
 
+// D24 (lote 14): a tela usa a navegação ("Transformar em proposta"); a rota de destino mostra o estado recebido.
+const EstadoDaProposta = () => <pre data-testid="estado">{JSON.stringify(useLocation().state)}</pre>;
 const abrirTela = async () => {
-  render(<ContactSubmissionsListPage />);
+  render(
+    <MemoryRouter initialEntries={['/admin/contatos']}>
+      <Routes>
+        <Route path="/admin/contatos" element={<ContactSubmissionsListPage />} />
+        <Route path="/admin/orcamentos/novo" element={<EstadoDaProposta />} />
+      </Routes>
+    </MemoryRouter>,
+  );
   await screen.findByRole('heading', { name: 'Ana Souza' });
 };
 
@@ -136,5 +146,30 @@ describe('ContactSubmissionsListPage — lida/não lida e exclusão com o format
     expect(apiFetch).toHaveBeenCalledWith('/admin/contacts/c2', { method: 'DELETE' });
     expect(banco.map((linha) => linha.id)).toEqual(['c1', 'c3']);
     expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
+  });
+
+  // D24 (aprovada em 02/11/2026): responder pelo WhatsApp do formulário e levar o contato para a Proposta Rápida.
+  it('"Responder no WhatsApp" só com telefone do formulário, com o número e a saudação', async () => {
+    await abrirTela();
+
+    const link = within(cartao('Ana Souza')).getByRole('link', { name: /Responder no WhatsApp/ });
+    expect(link.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/5531988887777\?text=/);
+    expect(decodeURIComponent(link.getAttribute('href')!.split('text=')[1])).toBe('Olá, Ana! Aqui é da X Produções, recebemos sua mensagem pelo site.');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(within(cartao('Bruno Lima')).queryByRole('link', { name: /Responder no WhatsApp/ })).not.toBeInTheDocument();
+    expect(within(cartao('Carla Dias')).queryByRole('link', { name: /Responder no WhatsApp/ })).not.toBeInTheDocument();
+  });
+
+  it('"Transformar em proposta" abre a Proposta Rápida com os dados do contato no estado da navegação, não na URL', async () => {
+    await abrirTela();
+
+    fireEvent.click(within(cartao('Ana Souza')).getByRole('button', { name: /Transformar em proposta/ }));
+
+    const estado = JSON.parse((await screen.findByTestId('estado')).textContent || 'null');
+    expect(estado).toEqual({
+      fromContact: { name: 'Ana Souza', email: 'ana@teste.com', phone: '(31) 98888-7777', text: 'Quero som para a festa.' },
+    });
+    expect(apiFetch).not.toHaveBeenCalledWith('/admin/contacts/c1/read', expect.anything()); // não marca como lida
   });
 });

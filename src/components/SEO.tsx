@@ -11,16 +11,20 @@ interface SEOProps {
   url?: string;
   type?: string;
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  // D23 (decisão do dono de 08/11/2026): a página do item INATIVO continua abrindo pelo link, mas sai do Google
+  // (noindex, follow) e sem o JSON-LD da página (o produto não está à venda).
+  noindex?: boolean;
 }
 
 export const SEO: React.FC<SEOProps> = ({ 
   title, 
-  description = "Líder em aluguel de som, iluminação, painel de LED e equipamentos audiovisuais em Belo Horizonte e região.",
+  description = "Aluguel de som, iluminação, painel de LED e equipamentos audiovisuais para eventos em Belo Horizonte e região.",
   keywords = "aluguel de som, iluminação, painel de led, eventos, belo horizonte",
   image = "https://www.xproducoeseeventos.com.br/xproducoes-logo.png",
   url = typeof window !== 'undefined' ? window.location.href : '',
   type = 'website',
-  jsonLd
+  jsonLd,
+  noindex = false
 }) => {
   const siteTitle = SITE_NAME;
   // Achado: páginas que já passavam "… | X-Produções" ganhavam o sufixo duas vezes
@@ -69,10 +73,11 @@ export const SEO: React.FC<SEOProps> = ({
   };
 
   // Logic to build a hybrid schema array (LocalBusiness + custom jsonLd from page)
-  const jsonLdArray = Array.isArray(jsonLd) 
-    ? [structuredData, ...jsonLd] 
-    : jsonLd 
-        ? [structuredData, jsonLd] 
+  const pageJsonLd = noindex ? undefined : jsonLd;
+  const jsonLdArray = Array.isArray(pageJsonLd)
+    ? [structuredData, ...pageJsonLd]
+    : pageJsonLd
+        ? [structuredData, pageJsonLd]
         : [structuredData];
 
   return (
@@ -82,6 +87,7 @@ export const SEO: React.FC<SEOProps> = ({
       <meta name="description" content={description} />
       <meta name="keywords" content={keywords} />
       <link rel="canonical" href={canonicalUrl} />
+      {noindex && <meta name="robots" content="noindex, follow" />}
 
       {/* Open Graph / Facebook */}
       <meta property="og:type" content={type} />

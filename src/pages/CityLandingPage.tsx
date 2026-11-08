@@ -53,7 +53,7 @@ export const CityLandingPage = () => {
 
   // Sem "| X-Produções" aqui: o <SEO>/PageLayout já acrescentam o nome do site (saía duplicado).
   const title = `${service.name} em ${city.name}, ${city.uf}`;
-  const description = `${service.name} profissional para eventos em ${city.name}. ${service.description} Entrega e montagem rápida em ${city.name} e região. Peça seu orçamento!`;
+  const description = `${service.name} profissional para eventos em ${city.name}. ${service.description} Entrega e montagem em ${city.name} e região. Peça seu orçamento!`;
   const whatsAppPhone = getWhatsAppPhone();
 
   // Base FAQ Schema
@@ -174,8 +174,8 @@ export const CityLandingPage = () => {
               </Card>
               <Card className="p-6 border-border/50">
                 <StarIcon className="w-10 h-10 text-warning mb-3" aria-hidden="true" />
-                <h2 className="text-lg font-bold mb-2 text-foreground">Qualidade Premium</h2>
-                <p className="text-sm text-muted-foreground">Equipamentos das melhores marcas.</p>
+                <h2 className="text-lg font-bold mb-2 text-foreground">Equipamento Profissional</h2>
+                <p className="text-sm text-muted-foreground">Equipamentos profissionais, revisados antes de cada evento.</p>
               </Card>
               <Card className="p-6 border-border/50">
                 <MapPinIcon className="w-10 h-10 text-primary mb-3" aria-hidden="true" />

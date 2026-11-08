@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { contactEventTitle, proposalNotesFromContact, type ContactProposalPrefill } from '../../utils/contactFormBlock';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -139,21 +140,29 @@ export const AdminQuickProposalPage = () => {
   // Id da linha que cada botão Técnico pôs da última vez (chave: o id do serviço, ou "manual" no item à mão).
   const technicianLineIds = useRef<Record<string, string>>({});
 
+  // D24 (aprovada em 02/11/2026): "Transformar em proposta", na tela de contatos, abre esta página com os dados do
+  // formulário no estado da navegação. Lido uma vez, ao abrir; recarregar a página começa vazio, como antes. A data
+  // informada não vira horário (o campo pede hora): vai nas observações e num aviso perto de Início e Término.
+  const routerLocation = useLocation();
+  const [fromContact] = useState<ContactProposalPrefill | null>(
+    () => (routerLocation.state as { fromContact?: ContactProposalPrefill } | null)?.fromContact ?? null,
+  );
+
   // Form State - Cliente
   const [clientType, setClientType] = useState<'registered' | 'manual'>('manual');
   const [selectedClientId, setSelectedClientId] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [clientEmail, setClientEmail] = useState('');
-  const [clientContact, setClientContact] = useState('');
+  const [clientName, setClientName] = useState(fromContact?.name ?? '');
+  const [clientEmail, setClientEmail] = useState(fromContact?.email ?? '');
+  const [clientContact, setClientContact] = useState(fromContact?.phone ?? '');
   // Erros de campos (escopo global)
   const [fieldErrors] = useState<Record<string, string>>({});
 
   // Form State - Evento
-  const [eventTitle, setEventTitle] = useState('');
+  const [eventTitle, setEventTitle] = useState(fromContact ? contactEventTitle(fromContact) : '');
   const [location, setLocation] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventEndDate, setEventEndDate] = useState('');
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState(fromContact ? proposalNotesFromContact(fromContact) : '');
 
   // Form State - Endereço (obrigatórios pelo backend)
   const [street, setStreet] = useState('');
@@ -915,6 +924,11 @@ export const AdminQuickProposalPage = () => {
                  <Input label="Início Previsto *" type="datetime-local" value={eventDate} onChange={e => setEventDate(e.target.value)} />
                  <Input label="Término Previsto *" type="datetime-local" value={eventEndDate} onChange={e => setEventEndDate(e.target.value)} />
                </div>
+               {fromContact?.eventDate && (
+                 <p className="mt-2 text-xs text-muted-foreground">
+                   Data informada no contato: {fromContact.eventDate}. Preencha o início e o término com o horário combinado.
+                 </p>
+               )}
 
                <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4 space-y-3">
                  <h4 className="flex items-center gap-2 text-muted-foreground font-semibold uppercase text-xs tracking-wider">

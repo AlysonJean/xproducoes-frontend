@@ -345,7 +345,7 @@ export const InteractiveQuiz = () => {
             </a>
             
             <p className="mt-8 text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground max-w-sm text-center leading-relaxed">
-              Atendimento prioritário • Suporte técnico imediato • Projeto personalizado
+              Atendimento pelo WhatsApp • Proposta sem compromisso • Projeto personalizado
             </p>
           </div>
         </div>

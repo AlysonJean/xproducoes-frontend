@@ -15,10 +15,12 @@ import {
   COMPANY_CITY_LINE,
   COMPANY_CNPJ,
   COMPANY_LEGAL_NAME,
+  EXPERIENCE_SINCE,
   INSTAGRAM_URL,
   SUPPORT_EMAIL,
   formatPhoneDisplay,
 } from '../data/site';
+import { GoogleReviewLink } from './ui/GoogleReviewLink';
 import { RESERVATION_POLICY_PATH, RESERVATION_POLICY_PUBLISHED } from '../data/reservationPolicy';
 
 // Achado (auditoria do design system): os links "Equipamentos de Som/Luz/Acessórios" mandavam
@@ -101,7 +103,7 @@ const socialButtonClass =
   'touch-target rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 export const Footer = () => {
-  const { companyName } = useSettings();
+  const { companyName, googleReviewUrl } = useSettings();
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -208,7 +210,7 @@ export const Footer = () => {
 
             <p className="text-muted-foreground mb-6 leading-relaxed">
               Transformamos suas ideias em eventos inesquecíveis.
-              Equipamentos de qualidade profissional e atendimento excepcional desde 2015.
+              Equipamentos profissionais e atendimento próximo. {EXPERIENCE_SINCE}.
             </p>
 
             {/* Contato (dados de src/data/site.ts; telefone = WhatsApp do site) */}
@@ -229,6 +231,8 @@ export const Footer = () => {
                   {SUPPORT_EMAIL}
                 </a>
               </div>
+              {/* P20: só aparece com o link do Perfil da Empresa no Google (GOOGLE_REVIEW_LINK no servidor). */}
+              <GoogleReviewLink url={googleReviewUrl} />
             </div>
           </div>
 

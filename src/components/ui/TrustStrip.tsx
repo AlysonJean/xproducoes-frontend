@@ -1,13 +1,14 @@
-import { Shield, MessageCircle, Lock, Award } from 'lucide-react';
+import { Shield, MessageCircle, Landmark, Award } from 'lucide-react';
+import { EXPERIENCE_SINCE } from '../../data/site';
 
-// Selos de confiança reaproveitando afirmações já publicadas em outros pontos do site
-// (WarrantyPage, rodapé "SSL Seguro"/"desde 2015") — não são promessas novas inventadas,
-// só elevadas para os momentos de maior decisão (hero e antes do envio do orçamento).
+// Selos de confiança nos momentos de maior decisão (hero e antes do envio do orçamento). P20 (aprovada em 02/11/2026 e
+// decisão do dono de 08/11): não há pagamento online, então o selo diz como se paga (PIX na conta da empresa), e o
+// tempo de casa vem da frase única de data/site.ts.
 const badges = [
   { icon: Shield, label: 'Equipamento com Garantia' },
   { icon: MessageCircle, label: 'Suporte via WhatsApp' },
-  { icon: Lock, label: 'Pagamento Seguro' },
-  { icon: Award, label: 'Desde 2015' },
+  { icon: Landmark, label: 'PIX direto na conta da empresa (CNPJ)' },
+  { icon: Award, label: EXPERIENCE_SINCE },
 ];
 
 export function TrustStrip({ className }: { className?: string }) {

@@ -8,6 +8,8 @@ export interface AppSettings {
   companyName: string;
   createdAt: string;
   updatedAt: string;
+  // P20: link do Perfil da Empresa no Google (GOOGLE_REVIEW_LINK no servidor); null enquanto não existe.
+  googleReviewUrl?: string | null;
 }
 
 export const useAppSettings = () => {
@@ -98,6 +100,7 @@ export const useAppSettings = () => {
     error,
     loadSettings,
     saveSettings,
-    companyName: settings?.companyName || 'X Produçoes e Eventos'
+    companyName: settings?.companyName || 'X Produçoes e Eventos',
+    googleReviewUrl: settings?.googleReviewUrl ?? null
   };
 };

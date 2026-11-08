@@ -226,6 +226,7 @@ export const KitDetailPage = () => {
         description={kit.description || `Aluguel de ${kit.name} em Belo Horizonte. Kit completo para festas e eventos.`}
         image={kit.imageUrl}
         jsonLd={jsonLd}
+        noindex={kit.status === 'INACTIVE'}
       />
 
       {/* Mesmo cartão das páginas de equipamento e serviço (antes: card-glass translúcido). */}
@@ -368,7 +369,8 @@ export const KitDetailPage = () => {
         <TrustBenefits
           items={[
             { icon: Package, iconColor: 'success', title: 'Kit Completo e Testado', description: `Todos os itens do combo revisados e configurados juntos antes da ${fulfillment === 'CLIENT_PICKUP' ? 'retirada' : 'entrega'}.` },
-            { icon: Shield, iconColor: 'info', title: 'Compatibilidade Garantida', description: 'Equipamentos do kit já testados em conjunto — sem surpresas na hora da montagem.' },
+            // P20 (decisão do dono de 08/11/2026): sem promessa absoluta ("Compatibilidade Garantida").
+            { icon: Shield, iconColor: 'info', title: 'Testado em Conjunto', description: 'Os equipamentos do kit são testados juntos antes de sair para o evento.' },
             // Lote 13: o kit de retirada não tem entrega; o benefício fala da retirada. Decisão do dono de 08/11/2026:
             // o "Entrega Ágil" prometia o material "sempre no horário"; o kit de entrega fala do horário combinado.
             fulfillment === 'CLIENT_PICKUP'

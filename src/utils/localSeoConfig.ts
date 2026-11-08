@@ -39,7 +39,7 @@ A qualidade do som é o que define a energia da sua festa. Na **X-Produções**,
 *   **Microfones Sem Fio:** Tecnologia UHF para evitar interferências.
 *   **Técnico de Som:** Profissional para montagem e operação durante o evento (opcional).
 
-Nossos equipamentos são revisados semanalmente para garantir **zero falhas** no seu grande dia.
+Nossos equipamentos são revisados antes de cada evento.
     `,
     benefits: [
       "Equipamentos de marcas líderes (JBL, Yamaha)",
@@ -79,7 +79,7 @@ Trabalhamos com projetos personalizados de iluminação arquitetural para valori
       "Projetos personalizados em 3D",
       "Equipamentos LED de baixo consumo",
       "Variedade de cores e efeitos",
-      "Instalação segura e certificada"
+      "Instalação feita pela equipe técnica"
     ],
     faq: [
       {

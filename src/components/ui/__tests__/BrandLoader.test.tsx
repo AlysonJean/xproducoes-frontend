@@ -10,6 +10,16 @@ vi.mock('@lottiefiles/dotlottie-react', () => ({
 
 // Auditoria do painel: o .lottie era pedido 8 vezes em paralelo, uma por instância do player
 // (cada card carregando no painel tem um BrandLoader) — sem cache, porque saem ao mesmo tempo.
+// D8b (lote 14): o arquivo vem do build (?url), com hash no nome, servido de /assets com cache de 1 ano.
+import brandLottieUrl from '../../../assets/animations/Logo-xproducoes-eventos.lottie?url';
+
+describe('BrandLoader — o .lottie vem do build, não de /animations', () => {
+  it('a URL é a do import ?url, fora da pasta /animations', () => {
+    expect(brandLottieUrl).toMatch(/Logo-xproducoes-eventos.*\.lottie$/);
+    expect(brandLottieUrl.startsWith('/animations/')).toBe(false);
+  });
+});
+
 describe('BrandLoader — um download do .lottie para todas as instâncias', () => {
   const fetchMock = vi.fn();
 
@@ -32,7 +42,7 @@ describe('BrandLoader — um download do .lottie para todas as instâncias', () 
       expect(players.every((p) => p.getAttribute('data-bytes') === '16')).toBe(true);
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith('/animations/Logo-xproducoes-eventos.lottie');
+    expect(fetchMock).toHaveBeenCalledWith(brandLottieUrl);
   });
 
   it('se o download falhar, o player volta a buscar sozinho pelo src (não some da tela)', async () => {
@@ -41,6 +51,6 @@ describe('BrandLoader — um download do .lottie para todas as instâncias', () 
     render(<BrandLoader size="sm" />);
 
     const player = await screen.findByTestId('lottie');
-    await vi.waitFor(() => expect(player.getAttribute('data-src')).toBe('/animations/Logo-xproducoes-eventos.lottie'));
+    await vi.waitFor(() => expect(player.getAttribute('data-src')).toBe(brandLottieUrl));
   });
 });

@@ -20,6 +20,8 @@ import { SEO } from '../components/SEO';
 import { asArray } from '../utils/normalize';
 import { logger } from '../utils/logger';
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from '../data/site';
+import { useSettings } from '../contexts/SettingsContext';
+import { GoogleReviewLink } from '../components/ui/GoogleReviewLink';
 
 // Achado (auditoria do design system): os brilhos usavam `animate-pulse-slow` e a onda sonora do
 // hero usava a classe `sound-bar` — nenhuma das duas existe (120 divs de altura 0 no DOM). Os
@@ -42,6 +44,7 @@ const SectionEyebrow = ({ children }: { children: ReactNode }) => (
 const SectionDivider = () => <div className="w-24 h-1 bg-primary mx-auto rounded-full mb-6" aria-hidden="true" />;
 
 export const HomePage = () => {
+  const { googleReviewUrl } = useSettings();
   interface ReviewItem {
     id: string;
     rating: number;
@@ -164,7 +167,7 @@ export const HomePage = () => {
             Locação de Som, Luz e LED em BH
           </h1>
           <p className="text-lg sm:text-xl lg:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto font-light leading-relaxed">
-            Transformamos sua ideia em realidade com equipamentos de alta performance e tecnologia de ponta para experiências sensoriais inesquecíveis.
+            Transformamos sua ideia em realidade com equipamentos profissionais de som e luz para o seu evento.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link to="/briefing" className={buttonVariants({ size: 'lg', className: 'w-full sm:w-auto rounded-full' })}>
@@ -295,18 +298,20 @@ export const HomePage = () => {
         )}
 
         {/* Depoimentos */}
-        {(reviewsLoading || reviews.length > 0) && (
+        {/* P20: com o link do Perfil da Empresa, a seção aparece também sem depoimentos, com o convite para avaliar. */}
+        {(reviewsLoading || reviews.length > 0 || googleReviewUrl) && (
           <section className="relative">
             <div className="text-center mb-16">
               <SectionEyebrow>Depoimentos</SectionEyebrow>
               <h2 className="text-3xl sm:text-4xl font-bold mb-4">Vozes da Nossa Comunidade</h2>
               <SectionDivider />
+              <GoogleReviewLink url={googleReviewUrl} className="mt-4" />
             </div>
             {reviewsLoading ? (
               <div className="flex justify-center py-24">
                 <BrandLoader size={80} label="Carregando depoimentos..." />
               </div>
-            ) : (
+            ) : reviews.length === 0 ? null : (
               <Grid columns={{ sm: 1, md: 2, lg: 3 }} gap={8}>
                 {reviews.map((review) => (
                   <TestimonialCard

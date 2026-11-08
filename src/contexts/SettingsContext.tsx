@@ -9,6 +9,7 @@ import { logger } from '../utils/logger';
 
 interface SettingsContextType {
   companyName: string;
+  googleReviewUrl: string | null;
   setCompanyName: (name: string) => void;
   loading: boolean;
   error: string | null;
@@ -20,6 +21,7 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const {
     companyName,
+    googleReviewUrl,
     loading,
     error,
     saveSettings: saveAppSettings
@@ -59,6 +61,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   return (
     <SettingsContext.Provider value={{
       companyName: localCompanyName,
+      googleReviewUrl,
       setCompanyName,
       loading,
       error,

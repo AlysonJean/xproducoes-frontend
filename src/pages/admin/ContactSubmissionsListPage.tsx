@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Mail, 
   Trash2, 
@@ -16,6 +17,8 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import type { ContactSubmission } from '../../types/types';
+import { contactProposalPrefill, contactWhatsAppReplyHref } from '../../utils/contactFormBlock';
+import { buttonVariants } from '@/components/ui/Button';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { 
@@ -42,6 +45,7 @@ type ReadFilter = 'all' | 'unread' | 'read';
 
 export const ContactSubmissionsListPage = () => {
   const { addNotification } = useNotifications();
+  const navigate = useNavigate();
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -306,7 +310,27 @@ export const ContactSubmissionsListPage = () => {
                       </div>
                     </div>
 
-                    <div className="flex flex-row lg:flex-col gap-2 flex-shrink-0 self-end lg:self-start">
+                    <div className="flex flex-row flex-wrap lg:flex-col gap-2 flex-shrink-0 self-end lg:self-start">
+                      {/* D24 (aprovada em 02/11/2026): responder pelo WhatsApp do formulário (link simples, sem o evento do
+                          GA, D7) e levar os dados do contato para a Proposta Rápida pelo estado da navegação (nada na URL). */}
+                      {contactWhatsAppReplyHref(sub) && (
+                        <a
+                          href={contactWhatsAppReplyHref(sub) as string}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={buttonVariants({ variant: 'success', size: 'sm', className: 'gap-2 font-bold' })}
+                        >
+                          <MessageSquare className="h-4 w-4" /> Responder no WhatsApp
+                        </a>
+                      )}
+                      <Button
+                        onClick={() => navigate('/admin/orcamentos/novo', { state: { fromContact: contactProposalPrefill(sub) } })}
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 font-bold"
+                      >
+                        <TrendingUp className="h-4 w-4" /> Transformar em proposta
+                      </Button>
                       {!sub.isRead && (
                         <Button
                           onClick={() => handleMarkAsRead(sub.id)}

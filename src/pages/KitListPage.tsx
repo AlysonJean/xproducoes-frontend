@@ -12,7 +12,7 @@ import { transformKit } from '../utils/transformKit';
 import { logger } from '../utils/logger';
 
 const PAGE_TITLE = 'Kits Completos';
-const PAGE_DESCRIPTION = 'Soluções prontas com o melhor custo-benefício para seu evento.';
+const PAGE_DESCRIPTION = 'Combos prontos de equipamentos para o seu evento.';
 
 export const KitListPage = () => {
   const [kits, setKits] = useState<Kit[]>([]);

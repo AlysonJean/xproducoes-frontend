@@ -3,10 +3,11 @@ export interface Guide {
   title: string;
   excerpt: string;
   coverImage: string;
+  // P20 (aprovada em 02/11/2026): os guias são assinados pela equipe. Os autores eram fictícios ("Carlos Som",
+  // "Ana Luz"), com foto de banco de rostos.
   author: {
     name: string;
     role: string;
-    avatar: string;
   };
   date: string;
   readTime: string;
@@ -21,9 +22,8 @@ export const GUIDES: Guide[] = [
     excerpt: 'Descubra a potência correta, tipos de caixas e o que não pode faltar na sonorização da sua festa.',
     coverImage: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&q=80&w=1920',
     author: {
-      name: 'Carlos Som',
-      role: 'Engenheiro de Áudio',
-      avatar: 'https://i.pravatar.cc/150?u=carlos'
+      name: 'Equipe X Produções',
+      role: 'Equipe técnica'
     },
     date: '2024-02-01',
     readTime: '5 min',
@@ -50,7 +50,7 @@ Nada pior do que o microfone falhar na hora do "Sim". Opte sempre por microfones
 
 > **Dica de Ouro:** Sempre tenha um microfone com fio de backup. Baterias acabam, cabos não.
 
-Na X-Produções, todos os nossos kits de casamento já incluem redundância para garantir zero falhas.
+Na hora de montar o pedido, vale incluir um microfone reserva.
     `
   },
   {
@@ -59,9 +59,8 @@ Na X-Produções, todos os nossos kits de casamento já incluem redundância par
     excerpt: 'Veja como transformar um salão simples em um ambiente luxuoso apenas usando luzes.',
     coverImage: 'https://images.unsplash.com/photo-1504196606672-aef5c9cefc92?auto=format&fit=crop&q=80&w=1920',
     author: {
-      name: 'Ana Luz',
-      role: 'Lighting Designer',
-      avatar: 'https://i.pravatar.cc/150?u=ana'
+      name: 'Equipe X Produções',
+      role: 'Equipe técnica'
     },
     date: '2024-01-28',
     readTime: '3 min',

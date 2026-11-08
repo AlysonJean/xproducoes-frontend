@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import brandLottieUrl from '../../assets/animations/Logo-xproducoes-eventos.lottie?url';
 
 type LoaderSize = 'sm' | 'md' | 'lg' | 'xl' | number;
 
@@ -17,7 +18,10 @@ interface BrandLoaderProps {
 // Um download do .lottie para todas as instâncias. Com `src`, cada player baixava o arquivo
 // sozinho — o painel admin, com vários cards carregando juntos, pedia 8 vezes em paralelo
 // (sem cache, porque as requisições saem ao mesmo tempo). Falhou: libera para tentar de novo.
-const BRAND_LOTTIE_URL = '/animations/Logo-xproducoes-eventos.lottie';
+// D8b (aprovada em 02/11/2026): o arquivo entra pelo build (?url), com um hash no nome, e vai para /assets, onde o
+// navegador guarda por 1 ano e só baixa de novo quando o arquivo muda. Antes ficava em /animations, com o nome fixo,
+// e a regra geral do vercel.json anulava o cache longo.
+const BRAND_LOTTIE_URL = brandLottieUrl;
 let brandLottieBytes: Promise<ArrayBuffer> | null = null;
 
 function loadBrandLottie(): Promise<ArrayBuffer> {

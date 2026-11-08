@@ -13,6 +13,35 @@ const CANONICAL_DOMAIN = 'https://www.xproducoeseeventos.com.br';
 //
 // react-helmet-async aplica as tags no <head> real via efeito colateral no cliente —
 // em jsdom (ambiente do RTL) isso realmente acontece, então verificamos o <head> real.
+// D23 (decisão do dono de 08/11/2026): a página do item inativo continua abrindo, mas sai do Google.
+describe('SEO — noindex', () => {
+  afterEach(() => {
+    cleanup();
+    document.head.querySelectorAll('meta, script[type="application/ld+json"], link[rel="canonical"]').forEach((el) => el.remove());
+  });
+
+  it('com noindex: meta robots "noindex, follow" e sem o JSON-LD da página', async () => {
+    render(
+      <HelmetProvider>
+        <SEO title="Caixa velha" noindex jsonLd={{ '@type': 'Product', name: 'Caixa velha' }} />
+      </HelmetProvider>
+    );
+    await waitFor(() => expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, follow'));
+    const ld = document.head.querySelector('script[type="application/ld+json"]')?.textContent ?? '';
+    expect(ld).not.toContain('Product');
+  });
+
+  it('sem noindex: nada de meta robots, e o JSON-LD da página vai junto', async () => {
+    render(
+      <HelmetProvider>
+        <SEO title="Caixa ativa" jsonLd={{ '@type': 'Product', name: 'Caixa ativa' }} />
+      </HelmetProvider>
+    );
+    await waitFor(() => expect(document.head.querySelector('script[type="application/ld+json"]')?.textContent ?? '').toContain('Product'));
+    expect(document.head.querySelector('meta[name="robots"]')).toBeNull();
+  });
+});
+
 describe('SEO - og:image padrão absoluto (PNG real) e domínio canônico no JSON-LD', () => {
   afterEach(() => {
     cleanup();

@@ -23,6 +23,11 @@ export const INSTAGRAM_HANDLE = '@x_producoeseventos';
 // @xproducoeseventos.com.br (com um "e" só), que não é o domínio da empresa.
 export const SUPPORT_EMAIL = 'suporte@xproducoeseeventos.com.br';
 
+// P20 (decisão do dono de 08/11/2026, a partir da resposta de 03/11): o selo, o rodapé e o contato diziam "Desde 2015"
+// e "Mais de 10 anos de experiência", mas o CNPJ é de 2024. A frase fala da trajetória do dono, não da empresa. Uma
+// fonte só: a próxima troca é aqui.
+export const EXPERIENCE_SINCE = 'Experiência em eventos desde 2015';
+
 /** Título da aba: "Página | X Produções", sem duplicar o sufixo quando a página já o traz. */
 export function buildPageTitle(title: string): string {
   const normalized = title.toLowerCase().replace(/-/g, ' ');

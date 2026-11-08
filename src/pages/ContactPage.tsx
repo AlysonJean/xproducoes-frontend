@@ -11,6 +11,7 @@ import {
   COMPANY_ADDRESS_LINE,
   COMPANY_CITY_LINE,
   COMPANY_CNPJ,
+  EXPERIENCE_SINCE,
   SUPPORT_EMAIL,
   formatPhoneDisplay,
 } from '../data/site';
@@ -174,7 +175,7 @@ export const ContactPage = () => {
                   <h3 className="font-semibold text-foreground mb-1">Empresa Registrada</h3>
                   <p className="text-muted-foreground text-sm font-mono">{COMPANY_CNPJ}</p>
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                    Mais de 10 anos de experiência no mercado de eventos
+                    {EXPERIENCE_SINCE}
                   </p>
                 </div>
               </div>

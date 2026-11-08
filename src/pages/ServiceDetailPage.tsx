@@ -152,6 +152,7 @@ export const ServiceDetailPage = () => {
         title={service.name}
         description={service.description || `Contrate ${service.name} para seu evento.`}
         image={service.imageUrl || undefined}
+        noindex={service.status === 'INACTIVE'}
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "Service",
@@ -285,9 +286,10 @@ export const ServiceDetailPage = () => {
         {/* Benefícios */}
         <TrustBenefits
           items={[
-            { icon: User, iconColor: 'success', title: 'Equipe Profissional', description: 'Técnicos especializados e experientes para garantir o sucesso absoluto do seu evento.' },
-            { icon: Shield, iconColor: 'info', title: 'Garantia de Qualidade', description: 'Comprometimento total com a entrega do serviço conforme o planejado.' },
-            { icon: Zap, iconColor: 'primary', title: 'Suporte Integrado', description: 'Serviços pensados para trabalhar em harmonia perfeita com nossos equipamentos.' },
+            // P20 (decisão do dono de 08/11/2026): sem promessa absoluta ("sucesso absoluto", "Garantia de Qualidade").
+            { icon: User, iconColor: 'success', title: 'Equipe Profissional', description: 'Técnicos experientes para cuidar da parte técnica do seu evento.' },
+            { icon: Shield, iconColor: 'info', title: 'Serviço Combinado', description: 'O serviço é feito conforme o combinado na proposta.' },
+            { icon: Zap, iconColor: 'primary', title: 'Suporte Integrado', description: 'Serviços pensados para trabalhar junto com nossos equipamentos.' },
           ]}
         />
 

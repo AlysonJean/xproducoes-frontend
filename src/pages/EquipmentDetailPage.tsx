@@ -170,6 +170,7 @@ export const EquipmentDetailPage = () => {
         description={equipment.description || `Aluguel de ${equipment.name} em Belo Horizonte. Equipamento profissional para eventos.`}
         image={equipment.imageUrl}
         jsonLd={productSchema}
+        noindex={equipment.status === 'INACTIVE'}
       />
 
       <div className="bg-card p-6 md:p-8 rounded-2xl shadow-2xl border border-border">
@@ -280,9 +281,10 @@ export const EquipmentDetailPage = () => {
         {/* Benefícios */}
         <TrustBenefits
           items={[
-            { icon: Shield, iconColor: 'success', title: 'Equipamento Revisado', description: 'Testados rigorosamente antes de cada entrega para garantir zero falhas.' },
+            // P20 (decisão do dono de 08/11/2026): sem promessa absoluta ("zero falhas", "sempre no horário").
+            { icon: Shield, iconColor: 'success', title: 'Equipamento Revisado', description: 'Testado antes de cada entrega.' },
             { icon: Package, iconColor: 'info', title: 'Suporte Especializado', description: 'Nossa equipe técnica disponível para auxiliar na configuração se necessário.' },
-            { icon: Zap, iconColor: 'primary', title: 'Entrega Ágil', description: 'Logística otimizada para garantir que o material chegue sempre no horário.' },
+            { icon: Zap, iconColor: 'primary', title: 'Entrega no Horário Combinado', description: 'A equipe leva o equipamento no horário combinado, antes do evento.' },
           ]}
         />
 

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { existsSync } from 'node:fs';
 import vercelConfig from '../../vercel.json';
 
 // Achado (revisão antes do deploy): a regra geral "/(.*)" do vercel.json manda
@@ -27,6 +28,23 @@ function effectiveHeaders(path: string): Record<string, string> {
 }
 
 describe('vercel.json — Cache-Control efetivo por caminho', () => {
+  // D8b (aprovada em 02/11/2026): a regra geral vinha depois da de /assets e, para a mesma chave, vale a última que
+  // casou — o cache de 1 ano dos arquivos com hash nunca valia (o navegador revalidava tudo). A geral vem primeiro.
+  it('arquivos do build (/assets, com hash no nome) ficam 1 ano no navegador, com os cabeçalhos de segurança', () => {
+    for (const path of ['/assets/index-abc123.js', '/assets/Logo-xproducoes-eventos-abc123.lottie']) {
+      const headers = effectiveHeaders(path);
+      expect(headers['cache-control']).toBe('public, max-age=31536000, immutable');
+      expect(headers['x-frame-options']).toBe('DENY');
+      expect(headers['x-content-type-options']).toBe('nosniff');
+    }
+    expect(effectiveHeaders('/')['cache-control']).toBe('s-maxage=3600, stale-while-revalidate=86400');
+  });
+
+  it('nada mais aponta para /animations (o .lottie foi para o build)', () => {
+    expect(JSON.stringify(vercelConfig)).not.toContain('/animations');
+    expect(existsSync(new URL('../../public/animations', import.meta.url))).toBe(false);
+  });
+
   it('respostas da API nunca ficam em cache compartilhado', () => {
     for (const path of ['/api/v1/auth/me', '/api/v1/bookings/b1', '/api/v1/csrf-token']) {
       const cacheControl = effectiveHeaders(path)['cache-control'];

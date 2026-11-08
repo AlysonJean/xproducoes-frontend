@@ -88,9 +88,9 @@ export const GuideDetailPage = () => {
         <div className="mt-16 p-8 bg-muted/30 rounded-2xl border border-border flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
            {authorInitial('w-16 h-16 text-2xl')}
            <div>
-             <h2 className="font-bold text-lg text-foreground mb-1">Sobre o Autor</h2>
+             <h2 className="font-bold text-lg text-foreground mb-1">Quem escreve</h2>
              <p className="text-muted-foreground">
-               {guide.author.name} é {guide.author.role} e colabora com a X Produções trazendo dicas técnicas para eventos.
+               Os guias são escritos pela equipe técnica da X Produções, com dicas práticas para eventos.
              </p>
            </div>
         </div>

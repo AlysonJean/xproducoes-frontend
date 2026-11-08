@@ -18,7 +18,7 @@ const PAGE_DESCRIPTION = 'Explore nossos trabalhos realizados e se inspire para 
 const PortfolioSEO = () => (
   <SEO
     title="Portfólio de Eventos"
-    description="Veja fotos de casamentos, shows e eventos corporativos realizados com a estrutura da X Produções. Qualidade comprovada em Belo Horizonte."
+    description="Veja fotos de casamentos, shows e eventos corporativos realizados com a estrutura da X Produções em Belo Horizonte."
   />
 );
 

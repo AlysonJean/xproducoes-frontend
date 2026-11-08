@@ -8,7 +8,7 @@ export const COMPANY_INFO = {
   name: 'X-Produções',
   url: 'https://www.xproducoeseeventos.com.br',
   logo: 'https://www.xproducoeseeventos.com.br/xproducoes-logo.png',
-  description: 'Referência em aluguel de som, luz, painel de LED e estruturas para eventos em Belo Horizonte e região.',
+  description: 'Aluguel de som, luz, painel de LED e estruturas para eventos em Belo Horizonte e região.',
   address: {
     // Achado: rua e CEP eram placeholders ("Belo Horizonte", "30000-000") publicados para o Google.
     // CEP real não confirmado — fica de fora em vez de inventado.
