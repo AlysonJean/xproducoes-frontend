@@ -89,11 +89,25 @@ describe('P14 parte 2 — textos de WhatsApp de cada etapa', () => {
     expect(texto).not.toMatch(/cadastro|painel|http/);
   });
 
-  it('o nome da conta vale quando a reserva não traz nome; cancelamento e equipe a caminho mantêm o texto de antes, com o código inteiro', () => {
+  it('o nome da conta vale quando a reserva não traz nome', () => {
     expect(requestReceivedWhatsAppText({ ...RESERVA, clientName: null })).toMatch(/^Olá, Conta!/);
-    expect(bookingCancelledWhatsAppText(RESERVA)).toBe(
-      'Olá, Ana Souza. Informamos que sua reserva #XP-ANA-20271220-2200-AB1 foi CANCELADA em nosso sistema. Qualquer dúvida, estamos à disposição.',
-    );
-    expect(crewOnTheWayWhatsAppText(SEM_NADA)).toBe('Olá, Cliente! Nossa equipe operacional já está A CAMINHO para o evento #XP-BRUNO-1. Até breve!');
+  });
+
+  // Decisão do dono de 08/11/2026: cancelamento e equipe a caminho no tom das outras etapas. Antes: "Olá, Ana Souza.
+  // Informamos que sua reserva #XP-... foi CANCELADA em nosso sistema..." e "...já está A CAMINHO para o evento #XP-...".
+  it('cancelamento e equipe a caminho: primeiro nome, código inteiro sem "#", sem maiúsculas', () => {
+    expect(bookingCancelledWhatsAppText(RESERVA)).toBe([
+      'Olá, Ana. Sua reserva XP-ANA-20271220-2200-AB1 foi cancelada.',
+      'Se quiser remarcar ou tiver alguma dúvida, é só responder esta mensagem.',
+    ].join('\n'));
+    expect(bookingCancelledWhatsAppText(SEM_NADA).split('\n')[0]).toBe('Olá. Sua reserva XP-BRUNO-1 foi cancelada.');
+    expect(bookingCancelledWhatsAppText({ ...RESERVA, clientName: null })).toMatch(/^Olá, Conta\./);
+
+    expect(crewOnTheWayWhatsAppText(RESERVA)).toBe('Olá, Ana! Nossa equipe já está a caminho do seu evento "Formatura da Ana".\nAté já!');
+    expect(crewOnTheWayWhatsAppText(SEM_NADA)).toBe('Olá! Nossa equipe já está a caminho do seu evento.\nAté já!');
+
+    for (const texto of [bookingCancelledWhatsAppText(RESERVA), crewOnTheWayWhatsAppText(RESERVA)]) {
+      expect(texto).not.toMatch(/#|CANCELADA|CAMINHO|Souza|em nosso sistema/);
+    }
   });
 });

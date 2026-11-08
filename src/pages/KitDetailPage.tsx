@@ -369,10 +369,11 @@ export const KitDetailPage = () => {
           items={[
             { icon: Package, iconColor: 'success', title: 'Kit Completo e Testado', description: `Todos os itens do combo revisados e configurados juntos antes da ${fulfillment === 'CLIENT_PICKUP' ? 'retirada' : 'entrega'}.` },
             { icon: Shield, iconColor: 'info', title: 'Compatibilidade Garantida', description: 'Equipamentos do kit já testados em conjunto — sem surpresas na hora da montagem.' },
-            // Lote 13: o kit de retirada não tem entrega; o benefício fala da retirada.
+            // Lote 13: o kit de retirada não tem entrega; o benefício fala da retirada. Decisão do dono de 08/11/2026:
+            // o "Entrega Ágil" prometia o material "sempre no horário"; o kit de entrega fala do horário combinado.
             fulfillment === 'CLIENT_PICKUP'
               ? { icon: Zap, iconColor: 'primary', title: 'Retirada Combinada', description: 'Você busca o kit pronto para usar, no horário combinado com a equipe.' }
-              : { icon: Zap, iconColor: 'primary', title: 'Entrega Ágil', description: 'Logística otimizada para garantir que o material chegue sempre no horário.' },
+              : { icon: Zap, iconColor: 'primary', title: 'Entrega no Horário Combinado', description: 'A equipe leva e monta o kit no horário combinado, antes do evento.' },
           ]}
         />
 

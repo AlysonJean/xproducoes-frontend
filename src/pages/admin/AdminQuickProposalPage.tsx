@@ -136,6 +136,8 @@ export const AdminQuickProposalPage = () => {
   const [quotingFreight, setQuotingFreight] = useState(false);
   // Ids das linhas que o botão Frete pôs da última vez (frete, pedágio ou "Frete a combinar"): o próximo clique as troca.
   const freightLineIds = useRef<string[]>([]);
+  // Id da linha que cada botão Técnico pôs da última vez (chave: o id do serviço, ou "manual" no item à mão).
+  const technicianLineIds = useRef<Record<string, string>>({});
 
   // Form State - Cliente
   const [clientType, setClientType] = useState<'registered' | 'manual'>('manual');
@@ -226,11 +228,11 @@ export const AdminQuickProposalPage = () => {
   // Lote 13: os serviços do botão Técnico (marcados "Pode acompanhar o evento todo" e ativos).
   const technicianServices = useMemo(() => services.filter(isWholeEventService), [services]);
 
-  const addItemToProposal = (type: ProposalItem['type'], item: Equipment | Kit | Service) => {
+  const catalogLine = (type: ProposalItem['type'], item: Equipment | Kit | Service): ProposalItem => {
     // Kit: as "horas incluídas no preço" (minimumRentalDuration), a hora extra e o tipo vão para a conta do
     // kit (kitPriceLine), que monta a descrição com as horas (decisões do dono de 06/11).
     const catalogKit = item as Kit;
-    const newItem: ProposalItem = {
+    return {
       id: Math.random().toString(36).substr(2, 9),
       type,
       sourceId: item.id,
@@ -265,24 +267,38 @@ export const AdminQuickProposalPage = () => {
           }
         : {}),
     };
-    setItems(prev => [...prev, newItem]);
+  };
+
+  const addItemToProposal = (type: ProposalItem['type'], item: Equipment | Kit | Service) => {
+    setItems(prev => [...prev, catalogLine(type, item)]);
     addNotification({ type: 'success', title: 'Item adicionado', message: item.name });
   };
 
   // Q12 (respostas de 03/11): técnico, montagem e frete são cobrados à parte, como itens; frete dentro de
   // BH entra como item de R$ 0. Decisão de 06/11: a hora extra do kit sem valor cadastrado entra como item, à
   // mão; a do kit com valor cadastrado já vem na linha do kit (lote 13).
+  const customLine = (description: string): ProposalItem => ({
+    id: Math.random().toString(36).substr(2, 9),
+    type: 'CUSTOM',
+    description,
+    quantity: 1,
+    unitPrice: 0,
+    discount: 0,
+    totalPrice: 0
+  });
+
   const addCustomItem = (description = 'Novo Serviço/Item') => {
-    const newItem: ProposalItem = {
-      id: Math.random().toString(36).substr(2, 9),
-      type: 'CUSTOM',
-      description,
-      quantity: 1,
-      unitPrice: 0,
-      discount: 0,
-      totalPrice: 0
-    };
-    setItems(prev => [...prev, newItem]);
+    setItems(prev => [...prev, customLine(description)]);
+  };
+
+  // Decisão do dono de 08/11/2026: clicar de novo em Técnico troca a linha que esse botão pôs da última vez, mesmo
+  // editada, como no Frete, em vez de repetir o técnico (o 2º clique criava outra linha igual). Dois técnicos:
+  // quantidade 2 na linha. Com mais de um serviço marcado, cada botão troca só a própria linha; o técnico posto pela
+  // busca do catálogo fica como está.
+  const replaceTechnicianLine = (button: string, line: ProposalItem) => {
+    const previous = technicianLineIds.current[button];
+    technicianLineIds.current[button] = line.id;
+    setItems((prev) => [...prev.filter((item) => item.id !== previous), line]);
   };
 
   const updateItem = (id: string, field: keyof ProposalItem, value: string | number) => {
@@ -776,12 +792,15 @@ export const AdminQuickProposalPage = () => {
                        o evento todo", o botão põe esse serviço, cobrado pelas horas do evento (um botão por serviço quando
                        há mais de um); sem nenhum, o item à mão de antes. */}
                    {technicianServices.length === 0 ? (
-                     <Button variant="outline" size="xs" onClick={() => addCustomItem('Técnico')} leftIcon={<Plus className="h-3 w-3" />}>
+                     <Button variant="outline" size="xs" onClick={() => replaceTechnicianLine('manual', customLine('Técnico'))} leftIcon={<Plus className="h-3 w-3" />}>
                        Técnico
                      </Button>
                    ) : (
                      technicianServices.map((svc) => (
-                       <Button key={svc.id} variant="outline" size="xs" onClick={() => addItemToProposal('SERVICE', svc)} leftIcon={<Plus className="h-3 w-3" />}>
+                       <Button key={svc.id} variant="outline" size="xs" onClick={() => {
+                         replaceTechnicianLine(svc.id, catalogLine('SERVICE', svc));
+                         addNotification({ type: 'success', title: 'Item adicionado', message: svc.name });
+                       }} leftIcon={<Plus className="h-3 w-3" />}>
                          {technicianServices.length === 1 ? 'Técnico' : svc.name}
                        </Button>
                      ))

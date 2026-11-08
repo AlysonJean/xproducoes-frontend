@@ -65,7 +65,8 @@ describe('Páginas públicas do kit — horas incluídas, hora extra e tipo', ()
     expect(screen.getByText(/^4 h incluídas no preço · hora extra: R\$\s50,00$/)).toBeInTheDocument();
     expect(screen.getByText('Retirada e montagem pelo cliente')).toBeInTheDocument();
     expect(screen.getByText('Você retira o kit na X Produções, em Belo Horizonte, monta no local e devolve depois do evento.')).toBeInTheDocument();
-    expect(screen.queryByText('Entrega Ágil')).not.toBeInTheDocument();
+    expect(screen.queryByText('Entrega no Horário Combinado')).not.toBeInTheDocument();
+    expect(screen.getByText('Retirada Combinada')).toBeInTheDocument();
     expect(screen.getByText(/configurados juntos antes da retirada/)).toBeInTheDocument();
   });
 
@@ -75,7 +76,11 @@ describe('Páginas públicas do kit — horas incluídas, hora extra e tipo', ()
     expect(screen.getByText('Entrega e montagem pela equipe')).toBeInTheDocument();
     expect(screen.getByText('A equipe da X Produções leva o kit ao local do evento, monta e busca depois. Se preferir, um técnico fica durante todo o evento, cobrado à parte.')).toBeInTheDocument();
     expect(screen.queryByText(/h incluídas/)).not.toBeInTheDocument();
-    expect(screen.getByText('Entrega Ágil')).toBeInTheDocument();
+    // Decisão do dono de 08/11/2026: o "Entrega Ágil" prometia o material "sempre no horário".
+    expect(screen.getByText('Entrega no Horário Combinado')).toBeInTheDocument();
+    expect(screen.getByText('A equipe leva e monta o kit no horário combinado, antes do evento.')).toBeInTheDocument();
+    expect(screen.queryByText('Entrega Ágil')).not.toBeInTheDocument();
+    expect(screen.queryByText(/sempre no horário/)).not.toBeInTheDocument();
   });
 
   it('horas incluídas sem valor de hora extra: só as horas', async () => {

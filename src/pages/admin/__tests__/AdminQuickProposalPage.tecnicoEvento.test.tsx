@@ -160,3 +160,74 @@ describe('Proposta Rápida — botão Técnico com o serviço que acompanha o ev
     expect(precoDaLinha()).toBe('0');
   });
 });
+
+// Decisão do dono de 08/11/2026 (conferência do lote 13: "clicar duas vezes em Técnico cria duas linhas; no Frete, a
+// linha é trocada"): o 2º clique troca a linha que o botão pôs, mesmo editada, como o Frete. Dois técnicos: quantidade 2.
+describe('Proposta Rápida — clicar de novo em Técnico troca a linha, não repete', { timeout: 20000 }, () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
+  });
+
+  const descricoes = () => (screen.getAllByLabelText('Descrição do item') as HTMLInputElement[]).map((i) => i.value);
+
+  it('troca a linha do técnico (mesmo editada) e não repete, nem com clique duplo; as outras linhas ficam', async () => {
+    renderPage([DJ, TECNICO]);
+    await catalogoCarregado('Técnico de Som e Operação Profissional');
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar DJ Profissional' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
+    fireEvent.change(screen.getAllByLabelText('Qtd')[1], { target: { value: '3' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
+    preencher('2027-01-10T18:00', '2027-01-11T00:00');
+
+    expect(descricoes()).toEqual(['DJ Profissional', 'Técnico de Som e Operação Profissional']);
+    const corpo = await corpoDoPost();
+    expect(corpo.items.map((i) => [i.description, i.quantity, i.totalPrice])).toEqual([
+      ['DJ Profissional', 1, 800],
+      ['Técnico de Som e Operação Profissional (6 h de evento: 3 h incluídas + 3 h a mais)', 1, 600],
+    ]);
+  });
+
+  it('o técnico posto pela busca do catálogo fica; o botão troca só a linha que ele pôs', async () => {
+    renderPage([TECNICO]);
+    await catalogoCarregado('Técnico de Som e Operação Profissional');
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar Técnico de Som e Operação Profissional' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
+
+    expect(descricoes()).toEqual(['Técnico de Som e Operação Profissional', 'Técnico de Som e Operação Profissional']);
+  });
+
+  it('dois serviços marcados: cada botão troca só a própria linha', async () => {
+    renderPage([TECNICO, LUZ]);
+    await catalogoCarregado('Técnico de Iluminação');
+    fireEvent.click(screen.getByRole('button', { name: 'Técnico de Iluminação' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Técnico de Som e Operação Profissional' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Técnico de Iluminação' }));
+
+    expect(descricoes()).toEqual(['Técnico de Som e Operação Profissional', 'Técnico de Iluminação']);
+  });
+
+  it('sem serviço marcado: o Técnico à mão também troca a linha, e o valor digitado volta a zero', async () => {
+    renderPage([DJ]);
+    await catalogoCarregado('DJ Profissional');
+    fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
+    fireEvent.change(screen.getByLabelText('Preço unit.'), { target: { value: '200' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
+
+    expect(descricoes()).toEqual(['Técnico']);
+    expect(precoDaLinha()).toBe('0');
+  });
+
+  it('remover a linha e clicar de novo põe o técnico outra vez', async () => {
+    renderPage([TECNICO]);
+    await catalogoCarregado('Técnico de Som e Operação Profissional');
+    fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
+    fireEvent.click(screen.getByRole('button', { name: /Remover/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
+
+    expect(descricoes()).toEqual(['Técnico de Som e Operação Profissional']);
+  });
+});

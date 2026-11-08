@@ -121,13 +121,18 @@ export const proposalPdfWhatsAppText = (b: StageBooking): string => {
   ].filter(Boolean).join('\n');
 };
 
-// Avisos que acompanham a troca de status na ficha (textos de antes, só trazidos para cá).
-const fullName = (b: Pick<StageBooking, 'clientName' | 'client'>) => b.clientName?.trim() || b.client?.user?.name?.trim() || 'Cliente';
+// Avisos que acompanham a troca de status na ficha. Decisão do dono de 08/11/2026: no tom das outras etapas (primeiro
+// nome, código sem "#", sem maiúsculas), no lugar dos textos antigos ("foi CANCELADA em nosso sistema", "A CAMINHO").
 
 /** Cancelamento da reserva. */
-export const bookingCancelledWhatsAppText = (b: StageBooking): string =>
-  `Olá, ${fullName(b)}. Informamos que sua reserva #${formatBookingCode(b.id)} foi CANCELADA em nosso sistema. Qualquer dúvida, estamos à disposição.`;
+export const bookingCancelledWhatsAppText = (b: StageBooking): string => {
+  const name = clientFirstName(b);
+  return [
+    `${name ? `Olá, ${name}.` : 'Olá.'} Sua reserva ${formatBookingCode(b.id)} foi cancelada.`,
+    'Se quiser remarcar ou tiver alguma dúvida, é só responder esta mensagem.',
+  ].join('\n');
+};
 
 /** Equipe a caminho do evento. */
 export const crewOnTheWayWhatsAppText = (b: StageBooking): string =>
-  `Olá, ${fullName(b)}! Nossa equipe operacional já está A CAMINHO para o evento #${formatBookingCode(b.id)}. Até breve!`;
+  [`${greeting(b)} Nossa equipe já está a caminho do seu evento${quotedTitle(b)}.`, 'Até já!'].join('\n');
