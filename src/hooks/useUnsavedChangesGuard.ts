@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { clearOpenDrafts } from './useFormDraft';
 
 // Achado (relato do usuário): fechar um modal de criação/edição (clique fora, Esc, ou o
 // próprio botão "Cancelar") sempre descartava o formulário na hora, sem confirmação — um
@@ -22,6 +23,8 @@ export function useUnsavedChangesGuard(isDirty: boolean) {
   );
 
   const confirmDiscard = useCallback(() => {
+    // Descartar é jogar fora: o rascunho do formulário aberto sai junto (ver clearOpenDrafts).
+    clearOpenDrafts();
     setIsConfirmOpen(false);
     pendingCloseRef.current?.();
     pendingCloseRef.current = null;
