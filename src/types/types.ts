@@ -69,6 +69,8 @@ export interface Client {
   companySize?: string;
   taxId?: string;
   isVip?: boolean;
+  /** D8c: data do pedido de exclusão adiado (reserva futura ou pagamento pendente); null sem pedido. */
+  deletionScheduledAt?: string | null;
     address?: unknown;
   jobTitle?: string;
   department?: string;

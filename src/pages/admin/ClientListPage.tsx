@@ -60,8 +60,8 @@ const SORT_OPTIONS = [
 // Mesmo critério do card "Clientes VIP" (gasto acumulado).
 const VIP_SPENT_THRESHOLD = 5000;
 
-// Mensagem do backend (axios) quando houver; senão, um texto genérico. O backend recusa (409)
-// cliente com reservas e diz quantas são.
+// Mensagem do backend (axios) quando houver; senão, um texto genérico. O backend recusa (409) o perfil de
+// cliente de uma conta da equipe que tem reservas e diz quantas são.
 const apiErrorMessage = (err: unknown, fallback: string) => {
   const data = (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data;
   return data?.message || data?.error || fallback;
@@ -174,12 +174,22 @@ export const ClientListPage: React.FC = () => {
     if (!clientToDelete) return;
     try {
       setIsDeleting(true);
-      await deleteClient(clientToDelete);
-      addNotification({
-        type: 'success',
-        title: 'Cliente excluído',
-        message: 'O cliente foi removido.',
-      });
+      const result = await deleteClient(clientToDelete);
+      // D8c (aprovada em 02/11/2026), parte 2: o servidor diz se o cliente foi apagado, anonimizado ou se a exclusão
+      // ficou agendada (reserva confirmada por acontecer ou pagamento pendente).
+      if (result?.outcome === 'postponed') {
+        addNotification({
+          type: 'warning',
+          title: 'Exclusão agendada',
+          message: result.message || 'O cliente tem reserva por acontecer ou pagamento pendente: a exclusão fica para depois.',
+        });
+      } else {
+        addNotification({
+          type: 'success',
+          title: 'Cliente excluído',
+          message: result?.message || 'O cliente foi removido.',
+        });
+      }
       setIsDeleteModalOpen(false);
     } catch (err) {
       addNotification({
@@ -417,7 +427,11 @@ export const ClientListPage: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                            {/* D8c: pedido de exclusão adiado (reserva futura ou pagamento pendente). */}
+                            {client.deletionScheduledAt && <Badge variant="warning">Exclusão agendada</Badge>}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <span className="text-sm text-foreground">{new Date(client.createdAt || '').toLocaleDateString('pt-BR')}</span>
@@ -500,13 +514,14 @@ export const ClientListPage: React.FC = () => {
         cancelText="Continuar Editando"
       />
 
-      {/* A mensagem antiga prometia "cache de auditoria por 5 anos" — retenção que não existe no sistema. */}
+      {/* A mensagem antiga prometia "cache de auditoria por 5 anos" — retenção que não existe no sistema.
+          D8c (aprovada em 02/11/2026), parte 2: o "Excluir cliente" segue a regra do "Excluir minha conta". */}
       <ConfirmModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
         title="Excluir cliente?"
-        message="O cliente será removido da base. Cliente com reservas não pode ser excluído. Esta ação não pode ser desfeita."
+        message="Cliente sem reservas é apagado por completo. Com reservas, a conta é anonimizada: saem nome, e-mail, telefone e os outros dados pessoais, e as reservas contratadas ficam só com o que a contabilidade precisa. Com reserva confirmada por acontecer ou pagamento pendente, a exclusão fica agendada para depois. A anonimização não pode ser desfeita."
         variant="danger"
         isLoading={isDeleting}
         confirmText="Excluir"

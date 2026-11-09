@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import {
   User,
   Lock,
@@ -558,6 +559,17 @@ const CollaboratorSettingsPage: React.FC = () => {
                 </li>
                 <li>No Roteiro, você vê o que precisa para trabalhar: endereço, horários, contato do local, rider, tarefas e o seu cachê. Dados e valores do cliente não aparecem.</li>
               </ul>
+            </SimpleCard>
+            {/* D8c (aprovada em 02/11/2026), parte 2: baixar os dados e excluir a conta ficam na página LGPD, a mesma
+                do cliente (a exclusão fica adiada enquanto houver escala ativa num evento futuro ou pagamento pendente). */}
+            <SimpleCard title="Seus dados (LGPD)">
+              <p className="text-sm text-foreground">
+                Para baixar uma cópia dos seus dados ou excluir a sua conta, use a{' '}
+                <Link to="/lgpd" className="font-semibold text-primary underline-offset-4 hover:underline">
+                  página LGPD
+                </Link>
+                .
+              </p>
             </SimpleCard>
           </CollaboratorTabPanel>
         )}

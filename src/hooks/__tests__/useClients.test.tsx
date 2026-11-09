@@ -31,3 +31,39 @@ describe('useClients.fetchClients — todas as páginas', () => {
     expect(clientAPI.getAll).toHaveBeenCalledWith({ industry: 'eventos', page: 1, pageSize: 100 });
   });
 });
+
+// D8c (aprovada em 02/11/2026), parte 2: o "Excluir cliente" pode apagar, anonimizar ou deixar para depois (202). O
+// interceptor do axios entrega só o data: { outcome, until, message }.
+describe('useClients.deleteClient — resultado do servidor', () => {
+  const lista = { data: [{ id: 'c1', name: 'Ana' }, { id: 'c2', name: 'Bia' }] };
+  beforeEach(() => {
+    clientAPI.getAll.mockReset();
+    clientAPI.delete.mockReset();
+  });
+
+  it('anonimizado ou apagado: sai da lista e devolve o texto do servidor', async () => {
+    clientAPI.getAll.mockResolvedValueOnce(lista);
+    clientAPI.delete.mockResolvedValueOnce({ data: { outcome: 'anonymized', message: 'Cliente anonimizado.' } });
+    const { result } = renderHook(() => useClients());
+    await act(async () => { await result.current.fetchClients(); });
+
+    let resposta: unknown;
+    await act(async () => { resposta = await result.current.deleteClient('c1'); });
+
+    expect(resposta).toEqual({ outcome: 'anonymized', message: 'Cliente anonimizado.' });
+    expect(result.current.clients.map((c) => c.id)).toEqual(['c2']);
+  });
+
+  it('adiado: continua na lista, com a marca de exclusão agendada', async () => {
+    clientAPI.getAll.mockResolvedValueOnce(lista);
+    clientAPI.delete.mockResolvedValueOnce({ data: { outcome: 'postponed', until: null, message: 'Exclusão adiada.' } });
+    const { result } = renderHook(() => useClients());
+    await act(async () => { await result.current.fetchClients(); });
+
+    await act(async () => { await result.current.deleteClient('c1'); });
+
+    expect(result.current.clients.map((c) => c.id)).toEqual(['c1', 'c2']);
+    expect(result.current.clients[0].deletionScheduledAt).toEqual(expect.any(String));
+    expect(result.current.clients[1].deletionScheduledAt).toBeUndefined();
+  });
+});

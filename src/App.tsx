@@ -112,6 +112,8 @@ const WarrantyPage = lazy(() => import('./pages/WarrantyPage').then((m) => ({ de
 const CookiesPage = lazy(() => import('./pages/CookiesPage').then((m) => ({ default: m.CookiesPage })));
 const LicensesPage = lazy(() => import('./pages/LicensesPage').then((m) => ({ default: m.LicensesPage })));
 const LGPDPage = lazy(() => import('./pages/LGPDPage').then((m) => ({ default: m.LGPDPage })));
+// D8c (aprovada em 02/11/2026), parte 2: confirmação do "Excluir minha conta" pelo link do e-mail (#token=...).
+const AccountDeletionConfirmPage = lazy(() => import('./pages/AccountDeletionConfirmPage'));
 const HelpPage = lazy(() => import('./pages/HelpPage').then((m) => ({ default: m.HelpPage })));
 const DataDeletionStatusPage = lazy(() => import('./pages/DataDeletionStatusPage').then((m) => ({ default: m.DataDeletionStatusPage })));
 const CityLandingPage = lazy(() => import('./pages/CityLandingPage').then((m) => ({ default: m.CityLandingPage })));
@@ -200,7 +202,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // de marketing do site — o cabeçalho fixo cobria o topo da tela de envio. O aviso de cookies fica.
   // P15 (aprovada em 02/11/2026): a página da proposta (/proposta e o endereço antigo /proposta/<número>) também,
   // como um documento para o cliente: sem a navegação de marketing e sem o WhatsApp flutuante do site.
-  if (/^\/(participate|upload)\//.test(location.pathname) || /^\/proposta(\/|$)/.test(location.pathname)) {
+  // D8c (aprovada em 02/11/2026), parte 2: a confirmação da exclusão da conta pelo link do e-mail também.
+  if (
+    /^\/(participate|upload)\//.test(location.pathname) ||
+    /^\/proposta(\/|$)/.test(location.pathname) ||
+    /^\/lgpd\/confirmar-exclusao(\/|$)/.test(location.pathname)
+  ) {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <ScrollToTop />
@@ -288,6 +295,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/cookies" element={<CookiesPage />} />
       <Route path="/licencas" element={<LicensesPage />} />
       <Route path="/lgpd" element={<LGPDPage />} />
+      <Route path="/lgpd/confirmar-exclusao" element={<AccountDeletionConfirmPage />} />
       <Route path="/ajuda" element={<HelpPage />} />
       <Route path="/termos" element={<TermsPage />} />
       <Route path="/privacidade" element={<PrivacyPage />} />

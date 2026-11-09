@@ -10,8 +10,11 @@
 // endereços antigos que levam a ela) e o painel do freelancer (/freelancer). A equipe logada fica fora em qualquer
 // página pelo papel (hooks/useGoogleAnalytics), e as páginas com dados vão com o endereço genérico
 // (utils/analyticsPage). O React Router abre as mesmas telas com maiúsculas (/Admin/painel), daí o "i".
+// D8c (aprovada em 02/11/2026), parte 2: a confirmação da exclusão da conta pelo link do e-mail
+// (/lgpd/confirmar-exclusao#token=...) também fica fora: o link é pessoal, como o da proposta.
 const ANALYTICS_EXCLUDED_PATHS = [
   /^\/proposta(\/|$)/i,
+  /^\/lgpd\/confirmar-exclusao(\/|$)/i,
   /^\/admin(\/|$)/i,
   /^\/colaborador(\/|$)/i,
   /^\/collaborator(\/|$)/i,
