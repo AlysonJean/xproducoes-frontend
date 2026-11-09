@@ -47,6 +47,15 @@ import { useNotifications } from '../../contexts/NotificationContext';
 import { EventManagement } from '../../components/modals/EventManagement';
 import { bookingAPI, api } from '../../services/api';
 import { createAndClickAnchor } from '../../utils/dom';
+import {
+  ATTACHMENT_ACCEPT,
+  ATTACHMENT_RULE_TEXT,
+  attachmentFileProblem,
+  attachmentUploadErrorMessage,
+  bookingAttachmentFilePath,
+  openBookingAttachment,
+  uploadBookingAttachment,
+} from '../../utils/bookingAttachments';
 import { SUPPORT_EMAIL } from '../../data/site';
 import { formatBookingCode } from '../../utils/bookingCode';
 import { bookingEmail, bookingPhone, toWhatsAppNumber } from '../../utils/bookingContact';
@@ -133,9 +142,9 @@ type BookingDetails = BaseBookingDetails & {
   clientEmail?: string;
   paymentStatus?: string;
   internalNotes?: string;
+  // D21: sem url. O arquivo é privado e abre por um link de 5 minutos (openBookingAttachment).
   attachments?: Array<{
     id?: string;
-    url?: string;
     filename?: string;
     mimeType?: string;
     createdAt?: string;
@@ -682,27 +691,44 @@ export const BookingDetailPage = () => {
 
   // Anexos: o upload ficava inline no JSX; a lixeira de cada anexo não tinha ação (o backend já
   // tem DELETE /bookings/:id/attachments/:attachmentId).
+  // D21 (aprovada em 02/11/2026): cada arquivo vai direto para a reserva e fica privado (antes subia por /upload/image,
+  // público e com link eterno). Mesmas regras do cliente: JPG, PNG, WebP ou PDF até 10 MB.
   const handleUploadAttachments = async (files: FileList | null) => {
     if (!booking?.id || !files || !files.length) return;
+    const bookingId = booking.id;
+    const selected = Array.from(files);
     try {
       setUploading(true);
-      for (let i = 0; i < files.length; i++) {
-        const f = files[i];
-        const fd = new FormData();
-        fd.append('image', f);
-        fd.append('folder', 'bookings');
-        const uploadResp = await api.post('/upload/image', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-        const imageUrl = String(uploadResp.data?.imageUrl || uploadResp.data);
-        await api.post(`/bookings/${booking.id}/attachments`, { url: imageUrl, filename: f.name, mimeType: f.type });
+      let sent = 0;
+      for (const file of selected) {
+        const problem = attachmentFileProblem(file);
+        if (problem) {
+          addNotification({ type: 'error', title: `"${file.name}" não foi anexado`, message: problem });
+          continue;
+        }
+        try {
+          await uploadBookingAttachment(bookingId, file);
+          sent += 1;
+        } catch (error) {
+          addNotification({ type: 'error', title: `"${file.name}" não foi anexado`, message: attachmentUploadErrorMessage(error) });
+        }
       }
-      await fetchBooking();
-      addNotification({ type: 'success', title: 'Anexos enviados', message: 'Os arquivos foram anexados à reserva.' });
-    } catch {
-      addNotification({ type: 'error', title: 'Erro no envio', message: 'Não foi possível enviar o arquivo.' });
+      if (sent > 0) {
+        await fetchBooking();
+        addNotification({ type: 'success', title: 'Anexos enviados', message: 'Os arquivos foram anexados à reserva.' });
+      }
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  // D21: link de 5 minutos pedido no clique; a janela nasce antes da espera (senão o navegador a bloqueia).
+  const handleOpenAttachment = (attachmentId: string) => {
+    if (!booking?.id) return;
+    void openBookingAttachment(bookingAttachmentFilePath(booking.id, attachmentId)).catch(() => {
+      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível abrir o anexo. Tente novamente.' });
+    });
   };
 
   const handleDeleteAttachment = async () => {
@@ -1087,6 +1113,7 @@ export const BookingDetailPage = () => {
                   ref={fileInputRef}
                   type="file"
                   multiple
+                  accept={ATTACHMENT_ACCEPT}
                   className="hidden"
                   aria-hidden="true"
                   tabIndex={-1}
@@ -1103,41 +1130,47 @@ export const BookingDetailPage = () => {
                 </Button>
               </div>
 
+              <p className="text-xs text-muted-foreground mb-4">{ATTACHMENT_RULE_TEXT}. Só o admin e o cliente da reserva abrem.</p>
+              {/* D21: sem miniatura. O arquivo é privado (nada de <img> com endereço do Cloudinary): ícone, nome e
+                  "Abrir", que pede o link de 5 minutos. */}
               {booking.attachments && booking.attachments.length > 0 ? (
-                <Grid columns={{ sm: 2, md: 3, lg: 4 }} gap={4}>
-                  {booking.attachments.map((a) => (
-                    <div key={a.id} className="relative group overflow-hidden rounded-2xl border border-border aspect-[4/3] bg-muted/30">
-                      <img src={a.url} alt={a.filename || 'Anexo'} className="w-full h-full object-cover" />
-                      {/* Sobre foto: scrim escuro + texto branco (exceção do guia). Visível no toque e no foco. */}
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 flex items-end justify-between gap-2 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                        <p className="text-xs font-medium text-white truncate">{a.filename || 'Anexo'}</p>
-                        <div className="flex gap-2 shrink-0">
-                          <a
-                            href={a.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            title="Ver anexo em nova aba"
-                            aria-label={`Abrir ${a.filename || 'anexo'} em nova aba`}
-                            className="h-9 w-9 rounded-xl bg-white/20 hover:bg-white/40 flex items-center justify-center text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          >
-                            <ExternalLink size={16} />
-                          </a>
-                          {a.id && (
-                            <Button
-                              variant="destructive"
-                              size="icon"
-                              className="h-9 w-9"
-                              onClick={() => setAttachmentToDelete(a.id!)}
-                              aria-label={`Excluir ${a.filename || 'anexo'}`}
-                            >
-                              <Trash2 size={16} />
-                            </Button>
+                <ul className="space-y-2">
+                  {booking.attachments.map((a, idx) => (
+                    <li key={a.id ?? idx} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-muted/30 p-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <FileText className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{a.filename || 'Anexo'}</p>
+                          {a.createdAt && (
+                            <p className="text-xs text-muted-foreground">{new Date(a.createdAt).toLocaleDateString('pt-BR')}</p>
                           )}
                         </div>
                       </div>
-                    </div>
+                      {a.id && (
+                        <div className="flex shrink-0 gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenAttachment(a.id!)}
+                            leftIcon={<ExternalLink size={14} />}
+                            aria-label={`Abrir ${a.filename || 'anexo'}`}
+                          >
+                            Abrir
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="h-9 w-9"
+                            onClick={() => setAttachmentToDelete(a.id!)}
+                            aria-label={`Excluir ${a.filename || 'anexo'}`}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
+                      )}
+                    </li>
                   ))}
-                </Grid>
+                </ul>
               ) : (
                 <div className="bg-muted/30 rounded-2xl border-2 border-dashed border-border py-12 text-center">
                   <Camera className="mx-auto h-10 w-10 text-muted-foreground mb-3" />

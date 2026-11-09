@@ -19,6 +19,15 @@ import { bookingEmail, bookingPhone } from '../../utils/bookingContact';
 import { formatBookingCode } from '../../utils/bookingCode';
 import { buildBookingContactText, buildWhatsAppUrl, getWhatsAppPhone } from '../../utils/whatsapp';
 import { SUPPORT_EMAIL } from '../../data/site';
+import {
+  ATTACHMENT_ACCEPT,
+  ATTACHMENT_RULE_TEXT,
+  attachmentFileProblem,
+  attachmentUploadErrorMessage,
+  bookingAttachmentFilePath,
+  openBookingAttachment,
+  uploadBookingAttachment,
+} from '../../utils/bookingAttachments';
 
 export const BookingDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +41,7 @@ export const BookingDetailsPage = () => {
   const [proofToDelete, setProofToDelete] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileProblem, setFileProblem] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [downloadingProposal, setDownloadingProposal] = useState(false);
   const [deletingProof, setDeletingProof] = useState(false);
@@ -112,11 +122,13 @@ export const BookingDetailsPage = () => {
     setShowUploadModal(true);
   };
 
+  // D21: tipo e tamanho conferidos já na escolha, antes de enviar 10 MB à toa.
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-    }
+    if (!file) return;
+    const problem = attachmentFileProblem(file);
+    setFileProblem(problem);
+    setSelectedFile(problem ? null : file);
   };
 
   const handleUploadProof = async () => {
@@ -125,23 +137,9 @@ export const BookingDetailsPage = () => {
     try {
       setUploading(true);
 
-      // Achado (auditoria ponta a ponta): o arquivo ia em FormData direto para
-      // POST /bookings/:id/attachments, que só aceita JSON com a URL de um arquivo já enviado — todo
-      // comprovante voltava 400 ("URL do arquivo é obrigatória.") e nunca chegava à empresa. Agora é o
-      // caminho do painel admin: sobe a imagem em /upload/image e anexa a URL devolvida.
-      const formData = new FormData();
-      formData.append('image', selectedFile);
-      formData.append('folder', 'bookings');
-      const uploaded = await apiFetch<{ imageUrl?: string }>('/upload/image', {
-        method: 'POST',
-        body: formData,
-      });
-      if (!uploaded?.imageUrl) throw new Error('Upload sem URL do arquivo');
-
-      await apiFetch(`/bookings/${id}/attachments`, {
-        method: 'POST',
-        body: JSON.stringify({ url: uploaded.imageUrl, filename: selectedFile.name, mimeType: selectedFile.type }),
-      });
+      // D21 (aprovada em 02/11/2026): o arquivo vai direto para a reserva e fica privado (antes subia por
+      // /upload/image como imagem pública, com link eterno, e PDF era recusado).
+      await uploadBookingAttachment(id, selectedFile);
 
       // Atualizar a lista de comprovantes após upload
       await fetchBookingDetails();
@@ -156,17 +154,9 @@ export const BookingDetailsPage = () => {
       }
     } catch (error) {
       logger.error('Erro ao enviar comprovante:', 'BookingDetailsPage', error);
-      // Antes a falha era silenciosa: o modal só parava de girar, sem dizer o que houve.
-      // /upload tem teto de 3 envios por hora por conta (createUploadRateLimiter, no backend): nesse
-      // caso "tente novamente" enganaria — o certo é esperar.
-      const limite = error instanceof Error && /limit exceeded/i.test(error.message);
-      addNotification({
-        type: 'error',
-        title: 'Erro',
-        message: limite
-          ? 'Limite de envios atingido. Tente de novo em 1 hora.'
-          : 'Não foi possível enviar o comprovante. Tente novamente.',
-      });
+      // Antes a falha era silenciosa: o modal só parava de girar, sem dizer o que houve. O envio tem teto
+      // de 3 por hora por conta: nesse caso "tente novamente" enganaria — o certo é esperar.
+      addNotification({ type: 'error', title: 'Erro', message: attachmentUploadErrorMessage(error) });
     } finally {
       setUploading(false);
     }
@@ -175,10 +165,21 @@ export const BookingDetailsPage = () => {
   const cancelUpload = () => {
     setShowUploadModal(false);
     setSelectedFile(null);
+    setFileProblem(null);
     const fileInput = document.getElementById('proof-file-input') as HTMLInputElement;
     if (fileInput) {
       fileInput.value = '';
     }
+  };
+
+  // D21: o comprovante abre por um link de 5 minutos que a API dá a quem é dono da reserva. A janela é
+  // aberta dentro do clique (openBookingAttachment), senão o navegador a bloquearia depois da espera.
+  const handleOpenProof = (attachmentId: string, download: boolean) => {
+    if (!id) return;
+    void openBookingAttachment(bookingAttachmentFilePath(id, attachmentId), { download }).catch((error: unknown) => {
+      logger.error('Erro ao abrir comprovante:', 'BookingDetailsPage', error);
+      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível abrir o comprovante. Tente novamente.' });
+    });
   };
 
   // Achado (auditoria de produto): o gerador de proposta em PDF (jsPDF + logo/branding) só
@@ -230,6 +231,8 @@ export const BookingDetailsPage = () => {
   const pricing = bookingPricing(booking);
   // Pedido do briefing chega sem itens: o total fica zerado até a equipe preparar o orçamento.
   const hasPrice = pricing.total > 0;
+  // D21: o cliente apaga comprovante só enquanto o pagamento não foi registrado (a mesma regra do servidor).
+  const clientMayDeleteProof = booking.paymentStatus !== 'PAID' && booking.paymentStatus !== 'PARTIAL';
   // D20: texto pronto do contato com a equipe (o nome informado na reserva ou o da conta, o código inteiro
   // e a data do evento em Brasília), o mesmo no WhatsApp e no corpo do e-mail.
   const bookingCode = formatBookingCode(booking.id);
@@ -459,6 +462,11 @@ export const BookingDetailsPage = () => {
             </div>
 
             <div className="space-y-3">
+              {/* D21: com o pagamento registrado (pago ou parcial), o comprovante fica guardado com a reserva: o
+                  servidor recusa a exclusão pelo cliente e a lixeira não aparece. */}
+              {booking.attachments && booking.attachments.length > 0 && !clientMayDeleteProof && (
+                <p className="text-xs text-muted-foreground">Com o pagamento registrado, os comprovantes ficam guardados com a reserva.</p>
+              )}
               {/* Exibir comprovantes reais se existirem */}
               {booking.attachments && booking.attachments.length > 0 ? (
                 booking.attachments.map((attachment, idx) => (
@@ -475,33 +483,28 @@ export const BookingDetailsPage = () => {
                           </p>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteProof(attachment.id || `attachment-${idx}`)}
-                        className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        aria-label={`Excluir comprovante ${attachment.filename || idx + 1}`}
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden="true" />
-                      </Button>
+                      {clientMayDeleteProof && attachment.id && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteProof(attachment.id!)}
+                          className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          aria-label={`Excluir comprovante ${attachment.filename || idx + 1}`}
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                      )}
                     </div>
-                    <div className="flex gap-2">
-                      <a
-                        href={attachment.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={buttonVariants({ size: 'sm', className: 'flex-1' })}
-                      >
-                        Visualizar
-                      </a>
-                      <a
-                        href={attachment.url}
-                        download={attachment.filename}
-                        className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'flex-1' })}
-                      >
-                        Baixar
-                      </a>
-                    </div>
+                    {attachment.id && (
+                      <div className="flex gap-2">
+                        <Button size="sm" className="flex-1" onClick={() => handleOpenProof(attachment.id!, false)}>
+                          Visualizar
+                        </Button>
+                        <Button variant="secondary" size="sm" className="flex-1" onClick={() => handleOpenProof(attachment.id!, true)}>
+                          Baixar
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (
@@ -584,8 +587,8 @@ export const BookingDetailsPage = () => {
         showCloseButton={!uploading}
       >
         <div className="space-y-4">
-          {/* Só imagem: o upload (/upload/image) recusa PDF (uploadService.mediaFilter aceita imagem e vídeo). */}
-          <p className="text-sm text-muted-foreground">Selecione a imagem do comprovante (JPG ou PNG) para enviar.</p>
+          {/* D21: os mesmos tipos e o mesmo teto que o servidor confere (pelo conteúdo do arquivo). */}
+          <p className="text-sm text-muted-foreground">Selecione o arquivo do comprovante: {ATTACHMENT_RULE_TEXT}.</p>
           <div>
             <label htmlFor="proof-file-input" className="block text-sm font-medium text-foreground mb-2">
               Arquivo
@@ -593,13 +596,18 @@ export const BookingDetailsPage = () => {
             <input
               id="proof-file-input"
               type="file"
-              accept=".jpg,.jpeg,.png"
+              accept={ATTACHMENT_ACCEPT}
               onChange={handleFileSelect}
               className="w-full px-3 py-2 border-2 border-border rounded-lg bg-card text-foreground text-sm file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1 file:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             {selectedFile && (
               <p className="text-sm text-muted-foreground mt-1 break-all">
                 Arquivo selecionado: {selectedFile.name}
+              </p>
+            )}
+            {fileProblem && (
+              <p className="text-sm text-destructive mt-1" role="alert">
+                {fileProblem}
               </p>
             )}
           </div>

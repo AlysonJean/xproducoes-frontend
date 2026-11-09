@@ -25,6 +25,13 @@ import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
 import { NotifyClientCheckbox } from '../bookings/NotifyClientCheckbox';
 import { notifyClientPayload } from '../../utils/notifyClient';
 import { useEquipmentPriceUnit } from '../../hooks/usePricingRules';
+import {
+  ATTACHMENT_ACCEPT,
+  ATTACHMENT_RULE_TEXT,
+  attachmentFileProblem,
+  attachmentUploadErrorMessage,
+  uploadBookingAttachment,
+} from '../../utils/bookingAttachments';
 
 const idSchema = z.union([
   z.string().uuid(),
@@ -332,33 +339,17 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
 
   const onSubmit = async (data: BookingFormData) => {
     setServerError(null);
+    // D21 (aprovada em 02/11/2026): o comprovante vira anexo privado da reserva, enviado depois que ela é salva
+    // (antes subia por /upload/image, público e com link eterno, e o PDF era recusado sem aviso). Tipo e tamanho
+    // são conferidos antes de salvar, para não criar a reserva e só então recusar o arquivo.
+    const proofFile = isAdmin ? ((data.paymentProof as FileList | undefined)?.[0] ?? null) : null;
+    const proofProblem = proofFile ? attachmentFileProblem(proofFile) : null;
+    if (proofProblem) {
+      setServerError(`Comprovante de pagamento: ${proofProblem}`);
+      return;
+    }
     try {
       setSaving(true);
-      
-      let paymentProofUrl: string | undefined;
-      
-      // Se for admin e há arquivo de comprovante, fazer upload primeiro
-      if (isAdmin && data.paymentProof && (data.paymentProof as FileList).length > 0) {
-        try {
-          const formData = new FormData();
-          formData.append('image', (data.paymentProof as FileList)[0]);
-          formData.append('folder', 'payment-proofs');
-          
-          const uploadResponse = await apiFetch('/upload/image', {
-            method: 'POST',
-            body: formData,
-          });
-          
-          paymentProofUrl = (uploadResponse as { imageUrl?: string })?.imageUrl;
-        } catch (uploadError) {
-          logger.error('Erro no upload do comprovante:', 'AdminBookingForm', uploadError);
-          addNotification({ 
-            type: 'error', 
-            title: 'Erro no upload', 
-            message: 'Falha ao fazer upload do comprovante. A reserva será criada sem o comprovante.' 
-          });
-        }
-      }
 
       // Na edição não vão cliente cadastrado, kit, equipamentos nem status: nada disso muda por aqui
       // (o servidor não grava), e o formulário não os oferece.
@@ -395,9 +386,6 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
         if (data.finalValue) {
           payload.totalPrice = data.finalValue;
         }
-        if (paymentProofUrl) {
-          payload.paymentProofUrl = paymentProofUrl;
-        }
         // Na edição, "Não informado" limpa (null); na criação, só manda se escolhido.
         if (data.paymentStatus || isEditing) {
           payload.paymentStatus = data.paymentStatus || null;
@@ -406,12 +394,29 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
       
       if (!isEditing && data.status === 'CONFIRMED') Object.assign(payload, notifyClientPayload(notifyClient));
 
+      let savedId: string | undefined;
       if (isEditing && initialData) {
         await apiFetch(`/bookings/${initialData.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+        savedId = initialData.id;
         addNotification({ type: 'success', title: 'Reserva atualizada', message: 'As alterações foram salvas.' });
       } else {
-        await apiFetch(`/bookings`, { method: 'POST', body: JSON.stringify(payload) });
+        const created = await apiFetch<{ id?: string }>(`/bookings`, { method: 'POST', body: JSON.stringify(payload) });
+        savedId = created?.id;
         addNotification({ type: 'success', title: 'Reserva criada', message: 'Reserva criada com sucesso.' });
+      }
+
+      // A reserva já foi salva: se o comprovante falhar, ela fica como está e o aviso diz onde anexar de novo.
+      if (proofFile && savedId) {
+        try {
+          await uploadBookingAttachment(savedId, proofFile);
+        } catch (uploadError) {
+          logger.error('Erro no envio do comprovante:', 'AdminBookingForm', uploadError);
+          addNotification({
+            type: 'error',
+            title: 'Comprovante não enviado',
+            message: `${attachmentUploadErrorMessage(uploadError)} A reserva foi salva: anexe o comprovante na ficha, em "Anexos e comprovantes".`,
+          });
+        }
       }
       clearDraft();
       onSuccess();
@@ -617,9 +622,9 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
                 type="file"
                 label="Comprovante de Pagamento"
                 {...register('paymentProof')}
-                accept="image/*,.pdf"
+                accept={ATTACHMENT_ACCEPT}
                 error={errors.paymentProof ? String(errors.paymentProof.message) : undefined}
-                description="Anexe o comprovante de pagamento (imagem ou PDF)"
+                description={`Opcional. ${ATTACHMENT_RULE_TEXT}. Vai para "Anexos e comprovantes" da reserva depois de salvar.`}
               />
               <Select
                 label="Situação do Pagamento"

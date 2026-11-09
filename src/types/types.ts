@@ -605,9 +605,9 @@ export interface BookingDetails {
   status?: string;
   deliveryStatus?: string;
   paymentStatus?: string;
+  // D21: sem url. O arquivo é privado e abre por um link de 5 minutos (utils/bookingAttachments).
   attachments?: Array<{
     id?: string;
-    url?: string;
     filename?: string;
     mimeType?: string;
     createdAt?: string;
@@ -629,7 +629,6 @@ export interface BookingDetails {
   pricing?: BookingPricing | null;
   // D11: quando a equipe enviou a proposta ("Enviar proposta" da ficha); null sem envio.
   proposal?: { sentAt: string | null } | null;
-  paymentProofUrl?: string;
   eventLocation?: string;
   location?: string;
   street?: string;

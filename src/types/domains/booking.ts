@@ -137,7 +137,6 @@ export interface BookingDetails {
   totalPrice?: number | string;
   discount?: number;
   serviceValue?: number;
-  paymentProofUrl?: string;
   street?: string;
   neighborhood?: string;
   city?: string;
@@ -173,9 +172,9 @@ export interface BookingDetails {
     };
     payments?: unknown[];
   }>;
+  // D21: sem url. O arquivo é privado e abre por um link de 5 minutos (utils/bookingAttachments).
   attachments?: Array<{
     id?: string;
-    url?: string;
     filename?: string;
     mimeType?: string;
     createdAt?: string;
