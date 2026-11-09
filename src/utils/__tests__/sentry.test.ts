@@ -78,3 +78,37 @@ describe('initSentry - URLs enviadas ao Sentry', () => {
     expect(requestData.url).toBe('/api/v1/auth/verify-email?token=abc123');
   });
 });
+
+// D7 (aprovada em 02/11/2026): "tiro IP e e-mail do Sentry do site". O init ia com sendDefaultPii: true (o SDK guarda o
+// IP de quem teve o erro) e o objeto do app tinha um setUserContext, que mandaria id, e-mail, nome e papel de quem
+// estava logado (nenhuma tela o chamava).
+describe('initSentry - sem IP nem usuário', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    init.mockClear();
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('o SDK é iniciado com sendDefaultPii: false', async () => {
+    vi.stubEnv('VITE_SENTRY_DSN', 'https://dsn.test/1');
+    vi.stubEnv('VITE_SENTRY_ENVIRONMENT', 'production');
+    const { initSentry } = await import('../sentry');
+    initSentry();
+
+    expect(init).toHaveBeenCalledTimes(1);
+    expect((init.mock.calls[0][0] as BrowserOptions).sendDefaultPii).toBe(false);
+  });
+
+  it('o objeto do app não tem mais setUserContext, com ou sem DSN', async () => {
+    vi.stubEnv('VITE_SENTRY_DSN', 'https://dsn.test/1');
+    vi.stubEnv('VITE_SENTRY_ENVIRONMENT', 'production');
+    const comDsn = (await import('../sentry')).initSentry();
+    expect(comDsn).not.toHaveProperty('setUserContext');
+
+    vi.resetModules();
+    vi.stubEnv('VITE_SENTRY_DSN', '');
+    const semDsn = (await import('../sentry')).initSentry();
+    expect(semDsn).not.toHaveProperty('setUserContext');
+    expect(semDsn).toHaveProperty('captureException');
+  });
+});

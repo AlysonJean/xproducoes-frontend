@@ -1,15 +1,10 @@
 // src/components/Footer.tsx
 
-import { useState } from 'react';
 import { MapPinIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
-import { Button, Input } from './ui/StandardComponents';
 import { useSettings } from '../contexts/SettingsContext';
 import { Link, useLocation } from 'react-router-dom';
 import ThemedLogo from './ui/ThemedLogo';
 import { getWhatsAppPhone, openWhatsApp } from '../utils/whatsapp';
-import { useModal } from './modals/ModalContext';
-import { newsletterService } from '../services/newsletterService';
-import { logger } from '../utils/logger';
 import {
   COMPANY_ADDRESS_LINE,
   COMPANY_CITY_LINE,
@@ -104,10 +99,6 @@ const socialButtonClass =
 
 export const Footer = () => {
   const { companyName, googleReviewUrl } = useSettings();
-  const [email, setEmail] = useState('');
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { openModal } = useModal();
 
   const { pathname } = useLocation();
 
@@ -119,81 +110,14 @@ export const Footer = () => {
 
   const whatsAppPhone = getWhatsAppPhone();
 
-  const handleNewsletterSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-
-    setLoading(true);
-    try {
-      await newsletterService.subscribe(email);
-      setIsSubscribed(true);
-      setEmail('');
-      openModal('alert', {
-        title: 'Sucesso!',
-        message: 'Você foi inscrito na nossa newsletter. Fique atento ao seu e-mail!',
-        type: 'success'
-      });
-      setTimeout(() => setIsSubscribed(false), 3000);
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { error?: string } }; message?: string };
-      logger.error('Newsletter error:', 'Footer', err);
-      openModal('alert', {
-        title: 'Atenção',
-        message: err.response?.data?.error || err.message || 'Erro ao realizar inscrição. Tente novamente.',
-        type: 'warning'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleOpenFooterWhatsApp = () => {
     openWhatsApp(whatsAppPhone, 'Olá! Gostaria de saber mais sobre locação de equipamentos.');
   };
 
   return (
     <footer className="bg-card border-t border-border/50 mt-auto">
-      {/* Newsletter Section */}
-      <div className="border-b border-border/30">
-        <div className="container mx-auto px-6 py-16">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-              Fique por dentro das novidades
-            </h2>
-            <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Receba ofertas exclusivas, dicas de eventos e lançamentos de novos equipamentos
-            </p>
-
-            {/* Campo do design system (antes: <input> cru com estilo próprio). */}
-            <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row sm:items-start gap-4 max-w-md mx-auto">
-              <div className="flex-1 text-left">
-                <Input
-                  type="email"
-                  id="footer-newsletter-email"
-                  name="email"
-                  autoComplete="email"
-                  aria-label="E-mail para receber a newsletter"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Seu melhor e-mail"
-                  size="lg"
-                  required
-                />
-              </div>
-              <Button
-                type="submit"
-                variant={isSubscribed ? 'success' : 'primary'}
-                size="lg"
-                disabled={isSubscribed || loading}
-                isLoading={loading}
-                className="whitespace-nowrap"
-              >
-                {loading ? 'Enviando...' : isSubscribed ? 'Inscrito!' : 'Inscrever'}
-              </Button>
-            </form>
-          </div>
-        </div>
-      </div>
+      {/* D8c (aprovada em 02/11/2026), pergunta 5: saiu o formulário "Fique por dentro das novidades". Ninguém envia
+          newsletter, e a inscrição gravava o e-mail numa lista sem envio e sem como sair. */}
 
       {/* Main Footer Content */}
       <div className="container mx-auto px-6 py-16">

@@ -1,8 +1,9 @@
 // Provider + hook(s) co-localizados de propósito (padrão oficial de Context do React) —
 // só afeta a granularidade do Fast Refresh em dev, sem efeito em produção/correção.
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
+import { revokeAnalytics } from '../utils/analyticsConsent';
 
 // Achado (auditoria): o site inicializa Google Analytics (useGoogleAnalytics.ts) para todo
 // visitante, sem nenhum consentimento prévio — CookiesPage.tsx só dizia "gerencie via seu
@@ -52,6 +53,23 @@ export const CookieConsentProvider: React.FC<{ children: ReactNode }> = ({ child
   useEffect(() => {
     if (consent === 'unset') return;
     window.localStorage.setItem(STORAGE_KEY, consent);
+  }, [consent]);
+
+  // D7 (aprovada em 02/11/2026): quando a escolha deixa de ser "aceito" (Recusar, "Gerenciar preferências" em
+  // /cookies ou a escolha feita em outra aba, que chega pelo evento storage abaixo), o GA para nesta página e os
+  // cookies _ga saem (utils/analyticsConsent). Se o GA já tinha carregado, a página recarrega uma vez só, para tirar
+  // o script da memória. Fica depois do efeito acima: a recusa já está gravada quando a página recarrega.
+  const previousConsent = useRef<CookieConsent>('unset');
+  const reloadRequested = useRef(false);
+  useEffect(() => {
+    if (previousConsent.current === 'accepted' && consent !== 'accepted') {
+      const gaWasLoaded = revokeAnalytics();
+      if (gaWasLoaded && !reloadRequested.current) {
+        reloadRequested.current = true;
+        window.location.reload();
+      }
+    }
+    previousConsent.current = consent;
   }, [consent]);
 
   // Sincroniza entre abas (mesmo padrão do ThemeContext)

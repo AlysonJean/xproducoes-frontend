@@ -57,8 +57,9 @@ export const ReviewDetailPage: React.FC = () => {
 
   return (
     <PageLayout title={`Avaliação de ${review.user?.name || 'Cliente'}`} description="Veja o que nossos clientes dizem sobre nós.">
+      {/* D7 (aprovada em 02/11/2026): a aba fica genérica; o GA manda o título da aba em todo evento da página. */}
       <SEO 
-        title={`Depoimento de ${review.user?.name || 'Cliente'}`}
+        title="Depoimento de cliente"
         description={`"${review.comment?.substring(0, 150)}..." - Confira esta avaliação sobre a X Produções.`} 
       />
       <div className="max-w-2xl mx-auto py-12 px-4">

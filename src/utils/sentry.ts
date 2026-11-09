@@ -5,7 +5,6 @@
 // importado por completo. Imports nomeados, um por símbolo realmente usado abaixo.
 import {
   init,
-  setUser,
   setTag,
   setContext,
   ErrorBoundary,
@@ -29,7 +28,6 @@ export const initSentry = () => {
     // Sentry is optional. Return a safe no-op API so callers don't need to null-check.
         const noop = () => undefined;
     return {
-      setUserContext: noop,
             ErrorBoundary: ({ children }: { children: React.ReactNode }) => children,
       ErrorFallback: SentryErrorFallback,
       captureException: noop,
@@ -47,8 +45,9 @@ export const initSentry = () => {
     // Performance Monitoring
     tracesSampleRate: SENTRY_ENVIRONMENT === 'production' ? 0.1 : 1.0,
 
-    // Send default PII (IP addresses, user info, etc.)
-    sendDefaultPii: true,
+    // D7 (aprovada em 02/11/2026): "tiro IP e e-mail do Sentry do site". Com true, o SDK guardava o IP de quem teve
+    // o erro (e o usuário, se alguém o informasse). O erro continua chegando, sem esses dados.
+    sendDefaultPii: false,
 
     // Error filtering
     beforeSend(event, hint) {
@@ -141,23 +140,9 @@ export const initSentry = () => {
     });
   }
 
-  // Set user context if available
-    const setUserContext = (user: { id?: string; email?: string; name?: string; role?: string } | null) => {
-    if (user) {
-      setUser({
-        id: user.id,
-        email: user.email,
-        username: user.name,
-        role: user.role,
-      });
-      setTag('user_role', user.role);
-    } else {
-      setUser(null);
-    }
-  };
-
+  // D7: saiu o setUserContext, que mandaria ao Sentry o id, o e-mail, o nome e o papel de quem estava logado.
+  // Nenhuma tela o chamava.
   return {
-    setUserContext,
     ErrorBoundary,
     ErrorFallback: SentryErrorFallback,
     captureException,

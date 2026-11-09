@@ -7,15 +7,15 @@
 // endereço) deve sair para terceiros.
 // D7 (aprovada em 02/11/2026): "Eu desligo o GA nas áreas /admin e /colaborador e para a equipe". Entram aqui as
 // áreas da equipe pelo endereço: o painel (/admin), a área do colaborador (/colaborador, e /collaborator, os
-// endereços antigos que levam a ela) e o painel do freelancer (/freelancer). O resto da D7 (GA desligado para a
-// equipe também nas páginas públicas, cookies apagados na recusa, conexão com o Google antes do aceite, fontes do
-// próprio site, IP e e-mail fora do Sentry) fica para o item da D7.
+// endereços antigos que levam a ela) e o painel do freelancer (/freelancer). A equipe logada fica fora em qualquer
+// página pelo papel (hooks/useGoogleAnalytics), e as páginas com dados vão com o endereço genérico
+// (utils/analyticsPage). O React Router abre as mesmas telas com maiúsculas (/Admin/painel), daí o "i".
 const ANALYTICS_EXCLUDED_PATHS = [
-  /^\/proposta(\/|$)/,
-  /^\/admin(\/|$)/,
-  /^\/colaborador(\/|$)/,
-  /^\/collaborator(\/|$)/,
-  /^\/freelancer(\/|$)/,
+  /^\/proposta(\/|$)/i,
+  /^\/admin(\/|$)/i,
+  /^\/colaborador(\/|$)/i,
+  /^\/collaborator(\/|$)/i,
+  /^\/freelancer(\/|$)/i,
 ];
 
 export const isAnalyticsExcludedPath = (pathname: string): boolean =>

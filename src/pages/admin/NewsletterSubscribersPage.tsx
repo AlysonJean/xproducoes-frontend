@@ -100,7 +100,7 @@ export const NewsletterSubscribersPage = () => {
             </div>
             <div>
               <h2 className="text-xl font-bold text-foreground">Inscritos na newsletter</h2>
-              <p className="text-sm text-muted-foreground">E-mails cadastrados no site para receber novidades.</p>
+              <p className="text-sm text-muted-foreground">E-mails cadastrados pelo antigo formulário do rodapé do site.</p>
             </div>
           </div>
 
@@ -110,6 +110,13 @@ export const NewsletterSubscribersPage = () => {
             </Button>
           </div>
         </div>
+
+        {/* D8c (aprovada em 02/11/2026), pergunta 5: o formulário saiu do rodapé e a inscrição saiu do servidor. A lista
+            fica só para consulta; apagar as inscrições antigas é decisão do dono. */}
+        <Alert
+          variant="info"
+          description="O formulário de newsletter saiu do site em novembro de 2026. Nenhuma mensagem é enviada a esta lista."
+        />
 
         {/* Indicadores */}
         <Grid columns={{ sm: 1, md: 2 }} gap={4}>
@@ -219,7 +226,7 @@ export const NewsletterSubscribersPage = () => {
               </div>
               <h3 className="text-xl font-bold text-foreground">Nenhum inscrito encontrado</h3>
               <p className="text-muted-foreground text-sm max-w-sm mx-auto mt-2">
-                {searchTerm ? 'Ajuste a busca.' : 'As inscrições feitas no site aparecem aqui.'}
+                {searchTerm ? 'Ajuste a busca.' : 'Não há inscrições antigas nesta lista.'}
               </p>
               {searchTerm && (
                 <Button variant="outline" size="sm" className="mt-6" onClick={() => setSearchTerm('')}>

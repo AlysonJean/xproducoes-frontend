@@ -93,7 +93,9 @@ const menuGroups: MenuGroup[] = [
     name: 'Comunicação',
     items: [
       { name: 'Contatos', href: '/admin/contatos', icon: Mail, description: 'Mensagens recebidas' },
-      { name: 'Newsletter', href: '/admin/newsletter', icon: Newspaper, description: 'Inscritos para novidades' },
+      // D8c (aprovada em 02/11/2026), pergunta 5: o formulário de newsletter saiu do site e nada é enviado à lista; a
+      // tela só mostra as inscrições antigas (antes: "Inscritos para novidades").
+      { name: 'Newsletter', href: '/admin/newsletter', icon: Newspaper, description: 'Inscrições antigas, só consulta' },
       // P14 (aprovada em 02/11/2026), parte 1: saiu "WhatsApp" (QR da automação não oficial, que pode banir o
       // número da empresa). Na parte 3 a tela saiu de vez; o endereço /admin/whatsapp leva ao painel.
     ],

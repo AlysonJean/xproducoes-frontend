@@ -172,13 +172,10 @@ export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageCon
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link rel="preconnect" href="https://res.cloudinary.com" />
-        <link rel="preconnect" href="https://www.googletagmanager.com" />
-        <link rel="preconnect" href="https://www.google-analytics.com" />
-        
+        <!-- D7: sem aviso de conexão para o Google Analytics: a conexão só nasce depois do aceite de cookies. -->
+
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
-        <link rel="dns-prefetch" href="https://www.google-analytics.com" />
 
         <!-- Fonts -->
         <!-- Achado (Lighthouse contra produção real): a fonte web era carregada em dois

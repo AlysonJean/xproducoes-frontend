@@ -7,14 +7,9 @@ export interface NewsletterSubscriber {
   createdAt: string;
 }
 
+// D8c (aprovada em 02/11/2026), pergunta 5: a inscrição saiu do site e do servidor (ninguém envia newsletter). Fica
+// só a leitura das inscrições antigas, na tela do painel.
 export const newsletterService = {
-  subscribe: async (email: string) => {
-    return apiFetch('/newsletter/subscribe', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    });
-  },
-
   getAllSubscribers: async (): Promise<NewsletterSubscriber[]> => {
     return apiFetch('/newsletter/subscribers');
   },
