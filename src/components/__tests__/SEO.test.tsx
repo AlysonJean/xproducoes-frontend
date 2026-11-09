@@ -81,7 +81,8 @@ describe('SEO - og:image padrão absoluto (PNG real) e domínio canônico no JSO
     const jsonLd = JSON.parse(script!.textContent || '[]');
     const localBusiness = Array.isArray(jsonLd) ? jsonLd[0] : jsonLd;
 
-    expect(localBusiness['@id']).toBe(CANONICAL_DOMAIN);
+    // Lote 14b (09/11/2026): o mesmo LocalBusiness do PageLayout, com o mesmo @id (antes eram duas empresas).
+    expect(localBusiness['@id']).toBe(`${CANONICAL_DOMAIN}#localbusiness`);
     expect(localBusiness.url).toBe(CANONICAL_DOMAIN);
   });
 });

@@ -38,7 +38,7 @@ export const ReferralCard = () => {
   // (bytes certos até a chamada de window.open) e só quebra depois da navegação real, ou
   // seja, é o servidor do WhatsApp que não lida bem com caracteres astrais nesse link.
   // Evitado aqui em vez de perseguir um bug de terceiro para um emoji decorativo.
-  const shareMessage = `Oi! Tô alugando equipamentos de som, luz e LED com a X Produções e recomendo demais! Use meu código *${stats.code}* e ganhe ${stats.discountPercent}% de desconto na sua primeira locação: ${window.location.origin}/orcamento`;
+  const shareMessage = `Oi! Tô alugando equipamentos de som, luz e estrutura com a X Produções e recomendo demais! Use meu código *${stats.code}* e ganhe ${stats.discountPercent}% de desconto na sua primeira locação: ${window.location.origin}/orcamento`;
 
   const handleCopy = async () => {
     try {

@@ -36,9 +36,13 @@ describe('schemaGenerator - contato publicado para o Google', () => {
     expect(generateOrganizationSchema().contactPoint.telephone).toBe('+5531989252272');
   });
 
-  it('endereço sem CEP inventado e só o Instagram oficial', () => {
-    expect(COMPANY_INFO.address).not.toHaveProperty('postalCode');
+  // O CEP entrou depois de confirmado pelo dono (06/11/2026); o Perfil da Empresa no Google entrou no sameAs em 09/11.
+  it('endereço com o CEP confirmado (não o de placeholder), o Instagram oficial e o Perfil no Google', () => {
+    expect(COMPANY_INFO.address.postalCode).toBe('30810-310');
     expect(COMPANY_INFO.address.streetAddress).toMatch(/Flor d'Água/);
-    expect(COMPANY_INFO.sameAs).toEqual(['https://www.instagram.com/x_producoeseventos']);
+    expect(COMPANY_INFO.sameAs).toEqual([
+      'https://www.instagram.com/x_producoeseventos',
+      'https://maps.google.com/?cid=1473271925537970059',
+    ]);
   });
 });

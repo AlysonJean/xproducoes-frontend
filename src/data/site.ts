@@ -28,6 +28,20 @@ export const SUPPORT_EMAIL = 'suporte@xproducoeseeventos.com.br';
 // fonte só: a próxima troca é aqui.
 export const EXPERIENCE_SINCE = 'Experiência em eventos desde 2015';
 
+// Horário de atendimento (decisão do dono de 09/11/2026): todos os dias, 24 horas, pelo WhatsApp, o mesmo do Perfil
+// da Empresa no Google. Antes eram três: o contato dizia "seg–sex 9h–18h, sáb 9h–15h, domingo plantão", os dados para
+// o Google diziam "seg–sex 9h–18h" e o Perfil dizia "Aberto 24 horas". Uma fonte só para o contato e o JSON-LD.
+export const OPENING_HOURS_LABEL = 'Todos os dias, 24 horas';
+export const OPENING_HOURS_SCHEMA = {
+  '@type': 'OpeningHoursSpecification',
+  dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+  opens: '00:00',
+  closes: '23:59',
+};
+
+// Perfil da Empresa no Google, pelo identificador do lugar no Maps (conferido em 09/11/2026). Vai no sameAs do JSON-LD.
+export const GOOGLE_MAPS_URL = 'https://maps.google.com/?cid=1473271925537970059';
+
 /** Título da aba: "Página | X Produções", sem duplicar o sufixo quando a página já o traz. */
 export function buildPageTitle(title: string): string {
   const normalized = title.toLowerCase().replace(/-/g, ' ');

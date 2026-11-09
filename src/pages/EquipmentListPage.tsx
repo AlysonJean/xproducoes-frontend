@@ -125,7 +125,7 @@ export const EquipmentListPage: React.FC = () => {
             (WhatsApp, Facebook etc.) via SSR via título/descrição genéricos de "carregando". */}
         <SEO
           title="Catálogo de Equipamentos de Som e Luz"
-          description="Aluguel de caixas de som, microfones, moving heads, painéis de LED e estruturas em Belo Horizonte. Equipamentos revisados e de marcas profissionais."
+          description="Aluguel de caixas de som, microfones, mesas de som, moving heads e estruturas em Belo Horizonte. Equipamentos profissionais, revisados antes de cada evento."
         />
         <div className="flex flex-col items-center justify-center min-h-[400px]">
           <BrandLoader size={140} label="Carregando catálogo..." />
@@ -152,7 +152,7 @@ export const EquipmentListPage: React.FC = () => {
     >
       <SEO 
         title="Catálogo de Equipamentos de Som e Luz" 
-        description="Aluguel de caixas de som, microfones, moving heads, painéis de LED e estruturas em Belo Horizonte. Equipamentos revisados e de marcas profissionais."
+        description="Aluguel de caixas de som, microfones, mesas de som, moving heads e estruturas em Belo Horizonte. Equipamentos profissionais, revisados antes de cada evento."
       />
       <SearchAndFilters
         searchQuery={filters.searchQuery}

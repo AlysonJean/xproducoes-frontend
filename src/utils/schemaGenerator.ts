@@ -1,18 +1,31 @@
 import { getWhatsAppPhone } from './whatsapp';
-import { COMPANY_ADDRESS_LINE, INSTAGRAM_URL } from '../data/site';
+import {
+  COMPANY_ADDRESS_LINE,
+  COMPANY_LEGAL_NAME,
+  COMPANY_POSTAL_CODE,
+  GOOGLE_MAPS_URL,
+  INSTAGRAM_URL,
+  OPENING_HOURS_SCHEMA,
+  SITE_NAME,
+} from '../data/site';
 
 export type SchemaType = 'Organization' | 'LocalBusiness' | 'Product' | 'BreadcrumbList' | 'Event' | 'WebSite';
 
 
 export const COMPANY_INFO = {
-  name: 'X-Produções',
+  // O nome do Perfil da Empresa no Google e do rodapé (o Perfil dizia "X produçõe e Eventos"; o dono corrige lá); a
+  // marca curta vai em alternateName. Era "X-Produções", com hífen, que não aparece em lugar nenhum do site.
+  name: COMPANY_LEGAL_NAME,
+  alternateName: SITE_NAME,
   url: 'https://www.xproducoeseeventos.com.br',
   logo: 'https://www.xproducoeseeventos.com.br/xproducoes-logo.png',
-  description: 'Aluguel de som, luz, painel de LED e estruturas para eventos em Belo Horizonte e região.',
+  // Conferido com o catálogo em 09/11/2026: não há painel de LED cadastrado; o dono o oferece sob consulta (parceiro).
+  description: 'Aluguel de som, luz e estruturas para eventos em Belo Horizonte e região, com painel de LED sob consulta.',
   address: {
-    // Achado: rua e CEP eram placeholders ("Belo Horizonte", "30000-000") publicados para o Google.
-    // CEP real não confirmado — fica de fora em vez de inventado.
+    // Achado: rua e CEP eram placeholders ("Belo Horizonte", "30000-000") publicados para o Google. O CEP entrou
+    // depois de confirmado pelo dono (06/11/2026).
     streetAddress: COMPANY_ADDRESS_LINE,
+    postalCode: COMPANY_POSTAL_CODE,
     addressLocality: 'Belo Horizonte',
     addressRegion: 'MG',
     addressCountry: 'BR'
@@ -26,7 +39,8 @@ export const COMPANY_INFO = {
   },
   // Achado: listava instagram.com/xproducoes, facebook.com/xproducoes e linkedin.com/company/xproducoes,
   // perfis não confirmados (o Instagram oficial é @x_producoeseventos). Fica só o perfil confirmado.
-  sameAs: [INSTAGRAM_URL],
+  // + o Perfil da Empresa no Google (Maps), conferido em 09/11/2026.
+  sameAs: [INSTAGRAM_URL, GOOGLE_MAPS_URL],
   geo: {
     latitude: -19.9167, // BH coordinates
     longitude: -43.9345
@@ -54,6 +68,7 @@ export function generateLocalBusinessSchema() {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: COMPANY_INFO.name,
+    alternateName: COMPANY_INFO.alternateName,
     image: COMPANY_INFO.logo,
     '@id': `${COMPANY_INFO.url}#localbusiness`,
     url: COMPANY_INFO.url,
@@ -66,14 +81,7 @@ export function generateLocalBusinessSchema() {
       '@type': 'GeoCoordinates',
       ...COMPANY_INFO.geo
     },
-    openingHoursSpecification: [
-      {
-        '@type': 'OpeningHoursSpecification',
-        dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-        opens: '09:00',
-        closes: '18:00'
-      }
-    ],
+    openingHoursSpecification: [OPENING_HOURS_SCHEMA],
     priceRange: COMPANY_INFO.priceRange,
     areaServed: [
       {

@@ -22,6 +22,10 @@ export interface ServiceContent {
   faq?: FAQItem[];
 }
 
+// Textos conferidos com o catálogo publicado em 09/11/2026 (decisões do dono do mesmo dia): sem marcas que não estão
+// no estoque (JBL, Yamaha, RCF) e sem citar marcas; sem laser/strobo, "5.000 pessoas", "Box Truss Q30", equipamento
+// reserva no local nem "sem cabos aparentes"; painel de LED fica sob consulta (parceiro), sem P3/P5 nem "impacto
+// garantido"; projeto de luz em 3D e microfone sem fio UHF confirmados pelo dono.
 export const TARGET_SERVICES: ServiceContent[] = [
   { 
     slug: 'aluguel-som', 
@@ -31,10 +35,10 @@ export const TARGET_SERVICES: ServiceContent[] = [
     longDescription: `
 ## Som Profissional para Seu Evento
 
-A qualidade do som é o que define a energia da sua festa. Na **X-Produções**, oferecemos sistemas de som de alta fidelidade que garantem que cada palavra do discurso e cada batida da música sejam ouvidas com clareza.
+A qualidade do som é o que define a energia da sua festa. Na **X Produções**, você encontra caixas ativas, subwoofers, mesas de som e microfones profissionais para que cada palavra do discurso e cada música sejam ouvidas com clareza.
 
 ### O que incluímos no pacote básico?
-*   **Caixas Ativas de Alta Potência:** Marcas como JBL, Yamaha ou RCF.
+*   **Caixas Ativas e Subwoofers:** caixas de 15" e subwoofers ativos, dimensionados para o local.
 *   **Mesa de Som:** Digital ou analógica, conforme a necessidade da banda ou DJ.
 *   **Microfones Sem Fio:** Tecnologia UHF para evitar interferências.
 *   **Técnico de Som:** Profissional para montagem e operação durante o evento (opcional).
@@ -42,19 +46,18 @@ A qualidade do som é o que define a energia da sua festa. Na **X-Produções**,
 Nossos equipamentos são revisados antes de cada evento.
     `,
     benefits: [
-      "Equipamentos de marcas líderes (JBL, Yamaha)",
+      "Caixas ativas, mesas digitais e microfones profissionais",
       "Técnicos disponíveis durante todo o evento",
-      "Montagem estética e sem cabos aparentes",
-      "Backup de equipamentos no local"
+      "Montagem organizada pela equipe técnica"
     ],
     faq: [
       {
         question: "O som é suficiente para quantas pessoas?",
-        answer: "Temos kits dimensionados para eventos desde 50 até 5.000 pessoas. Nossa equipe calcula a potência necessária baseada no local e público."
+        answer: "Depende do local e do número de convidados. Informe esses dados no pedido de orçamento e a equipe indica as caixas e a potência para o seu evento."
       },
       {
         question: "Vocês fornecem DJ?",
-        answer: "Trabalhamos com parceiros DJs renomados em BH, mas o foco principal é a locação dos equipamentos de som e luz."
+        answer: "Sim. O DJ Profissional está entre os nossos serviços e pode ser contratado junto com o som."
       }
     ]
   },
@@ -69,7 +72,7 @@ Nossos equipamentos são revisados antes de cada evento.
 Transforme um salão comum em um ambiente mágico. A iluminação não é apenas decoração; é a alma da festa.
 
 ### Nossas Soluções
-*   **Pista de Dança:** Moving Heads, Lasers e Strobo para agitar.
+*   **Pista de Dança:** Moving Heads e Mini Moving Spider para agitar.
 *   **Cênica:** Refletores PAR LED para colorir paredes, colunas e mesas de bolo.
 *   **Efeitos:** Máquina de fumaça, sputnik e globo espelhado.
 
@@ -84,21 +87,21 @@ Trabalhamos com projetos personalizados de iluminação arquitetural para valori
     faq: [
       {
         question: "Preciso de energia trifásica?",
-        answer: "Para kits básicos não. Apenas para grandes estruturas de painel de LED e iluminação pesada. Nossa equipe técnica avalia o local antes."
+        answer: "Para os kits do catálogo, não. Painel de LED e montagens maiores podem precisar; nossa equipe técnica avalia o local antes."
       }
     ]
   },
   { 
     slug: 'aluguel-painel-led', 
     name: 'Aluguel de Painel de LED', 
-    keywords: ['painel led p3', 'telão led', 'video wall'],
-    description: 'Painéis de LED de alta definição (P3, P5) para impacto visual garantido.'
+    keywords: ['painel de led', 'telão de led', 'video wall'],
+    description: 'Painel de LED sob consulta, conforme a data e o tamanho do espaço do evento.'
   },
   { 
     slug: 'aluguel-palco-estrutura', 
     name: 'Aluguel de Palco e Estrutura', 
     keywords: ['box truss', 'palco praticável', 'backdrop', 'tendas'],
-    description: 'Estruturas de alumínio Box Truss Q30 e palcos seguros para qualquer porte.'
+    description: 'Box truss, traves, tablado modular, tendas e backdrop para montar o espaço do seu evento.'
   }
 ];
 

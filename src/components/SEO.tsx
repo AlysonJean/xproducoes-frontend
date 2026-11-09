@@ -1,7 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { SITE_NAME, buildPageTitle } from '../data/site';
-import { getWhatsAppPhone } from '../utils/whatsapp';
+import { generateLocalBusinessSchema } from '../utils/schemaGenerator';
 
 interface SEOProps {
   title: string;
@@ -18,7 +18,7 @@ interface SEOProps {
 
 export const SEO: React.FC<SEOProps> = ({ 
   title, 
-  description = "Aluguel de som, iluminação, painel de LED e equipamentos audiovisuais para eventos em Belo Horizonte e região.",
+  description = "Aluguel de som, iluminação e estruturas para eventos em Belo Horizonte e região, com painel de LED sob consulta.",
   keywords = "aluguel de som, iluminação, painel de led, eventos, belo horizonte",
   image = "https://www.xproducoeseeventos.com.br/xproducoes-logo.png",
   url = typeof window !== 'undefined' ? window.location.href : '',
@@ -35,42 +35,9 @@ export const SEO: React.FC<SEOProps> = ({
   // Canonical URL logic: remove query params to avoid duplicate content issues
   const canonicalUrl = safeUrl.split('?')[0];
 
-  // Schema.org Local Business data
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "LocalBusiness",
-    "name": "X Produções",
-    "image": [image],
-    "@id": "https://www.xproducoeseeventos.com.br",
-    "url": "https://www.xproducoeseeventos.com.br",
-    // Achado: era +5531998522380, número diferente do WhatsApp mostrado no site. Agora sai da
-    // mesma fonte do botão de WhatsApp (VITE_WHATSAPP_PHONE, padrão (31) 98925-2272).
-    "telephone": `+${getWhatsAppPhone()}`,
-    "priceRange": "$$",
-    "address": {
-      "@type": "PostalAddress",
-      "addressLocality": "Belo Horizonte",
-      "addressRegion": "MG",
-      "addressCountry": "BR"
-    },
-    "geo": {
-      "@type": "GeoCoordinates",
-      "latitude": -19.9208, // BH Coordinates placeholder
-      "longitude": -43.9378
-    },
-    "openingHoursSpecification": {
-      "@type": "OpeningHoursSpecification",
-      "dayOfWeek": [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday"
-      ],
-      "opens": "09:00",
-      "closes": "18:00"
-    }
-  };
+  // Schema.org LocalBusiness: o mesmo do PageLayout (utils/schemaGenerator), com o mesmo @id. Antes este arquivo tinha
+  // uma cópia própria (outro @id, sem rua, horário de seg–sex) e as páginas mandavam ao Google duas empresas diferentes.
+  const structuredData = generateLocalBusinessSchema();
 
   // Logic to build a hybrid schema array (LocalBusiness + custom jsonLd from page)
   const pageJsonLd = noindex ? undefined : jsonLd;

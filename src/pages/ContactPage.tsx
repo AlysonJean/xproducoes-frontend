@@ -12,6 +12,7 @@ import {
   COMPANY_CITY_LINE,
   COMPANY_CNPJ,
   EXPERIENCE_SINCE,
+  OPENING_HOURS_LABEL,
   SUPPORT_EMAIL,
   formatPhoneDisplay,
 } from '../data/site';
@@ -108,7 +109,7 @@ export const ContactPage = () => {
     >
       <SEO 
         title="Fale Conosco - Orçamento de Som e Luz" 
-        description="Solicite seu orçamento para aluguel de som, iluminação e painel de LED. Atendimento rápido e personalizado via WhatsApp, E-mail ou Telefone."
+        description="Solicite seu orçamento para aluguel de som, iluminação, estruturas e painel de LED (sob consulta). Atendimento pelo WhatsApp todos os dias, 24 horas, e também por e-mail e telefone."
       />
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
@@ -147,7 +148,7 @@ export const ContactPage = () => {
                   <a href={`https://wa.me/${whatsAppPhone}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground text-sm hover:text-primary transition-colors">
                     {formatPhoneDisplay(whatsAppPhone)}
                   </a>
-                  <p className="text-xs text-muted-foreground mt-1">Seg-Sex, 9h às 18h | Plantão FDS</p>
+                  <p className="text-xs text-muted-foreground mt-1">{OPENING_HOURS_LABEL}</p>
                 </div>
               </div>
 
@@ -183,19 +184,11 @@ export const ContactPage = () => {
 
             {/* Horários */}
             <div className="mt-8 p-6 bg-muted/50 rounded-2xl border border-border/50">
-              <h3 className="text-sm font-bold uppercase tracking-wider mb-4 text-muted-foreground">Horários</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider mb-4 text-muted-foreground">Horário de atendimento</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex justify-between border-b border-border/50 pb-2">
-                  <span>Segunda a Sexta</span>
-                  <span className="font-medium text-foreground">9h às 18h</span>
-                </li>
-                <li className="flex justify-between border-b border-border/50 pb-2">
-                  <span>Sábado</span>
-                  <span className="font-medium text-foreground">9h às 15h</span>
-                </li>
                 <li className="flex justify-between">
-                  <span>Domingo</span>
-                  <span className="font-medium text-primary">Plantão</span>
+                  <span>Atendimento pelo WhatsApp</span>
+                  <span className="font-medium text-foreground">{OPENING_HOURS_LABEL}</span>
                 </li>
               </ul>
             </div>

@@ -147,7 +147,7 @@ export const HomePage = () => {
       <FloatingGlow />
       <SEO
         title="Aluguel de Som, Luz e LED em BH"
-        description="Locação de som, iluminação e painel de LED de alta performance em Belo Horizonte. Equipamentos profissionais para casamentos, festas e eventos corporativos."
+        description="Locação de som, iluminação e estruturas em Belo Horizonte, com painel de LED sob consulta. Equipamentos profissionais para casamentos, festas e eventos corporativos."
       />
 
       {/* Dynamic Banner Carousel */}
