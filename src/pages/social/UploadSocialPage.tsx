@@ -9,6 +9,7 @@ import { Button, buttonVariants } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
 import { cn } from '../../utils/cn';
+import { SUPPORT_EMAIL } from '../../data/site';
 
 interface WallConfig {
     name: string;
@@ -282,6 +283,16 @@ const UploadSocialPage = () => {
                     {submitError && <Alert variant="error" description={submitError} />}
 
                     <div className="pt-2">
+                        {/* D8c (aprovada em 02/11/2026): "Aviso na página de envio de fotos pelo QR", logo antes do botão:
+                            para que a foto serve, por quanto tempo fica e como pedir para tirar. A página do mural não tem
+                            rodapé, então o link para a Política de Privacidade fica aqui. */}
+                        <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
+                            Sua foto aparece no telão deste evento, com o nome e a legenda que você escrever. As fotos
+                            são apagadas 90 dias depois do evento. Se quiser tirar a sua do telão, escreva para{' '}
+                            <a href={`mailto:${SUPPORT_EMAIL}`} className="underline break-all">{SUPPORT_EMAIL}</a>.
+                            Saiba mais na{' '}
+                            <Link to="/privacidade" className="underline">Política de Privacidade</Link>.
+                        </p>
                         <Button
                             type="submit"
                             size="lg"

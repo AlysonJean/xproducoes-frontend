@@ -1,102 +1,83 @@
+import { Link } from 'react-router-dom';
 import { PageLayout } from '../components/layouts/PageLayout';
-import { getWhatsAppPhone } from '../utils/whatsapp';
-import { COMPANY_ADDRESS_LINE, COMPANY_CITY_LINE, SUPPORT_EMAIL, formatPhoneDisplay } from '../data/site';
+import { PolicyTable } from '../components/PolicyTable';
+import {
+  PRIVACY_POLICY_DESCRIPTION,
+  PRIVACY_POLICY_SECTIONS,
+  PRIVACY_POLICY_TITLE,
+  type PrivacyPolicyBlock,
+  type PrivacyPolicyLink,
+} from '../data/privacyPolicy';
 
-// Data da última revisão do TEXTO desta política. Atualize sempre que o conteúdo mudar.
-// Achado: antes era `new Date()` — a página dizia ter sido atualizada "hoje" em todo acesso.
-const LAST_UPDATED = '01/11/2026';
+// D8c (aprovada em 02/11/2026), parte 4: a página pública /privacidade, escrita a partir de src/data/privacyPolicy.ts
+// (o mesmo arranjo da Política de reserva: o texto é dado, a página só desenha). A versão anterior citava um provedor
+// de pagamento e a finalidade "personalizar a experiência", que não existem, e não trazia CNPJ, base legal, prazos,
+// serviços usados, transferência para fora do Brasil, cookies nem fotos do mural.
 
-export const PrivacyPage = () => {
-  const phone = getWhatsAppPhone();
-  return (
-    <PageLayout
-      title="Política de Privacidade"
-      description={`Última atualização: ${LAST_UPDATED}`}
-    >
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-card rounded-xl p-8 space-y-8 border border-border">
-          <section>
-            <h2 className="text-2xl font-semibold text-foreground mb-4">1. Informações que Coletamos</h2>
-            <p className="text-muted-foreground leading-relaxed mb-4">
-              Coletamos informações necessárias para fornecer nossos serviços:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
-              <li>Dados de identificação (nome, e-mail, telefone)</li>
-              <li>Dados de navegação (endereço IP, cookies, páginas visitadas)</li>
-              <li>Dados de uso (preferências, histórico de solicitações)</li>
-              <li>Dados fornecidos em formulários (mensagens, eventuais anexos)</li>
-            </ul>
-          </section>
+const linkClass = 'text-primary hover:underline underline-offset-4 break-all';
 
-          <section>
-            <h2 className="text-2xl font-semibold text-foreground mb-4">2. Como Usamos suas Informações</h2>
-            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
-              <li>Prestar e melhorar nossos serviços</li>
-              <li>Atender solicitações e comunicações</li>
-              <li>Personalizar a experiência do usuário</li>
-              <li>Cumprir obrigações legais e regulatórias</li>
-              <li>Prevenção a fraudes e segurança</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-foreground mb-4">3. Compartilhamento de Dados</h2>
-            <p className="text-muted-foreground leading-relaxed">
-              Não vendemos, alugamos ou compartilhamos suas informações pessoais com terceiros, 
-              exceto quando necessário para:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4 mt-4">
-              <li>Operacionalização de serviços (provedores de hospedagem, e-mail, pagamento)</li>
-              <li>Cumprimento de obrigações legais e solicitações de autoridades</li>
-              <li>Proteção de direitos, propriedade e segurança da empresa e usuários</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-foreground mb-4">4. Seus Direitos</h2>
-            <p className="text-muted-foreground leading-relaxed mb-4">
-              De acordo com a LGPD, você tem direito a:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
-              <li>Acessar, corrigir e atualizar seus dados</li>
-              <li>Solicitar a exclusão ou portabilidade dos dados</li>
-              <li>Revogar consentimentos</li>
-              <li>Obter informações sobre uso e compartilhamento</li>
-              <li>Reclamar junto à autoridade competente</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-foreground mb-4">5. Segurança</h2>
-            <p className="text-muted-foreground leading-relaxed">
-              Implementamos medidas técnicas e organizacionais apropriadas para proteger suas 
-              informações pessoais contra acesso não autorizado, alteração, divulgação ou destruição.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-foreground mb-4">6. Contato</h2>
-            <p className="text-muted-foreground">
-              Para exercer seus direitos ou esclarecer dúvidas, entre em contato:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4 mt-2">
-              <li>
-                E-mail:{' '}
-                <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary hover:underline underline-offset-4 break-all">
-                  {SUPPORT_EMAIL}
-                </a>
-              </li>
-              <li>
-                Telefone:{' '}
-                <a href={`tel:+${phone}`} className="text-primary hover:underline underline-offset-4">
-                  {formatPhoneDisplay(phone)}
-                </a>
-              </li>
-              <li>Endereço: {COMPANY_ADDRESS_LINE}, {COMPANY_CITY_LINE}</li>
-            </ul>
-          </section>
-        </div>
-      </div>
-    </PageLayout>
+const PolicyLinkView = ({ link }: { link: PrivacyPolicyLink }) =>
+  link.href.startsWith('/') ? (
+    <Link to={link.href} className={linkClass}>
+      {link.label}
+    </Link>
+  ) : (
+    <a href={link.href} className={linkClass}>
+      {link.label}
+    </a>
   );
+
+const Block = ({ block }: { block: PrivacyPolicyBlock }) => {
+  if (block.kind === 'paragraph') {
+    const content = (
+      <>
+        {block.text}
+        {block.link && (
+          <>
+            {' '}
+            <PolicyLinkView link={block.link} />.
+          </>
+        )}
+      </>
+    );
+    // Art. 33, VIII: a transferência do Google Analytics vem em destaque, como no aviso de cookies.
+    return block.highlight ? (
+      <p className="rounded-md border border-primary/40 bg-primary/5 p-4 font-semibold leading-relaxed text-foreground">
+        {content}
+      </p>
+    ) : (
+      <p className="text-muted-foreground leading-relaxed">{content}</p>
+    );
+  }
+  if (block.kind === 'list') {
+    return (
+      <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+        {block.items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    );
+  }
+  return <PolicyTable caption={block.caption} columns={block.columns} rows={block.rows} />;
 };
+
+export const PrivacyPage = () => (
+  <PageLayout title={PRIVACY_POLICY_TITLE} description={PRIVACY_POLICY_DESCRIPTION}>
+    <div className="max-w-4xl mx-auto">
+      <div className="bg-card rounded-xl p-5 sm:p-8 space-y-8 border border-border">
+        {PRIVACY_POLICY_SECTIONS.map((section, index) => (
+          <section key={section.id} id={section.id} aria-labelledby={`${section.id}-titulo`}>
+            <h2 id={`${section.id}-titulo`} className="text-2xl font-semibold text-foreground mb-4">
+              {index + 1}. {section.title}
+            </h2>
+            <div className="space-y-4">
+              {section.blocks.map((block, blockIndex) => (
+                <Block key={blockIndex} block={block} />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    </div>
+  </PageLayout>
+);
