@@ -18,6 +18,15 @@ import {
 import { GoogleReviewLink } from './ui/GoogleReviewLink';
 import { RESERVATION_POLICY_PATH, RESERVATION_POLICY_PUBLISHED } from '../data/reservationPolicy';
 
+// P5 (aprovada em 02/11/2026): o ano do "©" é o de Brasília. Era new Date().getFullYear(), no fuso de quem desenha: o
+// servidor do site (Vercel, em UTC) virava o ano às 21:00 de 31/12 e o navegador à meia-noite local. Das 21:00 à
+// meia-noite o HTML chegava com o ano seguinte, e o React, ao assumir a página, achava o texto diferente do que ele
+// mesmo desenhava (erro de hidratação, com a página toda redesenhada no navegador). Com o fuso fixo, servidor e
+// navegador calculam o mesmo ano. O suppressHydrationWarning do <span> do ano cobre só a virada em si: o HTML guardado
+// no cache da Vercel, feito antes da meia-noite de 31/12 e aberto depois, mantém o ano do HTML até a próxima carga,
+// sem erro.
+const COPYRIGHT_YEAR = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', year: 'numeric' });
+
 // Achado (auditoria do design system): os links "Equipamentos de Som/Luz/Acessórios" mandavam
 // `?category=sound|lighting|accessories`, mas a página de equipamentos filtra por `categoryId`
 // (ID do banco) — o filtro era ignorado e os três links abriam a mesma lista. Sem um mapeamento
@@ -191,7 +200,7 @@ export const Footer = () => {
             {/* Copyright */}
             <div className="text-center lg:text-left">
               <p className="text-sm text-muted-foreground">
-                © {new Date().getFullYear()} {COMPANY_LEGAL_NAME}. CNPJ: {COMPANY_CNPJ}
+                © <span suppressHydrationWarning>{COPYRIGHT_YEAR.format(new Date())}</span> {COMPANY_LEGAL_NAME}. CNPJ: {COMPANY_CNPJ}
               </p>
               {/* Achado (Lighthouse/axe-core contra produção real): a opacidade /70 aqui
                   reduzia o contraste de text-muted-foreground — removida. */}
