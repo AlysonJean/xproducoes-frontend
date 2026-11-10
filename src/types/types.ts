@@ -713,6 +713,10 @@ export interface BookingListItem {
   clientName?: string; // Reservas manuais sem cliente cadastrado
   clientContact?: string | null; // Contato informado na reserva (o WhatsApp da lista usa antes do cadastro)
   paymentStatus?: BookingPaymentStatus | null;
+  // P3: filtros do painel na lista de Reservas (origem=cliente, ordem=antigos, proposta=nao-enviada).
+  createdAt?: string;
+  creator?: { role: string } | null; // só o papel de quem criou (CLIENT = pedido de cliente)
+  proposalSent?: boolean; // já houve "Enviar proposta" (D11)
 }
 
 export interface ContactSubmission {

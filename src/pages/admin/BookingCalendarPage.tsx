@@ -48,6 +48,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { useCollaborators } from '@/hooks/useCollaborators';
 import { NotifyClientCheckbox } from '@/components/bookings/NotifyClientCheckbox';
 import { notifyClientPayload } from '@/utils/notifyClient';
+import { refreshAdminSummary } from '@/stores/adminSummary';
 import { logger } from '../../utils/logger';
 
 const locales = { 'pt-BR': ptBR };
@@ -517,6 +518,8 @@ export const BookingCalendarPage = () => {
         body: JSON.stringify({ ...payload, ...notifyClientPayload(confirmNotifyClient) }),
       });
       fetchCalendarBookings();
+      // P3: a reserva confirmada sai do número do menu e do cartão do painel na hora.
+      void refreshAdminSummary({ force: true });
       setConfirmOpen(false);
       setConfirmBookingId(null);
       addNotification({ type: 'success', title: 'Agenda Confirmada', message: 'Valor e equipe alocados com sucesso.' });

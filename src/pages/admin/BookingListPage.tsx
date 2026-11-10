@@ -11,6 +11,7 @@ import { normalizeString } from '../../utils/string';
 import { bookingEmail } from '../../utils/bookingContact';
 import { notifyClientPayload } from '../../utils/notifyClient';
 import { NotifyClientCheckbox } from '../../components/bookings/NotifyClientCheckbox';
+import { refreshAdminSummary } from '../../stores/adminSummary';
 import { Link, useSearchParams } from 'react-router-dom';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { AdminLayout } from '../../components/admin/AdminLayout';
@@ -46,7 +47,8 @@ import {
   Filter,
   Zap,
   MessageSquare,
-  Upload
+  Upload,
+  X
 } from 'lucide-react';
 
 // Seletores da tabela: todos os valores que o backend aceita (fonte única em utils/bookingStatus). Com
@@ -60,6 +62,34 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'all', label: 'TODOS OS STATUS' },
   ...BOOKING_STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label.toUpperCase() })),
 ];
+
+// P3 (aprovada em 02/11/2026): filtros que o cartão do painel manda pelo endereço, com as regras do resumo (GET
+// /dashboard/summary). origem=cliente: pedido criado por conta de cliente (a proposta da equipe fica de fora);
+// periodo=proximos|passado: data do evento por vir ou já passada; proposta=nao-enviada: sem "Enviar proposta"
+// registrado (D11); ordem=antigos: do pedido criado há mais tempo para o mais novo. Valor desconhecido é ignorado.
+type UrlFilterKey = 'origem' | 'periodo' | 'proposta' | 'ordem';
+const URL_FILTERS: Record<UrlFilterKey, Record<string, string>> = {
+  origem: { cliente: 'Pedidos de clientes' },
+  periodo: { proximos: 'Evento por vir', passado: 'Data já passada' },
+  proposta: { 'nao-enviada': 'Sem proposta enviada' },
+  ordem: { antigos: 'Mais antigos primeiro' },
+};
+type UrlFilters = Partial<Record<UrlFilterKey, string>>;
+
+const readUrlFilters = (params: URLSearchParams): UrlFilters => {
+  const filters: UrlFilters = {};
+  for (const key of Object.keys(URL_FILTERS) as UrlFilterKey[]) {
+    const value = params.get(key);
+    if (value && URL_FILTERS[key][value]) filters[key] = value;
+  }
+  return filters;
+};
+
+// Data de criação para a ordem "mais antigos primeiro"; sem data, vai para o fim.
+const createdTime = (booking: BookingListItem) => {
+  const time = booking.createdAt ? Date.parse(booking.createdAt) : Number.NaN;
+  return Number.isNaN(time) ? Number.POSITIVE_INFINITY : time;
+};
 
 const PAGE_TITLE = 'Gestão de Reservas';
 const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Reservas' }];
@@ -78,12 +108,23 @@ export const BookingListPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // ?status=PENDING vem do cartão "pedidos aguardando resposta" do painel (P3): a lista já abre
-  // filtrada. Valor fora das opções do filtro é ignorado.
-  const [searchParams] = useSearchParams();
-  const [filterStatus, setFilterStatus] = useState<string>(() => {
+  // filtrada. Valor fora das opções do filtro é ignorado. O endereço é a fonte do status e dos outros filtros do
+  // cartão (URL_FILTERS, etiquetas removíveis acima da tabela): mudar o status ou tirar uma etiqueta grava no
+  // endereço, e voltar, recarregar ou clicar em "Reservas" no menu mostra o que o endereço diz.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterStatus = useMemo(() => {
     const fromUrl = searchParams.get('status');
     return fromUrl && STATUS_FILTER_OPTIONS.some((o) => o.value === fromUrl) ? fromUrl : 'all';
-  });
+  }, [searchParams]);
+  const urlFilters = useMemo(() => readUrlFilters(searchParams), [searchParams]);
+  const setUrlParam = useCallback((key: string, value: string | null) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value === null) next.delete(key);
+      else next.set(key, value);
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
   const [filterPayment, setFilterPayment] = useState<string>('all');
   const [exporting, setExporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -153,6 +194,8 @@ export const BookingListPage = () => {
     setIsModalOpen(false);
     setEditingBooking(null);
     fetchBookings();
+    // P3: a edição pode mudar o status ou a data de um pedido; o número do menu e o cartão do painel se atualizam.
+    void refreshAdminSummary({ force: true });
   };
 
   const handleCancel = () => {
@@ -181,6 +224,8 @@ export const BookingListPage = () => {
       setBookings((prev) =>
         prev.map((b) => (b.id === bookingId ? { ...b, [field]: value } : b))
       );
+      // P3: o status da reserva mudou; o número do menu e o cartão do painel se atualizam na hora.
+      if (field === 'status') void refreshAdminSummary({ force: true });
       
       addNotification({
         type: 'success',
@@ -253,8 +298,25 @@ export const BookingListPage = () => {
     }
   };
 
+  const changeStatusFilter = (value: string) => setUrlParam('status', value === 'all' ? null : value);
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilterPayment('all');
+    setStartDate('');
+    setEndDate('');
+    // P3: também os filtros do endereço (status e os do cartão do painel).
+    setSearchParams(new URLSearchParams(), { replace: true });
+  };
+
+  const activeUrlFilters = (Object.keys(urlFilters) as UrlFilterKey[]).map((key) => ({
+    key,
+    label: URL_FILTERS[key][urlFilters[key] as string],
+  }));
+
   const filteredBookings = useMemo(() => {
-    return bookings.filter(booking => {
+    const now = Date.now();
+    const list = bookings.filter(booking => {
       const q = normalizeString(searchTerm);
       const clientName = normalizeString(booking.client?.user?.name || booking.clientName || '');
       const bookingId = normalizeString(booking.id || '');
@@ -266,9 +328,22 @@ export const BookingListPage = () => {
       // Dias locais inteiros: new Date('AAAA-MM-DD') é meia-noite UTC (21h do dia anterior no Brasil).
       const matchesDate = !booking.eventDate || isWithinLocalDateRange(booking.eventDate, startDate, endDate);
       
-      return matchesSearch && matchesStatus && matchesPayment && matchesDate;
+      // P3: filtros do endereço (cartão do painel), com as mesmas regras do resumo.
+      const matchesOrigin = urlFilters.origem !== 'cliente' || booking.creator?.role === 'CLIENT';
+      const eventTime = booking.eventDate ? Date.parse(booking.eventDate) : Number.NaN;
+      const matchesPeriod = !urlFilters.periodo || (urlFilters.periodo === 'passado' ? eventTime < now : eventTime >= now);
+      const matchesProposal = urlFilters.proposta !== 'nao-enviada' || !booking.proposalSent;
+
+      return matchesSearch && matchesStatus && matchesPayment && matchesDate && matchesOrigin && matchesPeriod && matchesProposal;
     });
-  }, [bookings, searchTerm, filterStatus, filterPayment, startDate, endDate]);
+    // ordem=antigos: do pedido criado há mais tempo para o mais novo; sem ela, a ordem do servidor (data do evento).
+    if (urlFilters.ordem !== 'antigos') return list;
+    return [...list].sort((a, b) => {
+      const ta = createdTime(a);
+      const tb = createdTime(b);
+      return ta === tb ? 0 : ta < tb ? -1 : 1;
+    });
+  }, [bookings, searchTerm, filterStatus, filterPayment, startDate, endDate, urlFilters]);
 
   // O botão "Exportar" existia sem ação. Exporta o que está filtrado na tela (período, status e
   // busca) — o período vira o recorte do fechamento mensal.
@@ -369,7 +444,14 @@ export const BookingListPage = () => {
                 <Clock className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pendentes</p>
+                {/* P3: aqui conta toda reserva Pendente; o número do menu e o cartão do painel contam só os pedidos de
+                    clientes que esperam resposta. */}
+                <p
+                  className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                  title="Toda reserva com status Pendente, inclusive propostas da equipe e datas que já passaram. O número no menu conta só os pedidos de clientes que esperam resposta."
+                >
+                  Pendentes (todas)
+                </p>
                 <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
               </div>
             </div>
@@ -441,7 +523,7 @@ export const BookingListPage = () => {
                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Select
                   value={filterStatus}
-                                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setFilterStatus(e.target.value)}
+                                    onChange={(e: ChangeEvent<HTMLSelectElement>) => changeStatusFilter(e.target.value)}
                   className="pl-10 h-10 border-border bg-card rounded-xl text-xs font-semibold uppercase tracking-wider"
                   aria-label="Filtrar por status"
                   options={STATUS_FILTER_OPTIONS}
@@ -465,16 +547,10 @@ export const BookingListPage = () => {
                 />
               </div>
 
-              {(searchTerm || filterStatus !== 'all' || filterPayment !== 'all' || startDate || endDate) && (
+              {(searchTerm || filterStatus !== 'all' || filterPayment !== 'all' || startDate || endDate || activeUrlFilters.length > 0) && (
                 <Button 
                   variant="ghost" 
-                  onClick={() => {
-                    setSearchTerm('');
-                    setFilterStatus('all');
-                    setFilterPayment('all');
-                    setStartDate('');
-                    setEndDate('');
-                  }}
+                  onClick={clearFilters}
                   className="h-10 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
                 >
                   <AlertCircle size={14} className="mr-2" /> Limpar
@@ -483,6 +559,25 @@ export const BookingListPage = () => {
             </div>
           </div>
         </Card>
+
+        {/* P3: filtros vindos do endereço (cartão do painel), cada um removível. */}
+        {activeUrlFilters.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">Filtros:</span>
+            {activeUrlFilters.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setUrlParam(key, null)}
+                aria-label={`Tirar o filtro: ${label}`}
+                className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {label}
+                <X className="h-3 w-3" aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Bookings Table */}
         <Card className="overflow-hidden border-border shadow-sm">
@@ -515,7 +610,7 @@ export const BookingListPage = () => {
                       </div>
                       <h3 className="text-lg font-bold text-foreground">Nenhuma reserva localizada</h3>
                       <p className="text-muted-foreground max-w-xs mx-auto">Tente ajustar seus filtros ou busca para encontrar o que procura.</p>
-                      <Button variant="outline" className="mt-6" onClick={() => { setSearchTerm(''); setFilterStatus('all'); setFilterPayment('all'); setStartDate(''); setEndDate(''); }}>
+                      <Button variant="outline" className="mt-6" onClick={clearFilters}>
                         Limpar Filtros
                       </Button>
                     </td>

@@ -31,7 +31,14 @@ import {
 } from 'lucide-react';
 import { normalizeString } from '../../utils/string';
 import { useAuth } from '../../contexts/AuthContext';
-import { usePendingRequests, formatPendingAge, PENDING_LEVEL_CLASSES } from '../../hooks/usePendingRequests';
+import {
+  useAdminSummary,
+  formatWaitingAge,
+  unreadContactsText,
+  waitingAge,
+  waitingRequestsText,
+  WAITING_TONE_CLASSES,
+} from '../../stores/adminSummary';
 
 interface MenuGroup {
   name: string;
@@ -135,20 +142,34 @@ export const AdminSidebar: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
   const sidebarRef = useRef<HTMLDivElement>(null);
-  // P3: número de pedidos de clientes aguardando resposta no item "Reservas", com a cor da idade do
-  // mais antigo (cinza até 4 h, amarelo até 24 h, vermelho depois). Os outros itens seguem com o
-  // badge fixo do menu, se houver.
-  const pending = usePendingRequests(user?.role === 'ADMIN');
-  const isReservas = (item: MenuItem) => item.href === '/admin/reservas';
-  const badgeFor = (item: MenuItem) => (isReservas(item) ? pending?.count || 0 : item.badge || 0);
-  const badgeClassFor = (item: MenuItem) =>
-    isReservas(item) && pending?.level
-      ? PENDING_LEVEL_CLASSES[pending.level]
-      : 'bg-destructive/10 text-destructive border-destructive/20';
-  const badgeTitleFor = (item: MenuItem) =>
-    isReservas(item) && pending?.count
-      ? `${pending.count} ${pending.count === 1 ? 'pedido aguardando' : 'pedidos aguardando'} resposta, o mais antigo ${formatPendingAge(pending.oldestAgeHours)}`
-      : undefined;
+  // P3 (aprovada em 02/11/2026): no item "Reservas", quantos pedidos de clientes aguardam resposta, com a cor da idade
+  // do mais antigo (cinza até 4 h, amarelo até 24 h, vermelho depois); no item "Contatos", quantas mensagens não foram
+  // lidas. Montar o menu (a cada tela do admin) pede o resumo, no máximo uma vez por minuto (stores/adminSummary).
+  // Os outros itens seguem com o badge fixo do menu, se houver.
+  const summary = useAdminSummary(user?.role === 'ADMIN');
+  const badgeFor = (item: MenuItem): { count: number; label: string; title: string; className: string } | null => {
+    if (item.href === '/admin/reservas') {
+      const count = summary?.waitingRequests ?? 0;
+      if (count <= 0) return null;
+      const age = waitingAge(summary?.oldestWaitingAt ?? null);
+      const label = waitingRequestsText(count);
+      return {
+        count,
+        label,
+        title: age ? `${label}, o mais antigo ${formatWaitingAge(age.hours)}` : label,
+        className: WAITING_TONE_CLASSES[age?.tone ?? 'muted'],
+      };
+    }
+    if (item.href === '/admin/contatos') {
+      const count = summary?.unreadContacts ?? 0;
+      if (count <= 0) return null;
+      const label = unreadContactsText(count);
+      return { count, label, title: label, className: 'bg-primary/10 text-primary border-primary/20' };
+    }
+    return item.badge && item.badge > 0
+      ? { count: item.badge, label: String(item.badge), title: String(item.badge), className: 'bg-destructive/10 text-destructive border-destructive/20' }
+      : null;
+  };
 
   // Restaurar posição do scroll
   useEffect(() => {
@@ -265,6 +286,7 @@ export const AdminSidebar: React.FC = () => {
                   {group.items.map((item) => {
                     const isActive = item.href === activeHref;
                     const Icon = item.icon;
+                    const badge = badgeFor(item);
 
                     return (
                       <Link
@@ -293,14 +315,15 @@ export const AdminSidebar: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Ternário: com `&&`, badge 0 aparecia como um "0" solto no menu. */}
-                        {badgeFor(item) ? (
+                        {/* Só com número maior que zero: com `&&`, badge 0 aparecia como um "0" solto no menu. O leitor
+                            de tela ouve a frase ("3 pedidos aguardando resposta"), não o número solto. */}
+                        {badge ? (
                           <span
-                            className={`px-2 py-0.5 text-xs font-medium rounded-full border ${badgeClassFor(item)}`}
-                            title={badgeTitleFor(item)}
+                            className={`px-2 py-0.5 text-xs font-medium rounded-full border ${badge.className}`}
+                            title={badge.title}
                           >
-                            {badgeFor(item)}
-                            <span className="sr-only"> {badgeTitleFor(item)}</span>
+                            <span aria-hidden="true">{badge.count}</span>
+                            <span className="sr-only">{badge.label}</span>
                           </span>
                         ) : null}
                       </Link>

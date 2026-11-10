@@ -16,6 +16,7 @@ import {
 import { useNotifications } from '@/contexts/NotificationContext';
 import { apiFetch } from '../../services/api';
 import { asArray } from '../../utils/normalize';
+import { refreshAdminSummary } from '../../stores/adminSummary';
 import type { ContactSubmission } from '../../types/types';
 import { contactProposalPrefill, contactWhatsAppReplyHref } from '../../utils/contactFormBlock';
 import { buttonVariants } from '@/components/ui/Button';
@@ -83,6 +84,8 @@ export const ContactSubmissionsListPage = () => {
       setSubmissions((prev) =>
         prev.map((sub) => (sub.id === id ? (updatedSubmission as ContactSubmission) : sub))
       );
+      // P3: o número de mensagens não lidas no menu "Contatos" se atualiza na hora.
+      void refreshAdminSummary({ force: true });
       addNotification({
         type: 'success',
         title: 'Lida',
@@ -108,6 +111,8 @@ export const ContactSubmissionsListPage = () => {
       setIsDeleting(true);
       await apiFetch(`/admin/contacts/${submissionToDelete}`, { method: 'DELETE' });
       setSubmissions((prev) => prev.filter((sub) => sub.id !== submissionToDelete));
+      // P3: a mensagem apagada podia ser uma não lida contada no menu "Contatos".
+      void refreshAdminSummary({ force: true });
       addNotification({
         type: 'success',
         title: 'Sucesso',

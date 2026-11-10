@@ -69,6 +69,7 @@ import {
 import { notifyClientPayload } from '../../utils/notifyClient';
 import { NotifyClientCheckbox } from '../../components/bookings/NotifyClientCheckbox';
 import { SendProposalPanel } from '../../components/bookings/SendProposalPanel';
+import { refreshAdminSummary } from '../../stores/adminSummary';
 import { ProposalHistory } from '../../components/bookings/ProposalHistory';
 import { StageWhatsAppPanel } from '../../components/bookings/StageWhatsAppPanel';
 import { AdminLayout } from '../../components/admin/AdminLayout';
@@ -262,6 +263,8 @@ export const BookingDetailPage = () => {
       setActionLoading(true);
       await bookingAPI.delete(booking.id);
       addNotification({ type: 'success', title: 'Reserva excluída', message: 'A reserva foi excluída.' });
+      // P3: a reserva excluída pode ser um pedido contado no menu e no cartão do painel.
+      void refreshAdminSummary({ force: true });
       navigate('/admin/reservas');
         } catch {
       addNotification({ type: 'error', title: 'Erro ao excluir', message: 'Não foi possível excluir a reserva.' });
@@ -277,6 +280,8 @@ export const BookingDetailPage = () => {
       // "A caminho" é status de entrega (DeliveryStatus), não de reserva.
       if (value === 'ON_THE_WAY') await bookingAPI.updateDeliveryStatus(bookingId, value);
       else await bookingAPI.updateStatus(bookingId, value, value === 'CONFIRMED' ? notifyClientPayload(notifyClient) : undefined);
+      // P3: confirmar ou cancelar tira o pedido do número do menu e do cartão do painel na hora ("a caminho" é entrega).
+      if (value !== 'ON_THE_WAY') void refreshAdminSummary({ force: true });
       await fetchBooking();
       addNotification({ type: 'success', title: 'Status atualizado', message: 'O status da reserva foi atualizado.' });
         } catch (error: unknown) {
@@ -303,6 +308,7 @@ export const BookingDetailPage = () => {
         ];
       }
       await bookingAPI.confirmWithDetails(booking.id, { ...payload, ...notifyClientPayload(notifyClient) });
+      void refreshAdminSummary({ force: true }); // P3: a reserva saiu de Pendente.
       await fetchBooking();
       setConfirmModalOpen(false);
       addNotification({ type: 'success', title: 'Reserva confirmada', message: 'Valor e equipe salvos.' });
@@ -908,6 +914,8 @@ export const BookingDetailPage = () => {
                   onSent={() => {
                     setProposalHistoryKey((key) => key + 1);
                     void fetchBooking();
+                    // P3: com a proposta enviada, o pedido do cliente já foi respondido e sai do número do menu.
+                    void refreshAdminSummary({ force: true });
                   }}
                 />
                 <Button
@@ -1357,6 +1365,7 @@ export const BookingDetailPage = () => {
                 ...(a.hourlyRate != null ? { hourlyRate: a.hourlyRate, totalPayment: a.hourlyRate * a.estimatedHours } : {}),
               }));
               await bookingAPI.confirmWithDetails(booking.id, { collaborators: payload, ...notifyClientPayload(notifyClient) });
+              void refreshAdminSummary({ force: true }); // P3: salvar a equipe confirma a reserva pendente.
               await fetchBooking();
               setEventModalOpen(false);
               addNotification({ type: 'success', title: 'Equipe salva', message: 'Equipe alocada e reserva confirmada.' });

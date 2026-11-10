@@ -211,6 +211,10 @@ export interface BookingListItem {
   eventEndDate?: string;
   location?: string;
   notes?: string;
+  // P3: filtros do painel na lista de Reservas (origem=cliente, ordem=antigos, proposta=nao-enviada).
+  createdAt?: string;
+  creator?: { role: string } | null; // só o papel de quem criou (CLIENT = pedido de cliente)
+  proposalSent?: boolean; // já houve "Enviar proposta" (D11)
 }
 
 export interface PaymentData {

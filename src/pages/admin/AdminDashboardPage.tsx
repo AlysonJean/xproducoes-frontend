@@ -10,7 +10,7 @@ import { bookingStatusLabel, bookingStatusVariant } from '../../utils/bookingSta
 import { collaboratorRoleLabel } from '../../utils/collaboratorRoles';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { PendingRequestsCard } from '../../components/admin/PendingRequestsCard';
-import { usePendingRequests } from '../../hooks/usePendingRequests';
+import { useAdminSummary } from '../../stores/adminSummary';
 import {
   Users,
   Calendar,
@@ -248,7 +248,8 @@ const EfficiencyStats = ({ stats, loading }: { stats: AdminDashboardStats | null
 export const AdminDashboardPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const pendingRequests = usePendingRequests(user?.role === 'ADMIN');
+  // P3: o mesmo resumo do número do menu (uma consulta só para os dois; stores/adminSummary).
+  const pendingRequests = useAdminSummary(user?.role === 'ADMIN');
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [activities, setActivities] = useState<DashboardActivity[]>([]);
   const [loading, setLoading] = useState(true);

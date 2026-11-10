@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 const { apiFetch, useAuth } = vi.hoisted(() => ({ apiFetch: vi.fn(), useAuth: vi.fn() }));
@@ -7,70 +7,85 @@ vi.mock('../../../services/api', () => ({ apiFetch }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth }));
 
 import { AdminSidebar } from '../AdminSidebar';
-import { PendingRequestsCard } from '../PendingRequestsCard';
-import {
-  usePendingRequests,
-  resetPendingRequestsCache,
-  formatPendingAge,
-  PENDING_REFRESH_MS,
-  type PendingRequestsSummary,
-} from '../../../hooks/usePendingRequests';
+import { PendingRequestsCard, WAITING_REQUESTS_HREF, PAST_EVENT_REQUESTS_HREF } from '../PendingRequestsCard';
+import { useAdminSummary, resetAdminSummaryForTests, type AdminSummary } from '../../../stores/adminSummary';
 
-// P3 (aprovado em 02/11/2026): número de pedidos de clientes aguardando resposta no menu "Reservas" e
-// cartão no topo do painel. Consulta ao abrir e ao voltar à aba, no máximo uma vez por minuto, nunca
-// com a aba escondida; o menu não mostra "0".
+// P3 (aprovada em 02/11/2026): número de pedidos de clientes aguardando resposta no menu "Reservas" (com a cor da
+// idade do mais antigo), número de mensagens não lidas em "Contatos" e cartão no topo do painel. O menu não mostra
+// "0"; o leitor de tela ouve a frase, não o número solto.
 
-const resumo = (over: Partial<PendingRequestsSummary> = {}): PendingRequestsSummary => ({
-  count: 3, oldestCreatedAt: '2026-11-02T10:00:00.000Z', oldestAgeHours: 30, level: 'red', pastEventCount: 0, ...over,
+const AGORA = Date.parse('2026-11-10T15:00:00.000Z');
+const HORA = 60 * 60 * 1000;
+const ha = (horas: number) => new Date(AGORA - horas * HORA).toISOString();
+
+const resumo = (over: Partial<AdminSummary> = {}): AdminSummary => ({
+  waitingRequests: 3, oldestWaitingAt: ha(30), pastEventRequests: 0, proposalsAwaitingClient: 0, unreadContacts: 0, ...over,
 });
 
-let escondida = false;
-const mudarVisibilidade = (hidden: boolean) => {
-  escondida = hidden;
-  act(() => {
-    document.dispatchEvent(new Event('visibilitychange'));
-  });
-};
+const flush = () => act(async () => {
+  for (let i = 0; i < 5; i++) await Promise.resolve();
+});
 
-const Painel = () => {
-  const summary = usePendingRequests(true);
-  return <PendingRequestsCard summary={summary} />;
+const abrirMenu = async (summary: AdminSummary) => {
+  apiFetch.mockResolvedValue(summary);
+  render(<MemoryRouter initialEntries={['/admin/painel']}><AdminSidebar /></MemoryRouter>);
+  await flush();
 };
-
-const flush = () => act(async () => { await Promise.resolve(); await Promise.resolve(); });
+const linkDoMenu = (nome: RegExp) => screen.getByRole('link', { name: nome });
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date('2026-11-03T15:00:00Z'));
-  resetPendingRequestsCache();
+  vi.setSystemTime(AGORA);
+  resetAdminSummaryForTests();
   apiFetch.mockReset();
-  escondida = false;
-  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => (escondida ? 'hidden' : 'visible') });
+  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
   useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
 });
 afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('menu "Reservas" — número de pedidos aguardando resposta', () => {
-  it('mostra o número com a cor da idade do mais antigo', async () => {
-    apiFetch.mockResolvedValue(resumo({ count: 3, level: 'red' }));
-    render(<MemoryRouter initialEntries={['/admin/painel']}><AdminSidebar /></MemoryRouter>);
-    await flush();
+describe('menu do painel — números de "Reservas" e "Contatos"', () => {
+  it('"Reservas" mostra quantos pedidos esperam, com a frase para o leitor de tela e a idade do mais antigo no título', async () => {
+    await abrirMenu(resumo({ waitingRequests: 3, oldestWaitingAt: ha(30) }));
 
-    expect(apiFetch).toHaveBeenCalledWith('/admin/bookings/pending-summary');
-    const badge = screen.getByTitle(/3 pedidos aguardando resposta, o mais antigo há 30 h/);
-    expect(badge).toHaveTextContent('3');
+    expect(apiFetch).toHaveBeenCalledWith('/dashboard/summary');
+    const reservas = linkDoMenu(/^Reservas/);
+    expect(reservas).toHaveAccessibleName(/3 pedidos aguardando resposta$/);
+    const badge = within(reservas).getByTitle('3 pedidos aguardando resposta, o mais antigo há 30 h');
+    expect(within(badge).getByText('3')).toHaveAttribute('aria-hidden', 'true');
     expect(badge.className).toContain('text-destructive');
   });
 
-  it('com zero pedidos, não aparece "0" no menu', async () => {
-    apiFetch.mockResolvedValue(resumo({ count: 0, level: null, oldestAgeHours: null, oldestCreatedAt: null }));
-    render(<MemoryRouter initialEntries={['/admin/painel']}><AdminSidebar /></MemoryRouter>);
-    await flush();
+  it.each([
+    [2, 'text-muted-foreground'],
+    [5, 'text-warning'],
+    [30, 'text-destructive'],
+  ])('mais antigo há %d h: cor %s', async (horas, classe) => {
+    await abrirMenu(resumo({ waitingRequests: 1, oldestWaitingAt: ha(horas) }));
 
-    const reservas = screen.getByRole('link', { name: /Reservas/ });
-    expect(reservas.textContent).not.toMatch(/\b0\b/);
+    const badge = within(linkDoMenu(/^Reservas/)).getByTitle(new RegExp(`^1 pedido aguardando resposta, o mais antigo há ${horas} h$`));
+    expect(badge.className).toContain(classe);
+  });
+
+  it('"Contatos" mostra as mensagens não lidas (singular e plural)', async () => {
+    await abrirMenu(resumo({ waitingRequests: 0, oldestWaitingAt: null, unreadContacts: 2 }));
+    expect(linkDoMenu(/^Contatos/)).toHaveAccessibleName(/2 mensagens não lidas$/);
+  });
+
+  it('"Contatos" com uma mensagem: "1 mensagem não lida"', async () => {
+    await abrirMenu(resumo({ waitingRequests: 0, oldestWaitingAt: null, unreadContacts: 1 }));
+    expect(linkDoMenu(/^Contatos/)).toHaveAccessibleName(/1 mensagem não lida$/);
+  });
+
+  it('com zero, não aparece "0" nem em "Reservas" nem em "Contatos"', async () => {
+    await abrirMenu(resumo({ waitingRequests: 0, oldestWaitingAt: null, unreadContacts: 0 }));
+
+    for (const nome of [/^Reservas/, /^Contatos/]) {
+      const link = linkDoMenu(nome);
+      expect(link.textContent).not.toMatch(/\b0\b/);
+      expect(link).not.toHaveAccessibleName(/aguardando|não lid/);
+    }
   });
 
   it('quem não é admin não consulta', async () => {
@@ -80,81 +95,75 @@ describe('menu "Reservas" — número de pedidos aguardando resposta', () => {
 
     expect(apiFetch).not.toHaveBeenCalled();
   });
-});
 
-describe('usePendingRequests — no máximo uma consulta por minuto, nunca escondida', () => {
-  it('menu e cartão dividem a mesma consulta; voltar à aba antes de 1 min não consulta de novo', async () => {
-    apiFetch.mockResolvedValue(resumo());
-    render(<MemoryRouter><AdminSidebar /><Painel /></MemoryRouter>);
-    await flush();
-    expect(apiFetch).toHaveBeenCalledTimes(1);
-
-    mudarVisibilidade(true);
-    vi.setSystemTime(Date.now() + 30_000);
-    mudarVisibilidade(false);
-    await flush();
-    expect(apiFetch).toHaveBeenCalledTimes(1);
-
-    mudarVisibilidade(true);
-    vi.setSystemTime(Date.now() + PENDING_REFRESH_MS);
-    // Escondida, nada é consultado, mesmo passado o minuto.
-    expect(apiFetch).toHaveBeenCalledTimes(1);
-    mudarVisibilidade(false);
-    await flush();
-    expect(apiFetch).toHaveBeenCalledTimes(2);
-  });
-
-  it('tela aberta numa aba escondida não consulta; ao mostrar a aba, consulta', async () => {
-    apiFetch.mockResolvedValue(resumo());
-    escondida = true;
-    render(<MemoryRouter><Painel /></MemoryRouter>);
-    await flush();
-    expect(apiFetch).not.toHaveBeenCalled();
-
-    mudarVisibilidade(false);
-    await flush();
-    expect(apiFetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('falha da API: sem número e sem cartão (nada de zero inventado)', async () => {
+  it('falha da API: sem número (nada de zero inventado)', async () => {
     apiFetch.mockRejectedValue(new Error('500'));
-    render(<MemoryRouter><Painel /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={['/admin/painel']}><AdminSidebar /></MemoryRouter>);
     await flush();
 
-    expect(screen.queryByRole('link', { name: /Ver pedidos/ })).toBeNull();
+    expect(linkDoMenu(/^Reservas/)).not.toHaveAccessibleName(/aguardando/);
   });
 });
 
-describe('cartão do painel', () => {
-  const renderCard = (summary: PendingRequestsSummary | null) =>
+describe('cartão do topo do painel', () => {
+  const renderCard = (summary: AdminSummary | null) =>
     render(<MemoryRouter><PendingRequestsCard summary={summary} /></MemoryRouter>);
 
   it.each([
-    ['gray', 'bg-muted'],
-    ['yellow', 'text-warning'],
-    ['red', 'text-destructive'],
-  ] as const)('faixa %s', (level, classe) => {
-    renderCard(resumo({ count: 1, level, oldestAgeHours: 2 }));
-    const link = screen.getByRole('link');
-    expect(link).toHaveTextContent('1 pedido aguardando resposta, o mais antigo há 2 h');
-    expect(link.className).toContain(classe);
-    expect(link).toHaveAttribute('href', '/admin/reservas?status=PENDING');
+    [2, 'muted', 'bg-muted', '1 pedido aguardando resposta, o mais antigo há 2 h'],
+    [5, 'warning', 'text-warning', '1 pedido aguardando resposta, o mais antigo há 5 h'],
+    [30, 'destructive', 'text-destructive', '1 pedido aguardando resposta, o mais antigo há 30 h'],
+    [50, 'destructive', 'text-destructive', '1 pedido aguardando resposta, o mais antigo há 2 dias'],
+  ] as const)('mais antigo há %d h: tom %s', (horas, tom, classe, texto) => {
+    renderCard(resumo({ waitingRequests: 1, oldestWaitingAt: ha(horas) }));
+
+    const cartao = screen.getByRole('region', { name: 'Pedidos de clientes aguardando resposta' });
+    expect(cartao).toHaveAttribute('data-tone', tom);
+    expect(cartao.className).toContain(classe);
+    const link = within(cartao).getByRole('link', { name: texto });
+    expect(link).toHaveAttribute('href', WAITING_REQUESTS_HREF);
   });
 
-  it('pedidos com evento passado aparecem à parte', () => {
-    renderCard(resumo({ count: 0, level: null, oldestAgeHours: null, pastEventCount: 2 }));
-    expect(screen.getByRole('link')).toHaveTextContent('Nenhum pedido aguardando resposta');
-    expect(screen.getByRole('link')).toHaveTextContent('2 pedidos pendentes com evento que já passou');
+  it('o link abre a lista de Reservas com os filtros do mesmo número: pedidos de clientes, pendentes, por vir, sem proposta, mais antigos primeiro', () => {
+    const params = new URLSearchParams(WAITING_REQUESTS_HREF.split('?')[1]);
+    expect(WAITING_REQUESTS_HREF.startsWith('/admin/reservas?')).toBe(true);
+    expect(Object.fromEntries(params)).toEqual({ status: 'PENDING', origem: 'cliente', periodo: 'proximos', proposta: 'nao-enviada', ordem: 'antigos' });
+    expect(Object.fromEntries(new URLSearchParams(PAST_EVENT_REQUESTS_HREF.split('?')[1])))
+      .toEqual({ status: 'PENDING', origem: 'cliente', periodo: 'passado', ordem: 'antigos' });
   });
 
-  it('nada esperando e nada passado: o cartão some', () => {
-    const { container } = renderCard(resumo({ count: 0, level: null, oldestAgeHours: null, pastEventCount: 0 }));
+  it('pedidos com a data já passada aparecem à parte, numa linha com o próprio link', () => {
+    renderCard(resumo({ waitingRequests: 2, oldestWaitingAt: ha(3), pastEventRequests: 2 }));
+
+    const cartao = screen.getByRole('region', { name: 'Pedidos de clientes aguardando resposta' });
+    expect(within(cartao).getByRole('link', { name: '2 pedidos aguardando resposta, o mais antigo há 3 h' })).toBeInTheDocument();
+    expect(within(cartao).getByRole('link', { name: '2 pedidos com data já passada' })).toHaveAttribute('href', PAST_EVENT_REQUESTS_HREF);
+  });
+
+  it('só com pedidos de data passada: o cartão diz que nenhum espera resposta e mostra os passados', () => {
+    renderCard(resumo({ waitingRequests: 0, oldestWaitingAt: null, pastEventRequests: 1 }));
+
+    const cartao = screen.getByRole('region', { name: 'Pedidos de clientes aguardando resposta' });
+    expect(cartao).toHaveTextContent('Nenhum pedido aguardando resposta');
+    expect(within(cartao).getByRole('link', { name: '1 pedido com data já passada' })).toBeInTheDocument();
+    expect(cartao).toHaveAttribute('data-tone', 'muted');
+  });
+
+  it('nada esperando e nada passado (ou sem resumo): o cartão some', () => {
+    const { container, rerender } = renderCard(resumo({ waitingRequests: 0, oldestWaitingAt: null, pastEventRequests: 0, unreadContacts: 5 }));
+    expect(container).toBeEmptyDOMElement();
+    rerender(<MemoryRouter><PendingRequestsCard summary={null} /></MemoryRouter>);
     expect(container).toBeEmptyDOMElement();
   });
-});
 
-describe('formatPendingAge', () => {
-  it.each([[0, 'há menos de 1 h'], [5, 'há 5 h'], [47, 'há 47 h'], [72, 'há 3 dias']])('%d h → %s', (h, texto) => {
-    expect(formatPendingAge(h)).toBe(texto);
+  it('menu e cartão do painel dividem a mesma consulta', async () => {
+    apiFetch.mockResolvedValue(resumo({ waitingRequests: 4, oldestWaitingAt: ha(1) }));
+    const Painel = () => <PendingRequestsCard summary={useAdminSummary(true)} />;
+    render(<MemoryRouter initialEntries={['/admin/painel']}><AdminSidebar /><Painel /></MemoryRouter>);
+    await flush();
+
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('link', { name: '4 pedidos aguardando resposta, o mais antigo há 1 h' })).toBeInTheDocument();
+    expect(linkDoMenu(/^Reservas/)).toHaveAccessibleName(/4 pedidos aguardando resposta$/);
   });
 });
