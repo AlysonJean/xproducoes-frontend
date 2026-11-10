@@ -604,12 +604,34 @@ describe('Painel do Instagram — dicas e passos', () => {
 
     const box = (await screen.findByText('Como conectar')).closest('details') as HTMLElement;
     const steps = within(box).getAllByRole('listitem').map((li) => li.textContent);
-    expect(steps).toHaveLength(6);
+    // Pedido de 10/11/2026: o passo a passo é o do login unificado da Meta.
+    expect(steps).toHaveLength(7);
     expect(steps[0]).toContain('profissional (Empresa ou Criador de conteúdo)');
     expect(steps[1]).toContain('Meta for Developers');
-    expect(steps[2]).toContain('@x_producoeseventos');
-    expect(steps[3]).toContain('Gerar token');
-    expect(steps[4]).toContain('Nunca envie o token por chat ou e-mail.');
-    expect(steps[5]).toContain('renova a conexão sozinho');
+    expect(steps[1]).toContain('login unificado');
+    expect(steps[2]).toContain('expiração "Nunca"');
+    expect(steps[2]).toContain('só a permissão instagram_basic');
+    expect(steps[3]).toContain('@x_producoeseventos');
+    expect(steps[4]).toContain('Gerar token');
+    expect(steps[5]).toContain('Nunca envie o token por chat ou e-mail.');
+    expect(steps[6]).toContain('não precisa de renovação');
+  });
+
+  it('token do login unificado (sem data de vencimento): diz que não vence e não mostra "vale até"', async () => {
+    mockApi({ 'GET /admin/instagram/status': { ...baseStatus, accountType: null, tokenExpiresAt: null }, 'GET /admin/instagram/posts': { posts: [] } });
+    renderPage();
+
+    expect(await screen.findByText('Conectado')).toBeInTheDocument();
+    expect(screen.getByText(/O sistema não renova este tipo de token: gerado com a expiração "Nunca", ele não vence/)).toBeInTheDocument();
+    expect(screen.queryByText(/o sistema renova sozinho antes de vencer/)).toBeNull();
+    expect(screen.getByText('@x_producoeseventos')).toBeInTheDocument();
+  });
+
+  it('com data de vencimento (login do Instagram): não mostra a frase do token que não vence', async () => {
+    mockApi({ 'GET /admin/instagram/status': baseStatus, 'GET /admin/instagram/posts': { posts: [] } });
+    renderPage();
+
+    expect(await screen.findByText('Conectado')).toBeInTheDocument();
+    expect(screen.queryByText(/O sistema não renova este tipo de token/)).toBeNull();
   });
 });

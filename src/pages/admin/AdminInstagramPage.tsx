@@ -463,6 +463,16 @@ export const AdminInstagramPage = () => {
             </p>
           )}
 
+          {/* Pedido de 10/11/2026: o token do login unificado da Meta (usuário do sistema) é gravado sem data de vencimento
+              e não é renovado. Revisão: o servidor não tem como ler a validade real (ela é escolhida na configuração da
+              Meta), por isso a frase fala da configuração "Nunca" em vez de garantir que não vence. */}
+          {current === 'ok' && !status?.tokenExpiresAt && (
+            <p className="text-sm text-muted-foreground">
+              O sistema não renova este tipo de token: gerado com a expiração &quot;Nunca&quot;, ele não vence. Se a Meta cancelar
+              o acesso, o aviso aparece nesta página.
+            </p>
+          )}
+
           {current === 'refresh_failing' && (
             <Alert variant="warning" title="O sistema não conseguiu renovar a conexão">
               <p>
@@ -628,15 +638,22 @@ export const AdminInstagramPage = () => {
               <ListOrdered className="h-4 w-4 text-primary" aria-hidden="true" />
               Como conectar
             </summary>
+            {/* Pedido de 10/11/2026: a Meta não oferece mais o login do Instagram para apps novos; o passo a passo é o do
+                login unificado (token de usuário do sistema, só instagram_basic). */}
             <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
               <li>A conta do Instagram precisa ser profissional (Empresa ou Criador de conteúdo).</li>
-              <li>Crie um app na Meta for Developers (developers.facebook.com) com o produto Instagram.</li>
-              <li>Adicione a conta {INSTAGRAM_HANDLE} ao app.</li>
               <li>
-                Em &quot;Instagram &gt; Configuração da API com login da empresa no Instagram&quot;, clique em &quot;Gerar token&quot;.
+                No app da Meta for Developers (developers.facebook.com), abra &quot;Gerenciar mensagens e conteúdo no
+                Instagram&quot; e a configuração da API com login unificado.
               </li>
+              <li>
+                Crie uma configuração com token de usuário do sistema, expiração &quot;Nunca&quot;, o ativo &quot;Conta do
+                Instagram&quot; e só a permissão instagram_basic.
+              </li>
+              <li>Adicione a conta {INSTAGRAM_HANDLE} como testadora e aceite o convite no Instagram.</li>
+              <li>Clique em &quot;Gerar token&quot;, escolha o portfólio e a conta e copie o token (ele aparece uma vez só).</li>
               <li>Cole o token aqui e clique em Conectar. Nunca envie o token por chat ou e-mail.</li>
-              <li>O sistema renova a conexão sozinho, antes de vencer.</li>
+              <li>Token sem data para vencer não precisa de renovação. O token antigo, do login do Instagram, o sistema renova sozinho.</li>
             </ol>
           </details>
         </div>
