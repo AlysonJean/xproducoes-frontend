@@ -35,6 +35,10 @@ const FaqListPage = lazy(() =>
 const PortfolioListPage = lazy(() =>
   import('../pages/admin/PortfolioListPage').then((m) => ({ default: m.PortfolioListPage }))
 );
+// Pedido do dono de 09/11/2026 (Instagram): conexão com o Instagram e publicações importadas para o site.
+const AdminInstagramPage = lazy(() =>
+  import('../pages/admin/AdminInstagramPage').then((m) => ({ default: m.AdminInstagramPage }))
+);
 const BannerManagementPage = lazy(() =>
   import('../pages/admin/BannerManagementPage').then((m) => ({ default: m.BannerManagementPage }))
 );
@@ -185,6 +189,14 @@ export default function AdminRoutes() {
           element={
             <ProtectedRoute adminOnly>
               <PortfolioListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="instagram"
+          element={
+            <ProtectedRoute adminOnly>
+              <AdminInstagramPage />
             </ProtectedRoute>
           }
         />

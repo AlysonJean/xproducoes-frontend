@@ -9,6 +9,7 @@ import {
   BROWSER_STORAGE,
   ESSENTIAL_COOKIES,
   GOOGLE_ANALYTICS_TRANSFER_NOTICE,
+  INSTAGRAM_PLAYER_NOTICE,
   type BrowserDataEntry,
 } from '../data/cookiePolicy';
 
@@ -103,6 +104,14 @@ export const CookiesPage: React.FC = () => {
               &quot;Entrar com Google&quot;. Se você usar o botão, valem também as regras de privacidade do Google.
             </li>
           </ul>
+        </section>
+
+        {/* Pedido do dono de 09/11/2026 (Instagram): o player dos vídeos é da Meta e só carrega depois do clique. */}
+        <section aria-labelledby="instagram">
+          <h2 id="instagram" className="text-lg font-semibold text-foreground mb-2">
+            Vídeos do Instagram (só se você clicar)
+          </h2>
+          <p className="text-muted-foreground leading-relaxed">{INSTAGRAM_PLAYER_NOTICE}</p>
         </section>
 
         <section className="rounded-lg border border-border bg-muted p-4">

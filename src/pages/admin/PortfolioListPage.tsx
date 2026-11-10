@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Edit,
   Trash2,
@@ -171,12 +172,26 @@ export const PortfolioListPage = () => {
   const [isFormDirty, setIsFormDirty] = useState(false);
   const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
 
+  // Pedido do dono de 09/11/2026 (Instagram): o "Ver projeto" do painel do Instagram abre esta tela com ?editar=<id>.
+  // Na primeira carga da lista, o formulário desse projeto abre sozinho (uma vez só; recarregar a lista depois de
+  // salvar não abre de novo).
+  const [searchParams] = useSearchParams();
+  const editRequestRef = useRef<string | null>(searchParams.get('editar'));
+
   const fetchPortfolioItems = async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await apiFetch('/portfolio');
-      setItems(asArray<PortfolioItem>(data));
+      const list = asArray<PortfolioItem>(data);
+      setItems(list);
+      const requestedId = editRequestRef.current;
+      editRequestRef.current = null;
+      const requested = requestedId ? list.find((item) => item.id === requestedId) : undefined;
+      if (requested) {
+        setEditingItem(requested);
+        setIsFormModalOpen(true);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar itens do portfólio');
     } finally {

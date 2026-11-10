@@ -11,6 +11,8 @@ import { BrandLoader } from '../components/ui/BrandLoader';
 import { SEO } from '../components/SEO';
 import { logger } from '../utils/logger';
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from '../data/site';
+import { InstagramFeed } from '../components/InstagramFeed';
+import { InstagramVideo } from '../components/InstagramVideo';
 
 const PAGE_TITLE = 'Nosso Portfólio';
 const PAGE_DESCRIPTION = 'Explore nossos trabalhos realizados e se inspire para seu próximo evento.';
@@ -100,9 +102,22 @@ export const PortfolioPage: React.FC = () => {
     navigate('/portfolio');
   }, [navigate]);
 
+  // Achado (pedido do dono de 09/11/2026, Instagram): sem trilha própria, o Breadcrumbs montava os rótulos a partir do
+  // endereço, e /portfolio/camarote-no-estadio-mineirao virava "Portfolio > Camarote no estadio mineirao" (sem
+  // acentos, inclusive no BreadcrumbList do JSON-LD). Agora a trilha usa o título do projeto; enquanto ele carrega,
+  // fica só "Portfólio" (o texto do endereço nunca aparece).
+  const breadcrumbs =
+    slug && selectedItem && selectedItem.slug === slug
+      ? [{ label: 'Portfólio', path: '/portfolio' }, { label: selectedItem.title }]
+      : slug
+        ? [{ label: 'Portfólio', path: '/portfolio' }]
+        : [{ label: 'Portfólio' }];
+
+  const coverVideo = selectedItem?.media?.find((m) => m.isCover && m.embedUrl);
+
   if (loading) {
     return (
-      <PageLayout title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
+      <PageLayout title={PAGE_TITLE} description={PAGE_DESCRIPTION} breadcrumbs={breadcrumbs}>
         <PortfolioSEO />
         <div className="flex flex-col items-center justify-center min-h-[400px]">
           <BrandLoader size={120} label="Carregando portfólio..." />
@@ -113,7 +128,7 @@ export const PortfolioPage: React.FC = () => {
 
   if (error) {
     return (
-      <PageLayout title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
+      <PageLayout title={PAGE_TITLE} description={PAGE_DESCRIPTION} breadcrumbs={breadcrumbs}>
         <PortfolioSEO />
         <PageError message={error} onRetry={fetchData} />
       </PageLayout>
@@ -121,7 +136,7 @@ export const PortfolioPage: React.FC = () => {
   }
 
   return (
-    <PageLayout title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
+    <PageLayout title={PAGE_TITLE} description={PAGE_DESCRIPTION} breadcrumbs={breadcrumbs}>
       <PortfolioSEO />
       <div className="w-full max-w-6xl mx-auto">
         <SearchAndFilters
@@ -185,6 +200,10 @@ export const PortfolioPage: React.FC = () => {
           />
         )}
 
+        {/* Pedido do dono de 09/11/2026 (Instagram): as 12 publicações mais recentes do Instagram, abaixo dos
+            projetos. Sem publicações (ou se a busca falhar) a seção não aparece. */}
+        <InstagramFeed limit={12} className="mt-24" />
+
         {/* Chamada para o Instagram.
             Achado: o bloco tinha avatares de banco de imagens (i.pravatar.cc) com "+10k seguindo a
             X", fotos de banco (Unsplash) como se fossem eventos da casa e um selo "No Ar" piscando
@@ -233,12 +252,22 @@ export const PortfolioPage: React.FC = () => {
       >
         {selectedItem && (
           <>
-            <div className="aspect-[16/9] overflow-hidden rounded-xl -mt-2">
-              <PortfolioImage
-                src={selectedItem.imageUrl}
-                alt={selectedItem.title}
-                className="w-full h-full object-cover"
-              />
+            {/* Projeto criado de um vídeo do Instagram: a capa é o próprio vídeo (a galeria abaixo não mostra a capa). */}
+            <div className="relative aspect-[16/9] overflow-hidden rounded-xl -mt-2">
+              {coverVideo ? (
+                <InstagramVideo
+                  permalink={coverVideo.embedUrl}
+                  imageUrl={coverVideo.url || selectedItem.imageUrl}
+                  label={selectedItem.title}
+                  imageWidth={1000}
+                />
+              ) : (
+                <PortfolioImage
+                  src={selectedItem.imageUrl}
+                  alt={selectedItem.title}
+                  className="w-full h-full object-cover"
+                />
+              )}
             </div>
 
             <p className="text-muted-foreground text-base leading-relaxed mt-6 text-center">
@@ -248,8 +277,16 @@ export const PortfolioPage: React.FC = () => {
             {selectedItem.media && selectedItem.media.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
                 {selectedItem.media.filter(m => !m.isCover).map((media, index) => (
-                  <div key={media.id || index} className="aspect-square overflow-hidden rounded-lg bg-muted">
-                    {media.type === 'VIDEO' ? (
+                  <div key={media.id || index} className="relative aspect-square overflow-hidden rounded-lg bg-muted">
+                    {/* Pedido do dono de 09/11/2026 (Instagram): mídia com embedUrl é um vídeo do Instagram; a url é a
+                        capa (imagem) e o vídeo toca no player do Instagram depois do clique. */}
+                    {media.embedUrl ? (
+                      <InstagramVideo
+                        permalink={media.embedUrl}
+                        imageUrl={media.url}
+                        label={media.filename || `${selectedItem.title} - vídeo ${index + 1}`}
+                      />
+                    ) : media.type === 'VIDEO' ? (
                       <video
                         src={media.url}
                         className="w-full h-full object-cover"

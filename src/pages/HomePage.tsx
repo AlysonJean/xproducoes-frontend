@@ -22,6 +22,7 @@ import { logger } from '../utils/logger';
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from '../data/site';
 import { useSettings } from '../contexts/SettingsContext';
 import { GoogleReviewLink } from '../components/ui/GoogleReviewLink';
+import { InstagramFeed } from '../components/InstagramFeed';
 
 // Achado (auditoria do design system): os brilhos usavam `animate-pulse-slow` e a onda sonora do
 // hero usava a classe `sound-bar` — nenhuma das duas existe (120 divs de altura 0 no DOM). Os
@@ -296,6 +297,10 @@ export const HomePage = () => {
             )}
           </section>
         )}
+
+        {/* Pedido do dono de 09/11/2026 (Instagram): bloco menor, com as 6 publicações mais recentes e links para o
+            Portfólio e o perfil. Some quando não há publicações ou a busca falha. */}
+        <InstagramFeed limit={6} showPortfolioLink />
 
         {/* Depoimentos */}
         {/* P20: com o link do Perfil da Empresa, a seção aparece também sem depoimentos, com o convite para avaliar. */}

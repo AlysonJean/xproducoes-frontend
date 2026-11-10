@@ -14,6 +14,14 @@
 export const GOOGLE_ANALYTICS_TRANSFER_NOTICE =
   'O Google pode tratar os dados do Google Analytics fora do Brasil, inclusive nos Estados Unidos.';
 
+/**
+ * Pedido do dono de 09/11/2026 (Instagram): as fotos e as capas vêm das cópias que o servidor guarda no Cloudinary; o
+ * player do Instagram (iframe da Meta) só carrega depois do clique em "Assistir ao vídeo" (components/InstagramVideo).
+ * A mesma frase vai para a página /cookies e para a Política de Privacidade.
+ */
+export const INSTAGRAM_PLAYER_NOTICE =
+  'As fotos e as capas dos vídeos do Instagram mostradas no site são cópias guardadas pelo próprio site: vê-las não envia nada ao Instagram. O player do Instagram só carrega quando você clica para assistir a um vídeo. A partir desse clique, o Instagram (Meta, nos Estados Unidos) recebe o seu endereço IP e os dados do seu navegador e pode gravar cookies próprios, que seguem as regras de privacidade do Instagram.';
+
 export interface BrowserDataEntry {
   name: string;
   purpose: string;

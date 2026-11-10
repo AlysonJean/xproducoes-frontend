@@ -18,6 +18,7 @@ import {
   Image as ImageIcon,
   Tags,
   Images,
+  Instagram,
   HelpCircle,
   Star,
   Mail,
@@ -85,6 +86,8 @@ const menuGroups: MenuGroup[] = [
       { name: 'Banners', href: '/admin/banners', icon: ImageIcon, description: 'Banners da página inicial' },
       { name: 'Categorias', href: '/admin/categorias', icon: Tags, description: 'Organização de produtos' },
       { name: 'Portfólio', href: '/admin/portfolio', icon: Images, description: 'Gestão de portfólio' },
+      // Pedido do dono de 09/11/2026 (Instagram): as publicações do Instagram aparecem no site sozinhas.
+      { name: 'Instagram', href: '/admin/instagram', icon: Instagram, description: 'Fotos e vídeos do Instagram no site' },
       { name: 'FAQs', href: '/admin/faqs', icon: HelpCircle, description: 'Perguntas frequentes' },
       { name: 'Avaliações', href: '/admin/avaliacoes', icon: Star, description: 'Moderação de avaliações' },
     ],

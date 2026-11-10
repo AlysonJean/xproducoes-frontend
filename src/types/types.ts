@@ -776,6 +776,12 @@ export interface PortfolioMedia {
   mimeType?: string;
   isCover: boolean;
   sortOrder: number;
+  /**
+   * Pedido do dono de 09/11/2026 (Instagram): preenchido só em projetos criados de uma publicação do Instagram. Com
+   * ele, a mídia é um vídeo do Instagram: `url` é a capa (imagem) e `embedUrl` é o endereço da publicação, que o site
+   * abre no player do Instagram depois do clique. Nas mídias antigas vem null.
+   */
+  embedUrl?: string | null;
 }
 
 export interface PortfolioItem {

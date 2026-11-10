@@ -6,7 +6,7 @@ import {
   COMPANY_POSTAL_CODE,
   SUPPORT_EMAIL,
 } from './site';
-import { GOOGLE_ANALYTICS_TRANSFER_NOTICE } from './cookiePolicy';
+import { GOOGLE_ANALYTICS_TRANSFER_NOTICE, INSTAGRAM_PLAYER_NOTICE } from './cookiePolicy';
 
 // D8c (aprovada em 02/11/2026), parte 4: "política de privacidade nova, escrita a partir do que o sistema faz (empresa,
 // canal, tabela 'dado, finalidade, base legal, prazo', serviços usados e transferência para fora do país, cookies,
@@ -15,6 +15,8 @@ import { GOOGLE_ANALYTICS_TRANSFER_NOTICE } from './cookiePolicy';
 // serviço da tabela tem um uso no código ou na configuração (detalhes no plano do lote 15, item politica).
 // Os prazos são os do Q8 (respostas do dono de 02/11/2026). A exclusão da conta é a do item d8c-excluir do lote 15,
 // publicado junto com esta versão. Mudou o texto, mude PRIVACY_POLICY_UPDATED_AT.
+// Pedido do dono de 09/11/2026 (Instagram): entram a linha "Meta (Instagram)" e a frase do player dos vídeos, no mesmo
+// dia da versão acima (a data continua 09/11/2026).
 
 /** Data da última revisão do texto (como LAST_UPDATED dos Termos). */
 export const PRIVACY_POLICY_UPDATED_AT = '09/11/2026';
@@ -215,6 +217,12 @@ export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
             'Quando você clica para conversar pelo WhatsApp e quando a equipe manda mensagens sobre o seu pedido ou a sua reserva pelo WhatsApp (vão o seu número e o texto da mensagem). O que é escrito lá segue as regras do WhatsApp.',
             'Estados Unidos',
           ],
+          // Pedido do dono de 09/11/2026 (Instagram): importação das publicações da empresa e player dos vídeos.
+          [
+            'Meta (Instagram)',
+            'Traz para o site as fotos e os vídeos que a empresa publica no próprio perfil do Instagram; essa importação não usa dados de quem visita o site. Os vídeos tocam no player do Instagram, que só carrega se você clicar para assistir: aí o Instagram recebe o seu endereço IP e os dados do seu navegador e pode gravar cookies da Meta.',
+            'Estados Unidos',
+          ],
         ],
       },
       paragraph(
@@ -236,6 +244,7 @@ export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
         'Usamos cookies necessários para o login e a segurança. Os cookies do Google Analytics só são gravados se você aceitar no aviso de cookies, e você pode mudar a escolha a qualquer momento. A lista completa, com nomes e prazos, está na',
         { label: 'Política de Cookies', href: '/cookies' }
       ),
+      paragraph(INSTAGRAM_PLAYER_NOTICE),
     ],
   },
   {
