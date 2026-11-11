@@ -71,10 +71,11 @@ const ResetPasswordPage: React.FC = () => {
         body: JSON.stringify({ token, newPassword: data.password }),
       });
 
+      // D17 (aprovada em 02/11/2026): a redefinição encerra as sessões abertas em outros aparelhos.
       addNotification({ 
         type: 'success', 
         title: 'Senha atualizada', 
-        message: 'Sua senha foi redefinida com sucesso. Faça login para continuar.' 
+        message: 'Senha alterada. Por segurança, saímos das suas outras sessões. Faça login para continuar.' 
       });
       navigate('/login');
     } catch (err: unknown) {

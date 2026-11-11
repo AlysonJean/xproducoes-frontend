@@ -105,4 +105,24 @@ describe('ProfilePage (cliente)', () => {
     // A foto nova vai para a sessão (cabeçalho do site) sem recarregar.
     await waitFor(() => expect(setAuthenticatedUser).toHaveBeenCalledWith(expect.objectContaining({ avatarUrl: 'https://res.cloudinary.com/x/avatar_u1.jpg' })));
   });
+
+  // D17 (aprovada em 02/11/2026): "aviso na tela e e-mail quando a senha muda". A troca encerra as outras sessões.
+  it('troca a senha por POST /users/change-password e avisa que as outras sessões foram encerradas', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('tab', { name: /Segurança/ }));
+    fireEvent.change(screen.getByLabelText('Senha atual'), { target: { value: 'Atual123' } });
+    fireEvent.change(screen.getByLabelText('Nova senha'), { target: { value: 'Nova1234' } });
+    fireEvent.change(screen.getByLabelText('Confirmar nova senha'), { target: { value: 'Nova1234' } });
+    fireEvent.click(screen.getByRole('button', { name: /Alterar Senha/ }));
+
+    await waitFor(() =>
+      expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'success',
+        message: 'Senha alterada. Por segurança, saímos das suas outras sessões.',
+      })),
+    );
+    const call = apiFetch.mock.calls.find(([url]) => url === '/users/change-password')!;
+    expect(call[1].method).toBe('POST');
+    expect(bodyOf(call)).toEqual({ currentPassword: 'Atual123', newPassword: 'Nova1234' });
+  });
 });

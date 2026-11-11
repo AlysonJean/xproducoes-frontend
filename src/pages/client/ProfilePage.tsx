@@ -305,9 +305,11 @@ export const ProfilePage = () => {
         confirmPassword: ''
       });
       
+      // D17 (aprovada em 02/11/2026): "aviso na tela ... quando a senha muda". A troca encerra as
+      // outras sessões (o servidor grava a marca também no banco); esta segue aberta.
       addNotification({
         title: 'Sucesso',
-        message: 'Senha alterada com sucesso!',
+        message: 'Senha alterada. Por segurança, saímos das suas outras sessões.',
         type: 'success'
       });
     } catch (error) {

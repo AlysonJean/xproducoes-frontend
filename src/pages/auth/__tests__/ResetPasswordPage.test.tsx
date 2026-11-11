@@ -57,4 +57,16 @@ describe('ResetPasswordPage', () => {
     // confere a MENSAGEM DE ERRO exata, não qualquer texto com "maiúscula".
     expect(await screen.findByText('A senha deve conter pelo menos uma letra maiúscula')).toBeInTheDocument();
   });
+
+  // D17 (aprovada em 02/11/2026): a redefinição encerra as sessões abertas em outros aparelhos; a tela diz isso.
+  it('depois de redefinir, avisa que as outras sessões foram encerradas', async () => {
+    renderPage();
+    await submit('NovaSenha123');
+
+    expect(await screen.findByText('tela de login')).toBeInTheDocument();
+    expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'success',
+      message: 'Senha alterada. Por segurança, saímos das suas outras sessões. Faça login para continuar.',
+    }));
+  });
 });

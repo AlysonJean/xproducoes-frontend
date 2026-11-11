@@ -203,10 +203,13 @@ const CollaboratorSettingsPage: React.FC = () => {
         await collaboratorProfileAPI.updateSettings({ payment: paymentSettings });
       }
 
+      // D17 (aprovada em 02/11/2026): a troca de senha encerra as outras sessões; esta segue aberta.
       addNotification({
         type: 'success',
         title: 'Sucesso',
-        message: activeTab === 'security' ? 'Senha alterada com sucesso!' : 'Alterações salvas com sucesso!'
+        message: activeTab === 'security'
+          ? 'Senha alterada. Por segurança, saímos das suas outras sessões.'
+          : 'Alterações salvas com sucesso!'
       });
     } catch (error) {
       logger.error('Erro ao salvar:', 'CollaboratorSettingsPage', error);
