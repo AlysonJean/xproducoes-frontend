@@ -12,11 +12,12 @@ interface ExperienceLevelsEditorProps {
   basePrice?: number;
 }
 
-// Destaque "Mais Popular" escondido até a coluna existir. A tabela de produção kit_experience_levels
-// não tem isPopular (information_schema, 05/11/2026) e o servidor descarta o campo desde 50f1ff3. A
-// caixa, o selo e o Gold marcado de saída prometiam um destaque que nunca era gravado. Volta a true na
-// migração de base (lote 16), junto com a gravação no kitService. O site público não muda.
-export const POPULAR_LEVEL_SUPPORTED = false;
+// Destaque "Mais Popular" de um nível (item A). Ficou escondido de 05/11/2026 (c49668f) até a coluna existir: a
+// tabela de produção kit_experience_levels não tinha isPopular e o servidor descartava o campo. A migração de base
+// (lote 16, A08) criou a coluna e o servidor voltou a gravar o destaque, então a caixa, o selo e o Gold marcado de
+// saída voltam. Este site só vai ao ar depois do servidor com a migração. A página pública mostra o selo "Mais
+// Popular" no nível marcado (ExperienceLevelSelector).
+export const POPULAR_LEVEL_SUPPORTED = true;
 
 // Cores por token (antes: border-gray/yellow/slate-400 com fundos -50 fixos).
 const LEVEL_INFO = {
@@ -240,7 +241,7 @@ export function ExperienceLevelsEditor({
                   />
                 </div>
 
-                {/* Destaque (escondido até a coluna existir; ver POPULAR_LEVEL_SUPPORTED) */}
+                {/* Destaque "Mais Popular" (ver POPULAR_LEVEL_SUPPORTED) */}
                 {POPULAR_LEVEL_SUPPORTED && (
                   <Checkbox
                     label='Marcar como "Mais Popular"'
