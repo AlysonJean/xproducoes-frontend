@@ -16,6 +16,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { io } from 'socket.io-client';
+import { SOCKET_URL } from '../../utils/apiConfig';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import {
   Button,
@@ -137,8 +138,10 @@ const AdminSocialPage: React.FC = () => {
   useEffect(() => {
     if (!id) return;
 
-    const socketUrl = window.location.hostname === 'localhost' ? 'http://localhost:4000' : '/';
-    const socket = io(socketUrl, { path: '/socket.io' });
+    // Achado (conferência de 12/11/2026): fora do localhost a moderação conectava em '/', o próprio site na Vercel,
+    // que não repassa o Socket.IO (404 em /socket.io/), e o selo ficava em "Reconectando…" para sempre. Agora usa o
+    // mesmo endereço direto do servidor que a TV (utils/apiConfig). A sala wall: é aberta, como na TV.
+    const socket = io(SOCKET_URL, { path: '/socket.io', transports: ['websocket', 'polling'] });
 
     socket.on('connect', () => {
         setSocketConnected(true);
