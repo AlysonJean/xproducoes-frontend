@@ -326,6 +326,11 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
                 <div className="min-w-0">
                   <p className="font-medium text-foreground truncate">{item.collaborator.user.name}</p>
                   <p className="text-xs uppercase tracking-wide font-semibold text-primary">{collaboratorRoleLabel(item.role)}</p>
+                  {/* Decisão de Alyson (12/11/2026): "Desativar e tirar das escalas futuras" deixa a escala na reserva como
+                      cancelada (histórico); sem o selo, a pessoa parecia ainda estar na equipe. */}
+                  {item.status === 'CANCELLED' && (
+                    <Badge variant="ghost" size="sm" className="mt-1">Escala cancelada</Badge>
+                  )}
 
                   <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">

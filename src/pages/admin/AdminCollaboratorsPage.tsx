@@ -2,12 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Search,
-  Trash2,
   Users,
   DollarSign,
   Edit2,
   Mail,
   UserPlus,
+  UserX,
+  UserCheck,
   Settings,
   XCircle,
   Briefcase,
@@ -38,6 +39,8 @@ import { formatPrice } from '@/utils/formatPrice';
 import { COLLABORATOR_ROLE_OPTIONS, collaboratorRoleLabel } from '@/utils/collaboratorRoles';
 import { CollaboratorForm } from '@/components/forms/CollaboratorFormPage';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
+import { isCollaboratorDeactivated } from '@/utils/collaboratorAccess';
+import { formatDateTimeBR } from '@/utils/spreadsheet';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -50,11 +53,40 @@ const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Colabora
 // faltavam as demais funções que o backend aceita).
 const ROLE_FILTER_OPTIONS = [{ value: 'all', label: 'Todas as funções' }, ...COLLABORATOR_ROLE_OPTIONS];
 
+// Decisão de Alyson (12/11/2026): "Remover colaborador" virou "Desativar acesso" (como no Slack e no Google
+// Workspace). Quem está sem acesso continua na lista, com o selo "Inativo"; o filtro separa Ativos, Inativos e Todos.
 const STATUS_OPTIONS = [
-  { value: 'all', label: 'Todos os status' },
-  { value: 'ACTIVE', label: 'Ativo' },
-  { value: 'INACTIVE', label: 'Inativo' },
+  { value: 'all', label: 'Todos' },
+  { value: 'active', label: 'Ativos' },
+  { value: 'inactive', label: 'Inativos' },
 ];
+
+// Selo de quem tem acesso: Ativo, ou o status do cadastro (o convite chega "Pendente"). Antes, todo status diferente de
+// ACTIVE aparecia "Inativo", e "Inativo" agora quer dizer sem acesso.
+const STATUS_LABELS: Record<string, string> = { ACTIVE: 'Ativo', PENDING_APPROVAL: 'Pendente', SUSPENDED: 'Suspenso' };
+
+const DEACTIVATE_EXPLANATION =
+  'A pessoa não consegue mais entrar e as sessões abertas são encerradas. O histórico de eventos e pagamentos fica guardado. Você pode reativar depois.';
+
+// Resposta 409 de POST /collaborators/:id/deactivate: escalas em eventos que ainda não terminaram.
+interface FutureAssignment {
+  bookingId: string;
+  eventTitle: string | null;
+  eventDate: string;
+}
+
+type AccessError = {
+  response?: { status?: number; data?: { message?: string; error?: string; data?: { futureAssignments?: FutureAssignment[] } } };
+};
+
+const accessErrorMessage = (err: unknown, fallback: string) => {
+  const data = (err as AccessError).response?.data;
+  return data?.message || data?.error || fallback;
+};
+
+// Desativar e reativar valem só para conta de colaborador (o servidor recusa o perfil que o painel do colaborador cria
+// para um admin), a mesma regra do "Reenviar link de acesso".
+const isCollaboratorAccount = (c: CollaboratorDashboard) => c.user?.role === undefined || c.user.role === 'COLLABORATOR';
 
 // D3: "Aguardando ativação" e "Reenviar link de acesso" valem só para conta de colaborador, ativa, que ainda
 // não criou a senha pelo link: as mesmas regras com que o servidor aceita o reenvio (POST
@@ -77,24 +109,26 @@ export const AdminCollaboratorsPage: React.FC = () => {
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const [editingCollaborator, setEditingCollaborator] = useState<CollaboratorDashboard | null>(null);
   const [isFormDirty, setIsFormDirty] = useState(false);
   const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
-  const [collaboratorToDelete, setCollaboratorToDelete] = useState<string | null>(null);
 
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
+
+  // "Desativar acesso" e "Reativar": quem está na janela de confirmação e, depois de um 409, as escalas futuras dele.
+  const [toDeactivate, setToDeactivate] = useState<CollaboratorDashboard | null>(null);
+  const [futureAssignments, setFutureAssignments] = useState<FutureAssignment[] | null>(null);
+  const [toReactivate, setToReactivate] = useState<CollaboratorDashboard | null>(null);
+  const [accessBusy, setAccessBusy] = useState(false);
 
   const {
     collaborators: rawCollaborators,
     isLoading: loading,
     error,
     fetchCollaborators,
-    deleteCollaborator,
   } = useCollaborators();
 
   useEffect(() => {
@@ -108,7 +142,7 @@ export const AdminCollaboratorsPage: React.FC = () => {
 
   const stats = useMemo(() => ({
     total: collaborators.length,
-    active: collaborators.filter(c => c.status === 'ACTIVE').length,
+    active: collaborators.filter(c => c.status === 'ACTIVE' && !isCollaboratorDeactivated(c)).length,
     // Funções distintas presentes na equipe (antes: tamanho fixo da lista local de rótulos = 5).
     roles: new Set(collaborators.map(c => c.role).filter(Boolean)).size,
     earnings: collaborators.reduce((acc, c) => acc + toNumber(c.totalEarnings), 0),
@@ -119,7 +153,7 @@ export const AdminCollaboratorsPage: React.FC = () => {
       const searchStr = (c.name + c.email + (c.role || '') + collaboratorRoleLabel(c.role)).toLowerCase();
       const matchesSearch = searchStr.includes(searchTerm.toLowerCase());
       const matchesRole = selectedRole === 'all' || c.role === selectedRole;
-      const matchesStatus = selectedStatus === 'all' || c.status === selectedStatus;
+      const matchesStatus = selectedStatus === 'all' || (selectedStatus === 'inactive') === isCollaboratorDeactivated(c);
       return matchesSearch && matchesRole && matchesStatus;
     });
   }, [collaborators, searchTerm, selectedRole, selectedStatus]);
@@ -147,31 +181,71 @@ export const AdminCollaboratorsPage: React.FC = () => {
     setIsFormModalOpen(true);
   };
 
-  const handleDeleteClick = (id: string) => {
-    setCollaboratorToDelete(id);
-    setIsDeleteModalOpen(true);
+  const closeDeactivate = () => {
+    if (accessBusy) return;
+    setToDeactivate(null);
+    setFutureAssignments(null);
   };
 
-  const confirmDelete = async () => {
-    if (!collaboratorToDelete) return;
+  // Decisão de Alyson (12/11/2026): "Desativar acesso". A primeira confirmação pede só a desativação; se a pessoa está
+  // em escalas de eventos que ainda não terminaram, o servidor responde 409 com a lista, nada muda, e a janela mostra
+  // os eventos e o botão "Desativar e tirar das escalas futuras".
+  const confirmDeactivate = async () => {
+    if (!toDeactivate || accessBusy) return;
+    const collaborator = toDeactivate;
+    const removing = futureAssignments !== null;
+    setAccessBusy(true);
     try {
-      setIsDeleting(true);
-      await deleteCollaborator(collaboratorToDelete);
+      await api.post(`/collaborators/${collaborator.id}/deactivate`, removing ? { removeFromFutureAssignments: true } : {});
       addNotification({
         type: 'success',
-        title: 'Colaborador removido',
-        message: 'O cadastro do colaborador foi removido.',
+        title: 'Acesso desativado',
+        message: removing
+          ? `${collaborator.name} não consegue mais entrar e saiu das escalas futuras. O histórico fica guardado.`
+          : `${collaborator.name} não consegue mais entrar. O histórico fica guardado.`,
       });
-      setIsDeleteModalOpen(false);
-    } catch {
+      setToDeactivate(null);
+      setFutureAssignments(null);
+      void fetchCollaborators();
+    } catch (err) {
+      const response = (err as AccessError).response;
+      const list = response?.status === 409 ? response.data?.data?.futureAssignments : undefined;
+      if (!removing && Array.isArray(list) && list.length > 0) {
+        setFutureAssignments(list);
+      } else {
+        addNotification({
+          type: 'error',
+          title: 'Acesso não desativado',
+          message: accessErrorMessage(err, 'Não foi possível desativar o acesso agora. Tente de novo.'),
+        });
+      }
+    } finally {
+      setAccessBusy(false);
+    }
+  };
+
+  // "Reativar": a pessoa volta a entrar com a mesma senha; as escalas tiradas na desativação não voltam.
+  const confirmReactivate = async () => {
+    if (!toReactivate || accessBusy) return;
+    const collaborator = toReactivate;
+    setAccessBusy(true);
+    try {
+      await api.post(`/collaborators/${collaborator.id}/reactivate`);
+      addNotification({
+        type: 'success',
+        title: 'Acesso reativado',
+        message: `${collaborator.name} já pode entrar de novo, com a mesma senha.`,
+      });
+      setToReactivate(null);
+      void fetchCollaborators();
+    } catch (err) {
       addNotification({
         type: 'error',
-        title: 'Não foi possível remover',
-        message: 'Não foi possível remover o colaborador agora. Tente de novo.',
+        title: 'Acesso não reativado',
+        message: accessErrorMessage(err, 'Não foi possível reativar o acesso agora. Tente de novo.'),
       });
     } finally {
-      setIsDeleting(false);
-      setCollaboratorToDelete(null);
+      setAccessBusy(false);
     }
   };
 
@@ -415,7 +489,9 @@ export const AdminCollaboratorsPage: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  paginatedCollaborators.map((c) => (
+                  paginatedCollaborators.map((c) => {
+                    const deactivated = isCollaboratorDeactivated(c);
+                    return (
                     <tr key={c.id} className="hover:bg-muted/20 transition-colors group">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
@@ -423,7 +499,7 @@ export const AdminCollaboratorsPage: React.FC = () => {
                             <div className="h-11 w-11 rounded-2xl bg-primary/10 border border-primary/10 flex items-center justify-center flex-shrink-0">
                               <span className="text-sm font-bold text-primary uppercase">{c.name.charAt(0)}</span>
                             </div>
-                            <div className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-card ${c.status === 'ACTIVE' ? 'bg-success' : 'bg-muted-foreground'}`} />
+                            <div className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-card ${c.status === 'ACTIVE' && !deactivated ? 'bg-success' : 'bg-muted-foreground'}`} />
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-foreground truncate">{c.name}</p>
@@ -436,9 +512,13 @@ export const AdminCollaboratorsPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant={c.status === 'ACTIVE' ? 'success' : 'ghost'}>
-                            {c.status === 'ACTIVE' ? 'Ativo' : 'Inativo'}
-                          </Badge>
+                          {deactivated ? (
+                            <Badge variant="ghost">Inativo</Badge>
+                          ) : (
+                            <Badge variant={c.status === 'ACTIVE' ? 'success' : 'outline'}>
+                              {STATUS_LABELS[c.status] ?? c.status}
+                            </Badge>
+                          )}
                           {/* D3: conta criada pelo painel que ainda não criou a senha pelo link. */}
                           {isAwaitingActivation(c) && <Badge variant="warning">Aguardando ativação</Badge>}
                         </div>
@@ -484,20 +564,34 @@ export const AdminCollaboratorsPage: React.FC = () => {
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="h-9 w-9"
-                            onClick={() => handleDeleteClick(c.id)}
-                            title="Remover"
-                            aria-label={`Remover ${c.name}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {isCollaboratorAccount(c) && (deactivated ? (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-9 w-9"
+                              onClick={() => setToReactivate(c)}
+                              title="Reativar"
+                              aria-label={`Reativar ${c.name}`}
+                            >
+                              <UserCheck className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-9 w-9 text-destructive border-destructive/40 hover:bg-destructive/5"
+                              onClick={() => setToDeactivate(c)}
+                              title="Desativar acesso"
+                              aria-label={`Desativar acesso de ${c.name}`}
+                            >
+                              <UserX className="h-4 w-4" />
+                            </Button>
+                          ))}
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -583,15 +677,43 @@ export const AdminCollaboratorsPage: React.FC = () => {
       </Modal>
 
       <ConfirmModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={confirmDelete}
-        title="Remover colaborador?"
-        message="O colaborador será excluído junto com o histórico de eventos e pagamentos dele. Esta ação não pode ser desfeita."
+        isOpen={toDeactivate !== null}
+        onClose={closeDeactivate}
+        onConfirm={confirmDeactivate}
+        title={toDeactivate ? `Desativar o acesso de ${toDeactivate.name}?` : 'Desativar acesso'}
+        message={DEACTIVATE_EXPLANATION}
         variant="danger"
-        isLoading={isDeleting}
-        confirmText="Remover"
-        cancelText="Manter"
+        isLoading={accessBusy}
+        confirmText={futureAssignments ? 'Desativar e tirar das escalas futuras' : 'Desativar acesso'}
+        cancelText="Cancelar"
+      >
+        {futureAssignments && (
+          <div className="space-y-3">
+            <p className="text-sm text-foreground">
+              Esta pessoa está na escala destes eventos, que ainda não terminaram. Ao desativar o acesso, ela sai dessas escalas:
+            </p>
+            <ul className="space-y-2" aria-label="Escalas futuras">
+              {futureAssignments.map((assignment, index) => (
+                <li key={`${assignment.bookingId}-${index}`} className="rounded-xl border border-border bg-muted/30 px-3 py-2 text-sm">
+                  <span className="font-semibold text-foreground">{assignment.eventTitle || 'Evento sem título'}</span>
+                  <span className="text-muted-foreground"> — {formatDateTimeBR(assignment.eventDate)}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-muted-foreground">As escalas de eventos que já terminaram ficam como estão.</p>
+          </div>
+        )}
+      </ConfirmModal>
+
+      <ConfirmModal
+        isOpen={toReactivate !== null}
+        onClose={() => { if (!accessBusy) setToReactivate(null); }}
+        onConfirm={confirmReactivate}
+        title={toReactivate ? `Reativar o acesso de ${toReactivate.name}?` : 'Reativar acesso'}
+        message="A pessoa volta a entrar com a mesma senha. As escalas tiradas quando o acesso foi desativado não voltam: se for o caso, escale de novo."
+        isLoading={accessBusy}
+        confirmText="Reativar"
+        cancelText="Cancelar"
       />
     </AdminLayout>
   );

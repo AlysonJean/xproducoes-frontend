@@ -46,6 +46,7 @@ import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useCollaborators } from '@/hooks/useCollaborators';
+import { schedulableCollaborators } from '@/utils/collaboratorAccess';
 import { NotifyClientCheckbox } from '@/components/bookings/NotifyClientCheckbox';
 import { notifyClientPayload } from '@/utils/notifyClient';
 import { refreshAdminSummary } from '@/stores/adminSummary';
@@ -830,9 +831,11 @@ export const BookingCalendarPage = () => {
                       label="Colaborador responsável (opcional)"
                       value={confirmCollaboratorId}
                       onChange={(e: ChangeEvent<HTMLSelectElement>) => setConfirmCollaboratorId(e.target.value)}
+                      // Decisão de Alyson (12/11/2026): quem está com o acesso desativado não aparece para escalar (o
+                      // filtro "Toda a equipe", acima, continua com todos: é o histórico).
                       options={[
                           { value: '', label: 'Sem responsável' },
-                          ...collaborators.map(c => ({ value: c.id, label: c.name }))
+                          ...schedulableCollaborators(collaborators).map(c => ({ value: c.id, label: c.name }))
                       ]}
                   />
                   {confirmCollaboratorId && (

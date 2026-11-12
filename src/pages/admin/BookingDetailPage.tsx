@@ -38,6 +38,7 @@ import { bookingStatusLabel, bookingStatusVariant, deliveryStatusLabel, DELIVERY
 import { COLLABORATOR_ROLE_OPTIONS } from '@/utils/collaboratorRoles';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useCollaborators } from '@/hooks/useCollaborators';
+import { schedulableCollaborators } from '@/utils/collaboratorAccess';
 import { AdminBookingForm } from '@/components/forms/AdminBookingForm';
 import { isToday } from 'date-fns';
 import { BrandLoader } from '@/components/ui/BrandLoader';
@@ -230,7 +231,10 @@ export const BookingDetailPage = () => {
   // /admin/collaborators, rota que não existe (404 — a lista abria sempre vazia). O hook da tela de
   // Colaboradores já busca a rota real e põe em `name` o nome que vem dentro de `user`; sem isso o
   // EventManagement quebraria em `collaborator.name.toLowerCase()`.
-  const { collaborators: availableCollaborators, fetchCollaborators: fetchAvailableCollaborators } = useCollaborators();
+  const { collaborators: teamCollaborators, fetchCollaborators: fetchAvailableCollaborators } = useCollaborators();
+  // Decisão de Alyson (12/11/2026): quem está com o acesso desativado não aparece para escalar ("Confirmar reserva" e
+  // "Alocar equipe e confirmar"); o servidor também recusa.
+  const availableCollaborators = useMemo(() => schedulableCollaborators(teamCollaborators), [teamCollaborators]);
 
   const fetchBooking = useCallback(async () => {
     if (!id) return;

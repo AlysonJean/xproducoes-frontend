@@ -79,6 +79,7 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
   const { addNotification } = useNotifications();
   const { openModal } = useModal();
   const isEditing = Boolean(initialData);
+  const isDeactivated = initialData?.status === 'INACTIVE';
   const [functions, setFunctions] = useState<CollaboratorFunction[]>([]);
 
   const draftKey = `xp-draft-collaborator-${initialData?.id || 'new'}`;
@@ -298,17 +299,28 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({
             {...register('hourlyRate')}
             error={errors.hourlyRate?.message as string}
           />
-          <Select
-            label="Status"
-            {...register('status')}
-            error={errors.status?.message as string}
-            options={[
-              { value: 'ACTIVE', label: 'Ativo' },
-              { value: 'INACTIVE', label: 'Inativo' },
-              { value: 'PENDING_APPROVAL', label: 'Pendente' },
-              { value: 'SUSPENDED', label: 'Suspenso' },
-            ]}
-          />
+          {/* Decisão de Alyson (12/11/2026): o acesso só muda por "Desativar acesso" e "Reativar", na lista da equipe,
+              que mexem na conta e no cadastro juntos. "Inativo" saiu daqui: tirava a pessoa das escalas sem tirar o
+              acesso. Quem já está sem acesso mantém o status (o formulário o manda igual, e o servidor aceita). */}
+          {isDeactivated ? (
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">Status</p>
+              <p className="text-sm text-muted-foreground">
+                Inativo: o acesso está desativado. Para devolver o acesso, use “Reativar” na lista da equipe.
+              </p>
+            </div>
+          ) : (
+            <Select
+              label="Status"
+              {...register('status')}
+              error={errors.status?.message as string}
+              options={[
+                { value: 'ACTIVE', label: 'Ativo' },
+                { value: 'PENDING_APPROVAL', label: 'Pendente' },
+                { value: 'SUSPENDED', label: 'Suspenso' },
+              ]}
+            />
+          )}
         </div>
       </FormSection>
 

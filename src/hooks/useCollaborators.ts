@@ -10,7 +10,6 @@ interface UseCollaboratorsReturn {
   isLoading: boolean;
   error: string | null;
   fetchCollaborators: () => Promise<void>;
-  deleteCollaborator: (id: string) => Promise<void>;
   getCollaboratorEvents: (id: string) => unknown[];
 }
 
@@ -58,18 +57,8 @@ export const useCollaborators = (): UseCollaboratorsReturn => {
     }
   }, []);
 
-  const deleteCollaborator = useCallback(async (id: string) => {
-    try {
-      setError(null);
-
-      // Implementar endpoint real da API
-      await api.delete(`/collaborators/${id}`);
-
-      setCollaborators((prev) => prev.filter((c) => c.id !== id));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao deletar colaborador');
-    }
-  }, []);
+  // Decisão de Alyson (12/11/2026): saiu daqui deleteCollaborator (DELETE /collaborators/:id, a exclusão definitiva, que
+  // o servidor não faz mais). "Desativar acesso" e "Reativar" ficam na tela da equipe (AdminCollaboratorsPage).
 
   const getCollaboratorEvents = useCallback((_id: string) => {
     return [];
@@ -85,7 +74,6 @@ export const useCollaborators = (): UseCollaboratorsReturn => {
     isLoading,
     error,
     fetchCollaborators,
-    deleteCollaborator,
     getCollaboratorEvents,
   };
 };
