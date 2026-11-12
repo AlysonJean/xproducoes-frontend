@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { Link, useNavigate } from 'react-router-dom';
@@ -19,6 +19,7 @@ import { AuthLayout } from '../components/layouts/AuthLayout';
 import { LogIn, User as UserIcon, Users } from 'lucide-react';
 import { logger } from '../utils/logger';
 import { apiFetch } from '../services/api';
+import { consumeSessionExpiredNotice, SESSION_EXPIRED_MESSAGE } from '../services/authservice';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -35,6 +36,11 @@ export const LoginPage = () => {
   // N1 (02/11/2026): e-mail de quem tentou entrar sem ter confirmado o endereço; mostra "Reenviar confirmação".
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  // Decisão de Alyson (12/11/2026): quem chega aqui porque a sessão venceu vê o motivo uma vez.
+  const [sessionExpired, setSessionExpired] = useState(false);
+  useEffect(() => {
+    if (consumeSessionExpiredNotice()) setSessionExpired(true);
+  }, []);
   const { loginWithCredentials } = useAuth();
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
@@ -54,6 +60,7 @@ export const LoginPage = () => {
 
   const onSubmit = async (data: LoginFormData) => {
     setError(null);
+    setSessionExpired(false);
     setUnverifiedEmail(null);
     setLoading(true);
     try {
@@ -192,6 +199,8 @@ export const LoginPage = () => {
         </>
       }
     >
+      {sessionExpired && <Alert variant="info">{SESSION_EXPIRED_MESSAGE}</Alert>}
+
       <div className="flex rounded-lg bg-muted p-1" role="group" aria-label="Tipo de conta">
         {userTypes.map(({ id, label, icon: Icon }) => (
           <button

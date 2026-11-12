@@ -8,6 +8,29 @@ import { shouldTrySessionRestore, markSessionRestoreTried } from '../utils/sessi
  * to prevent race conditions and redundant logic.
  */
 
+// Decisão de Alyson (12/11/2026, "faça no padrão dos grandes aplicativos"): a sessão tem prazo máximo (30
+// dias para cliente, 7 para a equipe). Quando a renovação é recusada (prazo vencido, código
+// SESSION_EXPIRED_ABSOLUTE, ou sessão encerrada), a pessoa vai para o login e vê uma vez o motivo. O "Sair"
+// normal não mostra o aviso.
+const SESSION_EXPIRED_KEY = 'xp_session_expired';
+export const SESSION_EXPIRED_MESSAGE = 'Sua sessão expirou por segurança. Entre de novo.';
+// A renovação recusada pediu, nesta página, o carregamento de /login (endSession).
+let expiredRedirectPending = false;
+
+/** Lê e apaga o aviso de sessão expirada: aparece uma vez só, na página de login que abre depois da recusa. */
+export function consumeSessionExpiredNotice(): boolean {
+  try {
+    const marked = sessionStorage.getItem(SESSION_EXPIRED_KEY) === '1';
+    // Achado (revisão): no painel, o evento auth:logout leva à tela de login pelo próprio site um instante antes de
+    // chegar a página nova de /login. Apagado nessa tela de passagem, o aviso sumia no carregamento. Ela mostra o
+    // aviso e o deixa para a página nova, que o apaga.
+    if (marked && !expiredRedirectPending) sessionStorage.removeItem(SESSION_EXPIRED_KEY);
+    return marked;
+  } catch {
+    return false; // sem sessionStorage (modo privado restrito): sem aviso
+  }
+}
+
 class AuthService {
   private static instance: AuthService;
   private isRefreshing = false;
@@ -60,7 +83,7 @@ class AuthService {
         if (response.status === 401 || response.status === 403) {
           logDebug('Refresh token rejected by API', { status: response.status });
           this.notifyRefreshSubscribers(null);
-          this.logout();
+          this.endSession(true);
           return null;
         }
 
@@ -104,15 +127,28 @@ class AuthService {
    * Clears all session data and redirects to login
    */
   public logout() {
+    this.endSession(false);
+  }
+
+  // expired: a renovação foi recusada; a tela de login mostra o aviso uma vez. O "Sair" normal apaga um
+  // aviso que tenha ficado (ex.: a renovação recusada durante o próprio "Sair").
+  private endSession(expired: boolean) {
     logDebug('AuthService: Executing global logout');
     // Sessão encerrada: a próxima página não precisa perguntar ao servidor.
     markSessionRestoreTried();
+    try {
+      if (expired) sessionStorage.setItem(SESSION_EXPIRED_KEY, '1');
+      else sessionStorage.removeItem(SESSION_EXPIRED_KEY);
+    } catch {
+      // sem sessionStorage: sem aviso
+    }
 
     // Notify application
     window.dispatchEvent(new Event('auth:logout'));
     
     // Hard redirect if not on login page
     if (!window.location.pathname.includes('/login')) {
+      expiredRedirectPending = expired;
       window.location.href = '/login';
     }
   }
