@@ -2,6 +2,7 @@ import React from 'react';
 import { BookingDetails } from '@/types/types';
 import { DollarSign, TrendingUp, Users, Package } from 'lucide-react';
 import { formatPrice } from '@/utils/formatPrice';
+import { isActiveAssignmentStatus } from '@/utils/assignmentStatus';
 
 interface BookingFinancialSummaryProps {
   booking: BookingDetails;
@@ -20,8 +21,12 @@ export const BookingFinancialSummary: React.FC<BookingFinancialSummaryProps> = (
   // Cálculo de Receita
   const revenue = Number(booking.totalPrice || 0);
 
+  // Decisão de Alyson (12/11/2026): escala cancelada (ou "não compareceu") não é equipe. Fica de fora do custo e da
+  // contagem; a linha continua em "Colaboradores atribuídos", com o selo "Escala cancelada".
+  const crew = (booking.eventCollaborators || []).filter((assignment) => isActiveAssignmentStatus(assignment.status));
+
   // Cálculo de Custos de Equipe
-  const collaboratorsCost = (booking.eventCollaborators || []).reduce((acc, curr) => {
+  const collaboratorsCost = crew.reduce((acc, curr) => {
     // Usa totalPayment se existir
     if (curr.totalPayment) return acc + Number(curr.totalPayment);
 
@@ -78,7 +83,7 @@ export const BookingFinancialSummary: React.FC<BookingFinancialSummaryProps> = (
             - {formatPrice(collaboratorsCost)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            {booking.eventCollaborators?.length || 0} colaboradores
+            {crew.length} colaboradores
           </p>
         </div>
 
