@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { contactEventTitle, proposalNotesFromContact, type ContactProposalPrefill } from '../../utils/contactFormBlock';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { useAuth } from '@/contexts/AuthContext';
 import {
   Card,
   Button,
@@ -35,8 +34,6 @@ import { equipmentUnits, equipmentUnitSuffix, equipmentUnitText, hoursBetween, k
 import { isWholeEventService } from '@/utils/wholeEventService';
 import { KIT_FULFILLMENT_LABEL, kitFulfillment } from '@/utils/kitInfo';
 import { findSetupService } from '@/utils/cartCatalog';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 const ITEM_TYPE_LABELS: Record<string, string> = {
   EQUIPMENT: 'Equipamento',
@@ -81,7 +78,7 @@ interface ProposalItem {
   priceEdited?: boolean;
   // Auditoria do orçamento (12/11/2026), O18/A4/C11: a unidade do preço (diária ou hora) que o servidor pôs no
   // equipamento (priceUnit do GET /equipments, que chega junto com o preço). Sem ela, a linha não acompanha as datas
-  // e Salvar e o PDF ficam travados: nunca cobrar por hora quando o servidor está em diária.
+  // e Salvar fica travado: nunca cobrar por hora quando o servidor está em diária.
   priceUnit?: EquipmentPriceUnit | null;
   // Lote 13 (campos do kit aprovados em 06/11/2026): o kit do catálogo guarda o preço do evento, as horas
   // incluídas, a hora extra e o tipo; a linha acompanha as datas do evento como a do equipamento.
@@ -133,7 +130,7 @@ const pendingFreight = (item: Pick<ProposalItem, 'type' | 'description' | 'total
   const text = item.description.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
   return PENDING_FREIGHT.find(({ starts, says }) => starts.test(text) && says.test(text)) ?? null;
 };
-// "frete a combinar", "pedágio à parte": o que fica sem valor, sem repetir, para o subtotal e o total do PDF.
+// "frete a combinar", "pedágio à parte": o que fica sem valor, sem repetir, para o subtotal e o aviso ao salvar.
 const pendingFreightNotes = (items: ProposalItem[]): string[] =>
   [...new Set(items.map((item) => pendingFreight(item)?.note).filter((note): note is string => !!note))];
 
@@ -163,7 +160,7 @@ const catalogPrice = (type: string, item: Equipment | Kit | Service): number =>
 // dailyPrice, que não existe no cadastro: R$ 0. O preço digitado à mão vence. Sem as datas ainda, conta 1
 // unidade (ou o mínimo de diárias). Auditoria do orçamento (12/11/2026), O18/A4/C11: a unidade é a de cada
 // equipamento (priceUnit), não mais a da consulta GET /equipments/pricing-rules, que valia "hora" enquanto carregava
-// ou se falhasse; sem a unidade, a linha fica com o preço do cadastro e Salvar e o PDF pedem a unidade.
+// ou se falhasse; sem a unidade, a linha fica com o preço do cadastro e Salvar pede a unidade.
 const unitsFor = (item: ProposalItem, unit: EquipmentPriceUnit, start: string, end: string): number =>
   equipmentUnits(unit, start, end, item.minimumUnits) ?? Math.max(1, unit === 'day' ? item.minimumUnits ?? 1 : 1);
 
@@ -197,10 +194,8 @@ const lineDescription = (item: ProposalItem, start: string, end: string): string
 export const AdminQuickProposalPage = () => {
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [generatingPdf, setGeneratingPdf] = useState(false);
   const [quotingFreight, setQuotingFreight] = useState(false);
   // O31/C12: o texto digitado na quantidade enquanto não é um inteiro a partir de 1 (vazio, fração, zero), por linha.
   const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>({});
@@ -466,7 +461,7 @@ export const AdminQuickProposalPage = () => {
 
   // Auditoria do orçamento (12/11/2026), O31/C12: a quantidade é inteira, a partir de 1. Vazio, zero ou fração fica só
   // no campo (com o aviso) e a linha segue com a última quantidade válida: a conta da tela e o que vai para a reserva
-  // usam sempre a mesma. O aviso fica até o campo ganhar um inteiro, e Salvar e o PDF recusam enquanto isso. Sair do
+  // usam sempre a mesma. O aviso fica até o campo ganhar um inteiro, e Salvar recusa enquanto isso. Sair do
   // campo não descarta o texto: o clique em Salvar tira o foco do campo antes, e a quantidade anterior seria gravada
   // sem aviso. Antes a linha calculava com 1,5 e gravava 2 (2 × R$ 600 = R$ 900).
   const dropQuantityDraft = (id: string) => {
@@ -699,157 +694,9 @@ export const AdminQuickProposalPage = () => {
     }
   };
 
-  const formatDateTime = (value: string): string => {
-    if (!value) return '-';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return date.toLocaleString('pt-BR');
-  };
-
-  const loadLogoAsDataUrl = async (): Promise<string | null> => {
-    try {
-      const response = await fetch('/xproducoes-logo.png');
-      if (!response.ok) return null;
-      const blob = await response.blob();
-      return await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error('Falha ao converter logo em base64'));
-        reader.readAsDataURL(blob);
-      });
-    } catch {
-      return null;
-    }
-  };
-
-  const getClientDisplayName = (): string => {
-    if (clientType === 'registered') {
-      const found = clients.find((c) => c.id === selectedClientId);
-      return found?.user?.name || found?.name || 'Cliente cadastrado';
-    }
-    return clientName || 'Cliente não informado';
-  };
-
-  const getClientPhone = (): string => {
-    if (clientType === 'registered') {
-      const found = clients.find((c) => c.id === selectedClientId);
-      return found?.phone || found?.user?.phone || '';
-    }
-    return clientContact || '';
-  };
-
-  const getClientEmail = (): string => {
-    if (clientType === 'registered') {
-      const found = clients.find((c) => c.id === selectedClientId);
-      return found?.email || found?.user?.email || '';
-    }
-    return clientEmail || '';
-  };
-
-  // Auditoria do orçamento (12/11/2026), E8: o cliente recebe a proposta pelo link, que mostra sempre a reserva atual
-  // (decisão de 12/11), e não por PDF. Saíram o "PDF + WhatsApp" e a mensagem pronta ("Acabei de gerar o PDF...", com
-  // um total parado). O PDF desta tela fica para uso interno: sem a "Mensagem sugerida para WhatsApp" e sem validade
-  // (a proposta ainda não foi enviada; a validade começa no envio do link). D6, parte 1 (02/11/2026): sem convite de
-  // cadastro nem promessa de vínculo.
-  const generateProposalPdf = async (): Promise<void> => {
-    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-    const logoDataUrl = await loadLogoAsDataUrl();
-
-    if (logoDataUrl) {
-      doc.addImage(logoDataUrl, 'PNG', 14, 10, 42, 14);
-    }
-
-    doc.setFontSize(16);
-    doc.text('Proposta - uso interno', 14, 32);
-
-    doc.setFontSize(10);
-    doc.text(`Gerada em: ${new Date().toLocaleString('pt-BR')}`, 14, 38);
-    doc.text(`Responsavel: ${user?.name || 'Equipe X Producoes'}`, 14, 43);
-
-    doc.setFontSize(11);
-    doc.text('Cliente', 14, 52);
-    doc.setFontSize(10);
-    doc.text(`Nome: ${getClientDisplayName()}`, 14, 57);
-    doc.text(`WhatsApp: ${getClientPhone() || '-'}`, 14, 62);
-    doc.text(`Email: ${getClientEmail() || '-'}`, 14, 67);
-
-    doc.setFontSize(11);
-    doc.text('Evento', 14, 77);
-    doc.setFontSize(10);
-    doc.text(`Titulo: ${eventTitle || 'Proposta Rapida'}`, 14, 82);
-    doc.text(`Inicio: ${formatDateTime(eventDate)}`, 14, 87);
-    doc.text(`Termino: ${formatDateTime(eventEndDate)}`, 14, 92);
-    doc.text(`Local: ${location || '-'}`, 14, 97);
-
-    const fullAddress = [street, addressNumber, neighborhood, city, state, zipCode]
-      .filter(Boolean)
-      .join(', ');
-    const addressLines = doc.splitTextToSize(`Endereco: ${fullAddress || '-'}`, 180);
-    doc.text(addressLines, 14, 102);
-
-    autoTable(doc, {
-      startY: 112,
-      head: [['Item', 'Tipo', 'Qtd', 'Unitario', 'Desconto', 'Total']],
-      body: pricedItems.map((item) => {
-        // Onda 2: a linha do frete sem valor sai "a combinar"/"à parte", não "R$ 0,00".
-        const pending = pendingFreight(item);
-        return [
-          lineDescription(item, eventDate, eventEndDate),
-          ITEM_TYPE_LABELS[item.type] || item.type,
-          String(item.quantity),
-          pending ? pending.label : formatPrice(item.unitPrice),
-          formatPrice(item.discount),
-          pending ? pending.label : formatPrice(item.totalPrice),
-        ];
-      }),
-      styles: { fontSize: 9, cellPadding: 2 },
-      headStyles: { fillColor: [25, 118, 210] },
-    });
-
-    const tableEndY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || 120;
-    doc.setFontSize(12);
-    doc.text(`Total estimado: ${formatPrice(subtotal)}${pendingNotes.map((note) => ` + ${note}`).join('')}`, 14, tableEndY + 10);
-
-    // As observações internas também não entram: o arquivo pode ser repassado.
-    doc.setFontSize(9);
-    const internalUseLines = doc.splitTextToSize(
-      'Uso interno. O cliente recebe a proposta pelo link ("Enviar proposta", na ficha da reserva), que mostra sempre a reserva atual. A validade começa quando o link for enviado.',
-      180,
-    );
-    doc.text(internalUseLines, 14, tableEndY + 18);
-
-    const filenameClient = getClientDisplayName().replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
-    const fileName = `proposta-interna-${filenameClient || 'cliente'}-${Date.now()}.pdf`;
-    doc.save(fileName);
-  };
-
-  const handleDownloadPdf = async () => {
-    const validationError = validate();
-    if (validationError) {
-      addNotification({ type: 'error', title: 'Campos pendentes', message: validationError });
-      return;
-    }
-
-    try {
-      setGeneratingPdf(true);
-      await generateProposalPdf();
-
-      addNotification({
-        type: 'success',
-        title: 'PDF pronto',
-        message: 'PDF de uso interno baixado. Para o cliente, salve a proposta e use "Enviar proposta" na ficha da reserva.',
-      });
-    } catch (error: unknown) {
-      const err = error as { message?: string } | null;
-      addNotification({
-        type: 'error',
-        title: 'Falha no PDF',
-        message: err?.message || 'Nao foi possivel gerar o PDF da proposta.',
-      });
-    } finally {
-      setGeneratingPdf(false);
-    }
-  };
+  // Orçamento em PDF (13/11/2026): saiu o "Baixar PDF" de uso interno desta tela. Era um terceiro PDF montado no
+  // navegador (jsPDF), com outro visual e a sua própria conta; depois de salvar, a ficha da reserva baixa o orçamento
+  // oficial, que o servidor gera a partir da reserva (o mesmo do link da proposta e da área do cliente).
 
   // Carregando dentro do layout (antes: BrandLoader em tela cheia, sem menu nem título).
   if (loading) {
@@ -873,16 +720,14 @@ export const AdminQuickProposalPage = () => {
             </div>
             <div>
               <h2 className="text-xl font-bold text-foreground">Nova proposta comercial</h2>
-              {/* E8 (auditoria do orçamento, 12/11/2026): o link é o caminho da proposta; o PDF é de uso interno. */}
-              <p className="text-sm text-muted-foreground">Monte o orçamento e salve: o cliente recebe o link da proposta pelo "Enviar proposta" da ficha da reserva. O PDF é para uso interno.</p>
+              {/* E8 (auditoria do orçamento, 12/11/2026): o link é o caminho da proposta. Orçamento em PDF (13/11/2026): o PDF
+                  sai da ficha, depois de salvar. */}
+              <p className="text-sm text-muted-foreground">Monte o orçamento e salve: o cliente recebe o link da proposta pelo "Enviar proposta" da ficha da reserva, onde também se baixa o orçamento em PDF.</p>
             </div>
           </div>
           {/* flex-wrap: os botões em linha estouravam a tela de 375px. */}
           <div className="flex flex-wrap gap-2">
              <Button variant="outline" size="sm" onClick={() => navigate(-1)}>Cancelar</Button>
-             <Button variant="outline" size="sm" onClick={handleDownloadPdf} isLoading={generatingPdf}>
-              Baixar PDF
-             </Button>
              <Button size="sm" onClick={() => handleSave('PENDING')} isLoading={saving} leftIcon={<Send className="h-4 w-4" />}>
                 Salvar proposta
              </Button>
@@ -992,7 +837,7 @@ export const AdminQuickProposalPage = () => {
                )}
                {items.some(missingPriceUnit) && (
                  <p id="unidade-do-preco" role="alert" className="-mt-4 mb-6 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-foreground">
-                   O servidor não informou se o preço do equipamento é por diária ou por hora: a linha marcada não acompanha as datas, e Salvar e o PDF ficam travados. Recarregue a página e adicione o equipamento de novo, ou digite o preço da linha.
+                   O servidor não informou se o preço do equipamento é por diária ou por hora: a linha marcada não acompanha as datas, e Salvar fica travado. Recarregue a página e adicione o equipamento de novo, ou digite o preço da linha.
                  </p>
                )}
 

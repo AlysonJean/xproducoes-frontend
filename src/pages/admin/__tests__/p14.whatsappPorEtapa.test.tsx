@@ -26,24 +26,6 @@ vi.mock('@/components/bookings/BookingCollaborators', () => ({ BookingCollaborat
 vi.mock('@/components/bookings/BookingFinancialSummary', () => ({ BookingFinancialSummary: () => null }));
 vi.mock('../../../components/modals/EventManagement', () => ({ EventManagement: () => null }));
 vi.mock('react-ga4', () => ({ default: { event: gaEvent } }));
-vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
-vi.mock('jspdf', () => ({
-  jsPDF: class {
-    text() {}
-    splitTextToSize = (texto: string) => [texto];
-    setFillColor() {}
-    rect() {}
-    addImage() {}
-    setTextColor() {}
-    setFontSize() {}
-    setFont() {}
-    setDrawColor() {}
-    setLineWidth() {}
-    line() {}
-    textWithLink() {}
-    save() {}
-  },
-}));
 
 import BookingDetailPage from '../BookingDetailPage';
 

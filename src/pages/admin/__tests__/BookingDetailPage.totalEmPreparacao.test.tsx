@@ -2,12 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
-const { bookingAPI, pdfText, autoTable } = vi.hoisted(() => ({
+const { bookingAPI, quotePdfAPI } = vi.hoisted(() => ({
   bookingAPI: { getById: vi.fn(), updateStatus: vi.fn(), updateDeliveryStatus: vi.fn(), delete: vi.fn(), confirmWithDetails: vi.fn() },
-  pdfText: vi.fn(),
-  autoTable: vi.fn(),
+  quotePdfAPI: { forAdmin: vi.fn() },
 }));
-vi.mock('../../../services/api', () => ({ bookingAPI, api: { post: vi.fn(), delete: vi.fn() } }));
+vi.mock('../../../services/api', () => ({ bookingAPI, quotePdfAPI, api: { post: vi.fn(), delete: vi.fn() } }));
 vi.mock('../../../contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification: vi.fn() }) }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } }) }));
 vi.mock('@/hooks/useCollaborators', () => ({ useCollaborators: () => ({ collaborators: [], fetchCollaborators: vi.fn().mockResolvedValue(undefined) }) }));
@@ -16,31 +15,14 @@ vi.mock('@/components/bookings/BookingCollaborators', () => ({ BookingCollaborat
 vi.mock('@/components/bookings/BookingFinancialSummary', () => ({ BookingFinancialSummary: () => null }));
 vi.mock('../../../components/modals/EventManagement', () => ({ EventManagement: () => null }));
 vi.mock('react-ga4', () => ({ default: { event: vi.fn() } }));
-vi.mock('jspdf-autotable', () => ({ default: autoTable }));
-vi.mock('jspdf', () => ({
-  jsPDF: class {
-    text = pdfText;
-    splitTextToSize = (texto: string) => [texto];
-    setFillColor() {}
-    rect() {}
-    addImage() {}
-    setTextColor() {}
-    setFontSize() {}
-    setFont() {}
-    setDrawColor() {}
-    setLineWidth() {}
-    line() {}
-    textWithLink() {}
-    save() {}
-  },
-}));
 
 import BookingDetailPage from '../BookingDetailPage';
 import { formatPrice } from '../../../utils/formatPrice';
 
 // Auditoria do orçamento (12/11/2026), O3: o pedido do briefing (sem itens, total zero) aparecia "R$ 0,00" no card
 // "Valor da reserva" da ficha e no "VALOR FINAL DA PROPOSTA" do PDF do painel. Agora "Em preparação", como na área
-// do cliente.
+// do cliente. Orçamento em PDF (13/11/2026): o PDF é o do servidor, que escreve "Em preparação" no total zero
+// (backend/src/services/pdf/__tests__).
 const PEDIDO_DO_BRIEFING = {
   id: 'XP-ANA-20270110', status: 'PENDING', deliveryStatus: 'PENDING', totalPrice: '0.00', discountAmount: null,
   eventDate: '2027-01-10T21:00:00.000Z', eventEndDate: '2027-01-11T01:00:00.000Z', location: 'A definir',
@@ -57,11 +39,6 @@ const renderFicha = async (reserva: object) => {
     </MemoryRouter>,
   );
   await screen.findByRole('heading', { name: /^Reserva / });
-};
-
-const valorFinalDoPdf = () => {
-  const i = pdfText.mock.calls.findIndex((c) => c[0] === 'VALOR FINAL DA PROPOSTA:');
-  return pdfText.mock.calls[i + 1]?.[0];
 };
 
 describe('BookingDetailPage — total zero sai "Em preparação" (O3)', () => {
@@ -82,13 +59,13 @@ describe('BookingDetailPage — total zero sai "Em preparação" (O3)', () => {
     expect(card.textContent).not.toMatch(/R\$\s*0,00/);
   });
 
-  it('PDF do painel: "VALOR FINAL DA PROPOSTA" com "Em preparação"', async () => {
+  it('"Baixar orçamento (PDF)" também no pedido sem valor: baixa o orçamento do servidor ("Em preparação")', async () => {
+    quotePdfAPI.forAdmin.mockResolvedValue(undefined);
     await renderFicha(PEDIDO_DO_BRIEFING);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Baixar PDF' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar orçamento (PDF)' }));
 
-    await waitFor(() => expect(autoTable).toHaveBeenCalledTimes(1));
-    expect(valorFinalDoPdf()).toBe('Em preparação');
+    await waitFor(() => expect(quotePdfAPI.forAdmin).toHaveBeenCalledWith('XP-ANA-20270110'));
   });
 
   it('com valor, o card mostra o total da reserva', async () => {

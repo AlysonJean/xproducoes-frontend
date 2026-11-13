@@ -8,7 +8,6 @@ vi.mock('@/services/api', () => ({ apiFetch }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1', role: 'CLIENT', name: 'Ana da Conta' } }) }));
 vi.mock('../../../contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification: vi.fn() }) }));
 vi.mock('../../../components/client/BookingChatPanel', () => ({ BookingChatPanel: () => <p>Chat antigo da reserva</p> }));
-vi.mock('../../../utils/generateBookingProposalPdf', () => ({ generateBookingProposalPdf: vi.fn() }));
 vi.mock('react-ga4', () => ({ default: { event: gaEvent } }));
 
 import { BookingDetailsPage } from '../BookingDetailsPage';

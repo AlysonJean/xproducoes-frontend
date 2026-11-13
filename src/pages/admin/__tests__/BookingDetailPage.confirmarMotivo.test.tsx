@@ -5,10 +5,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
-const { bookingAPI, addNotification, pdfText } = vi.hoisted(() => ({
+const { bookingAPI, addNotification } = vi.hoisted(() => ({
   bookingAPI: { getById: vi.fn(), updateStatus: vi.fn(), updateDeliveryStatus: vi.fn(), delete: vi.fn(), confirmWithDetails: vi.fn() },
   addNotification: vi.fn(),
-  pdfText: vi.fn(),
 }));
 vi.mock('../../../services/api', () => ({ bookingAPI, api: { post: vi.fn(), delete: vi.fn() } }));
 vi.mock('../../../contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification }) }));
@@ -19,25 +18,6 @@ vi.mock('@/components/bookings/BookingCollaborators', () => ({ BookingCollaborat
 vi.mock('@/components/bookings/BookingFinancialSummary', () => ({ BookingFinancialSummary: () => null }));
 vi.mock('../../../components/modals/EventManagement', () => ({ EventManagement: () => null }));
 vi.mock('react-ga4', () => ({ default: { event: vi.fn() } }));
-vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
-// O PDF de verdade não importa aqui: só o que ele escreve na seção do cliente.
-vi.mock('jspdf', () => ({
-  jsPDF: class {
-    text = pdfText;
-    splitTextToSize = (texto: string) => [texto];
-    setFillColor() {}
-    rect() {}
-    addImage() {}
-    setTextColor() {}
-    setFontSize() {}
-    setFont() {}
-    setDrawColor() {}
-    setLineWidth() {}
-    line() {}
-    textWithLink() {}
-    save() {}
-  },
-}));
 
 import BookingDetailPage from '../BookingDetailPage';
 

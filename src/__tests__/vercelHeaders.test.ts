@@ -45,8 +45,17 @@ describe('vercel.json — Cache-Control efetivo por caminho', () => {
     expect(existsSync(new URL('../../public/animations', import.meta.url))).toBe(false);
   });
 
+  // Orçamento em PDF (13/11/2026): o PDF do cliente (GET com cookie na área do cliente e na ficha; POST pelo link da
+  // proposta) passa pela mesma regra da API: nunca s-maxage na borda.
   it('respostas da API nunca ficam em cache compartilhado', () => {
-    for (const path of ['/api/v1/auth/me', '/api/v1/bookings/b1', '/api/v1/csrf-token']) {
+    for (const path of [
+      '/api/v1/auth/me',
+      '/api/v1/bookings/b1',
+      '/api/v1/csrf-token',
+      '/api/v1/bookings/b1/quote-pdf',
+      '/api/v1/admin/bookings/b1/quote-pdf',
+      '/api/v1/proposals/pdf',
+    ]) {
       const cacheControl = effectiveHeaders(path)['cache-control'];
       expect(cacheControl).toContain('private');
       expect(cacheControl).toContain('no-cache');

@@ -17,8 +17,6 @@ vi.mock('@/components/bookings/BookingCollaborators', () => ({ BookingCollaborat
 vi.mock('@/components/bookings/BookingFinancialSummary', () => ({ BookingFinancialSummary: () => null }));
 vi.mock('../../../components/modals/EventManagement', () => ({ EventManagement: () => null }));
 vi.mock('react-ga4', () => ({ default: { event: vi.fn() } }));
-vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
-vi.mock('jspdf', () => ({ jsPDF: class {} }));
 
 import BookingDetailPage from '../BookingDetailPage';
 

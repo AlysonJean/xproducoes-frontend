@@ -8,8 +8,6 @@ vi.mock('@/services/api', () => ({ apiFetch }));
 vi.mock('@/contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification }) }));
 vi.mock('../../../contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification }) }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth }));
-vi.mock('jspdf', () => ({ jsPDF: vi.fn() }));
-vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
 
 import AdminQuickProposalPage from '../AdminQuickProposalPage';
 

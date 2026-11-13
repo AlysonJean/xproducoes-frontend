@@ -3,6 +3,8 @@ import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { logDebug } from '../utils/logger';
 import { normalizeString } from '../utils/string';
 import { API_BASE_URL, API_URL } from '../utils/apiConfig';
+import { createAndClickAnchor } from '../utils/dom';
+import { formatBookingCode } from '../utils/bookingCode';
 
 // ✅ PRODUCTION-SAFE LOGGING
 logDebug('API Configuration', {
@@ -152,10 +154,10 @@ api.interceptors.response.use(
 
 // ✅ SECURE FETCH UTILITY WITH AUTO REFRESH
 
-export const apiFetch = async <T = unknown>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> => {
+// Orçamento em PDF (13/11/2026): a requisição (cookies, CSRF, Idempotency-Key, renovação do login, repetição de falha
+// de rede e a mensagem de erro com o status) é a mesma para o JSON (apiFetch) e para o arquivo (downloadPdf); só a
+// leitura da resposta muda.
+async function apiResponse(endpoint: string, options: RequestInit = {}): Promise<Response> {
   const makeRequest = async (url: string, config: RequestInit): Promise<Response> => {
     // Add timeout handling
         const timeout = parseInt((import.meta as unknown as { env?: { VITE_API_TIMEOUT?: string } }).env?.VITE_API_TIMEOUT as string) || 30000;
@@ -339,6 +341,15 @@ export const apiFetch = async <T = unknown>(
     throw Object.assign(new Error(message), { status: response.status });
   }
 
+  return response;
+}
+
+export const apiFetch = async <T = unknown>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> => {
+  const response = await apiResponse(endpoint, options);
+
   if (response.status === 204) {
     return {} as T;
   }
@@ -351,6 +362,45 @@ export const apiFetch = async <T = unknown>(
   }
 
   return json as T;
+};
+
+// ===== Orçamento em PDF (13/11/2026) =====
+// O servidor gera o orçamento na hora, a partir da reserva atual (backend/src/services/pdf); o site só baixa. Antes a
+// área do cliente, a ficha do painel e a Proposta Rápida montavam cada uma o seu PDF no navegador (jsPDF).
+
+/** O nome do arquivo no Content-Disposition do servidor (orcamento-<código>.pdf), ou null sem ele. */
+export function filenameFromDisposition(header: string | null): string | null {
+  const match = /filename="?([^";]+)"?/i.exec(header ?? '');
+  return match ? match[1].trim() : null;
+}
+
+/**
+ * Baixa um PDF da API e o entrega ao navegador como download. O nome vem do servidor; fallbackName vale quando o
+ * cabeçalho não chega (em desenvolvimento a API é de outra origem). Erro: o mesmo do apiFetch (mensagem e status).
+ */
+export async function downloadPdf(endpoint: string, options: RequestInit = {}, fallbackName = 'orcamento.pdf'): Promise<void> {
+  const response = await apiResponse(endpoint, options);
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  createAndClickAnchor({ href: url, download: filenameFromDisposition(response.headers.get('Content-Disposition')) || fallbackName });
+  // O endereço do arquivo vale até o download começar; solto depois de um minuto (soltar na hora cancela o download
+  // em alguns navegadores).
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+const quoteFileName = (bookingId: string) => `orcamento-${formatBookingCode(bookingId).replace(/[^A-Za-z0-9-]+/g, '-')}.pdf`;
+
+export const quotePdfAPI = {
+  /**
+   * Pela página da proposta (sem login): o código do link vai no CORPO, nunca no endereço (que entra nos registros da
+   * Vercel e do Render). O referrerPolicy "origin" é o do POST /proposals/view (ver PublicProposalPage).
+   */
+  fromProposal: (token: string) =>
+    downloadPdf('/proposals/pdf', { method: 'POST', body: JSON.stringify({ token }), referrerPolicy: 'origin' }),
+  /** Área do cliente: só o cliente dono da reserva. */
+  forClient: (bookingId: string) => downloadPdf(`/bookings/${encodeURIComponent(bookingId)}/quote-pdf`, {}, quoteFileName(bookingId)),
+  /** Ficha do painel (admin). */
+  forAdmin: (bookingId: string) => downloadPdf(`/admin/bookings/${encodeURIComponent(bookingId)}/quote-pdf`, {}, quoteFileName(bookingId)),
 };
 
 // ===== 🔗 API ENDPOINTS =====

@@ -8,7 +8,6 @@ vi.mock('@/services/api', () => ({ apiFetch }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1', role: 'CLIENT' } }) }));
 vi.mock('../../../contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification: vi.fn() }) }));
 vi.mock('../../../components/client/BookingChatPanel', () => ({ BookingChatPanel: () => null }));
-vi.mock('../../../utils/generateBookingProposalPdf', () => ({ generateBookingProposalPdf: vi.fn() }));
 vi.mock('react-ga4', () => ({ default: { event: vi.fn() } }));
 
 import { BookingDetailsPage } from '../BookingDetailsPage';
@@ -36,13 +35,13 @@ describe('BookingDetailsPage (cliente) — sem valor, sem PDF da proposta (O3)',
     await renderPage({ ...base, totalPrice: '0.00' });
 
     expect(screen.getByText('Em preparação')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Baixar proposta/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Baixar orçamento/ })).not.toBeInTheDocument();
   });
 
   it('com valor: o botão do PDF aparece', async () => {
     await renderPage({ ...base, totalPrice: '900.00' });
 
-    expect(screen.getByRole('button', { name: /Baixar proposta \(PDF\)/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Baixar orçamento \(PDF\)/ })).toBeInTheDocument();
     expect(screen.queryByText('Em preparação')).not.toBeInTheDocument();
   });
 });

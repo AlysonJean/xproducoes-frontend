@@ -37,8 +37,6 @@ vi.mock('../../../components/modals/EventManagement', () => ({
   ),
 }));
 vi.mock('react-ga4', () => ({ default: { event: vi.fn() } }));
-vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
-vi.mock('jspdf', () => ({ jsPDF: class {} }));
 // O react-big-calendar mede o layout (o jsdom não tem medidas): no lugar dele, um botão por reserva (o mesmo stub de
 // d11b.listaEAgendaAvisarCliente.test.tsx).
 type StubEvent = { title: string; resource: { id: string } };

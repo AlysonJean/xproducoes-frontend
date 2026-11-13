@@ -16,7 +16,6 @@ vi.mock('../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1
 vi.mock('../../contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification: vi.fn() }) }));
 vi.mock('@/contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification: vi.fn() }) }));
 vi.mock('../../components/client/BookingChatPanel', () => ({ BookingChatPanel: () => null }));
-vi.mock('../../utils/generateBookingProposalPdf', () => ({ generateBookingProposalPdf: vi.fn() }));
 
 import PublicProposalPage from '../PublicProposalPage';
 import { BookingDetailsPage } from '../client/BookingDetailsPage';

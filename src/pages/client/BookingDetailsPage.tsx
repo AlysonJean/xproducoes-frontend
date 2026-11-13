@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import ReactGA from 'react-ga4';
 import { ArrowLeft, FileDown, FileText, Mail, MessageCircle, Plus, Trash2, Upload } from 'lucide-react';
-import { apiFetch } from '@/services/api';
+import { apiFetch, quotePdfAPI } from '@/services/api';
 import type { BookingDetails } from '@/types/types';
 import { formatBookingTotal, formatPrice, hasBookingTotal } from '@/utils/formatPrice';
 import { bookingPricing, formatPricingLineTotal, toArrangeNote } from '@/utils/bookingPricing';
@@ -14,7 +14,6 @@ import { logger } from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { BookingChatPanel } from '../../components/client/BookingChatPanel';
-import { generateBookingProposalPdf } from '../../utils/generateBookingProposalPdf';
 import { bookingEmail, bookingPhone } from '../../utils/bookingContact';
 import { formatBookingCode } from '../../utils/bookingCode';
 import { buildBookingContactText, buildWhatsAppUrl, getWhatsAppPhone } from '../../utils/whatsapp';
@@ -182,17 +181,17 @@ export const BookingDetailsPage = () => {
     });
   };
 
-  // Achado (auditoria de produto): o gerador de proposta em PDF (jsPDF + logo/branding) só
-  // existia no lado admin, para propostas montadas manualmente numa ligação. O cliente não
-  // tinha nenhuma forma de baixar um PDF formal do próprio orçamento já existente.
+  // Orçamento em PDF (13/11/2026): o PDF é o orçamento que o servidor gera na hora, a partir da reserva atual (o mesmo
+  // do link da proposta e da ficha do painel). Antes era montado aqui no navegador (jsPDF), com outro visual e outra
+  // conta de datas e validade.
   const handleDownloadProposal = async () => {
     if (!booking) return;
     try {
       setDownloadingProposal(true);
-      await generateBookingProposalPdf(booking);
+      await quotePdfAPI.forClient(booking.id);
     } catch (error) {
-      logger.error('Erro ao gerar PDF da proposta:', 'BookingDetailsPage', error);
-      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível gerar o PDF agora.' });
+      logger.error('Erro ao baixar o orçamento em PDF:', 'BookingDetailsPage', error);
+      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível baixar o orçamento agora. Tente de novo em alguns minutos.' });
     } finally {
       setDownloadingProposal(false);
     }
@@ -264,7 +263,7 @@ export const BookingDetailsPage = () => {
               isLoading={downloadingProposal}
               leftIcon={<FileDown className="h-4 w-4" aria-hidden="true" />}
             >
-              {downloadingProposal ? 'Gerando PDF...' : 'Baixar proposta (PDF)'}
+              {downloadingProposal ? 'Gerando PDF...' : 'Baixar orçamento (PDF)'}
             </Button>
           )}
           <Button
@@ -537,7 +536,7 @@ export const BookingDetailsPage = () => {
               </div>
               {/* Achado (auditoria ponta a ponta): o telefone era só o do cadastro, e o e-mail lia client.email,
                   que a API não manda (o do cadastro é o da conta), e saía sempre "Não informado". Agora é o
-                  mesmo contato do PDF desta tela: o informado na reserva antes do cadastro (utils/bookingContact). */}
+                  informado na reserva antes do cadastro (utils/bookingContact). */}
               <div>
                 <dt className="text-sm text-muted-foreground">Telefone</dt>
                 <dd className="font-medium text-foreground">{bookingPhone(booking) || 'Não informado'}</dd>

@@ -11,15 +11,14 @@ const { ORIGINAL_TZ } = vi.hoisted(() => {
   return { ORIGINAL_TZ: original };
 });
 
-const { bookingAPI, pdfText, autoTable } = vi.hoisted(() => ({
+const { bookingAPI, quotePdfAPI } = vi.hoisted(() => ({
   bookingAPI: {
     getById: vi.fn(), updateStatus: vi.fn(), updateDeliveryStatus: vi.fn(), delete: vi.fn(), confirmWithDetails: vi.fn(),
     sendProposal: vi.fn(), getAuditHistory: vi.fn(),
   },
-  pdfText: vi.fn(),
-  autoTable: vi.fn(),
+  quotePdfAPI: { forAdmin: vi.fn() },
 }));
-vi.mock('../../../services/api', () => ({ bookingAPI, api: { post: vi.fn(), delete: vi.fn() }, apiFetch: vi.fn().mockResolvedValue({}) }));
+vi.mock('../../../services/api', () => ({ bookingAPI, quotePdfAPI, api: { post: vi.fn(), delete: vi.fn() }, apiFetch: vi.fn().mockResolvedValue({}) }));
 vi.mock('../../../contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification: vi.fn() }) }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } }) }));
 vi.mock('@/hooks/useCollaborators', () => ({ useCollaborators: () => ({ collaborators: [], fetchCollaborators: vi.fn().mockResolvedValue(undefined) }) }));
@@ -33,24 +32,6 @@ vi.mock('@/components/bookings/BookingCollaborators', () => ({ BookingCollaborat
 vi.mock('@/components/bookings/BookingFinancialSummary', () => ({ BookingFinancialSummary: () => null }));
 vi.mock('../../../components/modals/EventManagement', () => ({ EventManagement: () => null }));
 vi.mock('react-ga4', () => ({ default: { event: vi.fn() } }));
-vi.mock('jspdf-autotable', () => ({ default: autoTable }));
-vi.mock('jspdf', () => ({
-  jsPDF: class {
-    text = pdfText;
-    splitTextToSize = (texto: string) => [texto];
-    setFillColor() {}
-    rect() {}
-    addImage() {}
-    setTextColor() {}
-    setFontSize() {}
-    setFont() {}
-    setDrawColor() {}
-    setLineWidth() {}
-    line() {}
-    textWithLink() {}
-    save() {}
-  },
-}));
 
 import BookingDetailPage from '../BookingDetailPage';
 import { formatPrice } from '../../../utils/formatPrice';
@@ -120,11 +101,6 @@ const renderFicha = async (reserva: object = RESERVA) => {
 };
 
 const cartaoDoValor = () => screen.getByText('Valor da reserva').closest('.overflow-hidden') as HTMLElement;
-const escritosNoPdf = () => pdfText.mock.calls.map((c) => String(c[0]));
-const baixarPdf = async () => {
-  fireEvent.click(screen.getByRole('button', { name: 'Baixar PDF' }));
-  await waitFor(() => expect(autoTable).toHaveBeenCalledTimes(1));
-};
 
 describe('Ficha da reserva — auditoria do orçamento (onda 2)', () => {
   let open: MockInstance<typeof window.open>;
@@ -278,7 +254,7 @@ describe('Ficha da reserva — auditoria do orçamento (onda 2)', () => {
     const url = new URL(String(open.mock.calls[0][0]));
     expect(`${url.origin}${url.pathname}`).toBe('https://wa.me/5531988887777');
     expect(url.searchParams.get('text')).toContain('https://xproducoeseeventos.com.br/proposta#token=abc');
-    expect(autoTable).not.toHaveBeenCalled();
+    expect(quotePdfAPI.forAdmin).not.toHaveBeenCalled();
   });
 
   it('"Enviar link pelo WhatsApp" com envio anterior e a reserva mudada: aciona o "Reenviar proposta", não outro botão', async () => {
@@ -310,7 +286,7 @@ describe('Ficha da reserva — auditoria do orçamento (onda 2)', () => {
   it('reserva confirmada: sem "Enviar link pelo WhatsApp" (o link da proposta não abre mais)', async () => {
     await renderFicha({ ...RESERVA, status: 'CONFIRMED' });
 
-    expect(screen.getByRole('button', { name: 'Baixar PDF' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Baixar orçamento (PDF)' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Enviar link pelo WhatsApp' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'PDF + WhatsApp' })).not.toBeInTheDocument();
   });
@@ -328,44 +304,20 @@ describe('Ficha da reserva — auditoria do orçamento (onda 2)', () => {
     expect(bookingAPI.getById).toHaveBeenCalledTimes(2);
   });
 
-  // O10/C5/D5, O21, O32/C14, D11 e D13 no PDF do painel (uso interno).
-  it('PDF do painel: validade do link, pedágio à parte, nome do cadastro, duração pelas datas e horário de Brasília', async () => {
-    await renderFicha({ ...RESERVA, proposal: enviada('2099-01-05T02:59:59.999Z') });
+  // Orçamento em PDF (13/11/2026): O10/C5/D5 (validade do link), O21 (pedágio à parte), O32/C14 (nome do cadastro), D11
+  // (duração pelas datas) e D13 (horário de Brasília) do PDF do painel agora são do orçamento do servidor
+  // (backend/src/services/pdf/__tests__). A ficha só pede o arquivo, em qualquer status.
+  it('"Baixar orçamento (PDF)": pede ao servidor o orçamento da reserva, pendente ou confirmada', async () => {
+    quotePdfAPI.forAdmin.mockResolvedValue(undefined);
+    const view = await renderFicha({ ...RESERVA, proposal: enviada('2099-01-05T02:59:59.999Z') });
 
-    await baixarPdf();
-
-    const escritos = escritosNoPdf();
-    const cabecalho = escritos.find((t) => t.startsWith('Emitida em:')) ?? '';
-    expect(cabecalho).toContain('Válida até 04/01/2099');
-    expect(cabecalho).not.toContain('Validade: 7 dias');
-    expect(escritos).toContain('Carla Dias');
-    expect(escritos).not.toContain('Nao informado');
-    expect(escritos).toContain('5 h');
-    expect(escritos).not.toContain('3h');
-    expect(escritos).toContain('10/01/2027 18:00');
-    expect(escritos).toContain('10/01/2027 23:00');
-    expect(escritos).toContain('O pedágio é cobrado à parte e não está no total.');
-    expect(escritos.join(' ')).not.toContain('Mensagem sugerida');
-    const pedagio = (autoTable.mock.calls[0][1].body as string[][]).find((l) => l[1] === 'Pedágio à parte');
-    expect(pedagio?.slice(4)).toEqual(['-', '-', 'à parte']);
-  });
-
-  it('PDF do painel: proposta vencida diz "Venceu em"; confirmada, ou sem o resumo da proposta, não fala de validade', async () => {
-    const view = await renderFicha({ ...RESERVA, proposal: enviada('2020-03-02T02:59:59.999Z', true) });
-    await baixarPdf();
-    expect(escritosNoPdf().find((t) => t.startsWith('Emitida em:'))).toContain('Venceu em 01/03/2020');
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar orçamento (PDF)' }));
+    await waitFor(() => expect(quotePdfAPI.forAdmin).toHaveBeenCalledWith('XP-CARLA-20270110'));
     view.unmount();
 
-    for (const reserva of [
-      { ...RESERVA, status: 'CONFIRMED', proposal: enviada('2099-01-05T02:59:59.999Z') },
-      { ...RESERVA, proposal: { sentAt: null }, validUntil: '2099-01-05T02:59:59.999Z' },
-    ]) {
-      vi.clearAllMocks();
-      const outra = await renderFicha(reserva);
-      await baixarPdf();
-      const cabecalho = escritosNoPdf().find((t) => t.startsWith('Emitida em:')) ?? '';
-      expect(cabecalho).not.toMatch(/Válida|Venceu|Validade/);
-      outra.unmount();
-    }
+    await renderFicha({ ...RESERVA, status: 'CONFIRMED' });
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar orçamento (PDF)' }));
+    await waitFor(() => expect(quotePdfAPI.forAdmin).toHaveBeenCalledTimes(2));
+    expect(open).not.toHaveBeenCalled();
   });
 });

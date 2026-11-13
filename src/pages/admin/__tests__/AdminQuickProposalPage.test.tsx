@@ -8,10 +8,7 @@ vi.mock('@/services/api', () => ({ apiFetch }));
 vi.mock('@/contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification }) }));
 vi.mock('../../../contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification }) }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth }));
-vi.mock('jspdf', () => ({ jsPDF: vi.fn() }));
-vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
 
-import { jsPDF } from 'jspdf';
 import AdminQuickProposalPage from '../AdminQuickProposalPage';
 
 // priceUnit: a unidade do preço que o GET /equipments põe em cada equipamento (auditoria do orçamento, O18).
@@ -138,33 +135,6 @@ describe('AdminQuickProposalPage — salvar proposta', { timeout: 20000 }, () =>
     expect(JSON.parse(chamadasPost()[0][1].body)).not.toHaveProperty('internalNotes');
   });
 
-  // O PDF desta tela é de uso interno (E8), mas o arquivo pode ser repassado.
-  it('o PDF da proposta não leva as observações internas', async () => {
-    const textos: string[] = [];
-    const doc = new Proxy(
-      { lastAutoTable: { finalY: 120 } } as Record<string | symbol, unknown>,
-      {
-        get(alvo, chave) {
-          if (chave in alvo) return alvo[chave];
-          if (chave === 'text') return (texto: string | string[]) => textos.push(...[texto].flat());
-          if (chave === 'splitTextToSize') return (texto: string) => [texto];
-          return () => undefined;
-        },
-      },
-    );
-    vi.mocked(jsPDF).mockImplementation(function construtor() { return doc; } as never);
-    apiFetch.mockImplementation((url: string) => Promise.resolve(url === '/equipments' ? [mesa] : []));
-    renderPage();
-    await preencherProposta();
-    fireEvent.change(screen.getByLabelText(/Observações Internas/), { target: { value: 'Cliente pede desconto' } });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Baixar PDF' }));
-
-    await waitFor(() => expect(textos.some((t) => t.includes('Ana Souza'))).toBe(true));
-    expect(textos.join(' ')).not.toContain('Cliente pede desconto');
-    expect(textos.join(' ')).not.toMatch(/observa[cç][oõ]es/i);
-  });
-
   // Achado (auditoria ponta a ponta): o corpo levava `userId: user?.id`, o id do admin logado, e o
   // backend pendurava a reserva do cliente manual no perfil de cliente do próprio admin.
   it('cliente manual: o corpo não leva o id do admin como userId', async () => {
@@ -219,19 +189,10 @@ describe('AdminQuickProposalPage — salvar proposta', { timeout: 20000 }, () =>
 // sua proposta ao seu acesso" e mandava "acompanhar em tempo real" no painel do cliente. Nada disso
 // acontece: o cadastro não vincula proposta nenhuma (linkBookingsToUser não tem chamador) e a equipe não
 // tem tela para isso. Auditoria do orçamento (12/11/2026), E8: a mensagem do "PDF + WhatsApp" saiu junto com o botão
-// (AdminQuickProposalPage.auditoriaOrcamento.test.tsx); o PDF, de uso interno, continua sem a promessa.
-describe('AdminQuickProposalPage — texto do PDF sem promessa de vínculo (D6)', { timeout: 20000 }, () => {
+// (AdminQuickProposalPage.auditoriaOrcamento.test.tsx). Orçamento em PDF (13/11/2026): o PDF de uso interno também
+// saiu; o orçamento em PDF é o do servidor, baixado na ficha.
+describe('AdminQuickProposalPage — sem PDF próprio e sem promessa de vínculo (D6)', { timeout: 20000 }, () => {
   const PROMESSAS = [/vincul/i, /\/cadastro/, /\/cliente\/painel/, /tempo real/i, /crie aqui/i];
-
-  const docQueGuardaTexto = (textos: string[]) =>
-    new Proxy({ lastAutoTable: { finalY: 120 } } as Record<string | symbol, unknown>, {
-      get(alvo, chave) {
-        if (chave in alvo) return alvo[chave];
-        if (chave === 'text') return (texto: string | string[]) => textos.push(...[texto].flat());
-        if (chave === 'splitTextToSize') return (texto: string) => [texto];
-        return () => undefined;
-      },
-    });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -239,17 +200,12 @@ describe('AdminQuickProposalPage — texto do PDF sem promessa de vínculo (D6)'
     apiFetch.mockImplementation((url: string) => Promise.resolve(url === '/equipments' ? [mesa] : []));
   });
 
-  it('PDF: sem convite de cadastro nem promessa de vínculo', async () => {
-    const textos: string[] = [];
-    vi.mocked(jsPDF).mockImplementation(function construtor() { return docQueGuardaTexto(textos); } as never);
+  it('a tela não gera PDF e não promete vínculo de cadastro', async () => {
     renderPage();
     await preencherProposta();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Baixar PDF' }));
-
-    await waitFor(() => expect(textos.some((t) => t.includes('Ana Souza'))).toBe(true));
-    const tudo = textos.join(' ');
-    for (const promessa of PROMESSAS) expect(tudo).not.toMatch(promessa);
+    expect(screen.queryByRole('button', { name: /pdf/i })).not.toBeInTheDocument();
+    for (const promessa of PROMESSAS) expect(document.body.textContent).not.toMatch(promessa);
   });
 
 });

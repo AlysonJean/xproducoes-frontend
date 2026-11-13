@@ -8,7 +8,6 @@ vi.mock('@/services/api', () => ({ apiFetch }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1', role: 'CLIENT' } }) }));
 vi.mock('../../../contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification }) }));
 vi.mock('../../../components/client/BookingChatPanel', () => ({ BookingChatPanel: () => null }));
-vi.mock('../../../utils/generateBookingProposalPdf', () => ({ generateBookingProposalPdf: vi.fn() }));
 
 import { BookingDetailsPage } from '../BookingDetailsPage';
 

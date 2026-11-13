@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } fr
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
-const { bookingAPI, addNotification, pdfText } = vi.hoisted(() => ({
+const { bookingAPI, addNotification, quotePdfAPI } = vi.hoisted(() => ({
   bookingAPI: { getById: vi.fn(), updateStatus: vi.fn(), updateDeliveryStatus: vi.fn(), delete: vi.fn(), confirmWithDetails: vi.fn() },
   addNotification: vi.fn(),
-  pdfText: vi.fn(),
+  quotePdfAPI: { forAdmin: vi.fn() },
 }));
-vi.mock('../../../services/api', () => ({ bookingAPI, api: { post: vi.fn(), delete: vi.fn() } }));
+vi.mock('../../../services/api', () => ({ bookingAPI, quotePdfAPI, api: { post: vi.fn(), delete: vi.fn() } }));
 vi.mock('../../../contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification }) }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } }) }));
 vi.mock('@/hooks/useCollaborators', () => ({ useCollaborators: () => ({ collaborators: [], fetchCollaborators: vi.fn().mockResolvedValue(undefined) }) }));
@@ -16,25 +16,6 @@ vi.mock('@/components/bookings/BookingCollaborators', () => ({ BookingCollaborat
 vi.mock('@/components/bookings/BookingFinancialSummary', () => ({ BookingFinancialSummary: () => null }));
 vi.mock('../../../components/modals/EventManagement', () => ({ EventManagement: () => null }));
 vi.mock('react-ga4', () => ({ default: { event: vi.fn() } }));
-vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
-// O PDF de verdade não importa aqui: só o que ele escreve na seção do cliente.
-vi.mock('jspdf', () => ({
-  jsPDF: class {
-    text = pdfText;
-    splitTextToSize = (texto: string) => [texto];
-    setFillColor() {}
-    rect() {}
-    addImage() {}
-    setTextColor() {}
-    setFontSize() {}
-    setFont() {}
-    setDrawColor() {}
-    setLineWidth() {}
-    line() {}
-    textWithLink() {}
-    save() {}
-  },
-}));
 
 import BookingDetailPage from '../BookingDetailPage';
 
@@ -102,28 +83,16 @@ describe('BookingDetailPage — contato do cliente nos botões manuais', () => {
     expect(screen.queryByText('dono@empresa.test')).not.toBeInTheDocument();
   });
 
-  it('"Baixar PDF": o PDF usa o contato da reserva, não o do cadastro', async () => {
+  // Orçamento em PDF (13/11/2026): o PDF da ficha é o orçamento do servidor, que não leva telefone nem e-mail do
+  // cliente (antes o PDF montado aqui escrevia o contato, e estes testes conferiam a ordem reserva → cadastro).
+  it('"Baixar orçamento (PDF)": baixa o orçamento do servidor, sem abrir o WhatsApp', async () => {
+    quotePdfAPI.forAdmin.mockResolvedValue(undefined);
     await renderFicha(reservaNoCadastroDoAdmin);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Baixar PDF' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar orçamento (PDF)' }));
 
-    await waitFor(() => expect(pdfText).toHaveBeenCalledWith('(31) 98888-7777', expect.any(Number), expect.any(Number)));
+    await waitFor(() => expect(quotePdfAPI.forAdmin).toHaveBeenCalledWith('XP-ANA-20270110'));
     expect(open).not.toHaveBeenCalled();
-    const escritos = pdfText.mock.calls.map((c) => c[0]);
-    expect(escritos).toContain('(31) 98888-7777');
-    expect(escritos).toContain('ana@cliente.test');
-    expect(escritos).not.toContain('31911112222');
-  });
-
-  it('PDF de cliente cadastrado sem e-mail na reserva: usa o e-mail da conta (antes: "-")', async () => {
-    await renderFicha({
-      ...reservaNoCadastroDoAdmin, clientEmail: null,
-      client: { id: 'cli-1', phone: '31955554444', user: { id: 'u1', name: 'Carla Dias', email: 'carla@cliente.test' } },
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Baixar PDF' }));
-
-    await waitFor(() => expect(pdfText).toHaveBeenCalledWith('carla@cliente.test', 112, expect.any(Number)));
   });
 
   it.each([

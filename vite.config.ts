@@ -200,11 +200,6 @@ export default defineConfig({
               id.includes('date-fns')
             ) return 'vendor-data';
 
-            // jsPDF/html2canvas: sem dependência de React, seguro isolar sozinho.
-            if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('canvg')) {
-              return 'vendor-pdf';
-            }
-
             // Real-time (chat/notificações) — mantido isolado por peso e para não
             // compartilhar chunk com PDF/gráficos.
             if (

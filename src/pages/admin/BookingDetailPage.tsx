@@ -29,11 +29,8 @@ import {
   Paperclip,
   Package
 } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { formatBookingTotal, formatPrice } from '@/utils/formatPrice';
-import { bookingPricing, formatPricingLineTotal, PRICING_LINE_TYPE_LABEL, toArrangeNote, type BookingPricingLine } from '@/utils/bookingPricing';
-import { eventDurationText, formatBrasiliaDateTime, proposalValidity } from '@/utils/generateBookingProposalPdf';
+import { bookingPricing, formatPricingLineTotal, serviceMinutesText, toArrangeNote } from '@/utils/bookingPricing';
 import { formatBookingPaymentStatus } from '@/utils/typeSafeFormatters';
 import { bookingStatusLabel, bookingStatusVariant, deliveryStatusLabel, DELIVERY_STATUS_OPTIONS } from '@/utils/bookingStatus';
 import { COLLABORATOR_ROLE_OPTIONS } from '@/utils/collaboratorRoles';
@@ -47,7 +44,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { WhatsAppConfirmationModal } from '../../components/modals/WhatsAppConfirmationModal';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { EventManagement } from '../../components/modals/EventManagement';
-import { bookingAPI, api } from '../../services/api';
+import { bookingAPI, api, quotePdfAPI } from '../../services/api';
 import { createAndClickAnchor } from '../../utils/dom';
 import {
   ATTACHMENT_ACCEPT,
@@ -58,10 +55,9 @@ import {
   openBookingAttachment,
   uploadBookingAttachment,
 } from '../../utils/bookingAttachments';
-import { SUPPORT_EMAIL, formatPhoneDisplay } from '../../data/site';
 import { formatBookingCode } from '../../utils/bookingCode';
 import { bookingEmail, bookingPhone, toWhatsAppNumber } from '../../utils/bookingContact';
-import { formatBrasiliaDate, getWhatsAppPhone } from '../../utils/whatsapp';
+import { formatBrasiliaDate } from '../../utils/whatsapp';
 import {
   bookingCancelledWhatsAppText,
   bookingConfirmedWhatsAppText,
@@ -211,6 +207,19 @@ function eventWhenText(start?: string | null, end?: string | null): string | nul
   return sameDay
     ? `${formatBrasiliaDate(from)}, das ${brasiliaTime.format(from)} às ${brasiliaTime.format(to)}`
     : `${startText} até ${formatBrasiliaDate(to)}, às ${brasiliaTime.format(to)}`;
+}
+
+/**
+ * D11: a duração do evento tirada do início e do término ("5 h", "4 h 30 min"), não do eventDuration gravado (que
+ * ficava velho depois de mudar as datas). '-' sem as duas datas ou com término antes do início. Orçamento em PDF
+ * (13/11/2026): veio de utils/generateBookingProposalPdf.ts, que saiu junto com o PDF montado no navegador.
+ */
+function eventDurationText(start?: string | null, end?: string | null): string {
+  const from = validDate(start);
+  const to = validDate(end);
+  if (!from || !to) return '-';
+  const minutes = Math.round((to.getTime() - from.getTime()) / 60_000);
+  return minutes > 0 ? serviceMinutesText(minutes) : '-';
 }
 
 interface VenueAnswer {
@@ -467,339 +476,16 @@ export const BookingDetailPage = () => {
       });
   };
 
-  // ─── PDF / WhatsApp helpers ────────────────────────────────────────────────
-
-  const generateBookingPdf = async (): Promise<void> => {
-    if (!booking) return;
-
-    // ── Paleta de cores da marca ─────────────────────────────────────────────
-    const C_DARK:  [number, number, number] = [23,  37,  84];   // #172554 azul escuro
-    const C_BLUE:  [number, number, number] = [37,  99,  235];  // #2563eb azul primário
-    const C_LIGHT: [number, number, number] = [239, 246, 255];  // #eff6ff azul muito claro
-    const C_MUTED: [number, number, number] = [100, 116, 139];  // #64748b cinza
-    const C_TEXT:  [number, number, number] = [30,  30,  30];   // #1e1e1e texto
-    const C_WHITE: [number, number, number] = [255, 255, 255];
-    const C_RED:   [number, number, number] = [220, 38,  38];   // #dc2626 para desconto
-    const C_CARD:  [number, number, number] = [248, 250, 252];  // #f8fafc fundo card
-
-    const MARGIN = 14;
-    const PAGE_W = 210;
-    const PAGE_H = 297;
-    // Auditoria do orçamento (12/11/2026), D13: a data de emissão é a de Brasília, não a do aparelho.
-    const dataEmissao = formatBrasiliaDate(new Date());
-    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-
-    // ── Logo embutido (base64) ───────────────────────────────────────────────
-    const LOGO_DATA = "data:image/png;base64,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";
-
-    // ── Cabeçalho ────────────────────────────────────────────────────────────
-    doc.setFillColor(...C_DARK);
-    doc.rect(0, 0, PAGE_W, 33, 'F');
-
-    const logoData = LOGO_DATA;
-    if (logoData) {
-      doc.addImage(logoData, 'PNG', MARGIN, 5, 46, 23);
-    }
-
-    doc.setTextColor(...C_WHITE);
-    doc.setFontSize(19);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PROPOSTA COMERCIAL', 72, 16);
-
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    // Auditoria do orçamento (12/11/2026), O10/C5/D5: a validade é a do link (booking.proposal.validUntil, a que vale), não
-    // "7 dias" contados do dia em que o PDF foi baixado; sem ela (sem envio, ou reserva já fora de pendente), o PDF não
-    // fala de validade. E8: este PDF é de uso interno (o cliente recebe o link, que mostra a reserva atual).
-    const validity = proposalValidity(booking);
-    const validityText = validity ? `   |   ${validity.expired ? 'Venceu em' : 'Válida até'} ${validity.date}` : '';
-    doc.text(`Emitida em: ${dataEmissao}${validityText}   |   Ref: #${formatBookingCode(booking.id).toUpperCase()}`, 72, 23);
-
-    // ── Responsável ──────────────────────────────────────────────────────────
-    let curY = 42;
-    doc.setTextColor(...C_BLUE);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Responsavel: ${user?.name || 'Equipe X Producoes'}`, MARGIN, curY);
-
-    // ── Seção Cliente ────────────────────────────────────────────────────────
-    curY += 8;
-    doc.setFillColor(...C_DARK);
-    doc.rect(MARGIN, curY, PAGE_W - MARGIN * 2, 6, 'F');
-    doc.setTextColor(...C_WHITE);
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'bold');
-    doc.text('CLIENTE', MARGIN + 3, curY + 4.2);
-
-    curY += 9;
-    // Auditoria do orçamento (12/11/2026), O32/C14: o nome do cadastro vem em client.user.name (a API não manda
-    // client.name); antes, cliente cadastrado saía "Nao informado".
-    const clientName = booking.client?.user?.name || booking.client?.name || booking.clientName || 'Nao informado';
-    const clientPhone = bookingPhone(booking) || '-';
-    const clientEmail = bookingEmail(booking) || '-';
-    doc.setFontSize(9);
-    doc.setTextColor(...C_TEXT);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Nome:', MARGIN, curY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(clientName, MARGIN + 14, curY);
-    curY += 5;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Tel/WhatsApp:', MARGIN, curY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(clientPhone, MARGIN + 26, curY);
-    doc.setFont('helvetica', 'bold');
-    doc.text('E-mail:', 100, curY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(clientEmail, 112, curY);
-
-    // ── Seção Evento ─────────────────────────────────────────────────────────
-    curY += 10;
-    doc.setFillColor(...C_DARK);
-    doc.rect(MARGIN, curY, PAGE_W - MARGIN * 2, 6, 'F');
-    doc.setTextColor(...C_WHITE);
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'bold');
-    doc.text('EVENTO', MARGIN + 3, curY + 4.2);
-
-    curY += 9;
-    // Auditoria do orçamento (12/11/2026), D11: a duração sai das datas (antes, o eventDuration gravado, que ficava
-    // velho depois de mudar as datas, ou 4 h inventadas); D13: início e término no horário de Brasília.
-    const duracao = eventDurationText(booking.eventDate, booking.eventEndDate);
-    const eventLabel = booking.location || booking.eventLocation || '-';
-    const startDate = formatBrasiliaDateTime(booking.eventDate);
-    const endDate = formatBrasiliaDateTime(booking.eventEndDate);
-    const fullAddress = [booking.street, booking.addressNumber, booking.neighborhood, booking.city, booking.state, booking.zipCode].filter(Boolean).join(', ');
-
-    doc.setFontSize(9);
-    doc.setTextColor(...C_TEXT);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Local:', MARGIN, curY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(eventLabel, MARGIN + 12, curY);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Duracao:', 110, curY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(duracao, 125, curY);
-    curY += 5;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Inicio:', MARGIN, curY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(startDate, MARGIN + 12, curY);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Termino:', 110, curY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(endDate, 125, curY);
-
-    if (fullAddress) {
-      curY += 5;
-      doc.setFont('helvetica', 'bold');
-      doc.text('Endereco:', MARGIN, curY);
-      doc.setFont('helvetica', 'normal');
-      const addrLines = doc.splitTextToSize(fullAddress, 148);
-      doc.text(addrLines, MARGIN + 20, curY);
-      curY += (addrLines.length - 1) * 4.5;
-    }
-
-    // ── Itens da proposta ─────────────────────────────────────────────────────
-    // D8a e P16 (aprovadas em 02/11/2026): as linhas e o valor final vêm da reserva (pricing da API), os
-    // mesmos da página do cliente e do PDF da área do cliente. Antes este PDF, que ia ao cliente pelo
-    // "PDF + WhatsApp" (saiu, E8), recalculava pelo catálogo × (eventDuration || 4): serviço multiplicado por horas,
-    // equipamento e kit por campos que não existem no cadastro (R$ 0), desconto de um campo inexistente e
-    // os cachês da equipe como linhas do cliente. Reserva antiga sem itens gravados lista só os nomes.
-    const pricing = bookingPricing(booking);
-    const itemRows: string[][] = [];
-    const itemImages: string[] = [];
-
-    const fetchItemImage = async (url: string): Promise<string | null> => {
-      if (!url) return null;
-      try {
-        const res = await fetch(url);
-        const blob = await res.blob();
-        return await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = () => reject(new Error('img'));
-          reader.readAsDataURL(blob);
-        });
-      } catch { return null; }
-    };
-
-    const imageOf = (line: BookingPricingLine): string =>
-      (line.equipmentId ? booking.equipments?.find((e) => e.id === line.equipmentId)?.imageUrl : undefined)
-      || (line.serviceId ? booking.services?.find((s) => s.id === line.serviceId)?.imageUrl : undefined)
-      || (line.kitId && booking.kit?.id === line.kitId ? booking.kit.imageUrl : undefined)
-      || '';
-
-    for (const line of pricing.lines) {
-      // Auditoria do orçamento (12/11/2026), O21: frete ou pedágio sem preço (toArrange) sai "a combinar" / "à parte".
-      const toArrange = Boolean(line.toArrange);
-      itemRows.push(['', line.description, PRICING_LINE_TYPE_LABEL[line.type] ?? 'Item', String(line.quantity), toArrange ? '-' : formatPrice(line.unitPrice), toArrange ? '-' : formatPrice(line.discount), formatPricingLineTotal(line)]);
-      itemImages.push(imageOf(line));
-    }
-    if (itemRows.length === 0) {
-      const addName = (name: string, type: string, image?: string) => {
-        itemRows.push(['', name, type, '-', '-', '-', 'Incluído']);
-        itemImages.push(image || '');
-      };
-      for (const k of booking.kits || (booking.kit ? [booking.kit] : [])) {
-        const kit = ('kit' in k ? k.kit : undefined) ?? (k as Kit);
-        addName(kit.name || 'Kit', 'Kit', kit.imageUrl);
-      }
-      for (const e of booking.equipments || []) addName(e.name || 'Equipamento', 'Equipamento', e.imageUrl);
-      for (const s of booking.services || []) addName(s.name || 'Serviço', 'Serviço', s.imageUrl);
-    }
-
-    const loadedImages = await Promise.all(itemImages.map(fetchItemImage));
-
-    // ── Tabela de itens ───────────────────────────────────────────────────────
-    const tableStartY = curY + 8;
-    autoTable(doc, {
-      startY: tableStartY,
-      head: [['', 'Item / Descricao', 'Tipo', 'Qtd', 'Unitario', 'Desconto', 'Total']],
-      body: itemRows.length > 0
-        ? itemRows
-        : [['', '(conforme contrato)', '', '-', '-', '-', formatBookingTotal(pricing.total)]],
-      styles: { fontSize: 8.5, cellPadding: 2.5, textColor: C_TEXT },
-      headStyles: { fillColor: C_DARK, textColor: C_WHITE, fontStyle: 'bold', fontSize: 8 },
-      alternateRowStyles: { fillColor: C_LIGHT },
-      columnStyles: {
-        0: { cellWidth: 10, halign: 'center' },
-        1: { cellWidth: 58 },
-        2: { cellWidth: 25, halign: 'center' },
-        3: { cellWidth: 16, halign: 'center' },
-        4: { cellWidth: 23, halign: 'right' },
-        5: { cellWidth: 23, halign: 'right' },
-        6: { cellWidth: 24, halign: 'right' },
-      },
-      didDrawCell: (data) => {
-        const img = loadedImages[data.row.index];
-        if (data.column.index === 0 && typeof img === 'string' && data.section === 'body') {
-          doc.addImage(img, 'PNG', data.cell.x + 1, data.cell.y + 1, 8, 8);
-        }
-      },
-    });
-
-    const tableEndY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? tableStartY + 20;
-
-    // ── Resumo financeiro (caixa à direita) ──────────────────────────────────
-    // Subtotal, cupom e ajuste só quando há o que explicar; o valor final é o da reserva.
-    const summaryRows: Array<[string, string, boolean]> = [];
-    if (pricing.couponDiscount || pricing.adjustment !== 0) {
-      summaryRows.push(['Subtotal dos itens:', formatPrice(pricing.itemsSubtotal), false]);
-    }
-    if (pricing.couponDiscount) {
-      const code = pricing.couponDiscount.code ? ` (${pricing.couponDiscount.code})` : '';
-      summaryRows.push([`Desconto${code}:`, `- ${formatPrice(pricing.couponDiscount.amount)}`, true]);
-    }
-    if (pricing.adjustment !== 0) {
-      summaryRows.push(['Ajuste no valor final:', `${pricing.adjustment < 0 ? '-' : '+'} ${formatPrice(Math.abs(pricing.adjustment))}`, pricing.adjustment < 0]);
-    }
-
-    const boxX = PAGE_W - MARGIN - 86;
-    const boxW = 86;
-    let finY = tableEndY + 5;
-
-    doc.setFillColor(...C_CARD);
-    doc.setDrawColor(...C_BLUE);
-    doc.setLineWidth(0.4);
-    doc.rect(boxX, finY, boxW, summaryRows.length * 6 + (summaryRows.length > 0 ? 3 : 0) + 14, 'FD');
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    for (const [label, value, red] of summaryRows) {
-      finY += 6;
-      doc.setTextColor(...(red ? C_RED : C_TEXT));
-      doc.text(label, boxX + 4, finY);
-      doc.text(value, boxX + boxW - 4, finY, { align: 'right' });
-    }
-
-    if (summaryRows.length > 0) {
-      finY += 3;
-      doc.setDrawColor(...C_MUTED);
-      doc.setLineWidth(0.2);
-      doc.line(boxX + 4, finY + 1, boxX + boxW - 4, finY + 1);
-    }
-
-    finY += 5;
-    doc.setFillColor(...C_BLUE);
-    doc.rect(boxX, finY - 1, boxW, 9, 'F');
-    doc.setTextColor(...C_WHITE);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('VALOR FINAL DA PROPOSTA:', boxX + 4, finY + 5.5);
-    // Auditoria do orçamento (12/11/2026), O3: pedido ainda sem valor sai "Em preparação", não "R$ 0,00".
-    doc.text(formatBookingTotal(pricing.total), boxX + boxW - 4, finY + 5.5, { align: 'right' });
-    // O21: com frete a combinar ou pedágio à parte, o total não os inclui (a frase da página do cliente e do e-mail).
-    const toArrangeText = toArrangeNote(pricing.lines);
-    if (toArrangeText) {
-      doc.setFontSize(7.5);
-      doc.setFont('helvetica', 'italic');
-      doc.setTextColor(...C_MUTED);
-      doc.text(doc.splitTextToSize(toArrangeText, boxW), boxX, finY + 13);
-    }
-
-    // ── Observações (à esquerda do resumo financeiro) ─────────────────────────
-    if (booking.notes?.trim()) {
-      const obsLines = doc.splitTextToSize(`Obs: ${booking.notes.trim()}`, 82);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'italic');
-      doc.setTextColor(...C_MUTED);
-      doc.text(obsLines, MARGIN, tableEndY + 8);
-    }
-
-    // ── Rodapé institucional ──────────────────────────────────────────────────
-    const footerH = 30;
-    const footerY = PAGE_H - footerH - 3;
-
-    doc.setFillColor(...C_DARK);
-    doc.rect(0, footerY, PAGE_W, footerH + 3, 'F');
-
-    let fy = footerY + 7;
-    doc.setTextColor(...C_WHITE);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('X Producoes & Eventos', MARGIN, fy);
-
-    fy += 5;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    // O telefone comercial vem da mesma fonte do botão de WhatsApp (mudou em 13/11/2026); antes estava escrito à mão.
-    doc.text(`Tel/WhatsApp: ${formatPhoneDisplay(getWhatsAppPhone())}`, MARGIN, fy);
-    doc.text(`E-mail: ${SUPPORT_EMAIL}`, 95, fy);
-
-    fy += 5;
-    doc.setTextColor(167, 202, 255);
-    doc.textWithLink('Instagram: @x_producoeseventos', MARGIN, fy, { url: 'https://www.instagram.com/x_producoeseventos' });
-    doc.textWithLink('Facebook: /XProducoeseEventos', 95, fy, { url: 'https://www.facebook.com/XProducoeseEventos/?locale=pt_BR' });
-
-    fy += 5;
-    doc.setTextColor(...C_WHITE);
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(7.5);
-    doc.text('Agradecemos a preferencia! Estamos a disposicao para qualquer duvida ou ajuste nesta proposta.', MARGIN, fy);
-
-    fy += 5;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text(`Atenciosamente, ${user?.name || 'Equipe X Producoes'}`, MARGIN, fy);
-
-    doc.setTextColor(167, 202, 255);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.text(`Emitido em ${dataEmissao}`, PAGE_W - MARGIN, fy, { align: 'right' });
-
-    const filenameClient = clientName.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
-    doc.save(`proposta-${filenameClient}-${booking.id?.substring(0, 8)}.pdf`);
-  };
-
+  // Orçamento em PDF (13/11/2026): "Baixar orçamento (PDF)" baixa o orçamento que o servidor gera na hora, a partir da
+  // reserva atual: o mesmo que o cliente baixa pelo link da proposta e pela área do cliente. Antes era um PDF de uso
+  // interno montado aqui no navegador (jsPDF), com outro visual e outra conta de datas e validade.
   const handleDownloadBookingPdf = async () => {
+    if (!booking?.id) return;
     try {
       setGeneratingPdf(true);
-      await generateBookingPdf();
-      addNotification({ type: 'success', title: 'PDF pronto', message: 'Arquivo gerado com sucesso.' });
+      await quotePdfAPI.forAdmin(booking.id);
     } catch (err: unknown) {
-      addNotification({ type: 'error', title: 'Erro no PDF', message: err instanceof Error ? err.message : 'Não foi possível gerar o PDF.' });
+      addNotification({ type: 'error', title: 'Erro no PDF', message: err instanceof Error && err.message ? err.message : 'Não foi possível baixar o orçamento.' });
     } finally {
       setGeneratingPdf(false);
     }
@@ -1019,9 +705,9 @@ export const BookingDetailPage = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* E8: PDF de uso interno; o cliente recebe o link da proposta. */}
-            <Button variant="outline" size="sm" onClick={handleDownloadBookingPdf} isLoading={generatingPdf} leftIcon={<FileText className="h-4 w-4" />} title="PDF para uso interno. O cliente recebe o link da proposta, que mostra a reserva atual.">
-              Baixar PDF
+            {/* Orçamento em PDF (13/11/2026): o orçamento do servidor, o mesmo do link da proposta e da área do cliente. */}
+            <Button variant="outline" size="sm" onClick={handleDownloadBookingPdf} isLoading={generatingPdf} leftIcon={<FileText className="h-4 w-4" />} title="O mesmo orçamento que o cliente baixa pelo link da proposta e pela área do cliente, gerado agora a partir da reserva.">
+              Baixar orçamento (PDF)
             </Button>
             {/* E8: no lugar do "PDF + WhatsApp". Só com a proposta em aberto (rascunho ou pendente): é quando o servidor
                 aceita o envio e o link abre. Sem telefone válido, desligado (o "Enviar proposta" do cartão manda o e-mail). */}

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Calendar, MapPin, ShieldCheck } from 'lucide-react';
-import { apiFetch } from '@/services/api';
+import { Calendar, FileDown, MapPin, ShieldCheck } from 'lucide-react';
+import { apiFetch, quotePdfAPI } from '@/services/api';
 import { BrandLoader } from '@/components/ui/BrandLoader';
-import { Card } from '@/components/ui/StandardComponents';
+import { Button, Card } from '@/components/ui/StandardComponents';
 import { NoticeCard, PROPOSAL_HELP_TEXT, ProposalShell, WhatsAppLink } from '@/components/proposal/ProposalShell';
 import { formatPrice } from '@/utils/formatPrice';
 import { formatPricingLineTotal, toArrangeNote, type ToArrangeKind } from '@/utils/bookingPricing';
@@ -25,6 +25,9 @@ import { buildProposalReplyText } from '@/utils/whatsapp';
 // linhas sem preço (frete a combinar, pedágio à parte; o servidor manda toArrange) aparecem como "a combinar"/"à
 // parte", nunca R$ 0,00, com a frase de que o total não as inclui. O11/D6: o link vencido responde 410 e a página diz
 // "Este link venceu ou foi trocado. Peça um novo link à equipe."
+// Orçamento em PDF (13/11/2026): "Baixar orçamento (PDF)" baixa o orçamento que o servidor gera na hora, a partir da
+// reserva atual (a página continua sendo a fonte da verdade). O código vai no corpo do POST /proposals/pdf, com o
+// mesmo controle do /proposals/view: link vencido ou trocado não baixa, e a página diz por quê.
 
 interface ProposalLine {
   description: string;
@@ -53,7 +56,7 @@ type ViewState =
   | { kind: 'closed' }
   | { kind: 'unavailable' }
   | { kind: 'error' }
-  | { kind: 'open'; proposal: OpenProposal };
+  | { kind: 'open'; proposal: OpenProposal; token: string };
 
 const MESSAGES: Record<Exclude<ViewState['kind'], 'loading' | 'open'>, string> = {
   invalid: 'Este link não é válido. Peça um novo link à equipe.',
@@ -82,10 +85,35 @@ function stateForError(error: unknown): ViewState {
   return { kind: 'error' };
 }
 
-function OpenProposalView({ proposal }: { proposal: OpenProposal }) {
+// Orçamento em PDF: o erro do download, pelo status (o mesmo do /proposals/view, mais o 409 da reserva confirmada e o
+// 429 do limitador, que traz a mensagem do servidor).
+function pdfErrorMessage(error: unknown): string {
+  const status = (error as { status?: number } | null)?.status;
+  if (status === 404 || status === 400) return MESSAGES.invalid;
+  if (status === 410) return MESSAGES.gone;
+  if (status === 409) return MESSAGES.closed;
+  if (status === 503) return MESSAGES.unavailable;
+  if (status === 429 && error instanceof Error && error.message) return error.message;
+  return 'Não conseguimos gerar o PDF agora. Tente de novo em alguns minutos ou fale com a equipe.';
+}
+
+function OpenProposalView({ proposal, token }: { proposal: OpenProposal; token: string }) {
   const { pricing } = proposal;
   const place = [proposal.neighborhood, proposal.city].filter(Boolean).join(', ');
   const toArrange = toArrangeNote(pricing.lines);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const downloadPdf = async () => {
+    setDownloading(true);
+    setDownloadError(null);
+    try {
+      await quotePdfAPI.fromProposal(token);
+    } catch (error) {
+      setDownloadError(pdfErrorMessage(error));
+    } finally {
+      setDownloading(false);
+    }
+  };
   return (
     <Card padding className="space-y-6">
       <div className="space-y-2">
@@ -155,6 +183,22 @@ function OpenProposalView({ proposal }: { proposal: OpenProposal }) {
       </p>
 
       <div className="space-y-2">
+        <Button
+          variant="outline"
+          onClick={downloadPdf}
+          isLoading={downloading}
+          leftIcon={<FileDown className="h-4 w-4" aria-hidden="true" />}
+        >
+          {downloading ? 'Gerando PDF...' : 'Baixar orçamento (PDF)'}
+        </Button>
+        {downloadError && (
+          <p role="alert" className="text-sm text-destructive">
+            {downloadError}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-2">
         <p className="text-sm text-muted-foreground">Para confirmar ou ajustar a proposta, fale com a equipe.</p>
         <WhatsAppLink text={buildProposalReplyText({ eventTitle: proposal.eventTitle, eventDate: proposal.eventDate })} />
       </div>
@@ -179,7 +223,7 @@ export default function PublicProposalPage() {
           method: 'POST',
           body: JSON.stringify({ token }),
           referrerPolicy: 'origin',
-        }).then((data): ViewState => (data.state === 'open' ? { kind: 'open', proposal: data } : { kind: 'closed' }))
+        }).then((data): ViewState => (data.state === 'open' ? { kind: 'open', proposal: data, token } : { kind: 'closed' }))
       : Promise.resolve({ kind: 'invalid' });
     next.catch(stateForError).then((state) => {
       if (active) setView(state);
@@ -196,7 +240,7 @@ export default function PublicProposalPage() {
           <BrandLoader size={96} label="Abrindo a proposta..." />
         </div>
       )}
-      {view.kind === 'open' && <OpenProposalView proposal={view.proposal} />}
+      {view.kind === 'open' && <OpenProposalView proposal={view.proposal} token={view.token} />}
       {view.kind !== 'loading' && view.kind !== 'open' && (
         <NoticeCard
           message={MESSAGES[view.kind]}

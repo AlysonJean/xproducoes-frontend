@@ -9,11 +9,7 @@ vi.mock('@/services/api', () => ({ apiFetch }));
 vi.mock('@/contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification }) }));
 vi.mock('../../../contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification }) }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth }));
-vi.mock('jspdf', () => ({ jsPDF: vi.fn() }));
-vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
 
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import AdminQuickProposalPage from '../AdminQuickProposalPage';
 
 // Auditoria do orçamento (12/11/2026), onda 2, na Proposta Rápida: E8 (a proposta vai pelo link, não por PDF),
@@ -77,20 +73,6 @@ const corpoDaReserva = () => JSON.parse(postsDaReserva()[0][1].body as string) a
 const erroComTexto = (texto: string) =>
   expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'error', message: expect.stringContaining(texto) }));
 
-// O jsPDF de mentira guarda os textos escritos no PDF.
-const pdfQueGuardaTexto = (textos: string[]) => {
-  const doc = new Proxy({ lastAutoTable: { finalY: 120 } } as Record<string | symbol, unknown>, {
-    get(alvo, chave) {
-      if (chave in alvo) return alvo[chave];
-      if (chave === 'text') return (texto: string | string[]) => textos.push(...[texto].flat());
-      if (chave === 'splitTextToSize') return (texto: string) => [texto];
-      return () => undefined;
-    },
-  });
-  vi.mocked(jsPDF).mockImplementation(function construtor() { return doc; } as never);
-};
-const tabelaDoPdf = () => (vi.mocked(autoTable).mock.calls[0][1] as unknown as { body: string[][] }).body;
-
 beforeEach(() => {
   vi.clearAllMocks();
   useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
@@ -99,10 +81,10 @@ beforeEach(() => {
 
 // E8: "PDF + WhatsApp" mandava o PDF e a mensagem "Acabei de gerar o PDF…" com um total parado; o PDF trazia a
 // "Mensagem sugerida para WhatsApp". Decisão de 12/11: o cliente visita o link, que mostra sempre a reserva atual.
-describe('Proposta Rápida — a proposta vai pelo link; o PDF é de uso interno (E8)', { timeout: 20000 }, () => {
-  it('o "PDF + WhatsApp" saiu: nenhum botão da tela abre o WhatsApp, nem o Baixar PDF', async () => {
-    const textos: string[] = [];
-    pdfQueGuardaTexto(textos);
+// Orçamento em PDF (13/11/2026): saiu também o "Baixar PDF" de uso interno; o orçamento em PDF sai da ficha da reserva,
+// depois de salvar, gerado pelo servidor.
+describe('Proposta Rápida — a proposta vai pelo link; o PDF sai da ficha (E8)', { timeout: 20000 }, () => {
+  it('o "PDF + WhatsApp" e o "Baixar PDF" saíram: nenhum botão da tela abre o WhatsApp nem gera PDF', async () => {
     const abrir = vi.spyOn(window, 'open').mockReturnValue(null);
     renderPage();
     await carregado();
@@ -110,30 +92,17 @@ describe('Proposta Rápida — a proposta vai pelo link; o PDF é de uso interno
     preencher();
 
     expect(screen.queryByRole('button', { name: /whatsapp/i })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Baixar PDF' }));
-    await waitFor(() => expect(textos.some((t) => t.includes('Ana Souza'))).toBe(true));
+    expect(screen.queryByRole('button', { name: /pdf/i })).not.toBeInTheDocument();
     expect(abrir).not.toHaveBeenCalled();
     abrir.mockRestore();
   });
 
-  it('o PDF diz que é de uso interno, sem a mensagem para o WhatsApp e sem validade inventada', async () => {
-    const textos: string[] = [];
-    pdfQueGuardaTexto(textos);
+  it('o topo diz onde fica o orçamento em PDF: na ficha da reserva, depois de salvar', async () => {
     renderPage();
     await carregado();
-    adicionar('Equipamentos', 'Caixa de Som');
-    preencher();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Baixar PDF' }));
-
-    await waitFor(() => expect(textos.some((t) => t.includes('Ana Souza'))).toBe(true));
-    const tudo = textos.join('\n');
-    expect(tudo).toContain('Proposta - uso interno');
-    expect(tudo).toContain('A validade começa quando o link for enviado.');
-    expect(tudo).not.toContain('Mensagem sugerida');
-    expect(tudo).not.toMatch(/Acabei de gerar/);
-    expect(tudo).not.toMatch(/vale até|validade: \d/i);
-    expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'success', message: expect.stringContaining('uso interno') }));
+    expect(screen.getByText(/onde também se baixa o orçamento em PDF/)).toBeInTheDocument();
+    expect(screen.queryByText(/uso interno/)).not.toBeInTheDocument();
   });
 
   it('Salvar leva à ficha da reserva pedindo o "Enviar proposta" (o link), sem mandar nada ao cliente daqui', async () => {
@@ -166,7 +135,7 @@ describe('Proposta Rápida — unidade do preço do equipamento vem do servidor 
     expect(corpoDaReserva().items).toEqual([expect.objectContaining({ description: 'Caixa de Som (2 diárias)', unitPrice: 360, totalPrice: 360, equipmentId: 'eq-caixa' })]);
   });
 
-  it('equipamento sem a unidade: a linha avisa, Salvar e o PDF ficam travados; o preço digitado à mão libera', async () => {
+  it('equipamento sem a unidade: a linha avisa, Salvar fica travado; o preço digitado à mão libera', async () => {
     renderPage({ equipments: [{ id: 'eq-caixa', name: 'Caixa de Som', pricePerHour: 180, minimumRentalDuration: 1 }] });
     await carregado();
     adicionar('Equipamentos', 'Caixa de Som');
@@ -177,8 +146,6 @@ describe('Proposta Rápida — unidade do preço do equipamento vem do servidor 
     salvar();
     erroComTexto('por diária ou por hora');
     expect(postsDaReserva()).toHaveLength(0);
-    fireEvent.click(screen.getByRole('button', { name: 'Baixar PDF' }));
-    expect(vi.mocked(jsPDF)).not.toHaveBeenCalled();
 
     fireEvent.change(precos()[0], { target: { value: '400' } });
 
@@ -193,7 +160,7 @@ describe('Proposta Rápida — unidade do preço do equipamento vem do servidor 
 // Revisão: no navegador, o clique em Salvar tira o foco do campo antes do clique; se sair do campo descartasse o texto
 // inválido, a reserva gravaria a quantidade anterior sem aviso. O userEvent faz essa troca de foco.
 describe('Proposta Rápida — quantidade inteira, a partir de 1 (O31)', { timeout: 20000 }, () => {
-  it('fração ou vazio: o aviso fica mesmo fora do campo; o clique em Salvar e o PDF recusam; o inteiro grava com a mesma conta', async () => {
+  it('fração ou vazio: o aviso fica mesmo fora do campo; o clique em Salvar recusa; o inteiro grava com a mesma conta', async () => {
     const user = userEvent.setup();
     renderPage({ equipments: [{ ...CAIXA, pricePerHour: 600 }] });
     await carregado();
@@ -212,8 +179,8 @@ describe('Proposta Rápida — quantidade inteira, a partir de 1 (O31)', { timeo
 
     await user.click(qtd);
     fireEvent.change(qtd, { target: { value: '' } });
-    await user.click(screen.getByRole('button', { name: 'Baixar PDF' }));
-    expect(vi.mocked(jsPDF)).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: /salvar proposta/i }));
+    expect(postsDaReserva()).toHaveLength(0);
     expect(screen.getByText('Inteiro, mín. 1')).toBeInTheDocument();
 
     fireEvent.change(qtd, { target: { value: '2' } });
@@ -395,22 +362,4 @@ describe('Proposta Rápida — linha do frete sem valor: "a combinar"/"à parte"
     expect(postsDaReserva()).toHaveLength(0);
   });
 
-  it('no PDF interno, a linha sem valor sai "a combinar" e o total diz "+ frete a combinar"', async () => {
-    const textos: string[] = [];
-    pdfQueGuardaTexto(textos);
-    frete = () => Promise.reject(new Error('Erro 500'));
-    renderPage();
-    await carregado();
-    adicionar('Equipamentos', 'Caixa de Som');
-    preencher();
-    fireEvent.click(screen.getByRole('button', { name: 'Frete' }));
-    await screen.findByDisplayValue('Frete a combinar');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Baixar PDF' }));
-
-    await waitFor(() => expect(textos.some((t) => t.includes('Ana Souza'))).toBe(true));
-    const [, frete1] = tabelaDoPdf();
-    expect(frete1).toEqual(['Frete a combinar', 'Personalizado', '1', 'a combinar', expect.any(String), 'a combinar']);
-    expect(textos.some((t) => /^Total estimado: R\$\s180,00 \+ frete a combinar$/.test(t))).toBe(true);
-  });
 });
