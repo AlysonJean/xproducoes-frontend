@@ -1,4 +1,6 @@
 import type { Equipment, Kit, Service } from '../types/types';
+import { asArray } from './normalize';
+import { transformEquipment } from './transformEquipment';
 import { transformKit } from './transformKit';
 
 // Auditoria do orçamento (12/11/2026), O19, O23, E1 e E5: regras do carrinho que dependem do catálogo de agora.
@@ -135,4 +137,90 @@ export function applyCatalogSnapshot<C extends GuestCartLike>(cart: C, snapshot:
       return id ? refreshed<Service>(svc, snapshot.services[id]) : svc;
     }),
   };
+}
+
+// Palco (13/11/2026): os Kits 06 e 08 deixam de trazer o conjunto de palco (tablado, trave e backdrop), que passa a ser
+// vendido à parte. O opcional são os itens ativos da categoria "Estruturas" do catálogo (tablado, traves, backdrop,
+// totens, tenda), oferecidos na página do kit de entrega e no pedido de orçamento. Vale a categoria, nunca o nome do
+// item: uma luz chamada "de palco" fica fora, e o item novo cadastrado em "Estruturas" entra sem mexer no site.
+
+/** Frase do preço das estruturas, a mesma na página do kit e no pedido. */
+export const STRUCTURE_PRICE_NOTE = 'Palco, traves, backdrop e tenda são cobrados por diária.';
+/** No Kit 06, sem palco não há luz aérea: moving heads e spiders ficam presos na trave ou nos totens. */
+export const STRUCTURE_LIGHTING_HINT = 'Luzes no alto (moving heads) precisam de trave ou totens.';
+
+type StructureCandidate = { id?: string | null; status?: string | null; catalogMissing?: boolean; category?: unknown };
+
+const categoryName = (category: unknown): string => {
+  if (typeof category === 'string') return category;
+  const name = (category as { name?: unknown } | null | undefined)?.name;
+  return typeof name === 'string' ? name : '';
+};
+
+/** A categoria "Estruturas" do catálogo (o objeto da API ou o nome), sem acento, sem caixa e sem espaço nas pontas. */
+export function isStructureCategory(category: unknown): boolean {
+  return /^estruturas?$/.test(plain(categoryName(category)).trim());
+}
+
+/** Equipamento da categoria "Estruturas" que pode ir no pedido (ativo, como o servidor pede). */
+export function isStructureOffer(item: StructureCandidate | null | undefined): boolean {
+  return Boolean(item?.id) && isStructureCategory(item?.category) && isAvailableForOrder(item);
+}
+
+/** As estruturas a oferecer, na ordem do catálogo, menos as de `exclude` (o que o kit traz, o que já está no carrinho). */
+export function structureOffers<T extends StructureCandidate>(catalog: readonly T[], exclude: Iterable<string> = []): T[] {
+  const skip = new Set(exclude);
+  return catalog.filter((item) => isStructureOffer(item) && !skip.has(String(item.id)));
+}
+
+type KitEquipmentLike = { items?: Array<{ equipmentId?: string | null; equipment?: { id?: string | null } | null } | null> | null } | null | undefined;
+
+/**
+ * Ids dos equipamentos que já vêm dentro do kit (itens do kit com equipamento), pela composição. null sem a lista de
+ * itens: aí não se sabe o que o kit traz.
+ */
+export function kitEquipmentIds(kit: KitEquipmentLike): Set<string> | null {
+  const items = kit?.items;
+  if (!Array.isArray(items)) return null;
+  const ids = new Set<string>();
+  for (const item of items) {
+    const id = item?.equipmentId ?? item?.equipment?.id;
+    if (id) ids.add(id);
+  }
+  return ids;
+}
+
+// Uma consulta para a visita: a página do kit (também ao passar de um kit para outro, que zera o kit e consultaria de
+// novo) e o /orcamento dividem a lista, guardada por 5 minutos só no navegador (no SSR os efeitos não rodam e nada
+// fica guardado entre pedidos). A falha não fica guardada: a próxima abertura consulta de novo.
+const STRUCTURE_CATALOG_TTL_MS = 5 * 60 * 1000;
+let structureCatalogCache: { fetchJson: Fetch; at: number; list: Promise<Equipment[] | null> } | null = null;
+
+/**
+ * As estruturas do catálogo: a lista pública de equipamentos (GET /equipments, no cache público do servidor, com a
+ * categoria de cada item), filtrada aqui, porque a lista não filtra por categoria. null na falha de rede: a página
+ * segue sem a seção ou com a lista que já tinha. `fresh` consulta de novo (pedido recusado por item indisponível).
+ */
+export function fetchStructureCatalog(fetchJson: Fetch, options: { fresh?: boolean } = {}): Promise<Equipment[] | null> {
+  const cached = structureCatalogCache;
+  if (!options.fresh && cached && cached.fetchJson === fetchJson && Date.now() - cached.at < STRUCTURE_CATALOG_TTL_MS) {
+    return cached.list;
+  }
+  const list = Promise.resolve()
+    .then(() => fetchJson<unknown>('/equipments'))
+    .then((data) => asArray<Equipment>(data).filter(isStructureOffer).map(transformEquipment))
+    .catch(() => null);
+  if (typeof window !== 'undefined') {
+    const entry = { fetchJson, at: Date.now(), list };
+    structureCatalogCache = entry;
+    void list.then((result) => {
+      if (result === null && structureCatalogCache === entry) structureCatalogCache = null;
+    });
+  }
+  return list;
+}
+
+/** Esquece a lista guardada (os testes começam do zero). */
+export function resetStructureCatalogCache(): void {
+  structureCatalogCache = null;
 }

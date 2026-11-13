@@ -5,11 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
 import ReactGA from 'react-ga4';
 import { v4 as uuidv4 } from 'uuid';
-import { MapPin, Calendar, Clock, Info, User, Phone, Navigation2, Building2, Tag, X, Mail, ShoppingBag, Wrench } from 'lucide-react';
+import { MapPin, Calendar, Clock, Info, User, Phone, Navigation2, Building2, Tag, X, Mail, ShoppingBag, Wrench, ChevronDown, Layers } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
-import { api } from '../../services/api';
+import { api, apiFetch } from '../../services/api';
 import {
   Button,
   Input,
@@ -22,12 +22,12 @@ import {
 } from '../../components/ui/StandardComponents';
 import { BrandLoader } from '../../components/ui/BrandLoader';
 import { buildQuoteRequestSchema } from '../../validators/bookingSchema';
-import type { Booking, Equipment, Service } from '../../types/types';
+import type { Booking, Equipment, Kit, Service } from '../../types/types';
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
 import { useEquipmentPriceUnit, useFreightRules } from '../../hooks/usePricingRules';
-import { equipmentUnitsForHours, kitPriceLine, serviceLine, serviceMinutesText } from '../../utils/bookingPricing';
+import { equipmentUnitsForHours, equipmentUnitSuffix, equipmentUnitText, kitPriceLine, serviceLine, serviceMinutesText } from '../../utils/bookingPricing';
 import { kitFulfillment } from '../../utils/kitInfo';
 import { isWholeEventService, wholeEventRuleText } from '../../utils/wholeEventService';
 import { useCatalogServices } from '../../hooks/useCatalogServices';
@@ -43,7 +43,16 @@ import {
   todayISO,
   type CouponRule,
 } from '../../utils/quoteSubmission';
-import { findSetupService, isAvailableForOrder, kitServiceIds } from '../../utils/cartCatalog';
+import {
+  fetchStructureCatalog,
+  findSetupService,
+  isAvailableForOrder,
+  kitEquipmentIds,
+  kitServiceIds,
+  structureOffers,
+  STRUCTURE_LIGHTING_HINT,
+  STRUCTURE_PRICE_NOTE,
+} from '../../utils/cartCatalog';
 import { freightRulesText, orderNeedsDelivery } from '../../utils/freightInfo';
 import { TrustStrip } from '../../components/ui/TrustStrip';
 import { ClientPage } from '../../components/client/ClientPage';
@@ -227,6 +236,69 @@ export const QuoteRequestPage: React.FC = () => {
   const [wantsSetup, setWantsSetup] = useState(false);
   const chosenSetup: Service | null = offersSetup && setupService && !setupInCart && !setupInKit && wantsSetup ? setupService : null;
 
+  // Palco (13/11/2026): os Kits 06 e 08 deixam de trazer o conjunto de palco, vendido à parte. No pedido com kit de
+  // entrega ou equipamento avulso, a seção "Palco e estruturas (opcional)" oferece os itens ativos da categoria
+  // "Estruturas" do catálogo (structureOffers), menos o que já está no carrinho ou no kit. Marcado, o item soma na
+  // estimativa pela diária, como o equipamento avulso, e vai no pedido em equipmentIds.
+  const cartEquipmentIds = useMemo(() => equipments.map((it) => ('id' in it ? it.id : it.equipmentId)).filter(Boolean), [equipments]);
+  const [structureCatalog, setStructureCatalog] = useState<Equipment[]>([]);
+  useEffect(() => {
+    if (!hasDelivery) return;
+    let alive = true;
+    Promise.resolve()
+      .then(() => fetchStructureCatalog(apiFetch))
+      .then((list) => {
+        if (alive && list) setStructureCatalog(list);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [hasDelivery]);
+  // O que o kit traz vem da página do kit (GET /kits/:id): o carrinho da conta manda só o serviço de cada item do kit.
+  // Sem essa resposta, nada é oferecido junto com o kit (para não cobrar de novo o que já vem nele).
+  const kitId = kit?.id;
+  const [kitComposition, setKitComposition] = useState<{ kitId: string; equipmentIds: Set<string> } | null>(null);
+  useEffect(() => {
+    if (!kitId || !hasDelivery) return;
+    let alive = true;
+    Promise.resolve()
+      .then(() => apiFetch<Kit>(`/kits/${encodeURIComponent(kitId)}`))
+      .then((detail) => {
+        const ids = kitEquipmentIds(detail);
+        if (alive && ids) setKitComposition({ kitId, equipmentIds: ids });
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [kitId, hasDelivery]);
+  const structureOptions = useMemo(() => {
+    if (!hasDelivery) return [];
+    if (!kitId) return structureOffers(structureCatalog, cartEquipmentIds);
+    if (kitComposition?.kitId !== kitId) return [];
+    return structureOffers(structureCatalog, [...cartEquipmentIds, ...kitComposition.equipmentIds]);
+  }, [hasDelivery, kitId, kitComposition, structureCatalog, cartEquipmentIds]);
+  const [structureIds, setStructureIds] = useState<string[]>([]);
+  const [structuresOpen, setStructuresOpen] = useState(false);
+  const chosenStructures = useMemo(() => structureOptions.filter((eq) => structureIds.includes(eq.id)), [structureOptions, structureIds]);
+  const toggleStructure = (id: string, checked: boolean) =>
+    setStructureIds((prev) => (checked ? [...prev.filter((x) => x !== id), id] : prev.filter((x) => x !== id)));
+  // A estrutura marcada que deixou de estar ativa depois que a página abriu não está no carrinho, e o servidor recusa o
+  // pedido ("não está disponível"). A lista é relida (sem a guardada) e a que saiu deixa a seção e o pedido, com o nome
+  // no aviso. Se a releitura falhar, fica a lista de antes.
+  const [structuresGone, setStructuresGone] = useState<string[]>([]);
+  const reloadStructures = (marked: Equipment[]) => {
+    Promise.resolve()
+      .then(() => fetchStructureCatalog(apiFetch, { fresh: true }))
+      .then((list) => {
+        if (!list) return;
+        setStructureCatalog(list);
+        setStructuresGone(marked.filter((eq) => !list.some((it) => it.id === eq.id)).map((eq) => eq.name));
+      })
+      .catch(() => undefined);
+  };
+
   // Os serviços do carrinho com o cadastro de agora (o carrinho salvo antes pode não ter a marcação), menos os que já
   // vêm no kit, mais os técnicos e a montagem marcados.
   const cartServices = useMemo(() => services.map((it) => catalogServices.find((s) => s.id === it.id) ?? it), [services, catalogServices]);
@@ -260,8 +332,13 @@ export const QuoteRequestPage: React.FC = () => {
     );
     // Lote 13: o serviço que acompanha o evento todo cobra pelas horas, como o servidor (serviceLine); os outros, fixos.
     const servicesPrice = orderServices.reduce((sum, it) => (isAvailableForOrder(it) ? sum + serviceLine(it, eventHours).cents / 100 : sum), 0);
-    return kitsPrice + equipmentsPrice + servicesPrice;
-  }, [kit, equipments, orderServices, eventHours, durationHours, equipmentUnit]);
+    // Palco (13/11/2026): as estruturas marcadas, pela conta do equipamento avulso (diárias, com o mínimo do cadastro).
+    const structuresPrice = chosenStructures.reduce(
+      (sum, eq) => sum + getEquipmentUnitPrice(eq) * (equipmentUnitsForHours(equipmentUnit, durationHours, getEquipmentMinimum(eq)) ?? 0),
+      0,
+    );
+    return kitsPrice + equipmentsPrice + servicesPrice + structuresPrice;
+  }, [kit, equipments, orderServices, chosenStructures, eventHours, durationHours, equipmentUnit]);
 
   // O7: o desconto acompanha o subtotal de agora.
   const coupon = useMemo(() => {
@@ -326,6 +403,7 @@ export const QuoteRequestPage: React.FC = () => {
   const sendOrder = async (data: QuoteFormData, couponToUse: AppliedCoupon | null) => {
     setServerError(null);
     setCouponProblem(null);
+    setStructuresGone([]);
 
     if (!equipments.length && !kit?.id && !services.length) {
       setServerError('Adicione algum item ao carrinho antes de prosseguir.');
@@ -405,10 +483,8 @@ export const QuoteRequestPage: React.FC = () => {
       if (kit?.id) bookingData.kitId = kit.id;
       if (couponToUse) bookingData.couponCode = couponToUse.code;
 
-      const equipmentIds = equipments.map((it) => {
-        if ('id' in it) return it.id;
-        return it.equipmentId;
-      }).filter(Boolean);
+      // Palco (13/11/2026): as estruturas marcadas vão como equipamento (structureOptions já tira o que está no carrinho).
+      const equipmentIds = [...cartEquipmentIds, ...chosenStructures.map((eq) => eq.id)];
 
       // Lote 13: os técnicos marcados na caixa vão junto com os serviços do carrinho, sem repetir. E1: o serviço que já
       // vem no kit não vai de novo. E5: a montagem marcada vai como o serviço do catálogo.
@@ -467,6 +543,7 @@ export const QuoteRequestPage: React.FC = () => {
         cartItems: [
           ...(kit?.id ? [{ name: kit?.name ? `Kit: ${kit.name}` : 'Kit Selecionado' }] : []),
           ...equipments.map((it) => ({ name: equipmentOf(it).name })),
+          ...chosenStructures.map((eq) => ({ name: eq.name })),
           ...orderServices.map((it) => ({ name: it.name })),
         ]
       };
@@ -477,7 +554,11 @@ export const QuoteRequestPage: React.FC = () => {
       const msg = (axios.isAxiosError(err) && err.response?.data?.message) || (err instanceof Error ? err.message : null) || 'Erro ao salvar pedido.';
       setServerError(msg);
       // O19/O23: item que ficou indisponível entre abrir a página e enviar: o carrinho é relido e o aviso diz qual.
-      if (/não está disponível/i.test(msg)) Promise.resolve(refreshCart?.({ force: true })).catch(() => undefined);
+      if (/não está disponível/i.test(msg)) {
+        Promise.resolve(refreshCart?.({ force: true })).catch(() => undefined);
+        // Palco (13/11/2026): a estrutura marcada não está no carrinho; a lista das estruturas é relida.
+        if (chosenStructures.length > 0) reloadStructures(chosenStructures);
+      }
 
       ReactGA.event({
         category: "ecommerce",
@@ -557,6 +638,14 @@ export const QuoteRequestPage: React.FC = () => {
         {serverError && (
           <Alert variant="error" className="mb-8">
             {serverError}
+          </Alert>
+        )}
+
+        {/* Palco (13/11/2026): a estrutura marcada que deixou de estar ativa saiu do pedido (lista relida). */}
+        {structuresGone.length > 0 && (
+          <Alert variant="warning" className="mb-8">
+            {structuresGone.length === 1 ? 'Saiu do pedido por não estar disponível agora' : 'Saíram do pedido por não estarem disponíveis agora'}:{' '}
+            <strong>{structuresGone.join(', ')}</strong>. Confira a estimativa e envie de novo.
           </Alert>
         )}
 
@@ -777,6 +866,52 @@ export const QuoteRequestPage: React.FC = () => {
                   <p className="text-sm font-semibold text-foreground">A montagem pela equipe ({setupService.name}) já está no seu carrinho.</p>
                 )}
               </div>
+            </section>
+          )}
+
+          {/* Palco (13/11/2026): palco e estruturas à parte, numa seção recolhível. Cada item com o preço da diária e,
+              com os horários, as diárias do evento e o valor; marcado, soma na estimativa e vai no pedido. O
+              aria-controls só aponta para a lista quando ela está na página (aberta). */}
+          {structureOptions.length > 0 && (
+            <section className={sectionClass} aria-labelledby="palco-e-estruturas">
+              <h2 id="palco-e-estruturas" className="m-0">
+                <button
+                  type="button"
+                  onClick={() => setStructuresOpen((open) => !open)}
+                  aria-expanded={structuresOpen}
+                  aria-controls={structuresOpen ? 'palco-e-estruturas-itens' : undefined}
+                  className="flex w-full items-center gap-3 rounded-xl text-left text-xl font-bold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <span className={sectionIconClass} aria-hidden="true">
+                    <Layers className="h-5 w-5" />
+                  </span>
+                  <span className="flex-1">Palco e estruturas (opcional)</span>
+                  <ChevronDown className={`h-5 w-5 shrink-0 text-muted-foreground transition-transform ${structuresOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                </button>
+              </h2>
+              {!structuresOpen && chosenStructures.length > 0 && (
+                <p className="mt-4 text-sm text-foreground">Marcados: {chosenStructures.map((eq) => eq.name).join(', ')}.</p>
+              )}
+              {structuresOpen && (
+                <div id="palco-e-estruturas-itens" className="mt-6 space-y-4">
+                  <p className="text-sm text-muted-foreground">{STRUCTURE_PRICE_NOTE} O que você marcar entra na estimativa e vai no pedido.</p>
+                  <p className="text-sm font-semibold text-foreground">{STRUCTURE_LIGHTING_HINT}</p>
+                  {structureOptions.map((eq) => {
+                    const price = getEquipmentUnitPrice(eq);
+                    const units = equipmentUnitsForHours(equipmentUnit, durationHours, getEquipmentMinimum(eq));
+                    return (
+                      <Checkbox
+                        key={eq.id}
+                        id={`estrutura-${eq.id}`}
+                        label={eq.name}
+                        description={`${formatPrice(price)}${equipmentUnitSuffix(equipmentUnit)}${units ? ` · ${equipmentUnitText(units, equipmentUnit)} no evento: ${formatPrice(price * units)}` : ''}.`}
+                        checked={structureIds.includes(eq.id)}
+                        onChange={(ev) => toggleStructure(eq.id, ev.target.checked)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
             </section>
           )}
 

@@ -24,6 +24,7 @@ import { OptimizedImage } from '@/components/ui/OptimizedImage';
 import { ZoomableProductPhoto } from '@/components/ui/ZoomableProductPhoto';
 import { AskOnWhatsAppButton } from '@/components/ui/AskOnWhatsAppButton';
 import { Badge, Button, buttonVariants } from '../components/ui/StandardComponents';
+import { fetchStructureCatalog, kitEquipmentIds, structureOffers, STRUCTURE_LIGHTING_HINT, STRUCTURE_PRICE_NOTE } from '../utils/cartCatalog';
 
 const LIST_CRUMB = { label: 'Kits', path: '/kits' };
 
@@ -40,6 +41,10 @@ export const KitDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  // Palco (13/11/2026): as estruturas do catálogo, que o kit de entrega oferece à parte (o kit de retirada, não).
+  const [structureCatalog, setStructureCatalog] = useState<Equipment[]>([]);
+  const [addingStructureId, setAddingStructureId] = useState<string | null>(null);
+  const isDeliveryKit = !!kit && kitFulfillment(kit) === 'DELIVERY_SETUP';
 
   // Recommendations hooks
   const similarRecommendations = useRecommendations({
@@ -89,6 +94,20 @@ export const KitDetailPage = () => {
     fetchKit();
   }, [slug]);
 
+  useEffect(() => {
+    if (!isDeliveryKit) return;
+    let alive = true;
+    Promise.resolve()
+      .then(() => fetchStructureCatalog(apiFetch))
+      .then((list) => {
+        if (alive && list) setStructureCatalog(list);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [isDeliveryKit]);
+
   // Diária (lote 13): o preço de cada equipamento do kit diz a unidade que o servidor cobra no avulso (o
   // priceUnit que vem com o equipamento do kit; sem ele, a chave do servidor). O preço do kit é por evento.
   const kitEquipment = kit?.items?.find((item) => item.equipment)?.equipment;
@@ -133,6 +152,11 @@ export const KitDetailPage = () => {
   const canAdd = !kit.status || kit.status === 'ACTIVE';
   const fulfillment = kitFulfillment(kit);
   const { included: includedHours, extraHourPrice } = kitHours(kit);
+  // Palco (13/11/2026): o item que o kit já traz não aparece; o que já está no carrinho fica marcado.
+  const structures = isDeliveryKit ? structureOffers(structureCatalog, kitEquipmentIds(kit) ?? []) : [];
+  const cartEquipmentIds = new Set(
+    ((cart?.equipments ?? []) as Array<Equipment | { equipmentId: string }>).map((e) => ('equipmentId' in e ? e.equipmentId : e.id)),
+  );
 
   const handleAddToCart = async () => {
     if (!kit || !canAdd) return;
@@ -155,6 +179,19 @@ export const KitDetailPage = () => {
       });
     } finally {
       setAdding(false);
+    }
+  };
+
+  // Palco (13/11/2026): cada estrutura entra como equipamento avulso. O addItem do carrinho confere item ativo e
+  // repetido e já avisa, inclusive o erro.
+  const handleAddStructure = async (structure: Equipment) => {
+    setAddingStructureId(structure.id);
+    try {
+      await addItem(structure, 'equipment');
+    } catch {
+      // O carrinho já mostrou o erro.
+    } finally {
+      setAddingStructureId(null);
     }
   };
 
@@ -445,6 +482,49 @@ export const KitDetailPage = () => {
             ))}
           </div>
         </div>
+
+        {/* Palco (13/11/2026): os Kits 06 e 08 deixam de trazer o palco, vendido à parte. No kit de entrega, os itens
+            ativos da categoria "Estruturas" do catálogo, cada um com o preço da diária e o botão do orçamento. O nome
+            acessível do botão começa pelo texto que aparece nele (quem usa comando de voz diz o que vê). */}
+        {structures.length > 0 && (
+          <section className="mt-12 pt-12 border-t border-border" aria-labelledby="palco-ou-estrutura">
+            <h2 id="palco-ou-estrutura" className="text-3xl font-black text-foreground mb-4">Vai precisar de palco ou estrutura?</h2>
+            <p className="text-muted-foreground mb-2">{STRUCTURE_PRICE_NOTE} Entram no orçamento à parte do kit.</p>
+            <p className="text-sm font-semibold text-foreground mb-8">{STRUCTURE_LIGHTING_HINT}</p>
+            <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {structures.map((structure) => {
+                const inCart = cartEquipmentIds.has(structure.id);
+                return (
+                  <li key={structure.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-muted/10 p-5 shadow-sm">
+                    <h3 className="font-bold text-foreground">{structure.name}</h3>
+                    <p className="text-sm font-bold text-primary">
+                      {formatPrice(Number(structure.pricePerHour))}{equipmentUnitSuffix(priceUnitOf(structure) ?? kitEquipmentUnit)}
+                    </p>
+                    <div className="mt-auto flex flex-wrap items-center justify-between gap-3">
+                      <Link
+                        to={`/equipamentos/${structure.slug || structure.id}`}
+                        className="text-xs font-bold text-muted-foreground hover:text-primary underline-offset-4 hover:underline transition-colors uppercase tracking-widest"
+                        aria-label={`Detalhes de ${structure.name}`}
+                      >
+                        Detalhes
+                      </Link>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleAddStructure(structure)}
+                        isLoading={addingStructureId === structure.id}
+                        disabled={inCart}
+                        aria-label={inCart ? `No orçamento: ${structure.name}` : `Adicionar ao orçamento: ${structure.name}`}
+                      >
+                        {inCart ? 'No orçamento' : 'Adicionar ao orçamento'}
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
 
         {/* Achado: aqui havia uma 2ª grade de benefícios (com azul fixo) repetindo o TrustBenefits
             logo acima — removida. */}
