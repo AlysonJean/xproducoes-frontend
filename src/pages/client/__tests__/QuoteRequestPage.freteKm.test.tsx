@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { formatPrice } from '../../../utils/formatPrice';
+import { freightRulesText } from '../../../utils/freightInfo';
 
 const { post, apiFetch, useCart, useAuth, addNotification } = vi.hoisted(() => ({
   post: vi.fn(),
@@ -25,10 +25,12 @@ import { QuoteRequestPage } from '../QuoteRequestPage';
 // cálculo gasta a cota do Google): o pedido de orçamento só mostra a regra, com os valores que o servidor usa
 // (GET /equipments/pricing-rules), e o valor do frete vem na proposta. Pedido só com kit de retirada não tem
 // frete. Antes a página não dizia nada sobre frete.
+// Auditoria do orçamento (12/11/2026), E4: o texto em si (a regra nova da dona) é conferido em
+// utils/__tests__/freightInfo.freteKm.test.ts; aqui, que a página mostra o freightRulesText com os valores do servidor.
 const REGRAS = { equipmentPriceUnit: 'hour', kitPrice: 'PER_EVENT', freight: { pricePerKm: 3.5, freeKm: 15, minimum: 50, roundTo: 10, trips: 2 } };
 // A tela compara o texto com os espaços normalizados (o "R$" do formatPrice vem com espaço não separável).
 const semNbsp = (texto: string) => texto.replace(/\s+/g, ' ');
-const TEXTO = semNbsp(`Frete calculado pela distância: grátis até 15 km da X Produções; acima disso, ${formatPrice(3.5)} por km rodado. O valor aparece na proposta.`);
+const TEXTO = semNbsp(freightRulesText(REGRAS.freight));
 const CAIXA = { id: 'eq1', name: 'Caixa de som', pricePerHour: 10 };
 
 const abrir = async (cart: object, regras: object = REGRAS) => {
@@ -70,19 +72,20 @@ describe('QuoteRequestPage — a regra do frete no pedido de orçamento', { time
     await abrir({ kit: { id: 'kit-1', name: 'Kit Festa', price: 500, fulfillment: 'CLIENT_PICKUP' }, equipments: [], services: [] });
 
     expect(screen.getByLabelText('CEP *')).toBeInTheDocument();
-    expect(screen.queryByText(/Frete calculado pela distância/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Frete pela distância/)).not.toBeInTheDocument();
   });
 
   it('regras com outros valores no servidor: o texto acompanha', async () => {
-    await abrir({ equipments: [CAIXA], services: [] }, { ...REGRAS, freight: { ...REGRAS.freight, pricePerKm: 4, freeKm: 20 } });
+    const outras = { ...REGRAS.freight, pricePerKm: 4, freeKm: 20 };
+    await abrir({ equipments: [CAIXA], services: [] }, { ...REGRAS, freight: outras });
 
-    expect(await screen.findByText(new RegExp(`grátis até 20 km da X Produções; acima disso, ${semNbsp(formatPrice(4)).replace('$', '\\$')} por km rodado`))).toBeInTheDocument();
+    expect(await screen.findByText(semNbsp(freightRulesText(outras)))).toBeInTheDocument();
   });
 
   it('API sem as regras do frete (versão anterior): nenhum número que o servidor não confirmou', async () => {
     await abrir({ equipments: [CAIXA], services: [] }, { equipmentPriceUnit: 'hour', kitPrice: 'PER_EVENT' });
 
-    await waitFor(() => expect(screen.queryByText(/Frete calculado pela distância/)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(/Frete pela distância/)).not.toBeInTheDocument());
     expect(screen.getByLabelText('CEP *')).toBeInTheDocument();
   });
 });

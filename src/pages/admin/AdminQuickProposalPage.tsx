@@ -85,7 +85,51 @@ interface ProposalItem {
   // Lote 13, técnico durante o evento (decisão do dono de 06/11/2026): o serviço marcado "Pode acompanhar o evento
   // todo" guarda o preço e a duração do cadastro; a linha acompanha as horas do evento (serviceLine), como a do kit.
   service?: ServicePricingInput;
+  // Auditoria do orçamento (12/11/2026), E1/E3: os serviços que o kit do catálogo já traz dentro (itens do kit com
+  // serviceId). Serviço que já vem no kit não entra de novo na proposta.
+  includedServiceIds?: string[];
+  // Linha posta pelo botão Frete (frete, pedágio ou "Frete a combinar"): o próximo clique a troca.
+  freight?: boolean;
 }
+
+// Auditoria do orçamento (12/11/2026), E4: a regra do frete da proposta, como a do servidor (freightMode): com kit de
+// entrega, a do kit (o equipamento avulso vai na mesma entrega); sem ele, com equipamento avulso, a do avulso. Só
+// serviços ou só kit de retirada: sem frete (null).
+type FreightMode = 'KIT_DELIVERY' | 'EQUIPMENT';
+const freightModeOf = (items: ProposalItem[]): FreightMode | null => {
+  if (items.some((i) => i.kit && kitFulfillment(i.kit) !== 'CLIENT_PICKUP')) return 'KIT_DELIVERY';
+  return items.some((i) => i.type === 'EQUIPMENT') ? 'EQUIPMENT' : null;
+};
+
+// O17/C9: o endereço e a regra usados no cálculo do frete. Se um dos dois muda depois, as linhas ficam desatualizadas.
+const freightKey = (address: Record<string, string>, mode: FreightMode | null): string =>
+  JSON.stringify([...Object.values(address).map((value) => value.trim().toLowerCase().replace(/\s+/g, ' ')), mode]);
+
+// E1/E3: a linha de kit da proposta que já traz o serviço, pela composição do kit (não pelo nome).
+const kitIncluding = (serviceId: string, items: ProposalItem[]): ProposalItem | undefined =>
+  items.find((i) => i.includedServiceIds?.includes(serviceId));
+
+const kitIncludesText = (kitLine: ProposalItem, serviceName: string): string =>
+  `O kit "${kitLine.kit?.name || kitLine.description}" já inclui "${serviceName}".`;
+
+// E19: a busca do catálogo só lista serviço ativo (o "Em breve" e o inativo não podem ser vendidos).
+const isActiveService = (service: { status?: string | null }): boolean => (service.status ?? 'ACTIVE') === 'ACTIVE';
+
+// E3/E5: o serviço de montagem do catálogo ("Roadie / Auxiliar de Montagem"), cobrado à parte no equipamento avulso
+// (decisão de 12/11). O cadastro não tem um campo que diga "este é o de montagem" (criar um pediria migração), esse
+// serviço não tem slug e o id muda de um ambiente para outro. Vale o serviço ativo, que não é o técnico do evento
+// todo, com "montagem" ou "roadie" no nome, sem depender de acento, maiúsculas ou do nome exato ("Auxiliar de
+// montagem" e "Montagem e desmontagem" também servem). Com mais de um, o que mais kits trazem dentro.
+const normalizeName = (text: string): string => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const ASSEMBLY_NAME = /\b(montagem|roadie)\b/;
+const findAssemblyService = (services: Service[], kits: Kit[]): Service | null => {
+  const candidates = services.filter(
+    (s) => isActiveService(s) && s.coversWholeEvent !== true && ASSEMBLY_NAME.test(normalizeName(s.name || '')),
+  );
+  if (candidates.length <= 1) return candidates[0] ?? null;
+  const kitsWith = (id: string) => kits.filter((k) => (k.items ?? []).some((i) => (i.serviceId ?? i.service?.id) === id)).length;
+  return [...candidates].sort((a, b) => kitsWith(b.id) - kitsWith(a.id))[0];
+};
 
 // Preço do catálogo: equipamento pelo preço da unidade (a coluna pricePerHour guarda o da hora ou o da
 // diária); kit (preço por evento) e serviço pelo preço do cadastro.
@@ -135,10 +179,11 @@ export const AdminQuickProposalPage = () => {
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const [quotingFreight, setQuotingFreight] = useState(false);
-  // Ids das linhas que o botão Frete pôs da última vez (frete, pedágio ou "Frete a combinar"): o próximo clique as troca.
-  const freightLineIds = useRef<string[]>([]);
-  // Id da linha que cada botão Técnico pôs da última vez (chave: o id do serviço, ou "manual" no item à mão).
-  const technicianLineIds = useRef<Record<string, string>>({});
+  // O17/C9: o endereço e a regra do último cálculo do frete (freightKey); null antes do primeiro.
+  const [freightQuotedKey, setFreightQuotedKey] = useState<string | null>(null);
+  // Id da linha que cada atalho pôs da última vez (chave: o id do serviço do Técnico, "manual" no item à mão, ou
+  // "montagem").
+  const shortcutLineIds = useRef<Record<string, string>>({});
 
   // D24 (aprovada em 02/11/2026): "Transformar em proposta", na tela de contatos, abre esta página com os dados do
   // formulário no estado da navegação. Lido uma vez, ao abrir; recarregar a página começa vazio, como antes. A data
@@ -228,7 +273,8 @@ export const AdminQuickProposalPage = () => {
   }, [pricedItems]);
 
   const filteredCatalogItems = useMemo(() => {
-    const source = searchType === 'EQUIPMENT' ? equipments : searchType === 'KIT' ? kits : services;
+    // E19 (auditoria do orçamento, 12/11/2026): o GET /services do admin traz também os inativos e os "Em breve".
+    const source = searchType === 'EQUIPMENT' ? equipments : searchType === 'KIT' ? kits : services.filter(isActiveService);
     if (!searchTerm.trim()) return source;
     const lower = searchTerm.toLowerCase();
     return source.filter((item: Equipment | Kit | Service) => item.name?.toLowerCase().includes(lower));
@@ -236,6 +282,8 @@ export const AdminQuickProposalPage = () => {
 
   // Lote 13: os serviços do botão Técnico (marcados "Pode acompanhar o evento todo" e ativos).
   const technicianServices = useMemo(() => services.filter(isWholeEventService), [services]);
+  // E3/E5: o serviço de montagem do catálogo, para o atalho Montagem.
+  const assemblyService = useMemo(() => findAssemblyService(services, kits), [services, kits]);
 
   const catalogLine = (type: ProposalItem['type'], item: Equipment | Kit | Service): ProposalItem => {
     // Kit: as "horas incluídas no preço" (minimumRentalDuration), a hora extra e o tipo vão para a conta do
@@ -263,6 +311,9 @@ export const AdminQuickProposalPage = () => {
               extraHourPrice: catalogKit.extraHourPrice ?? null,
               fulfillment: kitFulfillment(catalogKit),
             },
+            includedServiceIds: (catalogKit.items ?? [])
+              .map((kitItem) => kitItem.serviceId ?? kitItem.service?.id)
+              .filter((id): id is string => !!id),
           }
         : {}),
       ...(type === 'SERVICE' && (item as Service).coversWholeEvent === true
@@ -279,13 +330,26 @@ export const AdminQuickProposalPage = () => {
   };
 
   const addItemToProposal = (type: ProposalItem['type'], item: Equipment | Kit | Service) => {
-    setItems(prev => [...prev, catalogLine(type, item)]);
+    // E1/E3 (auditoria do orçamento, 12/11/2026): serviço que algum kit da proposta já traz não entra de novo.
+    const includedBy = type === 'SERVICE' ? kitIncluding(item.id, items) : undefined;
+    if (includedBy) {
+      addNotification({ type: 'warning', title: 'Já incluso no kit', message: kitIncludesText(includedBy, item.name) });
+      return;
+    }
+    const line = catalogLine(type, item);
+    setItems(prev => [...prev, line]);
     addNotification({ type: 'success', title: 'Item adicionado', message: item.name });
+    // Kit que traz um serviço já posto na proposta: avisa (Salvar pede para tirar a linha do serviço).
+    const repeated = items.find((i) => i.type === 'SERVICE' && i.sourceId && line.includedServiceIds?.includes(i.sourceId));
+    if (repeated) {
+      addNotification({ type: 'warning', title: 'Já incluso no kit', message: `${kitIncludesText(line, repeated.description)} Tire a linha desse serviço.` });
+    }
   };
 
-  // Q12 (respostas de 03/11): técnico, montagem e frete são cobrados à parte, como itens; frete dentro de
-  // BH entra como item de R$ 0. Decisão de 06/11: a hora extra do kit sem valor cadastrado entra como item, à
-  // mão; a do kit com valor cadastrado já vem na linha do kit (lote 13).
+  // Q12 (respostas de 03/11): técnico, montagem e frete são cobrados à parte, como itens. Decisão de 06/11: a hora
+  // extra do kit sem valor cadastrado entra como item, à mão; a do kit com valor cadastrado já vem na linha do kit
+  // (lote 13). Decisões de 12/11 (auditoria do orçamento): o frete segue a regra nova (botão Frete) e a montagem do
+  // avulso é o serviço de montagem do catálogo (atalho Montagem).
   const customLine = (description: string): ProposalItem => ({
     id: Math.random().toString(36).substr(2, 9),
     type: 'CUSTOM',
@@ -303,11 +367,32 @@ export const AdminQuickProposalPage = () => {
   // Decisão do dono de 08/11/2026: clicar de novo em Técnico troca a linha que esse botão pôs da última vez, mesmo
   // editada, como no Frete, em vez de repetir o técnico (o 2º clique criava outra linha igual). Dois técnicos:
   // quantidade 2 na linha. Com mais de um serviço marcado, cada botão troca só a própria linha; o técnico posto pela
-  // busca do catálogo fica como está.
-  const replaceTechnicianLine = (button: string, line: ProposalItem) => {
-    const previous = technicianLineIds.current[button];
-    technicianLineIds.current[button] = line.id;
+  // busca do catálogo fica como está. O atalho Montagem segue a mesma regra (auditoria do orçamento, 12/11/2026).
+  const replaceShortcutLine = (button: string, line: ProposalItem) => {
+    const previous = shortcutLineIds.current[button];
+    shortcutLineIds.current[button] = line.id;
     setItems((prev) => [...prev.filter((item) => item.id !== previous), line]);
+  };
+
+  // E1/E3/E5 (auditoria do orçamento, 12/11/2026): os atalhos Técnico e Montagem não põem serviço que algum kit da
+  // proposta já traz (avisam "o kit já inclui …"). Montagem põe o serviço de montagem do catálogo, com o preço do
+  // cadastro, em vez da linha à mão de R$ 0.
+  const addShortcutService = (button: string, service: Service) => {
+    const includedBy = kitIncluding(service.id, items);
+    if (includedBy) {
+      addNotification({ type: 'warning', title: 'Já incluso no kit', message: kitIncludesText(includedBy, service.name) });
+      return;
+    }
+    replaceShortcutLine(button, catalogLine('SERVICE', service));
+    addNotification({ type: 'success', title: 'Item adicionado', message: service.name });
+  };
+
+  const addAssembly = () => {
+    if (!assemblyService) {
+      addNotification({ type: 'warning', title: 'Sem serviço de montagem', message: 'Nenhum serviço de montagem ativo no catálogo. Ative ou cadastre o "Roadie / Auxiliar de Montagem" em Serviços.' });
+      return;
+    }
+    addShortcutService('montagem', assemblyService);
   };
 
   const updateItem = (id: string, field: keyof ProposalItem, value: string | number) => {
@@ -322,10 +407,16 @@ export const AdminQuickProposalPage = () => {
 
   // Frete por km (decisões do dono de 06/11/2026, item frete-km): o botão Frete pede ao servidor o frete do
   // endereço do evento (POST /admin/freight/quote, só admin; a chave do Google fica só no servidor), com a regra e
-  // os valores do servidor (padrão do dono: R$ 3,50 por km rodado acima de 15 km em cada trecho, mínimo de R$ 50)
-  // e o pedágio estimado à parte. As linhas entram como itens personalizados e o valor continua editável. Com um
-  // kit de retirada, o aviso abaixo do botão continua: o frete só vale se houver outra entrega.
+  // os valores do servidor e o pedágio estimado à parte. As linhas entram como itens personalizados e o valor
+  // continua editável. Auditoria do orçamento (12/11/2026), E4 e O17/C9: o botão manda a regra da proposta (kit de
+  // entrega: até 15 km vem no kit e, acima, só os km a mais; equipamento avulso: R$ 50 até 15 km e, acima, os km com o
+  // mínimo) e não calcula quando a proposta só tem serviços ou só kit de retirada. Mudar o endereço ou a regra
+  // depois de calcular deixa as linhas desatualizadas, e Salvar pede para recalcular.
   const pickupKit = items.find((i) => i.kit && kitFulfillment(i.kit) === 'CLIENT_PICKUP');
+  const freightAddress = { street, addressNumber, neighborhood, city, state, zipCode };
+  const freightMode = freightModeOf(items);
+  const freightStale =
+    freightQuotedKey !== null && items.some((i) => i.freight) && freightQuotedKey !== freightKey(freightAddress, freightMode);
 
   const freightLine = (description: string, price: number): ProposalItem => ({
     id: Math.random().toString(36).substr(2, 9),
@@ -335,18 +426,28 @@ export const AdminQuickProposalPage = () => {
     unitPrice: price,
     discount: 0,
     totalPrice: price,
+    freight: true,
   });
 
   // Decisão de 07/11/2026: clicar de novo em Frete (outro endereço, outro cálculo) troca as linhas que o botão pôs da
   // última vez, mesmo editadas, em vez de repetir o frete. As outras linhas da proposta ficam como estão.
   const replaceFreightLines = (lines: ProposalItem[]) => {
-    const previous = freightLineIds.current;
-    freightLineIds.current = lines.map((line) => line.id);
-    setItems((prev) => [...prev.filter((item) => !previous.includes(item.id)), ...lines]);
+    setItems((prev) => [...prev.filter((item) => !item.freight), ...lines]);
   };
 
   const quoteFreight = async () => {
-    const address = { street, addressNumber, neighborhood, city, state, zipCode };
+    const address = freightAddress;
+    const mode = freightMode;
+    if (!mode) {
+      // Sem o que entregar: não calcula e tira as linhas de um cálculo anterior, com o aviso.
+      const hadLines = items.some((i) => i.freight);
+      if (hadLines) replaceFreightLines([]);
+      const reason = pickupKit
+        ? `O kit "${pickupKit.kit?.name || pickupKit.description}" é de retirada e a proposta não tem equipamento avulso para entregar`
+        : 'A proposta não tem equipamento nem kit de entrega (só serviços)';
+      addNotification({ type: 'warning', title: 'Sem frete', message: `${reason}: não há frete.${hadLines ? ' As linhas do frete calculado antes saíram.' : ''}` });
+      return;
+    }
     if (Object.values(address).some((value) => !value.trim())) {
       addNotification({ type: 'warning', title: 'Endereço incompleto', message: 'Preencha o endereço do evento (rua, número, bairro, cidade, UF e CEP) para calcular o frete.' });
       return;
@@ -355,7 +456,7 @@ export const AdminQuickProposalPage = () => {
     try {
       const quote = await apiFetch<{ status?: string; items?: Array<{ description?: string; unitPrice?: number | string }> }>('/admin/freight/quote', {
         method: 'POST',
-        body: JSON.stringify(address),
+        body: JSON.stringify({ ...address, mode }),
       });
       const lines = (Array.isArray(quote?.items) ? quote.items : []).map((line) =>
         freightLine(line.description || 'Frete', Math.max(0, toNumber(line.unitPrice))),
@@ -369,6 +470,7 @@ export const AdminQuickProposalPage = () => {
       replaceFreightLines([freightLine('Frete a combinar', 0)]);
       addNotification({ type: 'error', title: 'Frete não calculado', message: 'Não foi possível calcular o frete agora. Digite o valor na linha "Frete a combinar".' });
     } finally {
+      setFreightQuotedKey(freightKey(address, mode));
       setQuotingFreight(false);
     }
   };
@@ -399,6 +501,13 @@ export const AdminQuickProposalPage = () => {
     // Garantir que há pelo menos um item de catálogo (schema exige kitId ou equipmentIds ou serviceIds)
     const hasCatalogItem = items.some(i => i.type !== 'CUSTOM' && i.sourceId);
     if (!hasCatalogItem) return 'Adicione pelo menos um equipamento, kit ou serviço do catálogo.';
+    // Auditoria do orçamento (12/11/2026), E1/E3: serviço que o kit já traz (posto antes do kit, por exemplo).
+    for (const line of items) {
+      const includedBy = line.type === 'SERVICE' && line.sourceId ? kitIncluding(line.sourceId, items) : undefined;
+      if (includedBy) return `${kitIncludesText(includedBy, line.description)} Tire a linha desse serviço da proposta.`;
+    }
+    // O17/C9: frete calculado para outro endereço ou outra regra.
+    if (freightStale) return 'O endereço ou os itens mudaram depois do cálculo do frete. Clique em Frete para recalcular (ou remova as linhas do frete).';
     return null;
   };
 
@@ -799,25 +908,30 @@ export const AdminQuickProposalPage = () => {
                  <div className="flex flex-wrap gap-2">
                    {/* Lote 13, técnico durante o evento (decisão do dono de 06/11/2026): com serviço marcado "Pode acompanhar
                        o evento todo", o botão põe esse serviço, cobrado pelas horas do evento (um botão por serviço quando
-                       há mais de um); sem nenhum, o item à mão de antes. */}
+                       há mais de um); sem nenhum, o item à mão de antes. Auditoria do orçamento (12/11/2026): o técnico que
+                       um kit da proposta já traz não entra de novo (E1). */}
                    {technicianServices.length === 0 ? (
-                     <Button variant="outline" size="xs" onClick={() => replaceTechnicianLine('manual', customLine('Técnico'))} leftIcon={<Plus className="h-3 w-3" />}>
+                     <Button variant="outline" size="xs" onClick={() => replaceShortcutLine('manual', customLine('Técnico'))} leftIcon={<Plus className="h-3 w-3" />}>
                        Técnico
                      </Button>
                    ) : (
                      technicianServices.map((svc) => (
-                       <Button key={svc.id} variant="outline" size="xs" onClick={() => {
-                         replaceTechnicianLine(svc.id, catalogLine('SERVICE', svc));
-                         addNotification({ type: 'success', title: 'Item adicionado', message: svc.name });
-                       }} leftIcon={<Plus className="h-3 w-3" />}>
+                       <Button key={svc.id} variant="outline" size="xs" onClick={() => addShortcutService(svc.id, svc)} leftIcon={<Plus className="h-3 w-3" />}>
                          {technicianServices.length === 1 ? 'Técnico' : svc.name}
                        </Button>
                      ))
                    )}
-                   <Button variant="outline" size="xs" onClick={() => addCustomItem('Montagem e desmontagem')} leftIcon={<Plus className="h-3 w-3" />}>
+                   <Button variant="outline" size="xs" onClick={addAssembly} leftIcon={<Plus className="h-3 w-3" />}>
                      Montagem
                    </Button>
-                   <Button variant="outline" size="xs" onClick={quoteFreight} isLoading={quotingFreight} leftIcon={<Plus className="h-3 w-3" />} aria-describedby={pickupKit ? 'frete-kit-retirada' : undefined}>
+                   <Button
+                     variant="outline"
+                     size="xs"
+                     onClick={quoteFreight}
+                     isLoading={quotingFreight}
+                     leftIcon={<Plus className="h-3 w-3" />}
+                     aria-describedby={[pickupKit ? 'frete-kit-retirada' : '', freightStale ? 'frete-desatualizado' : ''].filter(Boolean).join(' ') || undefined}
+                   >
                      Frete
                    </Button>
                    <Button variant="outline" size="xs" onClick={() => addCustomItem('Hora extra')} leftIcon={<Plus className="h-3 w-3" />}>
@@ -828,10 +942,15 @@ export const AdminQuickProposalPage = () => {
                    </Button>
                  </div>
                </div>
-               <p className="-mt-4 mb-6 text-xs text-muted-foreground">Técnico, montagem, frete e hora extra são cobrados à parte, como itens (a hora extra do kit com valor cadastrado já entra na linha do kit). O botão Frete calcula pela distância até o endereço do evento (preencha o endereço antes), com o pedágio estimado à parte.</p>
+               <p className="-mt-4 mb-6 text-xs text-muted-foreground">Técnico, montagem, frete e hora extra entram como itens (a hora extra do kit com valor cadastrado já entra na linha do kit, e serviço que o kit já traz não entra de novo). O botão Frete calcula pela distância até o endereço do evento (preencha o endereço antes), pela regra do servidor: equipamento avulso e kit de entrega têm contas diferentes, e só serviços ou só kit de retirada não têm frete. Pedágio estimado à parte.</p>
                {pickupKit && (
                  <p id="frete-kit-retirada" role="note" className="-mt-4 mb-6 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-foreground">
-                   O kit "{pickupKit.description}" é de retirada: o cliente busca e devolve na X Produções. Só adicione frete se houver outra entrega.
+                   O kit "{pickupKit.description}" é de retirada: o cliente busca e devolve na X Produções. O frete só entra se a proposta tiver equipamento avulso para entregar.
+                 </p>
+               )}
+               {freightStale && (
+                 <p id="frete-desatualizado" role="alert" className="-mt-4 mb-6 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-foreground">
+                   O endereço ou os itens mudaram depois do cálculo do frete: clique em Frete para recalcular antes de salvar.
                  </p>
                )}
 
@@ -857,6 +976,7 @@ export const AdminQuickProposalPage = () => {
                               <Badge variant="outline" size="sm">
                                 {ITEM_TYPE_LABELS[item.type] || item.type}
                               </Badge>
+                              {item.freight && freightStale && <Badge variant="destructive" size="sm">Desatualizado</Badge>}
                               {item.kit && (
                                 <>
                                   <Badge variant="outline" size="sm">{KIT_FULFILLMENT_LABEL[kitFulfillment(item.kit)]}</Badge>

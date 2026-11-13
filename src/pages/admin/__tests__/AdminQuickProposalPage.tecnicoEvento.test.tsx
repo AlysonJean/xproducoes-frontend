@@ -152,12 +152,34 @@ describe('Proposta Rápida — botão Técnico com o serviço que acompanha o ev
     ['o marcado está inativo', [{ ...TECNICO, status: 'INACTIVE' }]],
   ])('%s: o Técnico continua o item à mão de antes', async (_caso, servicos) => {
     renderPage(servicos);
-    await catalogoCarregado((servicos[0] as { name: string }).name);
+    // A aba Serviços aparece quando o catálogo carrega (o serviço inativo não aparece nela: E19, abaixo).
+    fireEvent.click(await screen.findByRole('button', { name: 'Serviços' }));
     fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
     preencher('2027-01-10T18:00', '2027-01-11T00:00');
 
     expect(screen.getByDisplayValue('Técnico')).toBeInTheDocument();
     expect(precoDaLinha()).toBe('0');
+  });
+});
+
+// Auditoria do orçamento (12/11/2026), E19: a busca do catálogo listava os serviços "Em breve" e inativos (o GET
+// /services do admin traz todos), e a proposta podia vender o que a empresa não oferece.
+describe('Proposta Rápida — a busca do catálogo só lista serviço ativo (E19)', { timeout: 20000 }, () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
+  });
+
+  it('"Em breve" e inativo ficam fora da aba Serviços e da busca; o ativo aparece', async () => {
+    renderPage([DJ, { ...TECNICO, id: 'sv-live', name: 'Transmissão ao Vivo', status: 'COMING_SOON' }, { ...LUZ, status: 'INACTIVE' }]);
+    await catalogoCarregado('DJ Profissional');
+
+    expect(screen.queryByRole('button', { name: 'Adicionar Transmissão ao Vivo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Adicionar Técnico de Iluminação' })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Buscar no catálogo'), { target: { value: 'trans' } });
+    expect(screen.getByText('Nenhum item encontrado.')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Buscar no catálogo'), { target: { value: 'dj' } });
+    expect(screen.getByRole('button', { name: 'Adicionar DJ Profissional' })).toBeInTheDocument();
   });
 });
 

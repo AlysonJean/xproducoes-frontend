@@ -10,7 +10,7 @@
 export const RESERVATION_POLICY_VERSION = '2026-11';
 
 /** Data da última revisão do texto (como LAST_UPDATED dos Termos). Atualize junto com a versão. */
-export const RESERVATION_POLICY_UPDATED_AT = '07/11/2026';
+export const RESERVATION_POLICY_UPDATED_AT = '12/11/2026';
 
 /**
  * Só vira true quando o dono e o advogado aprovarem o texto e nenhuma seção estiver marcada "Texto proposto, a

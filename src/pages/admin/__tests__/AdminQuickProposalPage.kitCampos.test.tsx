@@ -23,7 +23,7 @@ const renderPage = (kits: object[]) => {
     if (url === '/equipments/pricing-rules') return Promise.resolve({ equipmentPriceUnit: 'hour', kitPrice: 'PER_EVENT' });
     // Frete por km (item frete-km): o botão Frete pede o frete do endereço ao servidor.
     if (url === '/admin/freight/quote' && opts?.method === 'POST') {
-      return Promise.resolve({ status: 'OK', items: [{ description: 'Frete (12 km por trecho, dentro dos 15 km sem cobrança)', quantity: 1, unitPrice: 0, discount: 0, totalPrice: 0, itemType: 'CUSTOM' }] });
+      return Promise.resolve({ status: 'OK', items: [{ description: 'Frete (12 km por trecho; até 15 km incluso no kit)', quantity: 1, unitPrice: 0, discount: 0, totalPrice: 0, itemType: 'CUSTOM' }] });
     }
     if (url === '/kits') return Promise.resolve(kits);
     return Promise.resolve([]);
@@ -64,7 +64,9 @@ const precoDaLinha = () => (screen.getAllByLabelText('Preço unit.')[0] as HTMLI
 // Lote 13, campos do kit (aprovados pelo dono em 06/11/2026). A linha do kit da Proposta Rápida era o preço do
 // evento com "(N h incluídas)" fixo na descrição; a hora extra só entrava à mão. Agora a linha usa a mesma
 // conta do servidor (kitPriceLine): quando as datas mudam, as horas extras são recalculadas, como a linha do
-// equipamento. O tipo do kit aparece na linha, e com um kit de retirada o Frete avisa, sem bloquear.
+// equipamento. O tipo do kit aparece na linha, e com um kit de retirada o Frete avisa. Auditoria do orçamento
+// (12/11/2026), E4: com só o kit de retirada (sem equipamento avulso), o Frete não calcula; o kit de entrega manda a
+// regra do kit (mode KIT_DELIVERY).
 describe('Proposta Rápida — linha do kit com horas extras e o tipo do kit', { timeout: 20000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -93,30 +95,35 @@ describe('Proposta Rápida — linha do kit com horas extras e o tipo do kit', {
     expect(corpo).toMatchObject({ kitId: 'kit-festa' });
   });
 
-  it('o tipo do kit aparece na linha, e com kit de retirada o Frete avisa sem bloquear', async () => {
+  it('o tipo do kit aparece na linha; com só o kit de retirada, o Frete avisa e não calcula (E4)', async () => {
     renderPage([RETIRADA]);
     await adicionarKit('Kit Festa');
 
     expect(screen.getByText('Retirada e montagem pelo cliente')).toBeInTheDocument();
     const aviso = screen.getByRole('note');
-    expect(aviso).toHaveTextContent('O kit "Kit Festa" é de retirada: o cliente busca e devolve na X Produções.');
+    expect(aviso).toHaveTextContent('O kit "Kit Festa" é de retirada: o cliente busca e devolve na X Produções. O frete só entra se a proposta tiver equipamento avulso para entregar.');
     const frete = screen.getByRole('button', { name: 'Frete' });
     expect(frete).toHaveAttribute('aria-describedby', aviso.id);
 
-    // Frete por km (item frete-km): com o endereço preenchido, o botão pede o frete ao servidor; o kit de retirada
-    // não bloqueia.
     preencher('2027-01-10T18:00', '2027-01-10T23:00');
     fireEvent.click(frete);
-    expect(await screen.findByDisplayValue('Frete (12 km por trecho, dentro dos 15 km sem cobrança)')).toBeInTheDocument();
+    expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'warning', title: 'Sem frete' }));
+    expect(apiFetch.mock.calls.some((c) => c[0] === '/admin/freight/quote')).toBe(false);
   });
 
-  it('kit de entrega: o tipo na linha e nenhum aviso no Frete', async () => {
+  it('kit de entrega: o tipo na linha, nenhum aviso no Frete, e o Frete manda a regra do kit', async () => {
     renderPage([ENTREGA]);
     await adicionarKit('Kit Som');
 
     expect(screen.getByText('Entrega e montagem pela equipe')).toBeInTheDocument();
     expect(screen.queryByRole('note')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Frete' })).not.toHaveAttribute('aria-describedby');
+
+    preencher('2027-01-10T18:00', '2027-01-10T23:00');
+    fireEvent.click(screen.getByRole('button', { name: 'Frete' }));
+    expect(await screen.findByDisplayValue('Frete (12 km por trecho; até 15 km incluso no kit)')).toBeInTheDocument();
+    const chamada = apiFetch.mock.calls.find((c) => c[0] === '/admin/freight/quote')!;
+    expect(JSON.parse(chamada[1].body as string)).toMatchObject({ mode: 'KIT_DELIVERY' });
   });
 
   it('preço digitado à mão vence: as datas não mudam o preço e a descrição fica sem hora extra', async () => {
