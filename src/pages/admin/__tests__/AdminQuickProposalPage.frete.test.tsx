@@ -21,7 +21,7 @@ import AdminQuickProposalPage from '../AdminQuickProposalPage';
 // Auditoria do orçamento (12/11/2026), E4 e O17/C9: o botão manda a regra da proposta (mode: kit de entrega ou
 // equipamento avulso), não calcula quando a proposta só tem serviços ou só kit de retirada, e trocar o endereço (ou a
 // regra) depois de calcular deixa as linhas "Desatualizado": Salvar pede para recalcular.
-const MESA = { id: 'eq-mesa', name: 'Mesa de Som', pricePerHour: 50, minimumRentalDuration: 1 };
+const MESA = { id: 'eq-mesa', name: 'Mesa de Som', pricePerHour: 50, minimumRentalDuration: 1, priceUnit: 'hour' };
 const ROADIE = { id: 'sv-roadie', name: 'Roadie / Auxiliar de Montagem', description: 'Montagem', price: '100.00', duration: 180, coversWholeEvent: false, status: 'ACTIVE' };
 const DJ = { id: 'sv-dj', name: 'DJ Profissional', description: 'DJ', price: '800.00', duration: 180, coversWholeEvent: false, status: 'ACTIVE' };
 const KIT_ENTREGA = { id: 'kit-som', name: 'Kit Som', price: '1200.00', minimumRentalDuration: 4, extraHourPrice: null, fulfillment: 'DELIVERY_SETUP', items: [] };

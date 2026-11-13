@@ -212,14 +212,16 @@ describe('Proposta Rápida — clicar de novo em Técnico troca a linha, não re
     ]);
   });
 
-  it('o técnico posto pela busca do catálogo fica; o botão troca só a linha que ele pôs', async () => {
+  // Auditoria do orçamento (12/11/2026), C13/O24: antes o técnico da busca ficava e o do botão somava (duas linhas do
+  // mesmo técnico). Agora o botão troca qualquer linha do serviço que acompanha o evento todo, venha de onde vier.
+  it('o botão troca também o técnico posto pela busca do catálogo (uma linha só)', async () => {
     renderPage([TECNICO]);
     await catalogoCarregado('Técnico de Som e Operação Profissional');
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar Técnico de Som e Operação Profissional' }));
     fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
     fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
 
-    expect(descricoes()).toEqual(['Técnico de Som e Operação Profissional', 'Técnico de Som e Operação Profissional']);
+    expect(descricoes()).toEqual(['Técnico de Som e Operação Profissional']);
   });
 
   it('dois serviços marcados: cada botão troca só a própria linha', async () => {

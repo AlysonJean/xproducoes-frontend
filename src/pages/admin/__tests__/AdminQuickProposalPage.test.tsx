@@ -14,7 +14,8 @@ vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
 import { jsPDF } from 'jspdf';
 import AdminQuickProposalPage from '../AdminQuickProposalPage';
 
-const mesa = { id: 'eq-mesa', name: 'Mesa de Som', dailyPrice: 300 };
+// priceUnit: a unidade do preço que o GET /equipments põe em cada equipamento (auditoria do orçamento, O18).
+const mesa = { id: 'eq-mesa', name: 'Mesa de Som', dailyPrice: 300, priceUnit: 'day' };
 
 const PaginaDaReserva = () => {
   const { pathname } = useLocation();
@@ -81,8 +82,9 @@ describe('AdminQuickProposalPage — salvar proposta', { timeout: 20000 }, () =>
     expect(await screen.findByText('Página da reserva /admin/reservas/XP-NOVA')).toBeInTheDocument();
     expect(addNotification).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
     // Antes: "Proposta gerada! O link de proposta está disponível na página da reserva", e a página não mostrava link.
+    // E8 (auditoria do orçamento, 12/11/2026): o aviso diz que o link vai pelo "Enviar proposta".
     expect(addNotification).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'success', title: 'Proposta salva', message: 'Use "Enviar proposta" na página da reserva.' }),
+      expect.objectContaining({ type: 'success', title: 'Proposta salva', message: 'Confira a reserva e use "Enviar proposta": o link vai pelo WhatsApp e por e-mail, se a reserva tiver e-mail.' }),
     );
   });
 
@@ -136,7 +138,7 @@ describe('AdminQuickProposalPage — salvar proposta', { timeout: 20000 }, () =>
     expect(JSON.parse(chamadasPost()[0][1].body)).not.toHaveProperty('internalNotes');
   });
 
-  // O PDF desta tela vai para o cliente.
+  // O PDF desta tela é de uso interno (E8), mas o arquivo pode ser repassado.
   it('o PDF da proposta não leva as observações internas', async () => {
     const textos: string[] = [];
     const doc = new Proxy(
@@ -212,12 +214,13 @@ describe('AdminQuickProposalPage — salvar proposta', { timeout: 20000 }, () =>
   });
 });
 
-// D6, parte 1 (aprovada em 02/11/2026): o texto que a Proposta Rápida põe no PDF e na mensagem do
+// D6, parte 1 (aprovada em 02/11/2026): o texto que a Proposta Rápida punha no PDF e na mensagem do
 // WhatsApp dizia "Se ainda não tiver cadastro, crie aqui ... Assim que concluir, nossa equipe vincula
 // sua proposta ao seu acesso" e mandava "acompanhar em tempo real" no painel do cliente. Nada disso
 // acontece: o cadastro não vincula proposta nenhuma (linkBookingsToUser não tem chamador) e a equipe não
-// tem tela para isso. O texto agora só fala do PDF e de responder pela conversa.
-describe('AdminQuickProposalPage — texto do PDF e do WhatsApp sem promessa de vínculo (D6)', { timeout: 20000 }, () => {
+// tem tela para isso. Auditoria do orçamento (12/11/2026), E8: a mensagem do "PDF + WhatsApp" saiu junto com o botão
+// (AdminQuickProposalPage.auditoriaOrcamento.test.tsx); o PDF, de uso interno, continua sem a promessa.
+describe('AdminQuickProposalPage — texto do PDF sem promessa de vínculo (D6)', { timeout: 20000 }, () => {
   const PROMESSAS = [/vincul/i, /\/cadastro/, /\/cliente\/painel/, /tempo real/i, /crie aqui/i];
 
   const docQueGuardaTexto = (textos: string[]) =>
@@ -249,22 +252,4 @@ describe('AdminQuickProposalPage — texto do PDF e do WhatsApp sem promessa de 
     for (const promessa of PROMESSAS) expect(tudo).not.toMatch(promessa);
   });
 
-  it('WhatsApp: a mensagem pronta fala do PDF e de responder por ali, sem cadastro nem vínculo', async () => {
-    const textos: string[] = [];
-    vi.mocked(jsPDF).mockImplementation(function construtor() { return docQueGuardaTexto(textos); } as never);
-    const abrir = vi.spyOn(window, 'open').mockReturnValue(null);
-    renderPage();
-    await preencherProposta();
-
-    fireEvent.click(screen.getByRole('button', { name: 'PDF + WhatsApp' }));
-
-    await waitFor(() => expect(abrir).toHaveBeenCalled());
-    const url = new URL(String(abrir.mock.calls[0][0]));
-    const mensagem = url.searchParams.get('text') ?? '';
-    expect(url.hostname).toBe('wa.me');
-    expect(mensagem).toContain('proposta');
-    expect(mensagem).toMatch(/responder por aqui/i);
-    for (const promessa of PROMESSAS) expect(mensagem).not.toMatch(promessa);
-    abrir.mockRestore();
-  });
 });

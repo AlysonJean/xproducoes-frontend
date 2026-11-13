@@ -13,6 +13,7 @@ vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
 
 import AdminQuickProposalPage from '../AdminQuickProposalPage';
 
+// priceUnit vai em cada equipamento do GET /equipments; a tela usa a unidade dele (auditoria do orçamento, O18).
 const MESA = { id: 'eq-mesa', name: 'Mesa de Som', pricePerHour: 50, minimumRentalDuration: 1 };
 const KIT = { id: 'kit-festa', name: 'Kit Festa', price: 1200, minimumRentalDuration: 5 };
 
@@ -20,7 +21,7 @@ const renderPage = (unidade: 'hour' | 'day' = 'hour') => {
   apiFetch.mockImplementation((url: string, opts?: { method?: string }) => {
     if (url === '/bookings' && opts?.method === 'POST') return Promise.resolve({ id: 'XP-NOVA' });
     if (url === '/equipments/pricing-rules') return Promise.resolve({ equipmentPriceUnit: unidade, kitPrice: 'PER_EVENT' });
-    if (url === '/equipments') return Promise.resolve([unidade === 'day' ? { ...MESA, pricePerHour: 180 } : MESA]);
+    if (url === '/equipments') return Promise.resolve([{ ...MESA, priceUnit: unidade, ...(unidade === 'day' ? { pricePerHour: 180 } : {}) }]);
     if (url === '/kits') return Promise.resolve([KIT]);
     return Promise.resolve([]);
   });

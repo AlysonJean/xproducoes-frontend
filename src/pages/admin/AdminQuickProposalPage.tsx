@@ -10,7 +10,8 @@ import {
   Select,
   Badge,
   Textarea,
-  Alert
+  Alert,
+  ConfirmModal
 } from '@/components/ui/StandardComponents';
 import { 
   Plus, 
@@ -30,12 +31,10 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { formatPrice } from '@/utils/formatPrice';
 import { toNumber } from '@/utils/typeSafeFormatters';
-import { equipmentUnits, equipmentUnitSuffix, equipmentUnitText, hoursBetween, kitPriceLine, serviceLine, type EquipmentPriceUnit, type KitPricingInput, type ServicePricingInput } from '@/utils/bookingPricing';
+import { equipmentUnits, equipmentUnitSuffix, equipmentUnitText, hoursBetween, kitPriceLine, priceUnitOf, serviceLine, type EquipmentPriceUnit, type KitPricingInput, type ServicePricingInput } from '@/utils/bookingPricing';
 import { isWholeEventService } from '@/utils/wholeEventService';
 import { KIT_FULFILLMENT_LABEL, kitFulfillment } from '@/utils/kitInfo';
 import { findSetupService } from '@/utils/cartCatalog';
-import { useEquipmentPriceUnit } from '@/hooks/usePricingRules';
-import { openWhatsAppUntracked } from '@/utils/whatsapp';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -80,6 +79,10 @@ interface ProposalItem {
   ratePerUnit?: number;
   minimumUnits?: number;
   priceEdited?: boolean;
+  // Auditoria do orçamento (12/11/2026), O18/A4/C11: a unidade do preço (diária ou hora) que o servidor pôs no
+  // equipamento (priceUnit do GET /equipments, que chega junto com o preço). Sem ela, a linha não acompanha as datas
+  // e Salvar e o PDF ficam travados: nunca cobrar por hora quando o servidor está em diária.
+  priceUnit?: EquipmentPriceUnit | null;
   // Lote 13 (campos do kit aprovados em 06/11/2026): o kit do catálogo guarda o preço do evento, as horas
   // incluídas, a hora extra e o tipo; a linha acompanha as datas do evento como a do equipamento.
   kit?: KitPricingInput;
@@ -116,6 +119,35 @@ const kitIncludesText = (kitLine: ProposalItem, serviceName: string): string =>
 // E19: a busca do catálogo só lista serviço ativo (o "Em breve" e o inativo não podem ser vendidos).
 const isActiveService = (service: { status?: string | null }): boolean => (service.status ?? 'ACTIVE') === 'ACTIVE';
 
+// Auditoria do orçamento (12/11/2026), onda 2: a linha do frete sem valor ("Frete a combinar", "Pedágio à parte", do
+// botão Frete ou digitada) aparece como "a combinar"/"à parte", nunca "R$ 0,00", e Salvar avisa antes de gravar. É a
+// marca que o servidor põe na linha para o link e a ficha (toArrangeKind, na mesma onda): item personalizado, valor
+// zero e a descrição que começa com "Frete" e diz "a combinar" ou começa com "Pedágio" e diz "à parte". Com valor
+// digitado, é uma linha como as outras; o frete de R$ 0 "incluso no kit" não é marcado.
+const PENDING_FREIGHT: Array<{ starts: RegExp; says: RegExp; label: string; note: string }> = [
+  { starts: /^frete\b/, says: /\ba combinar\b/, label: 'a combinar', note: 'frete a combinar' },
+  { starts: /^pedagio\b/, says: /\ba parte\b/, label: 'à parte', note: 'pedágio à parte' },
+];
+const pendingFreight = (item: Pick<ProposalItem, 'type' | 'description' | 'totalPrice'>) => {
+  if (item.type !== 'CUSTOM' || Math.round(Math.max(0, item.totalPrice) * 100) > 0) return null;
+  const text = item.description.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  return PENDING_FREIGHT.find(({ starts, says }) => starts.test(text) && says.test(text)) ?? null;
+};
+// "frete a combinar", "pedágio à parte": o que fica sem valor, sem repetir, para o subtotal e o total do PDF.
+const pendingFreightNotes = (items: ProposalItem[]): string[] =>
+  [...new Set(items.map((item) => pendingFreight(item)?.note).filter((note): note is string => !!note))];
+
+// O18/A4/C11: linha de equipamento com o preço do cadastro e sem a unidade do servidor (o preço digitado à mão vence).
+const missingPriceUnit = (item: ProposalItem): boolean => item.ratePerUnit !== undefined && !item.priceEdited && !item.priceUnit;
+// Sufixo do preço no catálogo pela unidade que veio no equipamento; sem ela, nenhum.
+const unitSuffixOf = (item: unknown): string => {
+  const unit = priceUnitOf(item);
+  return unit ? equipmentUnitSuffix(unit) : '';
+};
+
+// O31/C12: quantidade inteira, a partir de 1; null para vazio, fração ou zero.
+const parseQuantity = (raw: string): number | null => (/^\d+$/.test(raw.trim()) && Number(raw) >= 1 ? Number(raw) : null);
+
 // E3/E5: o serviço de montagem do catálogo ("Roadie / Auxiliar de Montagem"), cobrado à parte no equipamento avulso
 // (decisão de 12/11). A regra para achá-lo é a mesma do /orcamento: utils/cartCatalog.findSetupService (palavra
 // "montagem" ou "roadie", ativo, não é o técnico do evento todo; com mais de um, o que mais kits trazem dentro).
@@ -129,11 +161,13 @@ const catalogPrice = (type: string, item: Equipment | Kit | Service): number =>
 // as horas); o equipamento avulso custa por hora ou por diária (EQUIPMENT_PRICE_UNIT no servidor), vezes as
 // unidades tiradas do início e do término; o serviço tem preço fixo. Antes o equipamento entrava com
 // dailyPrice, que não existe no cadastro: R$ 0. O preço digitado à mão vence. Sem as datas ainda, conta 1
-// unidade (ou o mínimo de diárias).
+// unidade (ou o mínimo de diárias). Auditoria do orçamento (12/11/2026), O18/A4/C11: a unidade é a de cada
+// equipamento (priceUnit), não mais a da consulta GET /equipments/pricing-rules, que valia "hora" enquanto carregava
+// ou se falhasse; sem a unidade, a linha fica com o preço do cadastro e Salvar e o PDF pedem a unidade.
 const unitsFor = (item: ProposalItem, unit: EquipmentPriceUnit, start: string, end: string): number =>
   equipmentUnits(unit, start, end, item.minimumUnits) ?? Math.max(1, unit === 'day' ? item.minimumUnits ?? 1 : 1);
 
-const priceItems = (items: ProposalItem[], unit: EquipmentPriceUnit, start: string, end: string): ProposalItem[] =>
+const priceItems = (items: ProposalItem[], start: string, end: string): ProposalItem[] =>
   items.map((item) => {
     if (item.kit && !item.priceEdited) {
       const unitPrice = kitPriceLine(item.kit, hoursBetween(start, end)).cents / 100;
@@ -143,20 +177,21 @@ const priceItems = (items: ProposalItem[], unit: EquipmentPriceUnit, start: stri
       const unitPrice = serviceLine(item.service, hoursBetween(start, end)).cents / 100;
       return { ...item, unitPrice, totalPrice: Math.max(0, Math.round((unitPrice * item.quantity - item.discount) * 100) / 100) };
     }
-    if (item.ratePerUnit === undefined || item.priceEdited) return item;
-    const unitPrice = Math.round(item.ratePerUnit * unitsFor(item, unit, start, end) * 100) / 100;
+    if (item.ratePerUnit === undefined || item.priceEdited || !item.priceUnit) return item;
+    const unitPrice = Math.round(item.ratePerUnit * unitsFor(item, item.priceUnit, start, end) * 100) / 100;
     return { ...item, unitPrice, totalPrice: Math.max(0, Math.round((unitPrice * item.quantity - item.discount) * 100) / 100) };
   });
 
 // Descrição que vai para a reserva, o PDF e a página do cliente: com as horas ou diárias, quando o preço
 // acompanha as datas.
-const lineDescription = (item: ProposalItem, unit: EquipmentPriceUnit, start: string, end: string): string => {
+const lineDescription = (item: ProposalItem, start: string, end: string): string => {
   // Kit: a descrição da conta do servidor com o nome da linha; com o preço digitado à mão, sem hora extra.
   if (item.kit) return kitPriceLine({ ...item.kit, name: item.description }, item.priceEdited ? null : hoursBetween(start, end)).description;
   // Técnico durante o evento: a descrição com as horas da conta do servidor; com o preço digitado à mão, só o nome.
   if (item.service && !item.priceEdited) return serviceLine({ ...item.service, name: item.description }, hoursBetween(start, end)).description;
-  const n = item.ratePerUnit !== undefined && !item.priceEdited ? equipmentUnits(unit, start, end, item.minimumUnits) : null;
-  return n ? `${item.description} (${equipmentUnitText(n, unit)})` : item.description;
+  const unit = item.ratePerUnit !== undefined && !item.priceEdited ? item.priceUnit : null;
+  const n = unit ? equipmentUnits(unit, start, end, item.minimumUnits) : null;
+  return unit && n ? `${item.description} (${equipmentUnitText(n, unit)})` : item.description;
 };
 
 export const AdminQuickProposalPage = () => {
@@ -166,8 +201,11 @@ export const AdminQuickProposalPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
-  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const [quotingFreight, setQuotingFreight] = useState(false);
+  // O31/C12: o texto digitado na quantidade enquanto não é um inteiro a partir de 1 (vazio, fração, zero), por linha.
+  const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>({});
+  // Onda 2: Salvar com linha "a combinar"/"à parte" pede confirmação.
+  const [confirmPendingFreight, setConfirmPendingFreight] = useState(false);
   // O17/C9: o endereço e a regra do último cálculo do frete (freightKey); null antes do primeiro.
   const [freightQuotedKey, setFreightQuotedKey] = useState<string | null>(null);
   // Id da linha que cada atalho pôs da última vez (chave: o id do serviço do Técnico, "manual" no item à mão, ou
@@ -251,15 +289,15 @@ export const AdminQuickProposalPage = () => {
     fetchData();
   }, [reloadKey]);
 
-  const equipmentUnit = useEquipmentPriceUnit();
   const pricedItems = useMemo(
-    () => priceItems(items, equipmentUnit, eventDate, eventEndDate),
-    [items, equipmentUnit, eventDate, eventEndDate]
+    () => priceItems(items, eventDate, eventEndDate),
+    [items, eventDate, eventEndDate]
   );
 
   const subtotal = useMemo(() => {
     return pricedItems.reduce((sum, item) => sum + toNumber(item.totalPrice), 0);
   }, [pricedItems]);
+  const pendingNotes = pendingFreightNotes(pricedItems);
 
   const filteredCatalogItems = useMemo(() => {
     // E19 (auditoria do orçamento, 12/11/2026): o GET /services do admin traz também os inativos e os "Em breve".
@@ -289,7 +327,11 @@ export const AdminQuickProposalPage = () => {
       totalPrice: catalogPrice(type, item),
       imageUrl: item.imageUrl,
       ...(type === 'EQUIPMENT'
-        ? { ratePerUnit: catalogPrice(type, item), minimumUnits: (item as Equipment & { minimumRentalDuration?: number | null }).minimumRentalDuration ?? undefined }
+        ? {
+            ratePerUnit: catalogPrice(type, item),
+            minimumUnits: (item as Equipment & { minimumRentalDuration?: number | null }).minimumRentalDuration ?? undefined,
+            priceUnit: priceUnitOf(item),
+          }
         : {}),
       ...(type === 'KIT'
         ? {
@@ -325,6 +367,30 @@ export const AdminQuickProposalPage = () => {
       addNotification({ type: 'warning', title: 'Já incluso no kit', message: kitIncludesText(includedBy, item.name) });
       return;
     }
+    // Auditoria do orçamento (12/11/2026), C13/O24: a reserva tem um kit só (kitId); antes o 2º kit entrava na tela e
+    // o servidor ligava só o 1º à reserva.
+    const currentKit = type === 'KIT' ? items.find((i) => i.type === 'KIT') : undefined;
+    if (currentKit) {
+      addNotification({
+        type: 'warning',
+        title: 'Um kit por reserva',
+        message: `A proposta já tem o kit "${currentKit.description}". Uma reserva leva um kit só: para trocar, remova o kit atual e adicione o outro; para somar, use equipamentos e serviços avulsos.`,
+      });
+      return;
+    }
+    // C13/O24: o técnico que acompanha o evento todo é uma linha só (dois técnicos: quantidade 2 na linha), venha da
+    // busca ou do botão Técnico.
+    const sameWholeEvent = type === 'SERVICE' && (item as Service).coversWholeEvent === true
+      ? items.find((i) => i.type === 'SERVICE' && i.sourceId === item.id)
+      : undefined;
+    if (sameWholeEvent) {
+      addNotification({
+        type: 'warning',
+        title: 'Já está na proposta',
+        message: `"${item.name}" acompanha o evento todo e já está na proposta. Para mais de um, mude a quantidade da linha.`,
+      });
+      return;
+    }
     const line = catalogLine(type, item);
     setItems(prev => [...prev, line]);
     addNotification({ type: 'success', title: 'Item adicionado', message: item.name });
@@ -355,12 +421,13 @@ export const AdminQuickProposalPage = () => {
 
   // Decisão do dono de 08/11/2026: clicar de novo em Técnico troca a linha que esse botão pôs da última vez, mesmo
   // editada, como no Frete, em vez de repetir o técnico (o 2º clique criava outra linha igual). Dois técnicos:
-  // quantidade 2 na linha. Com mais de um serviço marcado, cada botão troca só a própria linha; o técnico posto pela
-  // busca do catálogo fica como está. O atalho Montagem segue a mesma regra (auditoria do orçamento, 12/11/2026).
-  const replaceShortcutLine = (button: string, line: ProposalItem) => {
+  // quantidade 2 na linha. Com mais de um serviço marcado, cada botão troca só a própria linha. O atalho Montagem segue
+  // a mesma regra (auditoria do orçamento, 12/11/2026). C13/O24: o botão do técnico do evento todo troca também a linha
+  // desse serviço posta pela busca do catálogo (antes as duas somavam); `alsoReplace` diz quais.
+  const replaceShortcutLine = (button: string, line: ProposalItem, alsoReplace?: (item: ProposalItem) => boolean) => {
     const previous = shortcutLineIds.current[button];
     shortcutLineIds.current[button] = line.id;
-    setItems((prev) => [...prev.filter((item) => item.id !== previous), line]);
+    setItems((prev) => [...prev.filter((item) => item.id !== previous && !alsoReplace?.(item)), line]);
   };
 
   // E1/E3/E5 (auditoria do orçamento, 12/11/2026): os atalhos Técnico e Montagem não põem serviço que algum kit da
@@ -372,7 +439,10 @@ export const AdminQuickProposalPage = () => {
       addNotification({ type: 'warning', title: 'Já incluso no kit', message: kitIncludesText(includedBy, service.name) });
       return;
     }
-    replaceShortcutLine(button, catalogLine('SERVICE', service));
+    const sameService = service.coversWholeEvent === true
+      ? (item: ProposalItem) => item.type === 'SERVICE' && item.sourceId === service.id
+      : undefined;
+    replaceShortcutLine(button, catalogLine('SERVICE', service), sameService);
     addNotification({ type: 'success', title: 'Item adicionado', message: service.name });
   };
 
@@ -392,6 +462,30 @@ export const AdminQuickProposalPage = () => {
       updated.totalPrice = Math.max(0, (updated.unitPrice * updated.quantity) - updated.discount);
       return updated;
     }));
+  };
+
+  // Auditoria do orçamento (12/11/2026), O31/C12: a quantidade é inteira, a partir de 1. Vazio, zero ou fração fica só
+  // no campo (com o aviso) e a linha segue com a última quantidade válida: a conta da tela e o que vai para a reserva
+  // usam sempre a mesma. O aviso fica até o campo ganhar um inteiro, e Salvar e o PDF recusam enquanto isso. Sair do
+  // campo não descarta o texto: o clique em Salvar tira o foco do campo antes, e a quantidade anterior seria gravada
+  // sem aviso. Antes a linha calculava com 1,5 e gravava 2 (2 × R$ 600 = R$ 900).
+  const dropQuantityDraft = (id: string) => {
+    setQuantityDrafts((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  };
+
+  const changeQuantity = (id: string, raw: string) => {
+    const quantity = parseQuantity(raw);
+    if (quantity === null) {
+      setQuantityDrafts((prev) => ({ ...prev, [id]: raw }));
+      return;
+    }
+    dropQuantityDraft(id);
+    updateItem(id, 'quantity', quantity);
   };
 
   // Frete por km (decisões do dono de 06/11/2026, item frete-km): o botão Frete pede ao servidor o frete do
@@ -466,11 +560,15 @@ export const AdminQuickProposalPage = () => {
 
   const removeItem = (id: string) => {
     setItems(items.filter(i => i.id !== id));
+    dropQuantityDraft(id);
   };
 
   const validate = (): string | null => {
     if (items.length === 0) return 'Adicione pelo menos um item ao orçamento.';
     if (items.some((i) => !i.description.trim())) return 'Dê um nome a cada item do orçamento.';
+    // Auditoria do orçamento (12/11/2026), O31/C12 e O18/A4/C11.
+    if (items.some((i) => quantityDrafts[i.id] !== undefined)) return 'A quantidade de cada item é um número inteiro, a partir de 1 (sem fração e sem deixar vazio).';
+    if (items.some(missingPriceUnit)) return 'O servidor não informou se o preço do equipamento é por diária ou por hora. Recarregue a página e adicione o equipamento de novo, ou digite o preço da linha.';
     if (!eventDate) return 'Informe a data de início do evento.';
     if (!eventEndDate) return 'Informe a data de término do evento.';
     if (new Date(eventEndDate) <= new Date(eventDate)) return 'A data de término deve ser posterior à data de início.';
@@ -500,12 +598,18 @@ export const AdminQuickProposalPage = () => {
     return null;
   };
 
-  const handleSave = async (status: 'DRAFT' | 'PENDING') => {
+  const handleSave = async (status: 'DRAFT' | 'PENDING', pendingFreightConfirmed = false) => {
     const validationError = validate();
     if (validationError) {
       addNotification({ type: 'error', title: 'Campo obrigatório', message: validationError });
       return;
     }
+    // Onda 2: linha "Frete a combinar"/"Pedágio à parte" sem valor: avisa e pede confirmação antes de gravar.
+    if (pendingNotes.length > 0 && !pendingFreightConfirmed) {
+      setConfirmPendingFreight(true);
+      return;
+    }
+    setConfirmPendingFreight(false);
 
     try {
       setSaving(true);
@@ -518,9 +622,10 @@ export const AdminQuickProposalPage = () => {
       // D8a e P16: os itens vão como itens da reserva, com o preço usado (técnico, montagem, frete e hora
       // extra inclusive), e o servidor soma o total pela mesma função das outras telas: o corpo não leva
       // totalPrice. Antes os personalizados iam como texto em `notes` e o total era só a conta desta tela.
+      // O31/C12: a quantidade da linha já é inteira (changeQuantity), a mesma da conta.
       const proposalItems = pricedItems.map((i) => ({
-        description: lineDescription(i, equipmentUnit, eventDate, eventEndDate),
-        quantity: Math.max(1, Math.round(i.quantity) || 1),
+        description: lineDescription(i, eventDate, eventEndDate),
+        quantity: i.quantity,
         unitPrice: Math.max(0, i.unitPrice),
         discount: Math.max(0, i.discount),
         totalPrice: Math.max(0, i.totalPrice),
@@ -580,9 +685,11 @@ export const AdminQuickProposalPage = () => {
 
       // D11 (aprovada em 02/11/2026): salvar não manda nada ao cliente. O link seguro, o e-mail e o WhatsApp saem do
       // "Enviar proposta" da página da reserva, para onde a tela vai agora. Antes o aviso prometia um link que a
-      // página da reserva não mostrava.
-      addNotification({ type: 'success', title: 'Proposta salva', message: 'Use "Enviar proposta" na página da reserva.' });
-      navigate(`/admin/reservas/${bookingId}`);
+      // página da reserva não mostrava. Auditoria do orçamento (12/11/2026), E8: o link é o caminho da proposta (o
+      // "PDF + WhatsApp" desta tela saiu); o estado sendProposal pede à ficha que leve ao "Enviar proposta", sem enviar
+      // sozinha (o envio manda e-mail ao cliente).
+      addNotification({ type: 'success', title: 'Proposta salva', message: 'Confira a reserva e use "Enviar proposta": o link vai pelo WhatsApp e por e-mail, se a reserva tiver e-mail.' });
+      navigate(`/admin/reservas/${bookingId}`, { state: { sendProposal: true } });
     } catch (error: unknown) {
       const err = error as { message?: string } | null;
       const msg = err?.message || 'Falha ao salvar. Verifique os campos e tente novamente.';
@@ -639,30 +746,11 @@ export const AdminQuickProposalPage = () => {
     return clientEmail || '';
   };
 
-  // D6, parte 1 (02/11/2026): o texto mandava criar cadastro e prometia que a equipe vincularia a
-  // proposta ao acesso do cliente e que ele acompanharia tudo "em tempo real" no painel. Nada disso
-  // acontece hoje (o cadastro não vincula proposta, e não há tela para isso). Fica só o que é verdade.
-  const buildWhatsappInviteText = (): string => {
-    const eventName = eventTitle || 'seu evento';
-    return [
-      `Olá! A proposta comercial do evento "${eventName}" está pronta.` ,
-      `Total estimado: ${formatPrice(subtotal)}.`,
-      'Acabei de gerar o PDF para envio neste atendimento.',
-      'Para ajustar algo ou confirmar, é só responder por aqui.',
-    ].join(' ');
-  };
-
-  const normalizeWhatsAppNumber = (raw: string): string | null => {
-    const digits = raw.replace(/\D/g, '');
-    if (!digits) return null;
-
-    if (digits.startsWith('55') && digits.length >= 12) return digits;
-    if (digits.length === 10 || digits.length === 11) return `55${digits}`;
-    if (digits.length >= 12) return digits;
-
-    return null;
-  };
-
+  // Auditoria do orçamento (12/11/2026), E8: o cliente recebe a proposta pelo link, que mostra sempre a reserva atual
+  // (decisão de 12/11), e não por PDF. Saíram o "PDF + WhatsApp" e a mensagem pronta ("Acabei de gerar o PDF...", com
+  // um total parado). O PDF desta tela fica para uso interno: sem a "Mensagem sugerida para WhatsApp" e sem validade
+  // (a proposta ainda não foi enviada; a validade começa no envio do link). D6, parte 1 (02/11/2026): sem convite de
+  // cadastro nem promessa de vínculo.
   const generateProposalPdf = async (): Promise<void> => {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const logoDataUrl = await loadLogoAsDataUrl();
@@ -672,7 +760,7 @@ export const AdminQuickProposalPage = () => {
     }
 
     doc.setFontSize(16);
-    doc.text('Proposta Comercial', 14, 32);
+    doc.text('Proposta - uso interno', 14, 32);
 
     doc.setFontSize(10);
     doc.text(`Gerada em: ${new Date().toLocaleString('pt-BR')}`, 14, 38);
@@ -702,32 +790,36 @@ export const AdminQuickProposalPage = () => {
     autoTable(doc, {
       startY: 112,
       head: [['Item', 'Tipo', 'Qtd', 'Unitario', 'Desconto', 'Total']],
-      body: pricedItems.map((item) => [
-        lineDescription(item, equipmentUnit, eventDate, eventEndDate),
-        ITEM_TYPE_LABELS[item.type] || item.type,
-        String(item.quantity),
-        formatPrice(item.unitPrice),
-        formatPrice(item.discount),
-        formatPrice(item.totalPrice),
-      ]),
+      body: pricedItems.map((item) => {
+        // Onda 2: a linha do frete sem valor sai "a combinar"/"à parte", não "R$ 0,00".
+        const pending = pendingFreight(item);
+        return [
+          lineDescription(item, eventDate, eventEndDate),
+          ITEM_TYPE_LABELS[item.type] || item.type,
+          String(item.quantity),
+          pending ? pending.label : formatPrice(item.unitPrice),
+          formatPrice(item.discount),
+          pending ? pending.label : formatPrice(item.totalPrice),
+        ];
+      }),
       styles: { fontSize: 9, cellPadding: 2 },
       headStyles: { fillColor: [25, 118, 210] },
     });
 
     const tableEndY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || 120;
     doc.setFontSize(12);
-    doc.text(`Total estimado: ${formatPrice(subtotal)}`, 14, tableEndY + 10);
+    doc.text(`Total estimado: ${formatPrice(subtotal)}${pendingNotes.map((note) => ` + ${note}`).join('')}`, 14, tableEndY + 10);
 
-    // Este PDF vai para o cliente: as observações internas não entram nele.
-    const inviteTitleY = tableEndY + 22;
-    doc.setFontSize(11);
-    doc.text('Mensagem sugerida para WhatsApp', 14, inviteTitleY);
-    doc.setFontSize(10);
-    const inviteLines = doc.splitTextToSize(buildWhatsappInviteText(), 180);
-    doc.text(inviteLines, 14, inviteTitleY + 6);
+    // As observações internas também não entram: o arquivo pode ser repassado.
+    doc.setFontSize(9);
+    const internalUseLines = doc.splitTextToSize(
+      'Uso interno. O cliente recebe a proposta pelo link ("Enviar proposta", na ficha da reserva), que mostra sempre a reserva atual. A validade começa quando o link for enviado.',
+      180,
+    );
+    doc.text(internalUseLines, 14, tableEndY + 18);
 
     const filenameClient = getClientDisplayName().replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
-    const fileName = `proposta-${filenameClient || 'cliente'}-${Date.now()}.pdf`;
+    const fileName = `proposta-interna-${filenameClient || 'cliente'}-${Date.now()}.pdf`;
     doc.save(fileName);
   };
 
@@ -745,7 +837,7 @@ export const AdminQuickProposalPage = () => {
       addNotification({
         type: 'success',
         title: 'PDF pronto',
-        message: 'Arquivo gerado com sucesso para envio via WhatsApp.',
+        message: 'PDF de uso interno baixado. Para o cliente, salve a proposta e use "Enviar proposta" na ficha da reserva.',
       });
     } catch (error: unknown) {
       const err = error as { message?: string } | null;
@@ -756,48 +848,6 @@ export const AdminQuickProposalPage = () => {
       });
     } finally {
       setGeneratingPdf(false);
-    }
-  };
-
-  const handleDownloadAndOpenWhatsApp = async () => {
-    const validationError = validate();
-    if (validationError) {
-      addNotification({ type: 'error', title: 'Campos pendentes', message: validationError });
-      return;
-    }
-
-    const normalizedPhone = normalizeWhatsAppNumber(getClientPhone());
-    if (!normalizedPhone) {
-      addNotification({
-        type: 'error',
-        title: 'WhatsApp inválido',
-        message: 'Informe um telefone de cliente válido para abrir o WhatsApp automaticamente.',
-      });
-      return;
-    }
-
-    try {
-      setSendingWhatsApp(true);
-      // P14 (aprovada em 02/11/2026), parte 2: todo WhatsApp aberto pelo painel usa o abridor sem o evento de
-      // conversão do GA (D7), o mesmo da ficha da reserva, e abre no clique, antes do PDF (que espera o logo):
-      // depois de uma espera o navegador pode bloquear a aba.
-      openWhatsAppUntracked(normalizedPhone, buildWhatsappInviteText());
-      await generateProposalPdf();
-
-      addNotification({
-        type: 'success',
-        title: 'WhatsApp aberto',
-        message: 'PDF baixado. O WhatsApp foi aberto com mensagem pronta. Anexe o PDF na conversa para enviar.',
-      });
-    } catch (error: unknown) {
-      const err = error as { message?: string } | null;
-      addNotification({
-        type: 'error',
-        title: 'Falha no envio',
-        message: err?.message || 'Nao foi possivel abrir o WhatsApp com a proposta.',
-      });
-    } finally {
-      setSendingWhatsApp(false);
     }
   };
 
@@ -823,17 +873,15 @@ export const AdminQuickProposalPage = () => {
             </div>
             <div>
               <h2 className="text-xl font-bold text-foreground">Nova proposta comercial</h2>
-              <p className="text-sm text-muted-foreground">Monte o orçamento e gere o link ou o PDF para o cliente.</p>
+              {/* E8 (auditoria do orçamento, 12/11/2026): o link é o caminho da proposta; o PDF é de uso interno. */}
+              <p className="text-sm text-muted-foreground">Monte o orçamento e salve: o cliente recebe o link da proposta pelo "Enviar proposta" da ficha da reserva. O PDF é para uso interno.</p>
             </div>
           </div>
-          {/* flex-wrap: os 4 botões em linha estouravam a tela de 375px. */}
+          {/* flex-wrap: os botões em linha estouravam a tela de 375px. */}
           <div className="flex flex-wrap gap-2">
              <Button variant="outline" size="sm" onClick={() => navigate(-1)}>Cancelar</Button>
              <Button variant="outline" size="sm" onClick={handleDownloadPdf} isLoading={generatingPdf}>
               Baixar PDF
-             </Button>
-             <Button variant="outline" size="sm" onClick={handleDownloadAndOpenWhatsApp} isLoading={sendingWhatsApp}>
-              PDF + WhatsApp
              </Button>
              <Button size="sm" onClick={() => handleSave('PENDING')} isLoading={saving} leftIcon={<Send className="h-4 w-4" />}>
                 Salvar proposta
@@ -931,7 +979,7 @@ export const AdminQuickProposalPage = () => {
                    </Button>
                  </div>
                </div>
-               <p className="-mt-4 mb-6 text-xs text-muted-foreground">Técnico, montagem, frete e hora extra entram como itens (a hora extra do kit com valor cadastrado já entra na linha do kit, e serviço que o kit já traz não entra de novo). O botão Frete calcula pela distância até o endereço do evento (preencha o endereço antes), pela regra do servidor: equipamento avulso e kit de entrega têm contas diferentes, e só serviços ou só kit de retirada não têm frete. Pedágio estimado à parte.</p>
+               <p className="-mt-4 mb-6 text-xs text-muted-foreground">Técnico, montagem, frete e hora extra entram como itens (a hora extra do kit com valor cadastrado já entra na linha do kit, e serviço que o kit já traz não entra de novo). O botão Frete calcula pela distância até o endereço do evento (preencha o endereço antes), pela regra do servidor: equipamento avulso e kit de entrega têm contas diferentes, e só serviços ou só kit de retirada não têm frete. Pedágio estimado à parte. A reserva leva um kit só; para somar, use equipamentos e serviços avulsos.</p>
                {pickupKit && (
                  <p id="frete-kit-retirada" role="note" className="-mt-4 mb-6 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-foreground">
                    O kit "{pickupKit.description}" é de retirada: o cliente busca e devolve na X Produções. O frete só entra se a proposta tiver equipamento avulso para entregar.
@@ -940,6 +988,11 @@ export const AdminQuickProposalPage = () => {
                {freightStale && (
                  <p id="frete-desatualizado" role="alert" className="-mt-4 mb-6 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-foreground">
                    O endereço ou os itens mudaram depois do cálculo do frete: clique em Frete para recalcular antes de salvar.
+                 </p>
+               )}
+               {items.some(missingPriceUnit) && (
+                 <p id="unidade-do-preco" role="alert" className="-mt-4 mb-6 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-foreground">
+                   O servidor não informou se o preço do equipamento é por diária ou por hora: a linha marcada não acompanha as datas, e Salvar e o PDF ficam travados. Recarregue a página e adicione o equipamento de novo, ou digite o preço da linha.
                  </p>
                )}
 
@@ -969,39 +1022,47 @@ export const AdminQuickProposalPage = () => {
                               {item.kit && (
                                 <>
                                   <Badge variant="outline" size="sm">{KIT_FULFILLMENT_LABEL[kitFulfillment(item.kit)]}</Badge>
-                                  <span className="text-xs text-muted-foreground">Na proposta: {lineDescription(item, equipmentUnit, eventDate, eventEndDate)}</span>
+                                  <span className="text-xs text-muted-foreground">Na proposta: {lineDescription(item, eventDate, eventEndDate)}</span>
                                 </>
                               )}
                               {item.service && !item.priceEdited && (
-                                <span className="text-xs text-muted-foreground">Na proposta: {lineDescription(item, equipmentUnit, eventDate, eventEndDate)}</span>
+                                <span className="text-xs text-muted-foreground">Na proposta: {lineDescription(item, eventDate, eventEndDate)}</span>
                               )}
-                              {item.ratePerUnit !== undefined && !item.priceEdited && (
+                              {item.ratePerUnit !== undefined && !item.priceEdited && item.priceUnit && (
                                 <span className="text-xs text-muted-foreground">
-                                  {formatPrice(item.ratePerUnit)}{equipmentUnitSuffix(equipmentUnit)} × {equipmentUnitText(unitsFor(item, equipmentUnit, eventDate, eventEndDate), equipmentUnit)}
+                                  {formatPrice(item.ratePerUnit)}{equipmentUnitSuffix(item.priceUnit)} × {equipmentUnitText(unitsFor(item, item.priceUnit, eventDate, eventEndDate), item.priceUnit)}
                                 </span>
                               )}
+                              {missingPriceUnit(item) && <Badge variant="destructive" size="sm">Sem a unidade do preço</Badge>}
                            </div>
                          </div>
 
                          <div className="flex flex-wrap items-end gap-3">
                            <div className="w-20">
+                             {/* O31/C12: inteiro a partir de 1; vazio, zero ou fração fica no campo, com o aviso, até virar inteiro. */}
                              <Input
                                label="Qtd"
                                size="xs"
                                type="number"
+                               min={1}
+                               step={1}
+                               inputMode="numeric"
                                className="text-center font-bold"
-                               value={item.quantity}
-                               onChange={e => updateItem(item.id, 'quantity', Number(e.target.value))}
+                               value={quantityDrafts[item.id] ?? String(item.quantity)}
+                               error={quantityDrafts[item.id] !== undefined ? 'Inteiro, mín. 1' : undefined}
+                               onChange={e => changeQuantity(item.id, e.target.value)}
                              />
                            </div>
                            <div className="w-36">
-                             {/* `prefix="R$"` não é prop do Input (virava atributo HTML sem efeito). */}
+                             {/* `prefix="R$"` não é prop do Input (virava atributo HTML sem efeito). Onda 2: a linha do
+                                 frete sem valor mostra "a combinar"/"à parte" no campo, não 0. */}
                              <Input
                                label="Preço unit."
                                size="xs"
                                type="number"
                                leftIcon={<span className="text-xs font-semibold">R$</span>}
-                               value={item.unitPrice}
+                               value={pendingFreight(item) ? '' : item.unitPrice}
+                               placeholder={pendingFreight(item)?.label}
                                onChange={e => updateItem(item.id, 'unitPrice', Number(e.target.value))}
                              />
                            </div>
@@ -1020,6 +1081,9 @@ export const AdminQuickProposalPage = () => {
                     <span className="text-muted-foreground font-medium uppercase tracking-wider text-xs">Subtotal estimado</span>
                     <span className="font-mono font-bold text-lg">{formatPrice(subtotal)}</span>
                   </div>
+                  {pendingNotes.length > 0 && (
+                    <p className="text-right text-xs font-medium text-foreground">+ {pendingNotes.join(' + ')}</p>
+                  )}
                </div>
             </Card>
 
@@ -1110,7 +1174,7 @@ export const AdminQuickProposalPage = () => {
                            <div className="min-w-0">
                              <p className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">{item.name}</p>
                              <p className="text-xs text-muted-foreground font-mono">
-                               {formatPrice(catalogPrice(searchType, item))}{searchType === 'EQUIPMENT' ? equipmentUnitSuffix(equipmentUnit) : ''}
+                               {formatPrice(catalogPrice(searchType, item))}{searchType === 'EQUIPMENT' ? unitSuffixOf(item) : ''}
                              </p>
                            </div>
                            <div className="h-6 w-6 shrink-0 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground flex items-center justify-center transition-all" aria-hidden="true">
@@ -1124,6 +1188,19 @@ export const AdminQuickProposalPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Onda 2 (auditoria do orçamento, 12/11/2026): Salvar com linha do frete sem valor avisa antes de gravar. */}
+      <ConfirmModal
+        isOpen={confirmPendingFreight}
+        onClose={() => setConfirmPendingFreight(false)}
+        onConfirm={() => void handleSave('PENDING', true)}
+        title="Salvar com valor a combinar?"
+        message={`A proposta tem ${pendingNotes.join(' e ')}: o cliente vê "a combinar" ou "à parte" no lugar do valor até a linha ganhar um preço. Para pôr o valor agora, volte e digite-o no preço da linha.`}
+        variant="warning"
+        isLoading={saving}
+        confirmText="Salvar assim"
+        cancelText="Voltar"
+      />
     </AdminLayout>
   );
 };

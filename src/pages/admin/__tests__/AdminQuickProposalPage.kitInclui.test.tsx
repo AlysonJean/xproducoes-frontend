@@ -22,7 +22,7 @@ const TECNICO = { id: 'sv-tec', name: 'Técnico de Som e Operação Profissional
 const ROADIE = { id: 'sv-roadie', name: 'Roadie / Auxiliar de Montagem', description: 'Montagem', price: '100.00', duration: 180, coversWholeEvent: false, status: 'ACTIVE' };
 const LOGISTICA = { id: 'sv-log', name: 'Logística de Entrega e Retirada Especializada', description: 'Logística', price: '50.00', duration: 180, coversWholeEvent: false, status: 'ACTIVE' };
 const DJ = { id: 'sv-dj', name: 'DJ Profissional', description: 'DJ', price: '800.00', duration: 180, coversWholeEvent: false, status: 'ACTIVE' };
-const MESA = { id: 'eq-mesa', name: 'Mesa de Som', pricePerHour: 50, minimumRentalDuration: 1 };
+const MESA = { id: 'eq-mesa', name: 'Mesa de Som', pricePerHour: 50, minimumRentalDuration: 1, priceUnit: 'hour' };
 // A composição como o GET /kits do admin devolve: itens com serviceId (e o serviço) ou com equipamento.
 const item = (kitId: string, serviceId: string | null) => ({ id: `${kitId}-${serviceId ?? 'eq'}`, kitId, quantity: 1, ...(serviceId ? { serviceId } : { equipmentId: 'eq-caixa' }) });
 const KIT_05 = { id: 'kit-05', name: 'Kit 05', price: '990.00', minimumRentalDuration: 3, extraHourPrice: '160.00', fulfillment: 'DELIVERY_SETUP', items: [item('kit-05', null), item('kit-05', 'sv-tec'), item('kit-05', 'sv-roadie'), item('kit-05', 'sv-log')] };
@@ -89,6 +89,8 @@ describe('Proposta Rápida — serviço que o kit já traz não entra de novo (E
     fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
     expect(descricoes()).toEqual(['Kit 01', 'Técnico de Som e Operação Profissional']);
 
+    // Uma reserva leva um kit só (auditoria do orçamento, C13/O24): troca o Kit 01 pelo Kit 05.
+    fireEvent.click(screen.getByRole('button', { name: 'Remover Kit 01' }));
     adicionar('Kits', 'Kit 05');
     avisou('O kit "Kit 05" já inclui "Técnico de Som e Operação Profissional". Tire a linha desse serviço.');
     preencher();
@@ -99,7 +101,8 @@ describe('Proposta Rápida — serviço que o kit já traz não entra de novo (E
     fireEvent.click(screen.getByRole('button', { name: 'Remover Técnico de Som e Operação Profissional' }));
     fireEvent.click(screen.getByRole('button', { name: /salvar proposta/i }));
     await waitFor(() => expect(postsDaReserva()).toHaveLength(1));
-    expect(corpoDaReserva().items.map((i: Record<string, unknown>) => i.itemType)).toEqual(['KIT', 'KIT']);
+    expect(corpoDaReserva().items.map((i: Record<string, unknown>) => i.itemType)).toEqual(['KIT']);
+    expect(corpoDaReserva()).toMatchObject({ kitId: 'kit-05' });
     expect(corpoDaReserva()).not.toHaveProperty('serviceIds');
   });
 
