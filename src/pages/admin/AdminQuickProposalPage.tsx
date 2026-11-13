@@ -33,6 +33,7 @@ import { toNumber } from '@/utils/typeSafeFormatters';
 import { equipmentUnits, equipmentUnitSuffix, equipmentUnitText, hoursBetween, kitPriceLine, serviceLine, type EquipmentPriceUnit, type KitPricingInput, type ServicePricingInput } from '@/utils/bookingPricing';
 import { isWholeEventService } from '@/utils/wholeEventService';
 import { KIT_FULFILLMENT_LABEL, kitFulfillment } from '@/utils/kitInfo';
+import { findSetupService } from '@/utils/cartCatalog';
 import { useEquipmentPriceUnit } from '@/hooks/usePricingRules';
 import { openWhatsAppUntracked } from '@/utils/whatsapp';
 import { jsPDF } from 'jspdf';
@@ -116,20 +117,8 @@ const kitIncludesText = (kitLine: ProposalItem, serviceName: string): string =>
 const isActiveService = (service: { status?: string | null }): boolean => (service.status ?? 'ACTIVE') === 'ACTIVE';
 
 // E3/E5: o serviço de montagem do catálogo ("Roadie / Auxiliar de Montagem"), cobrado à parte no equipamento avulso
-// (decisão de 12/11). O cadastro não tem um campo que diga "este é o de montagem" (criar um pediria migração), esse
-// serviço não tem slug e o id muda de um ambiente para outro. Vale o serviço ativo, que não é o técnico do evento
-// todo, com "montagem" ou "roadie" no nome, sem depender de acento, maiúsculas ou do nome exato ("Auxiliar de
-// montagem" e "Montagem e desmontagem" também servem). Com mais de um, o que mais kits trazem dentro.
-const normalizeName = (text: string): string => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-const ASSEMBLY_NAME = /\b(montagem|roadie)\b/;
-const findAssemblyService = (services: Service[], kits: Kit[]): Service | null => {
-  const candidates = services.filter(
-    (s) => isActiveService(s) && s.coversWholeEvent !== true && ASSEMBLY_NAME.test(normalizeName(s.name || '')),
-  );
-  if (candidates.length <= 1) return candidates[0] ?? null;
-  const kitsWith = (id: string) => kits.filter((k) => (k.items ?? []).some((i) => (i.serviceId ?? i.service?.id) === id)).length;
-  return [...candidates].sort((a, b) => kitsWith(b.id) - kitsWith(a.id))[0];
-};
+// (decisão de 12/11). A regra para achá-lo é a mesma do /orcamento: utils/cartCatalog.findSetupService (palavra
+// "montagem" ou "roadie", ativo, não é o técnico do evento todo; com mais de um, o que mais kits trazem dentro).
 
 // Preço do catálogo: equipamento pelo preço da unidade (a coluna pricePerHour guarda o da hora ou o da
 // diária); kit (preço por evento) e serviço pelo preço do cadastro.
@@ -283,7 +272,7 @@ export const AdminQuickProposalPage = () => {
   // Lote 13: os serviços do botão Técnico (marcados "Pode acompanhar o evento todo" e ativos).
   const technicianServices = useMemo(() => services.filter(isWholeEventService), [services]);
   // E3/E5: o serviço de montagem do catálogo, para o atalho Montagem.
-  const assemblyService = useMemo(() => findAssemblyService(services, kits), [services, kits]);
+  const assemblyService = useMemo(() => findSetupService(services, kits), [services, kits]);
 
   const catalogLine = (type: ProposalItem['type'], item: Equipment | Kit | Service): ProposalItem => {
     // Kit: as "horas incluídas no preço" (minimumRentalDuration), a hora extra e o tipo vão para a conta do

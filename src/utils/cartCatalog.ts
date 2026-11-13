@@ -41,10 +41,15 @@ type SetupCandidate = { name?: string | null; slug?: string | null; status?: str
  * E5: o serviço de montagem do catálogo ("Roadie / Auxiliar de Montagem"). O cadastro de serviço não tem um campo que
  * diga "este é o de montagem" (criar um pede migração), então vale a palavra, sem acento nem caixa, no nome ou no
  * endereço da página: "montagem" ou "roadie", como palavra inteira ("desmontagem" não conta). Fica de fora o serviço
- * que acompanha o evento todo (técnico) e o que não está ativo. Com mais de um, vence o que tem as duas palavras e,
- * depois, a ordem do nome. Renomear para "Auxiliar de Montagem" ou "Roadie" continua achando.
+ * que acompanha o evento todo (técnico) e o que não está ativo. Com mais de um, vence o que tem as duas palavras,
+ * depois o que mais kits trazem dentro e, por fim, a ordem do nome. Renomear para "Auxiliar de Montagem" ou "Roadie"
+ * continua achando. A Proposta Rápida usa esta mesma função (antes cada tela desempatava de um jeito).
  */
-export function findSetupService<T extends SetupCandidate>(services: readonly T[]): T | null {
+export function findSetupService<T extends SetupCandidate & { id?: string | null }>(
+  services: readonly T[],
+  kits: readonly KitItemsLike[] = [],
+): T | null {
+  const inKits = (id?: string | null) => (id ? kits.filter((kit) => kitServiceIds(kit).has(id)).length : 0);
   const ranked = services
     .filter((s) => isAvailableForOrder(s) && s.coversWholeEvent !== true)
     .map((s) => {
@@ -52,7 +57,7 @@ export function findSetupService<T extends SetupCandidate>(services: readonly T[
       return { s, score: (/\bmontagem\b/.test(text) ? 1 : 0) + (/\broadie\b/.test(text) ? 1 : 0) };
     })
     .filter((x) => x.score > 0)
-    .sort((a, b) => b.score - a.score || String(a.s.name ?? '').localeCompare(String(b.s.name ?? ''), 'pt-BR'));
+    .sort((a, b) => b.score - a.score || inKits(b.s.id) - inKits(a.s.id) || String(a.s.name ?? '').localeCompare(String(b.s.name ?? ''), 'pt-BR'));
   return ranked[0]?.s ?? null;
 }
 

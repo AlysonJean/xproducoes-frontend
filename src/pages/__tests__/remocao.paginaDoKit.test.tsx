@@ -91,7 +91,7 @@ const paginaDoKit = async (kit: { slug: string }) => {
 describe('Página do kit — sem níveis e com a frase da composição do kit (auditoria do orçamento, 12/11/2026)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    addItem.mockResolvedValue(undefined);
+    addItem.mockResolvedValue(true);
     useCart.mockReturnValue({ cart: null, addItem, removeItem: vi.fn(), clearCart: vi.fn(), itemCount: 0 });
     useCompare.mockReturnValue({ items: [], removeItem: vi.fn(), clearCompare: vi.fn() });
   });
@@ -153,5 +153,16 @@ describe('Página do kit — sem níveis e com a frase da composição do kit (a
     expect(addItem).toHaveBeenCalledWith(expect.objectContaining({ id: 'kit-festa' }), 'kit');
     expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'success', message: 'Kit Festa foi incluído no seu orçamento.' }));
     expect(JSON.stringify(addNotification.mock.calls)).not.toMatch(/desconto/);
+  });
+
+  it('kit mantido no modal de troca (addItem devolve false): nenhum aviso de sucesso (junção, O24)', async () => {
+    addItem.mockResolvedValue(false);
+    await paginaDoKit(SEM_TECNICO);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar combo ao orçamento' }));
+
+    await waitFor(() => expect(addItem).toHaveBeenCalledTimes(1));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(addNotification).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
   });
 });

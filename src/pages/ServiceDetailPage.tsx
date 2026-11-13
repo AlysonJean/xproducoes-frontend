@@ -93,7 +93,9 @@ export const ServiceDetailPage = () => {
     if (!service) return;
     setAdding(true);
     try {
-      await addItem(service, 'service');
+      // Auditoria do orçamento (12/11/2026), O23/O24: addItem devolve false (e já avisou) quando o item não entra:
+      // repetido, indisponível ou kit mantido no modal de troca. O aviso de sucesso só sai quando entrou.
+      if (!(await addItem(service, 'service'))) return;
       addNotification({
         type: 'success',
         title: 'Adicionado ao Orçamento',

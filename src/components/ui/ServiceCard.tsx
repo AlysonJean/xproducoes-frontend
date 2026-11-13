@@ -92,12 +92,18 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
     e.preventDefault();
     e.stopPropagation();
     if (service.status === 'ACTIVE' || !service.status) {
-        addItem(service, 'service');
-        addNotification({
-            type: 'success',
-            title: 'Serviço Adicionado',
-            message: `${service.name} foi adicionado ao orçamento.`
-        });
+        // Auditoria do orçamento (12/11/2026), O23/O24: o aviso de sucesso só sai quando o serviço entrou (addItem
+        // devolve false, e já avisou, quando ele não entra).
+        void addItem(service, 'service')
+          .then((added) => {
+            if (!added) return;
+            addNotification({
+              type: 'success',
+              title: 'Serviço Adicionado',
+              message: `${service.name} foi adicionado ao orçamento.`
+            });
+          })
+          .catch(() => undefined);
     }
   };
 
