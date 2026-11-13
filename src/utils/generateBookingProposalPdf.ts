@@ -1,8 +1,10 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatBookingTotal, formatPrice } from './formatPrice';
-import { bookingPricing, PRICING_LINE_TYPE_LABEL } from './bookingPricing';
+import { bookingPricing, formatPricingLineTotal, PRICING_LINE_TYPE_LABEL, serviceMinutesText, toArrangeNote } from './bookingPricing';
 import { bookingEmail, bookingPhone } from './bookingContact';
+import { clientProposalValidityText, proposalExpiredForClient, type ProposalSummaryView } from './bookingStatus';
+import { formatBrasiliaDate } from './whatsapp';
 import type { BookingDetails } from '../types/types';
 
 // Achado (auditoria de produto): o gerador de proposta em PDF (jsPDF + branding) só existia
@@ -25,11 +27,51 @@ async function loadLogoAsDataUrl(): Promise<string | null> {
   }
 }
 
-function formatDateTime(value?: string): string {
-  if (!value) return '-';
+// Auditoria do orçamento (12/11/2026): o que os dois PDFs da proposta (este, da área do cliente, e o do painel, na
+// ficha) e a ficha do painel mostram igual.
+
+const validDate = (value?: string | Date | null): Date | null => {
+  if (!value) return null;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('pt-BR');
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+// D13: data e hora no horário de Brasília (o do evento), qualquer que seja o fuso do aparelho de quem baixa o PDF.
+const brasiliaDateTime = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+});
+
+/** "10/01/2027 18:00" no horário de Brasília; '-' sem data válida. */
+export function formatBrasiliaDateTime(value?: string | Date | null): string {
+  const date = validDate(value);
+  return date ? brasiliaDateTime.format(date).replace(', ', ' ') : '-';
+}
+
+/**
+ * D11: a duração do evento tirada do início e do término ("5 h", "4 h 30 min"), não do eventDuration gravado (que
+ * ficava velho depois de mudar as datas) nem dos "4 h" inventados. '-' sem as duas datas ou com término antes do início.
+ */
+export function eventDurationText(start?: string | Date | null, end?: string | Date | null): string {
+  const from = validDate(start);
+  const to = validDate(end);
+  if (!from || !to) return '-';
+  const minutes = Math.round((to.getTime() - from.getTime()) / 60_000);
+  return minutes > 0 ? serviceMinutesText(minutes) : '-';
+}
+
+/**
+ * O10/C5/D5: a validade da proposta é a do resumo que a API manda (booking.proposal.validUntil: a do link, do e-mail e
+ * do WhatsApp, no fim do dia de Brasília e nunca depois da véspera do evento), não "7 dias" contados do dia em que o PDF
+ * foi baixado. Só na reserva pendente com proposta enviada e validade; sem isso, null (o PDF não fala de validade).
+ * expired: a mesma regra da área do cliente (proposalExpiredForClient).
+ */
+export function proposalValidity(
+  booking: { status?: string | null; proposal?: ProposalSummaryView | null },
+  now: number = Date.now(),
+): { date: string; expired: boolean } | null {
+  const until = booking.proposal?.sentAt ? validDate(booking.proposal.validUntil) : null;
+  if (booking.status !== 'PENDING' || !until) return null;
+  return { date: formatBrasiliaDate(until), expired: proposalExpiredForClient(booking, now) };
 }
 
 export async function generateBookingProposalPdf(booking: BookingDetails): Promise<void> {
@@ -44,8 +86,14 @@ export async function generateBookingProposalPdf(booking: BookingDetails): Promi
   doc.text('Proposta Comercial', 14, 32);
 
   doc.setFontSize(10);
-  doc.text(`Gerada em: ${new Date().toLocaleString('pt-BR')}`, 14, 38);
+  doc.text(`Gerada em: ${formatBrasiliaDateTime(new Date())}`, 14, 38);
   doc.text(`Reserva: #${booking.id}`, 14, 43);
+  // Auditoria do orçamento (12/11/2026), O10/C5/D5: a validade real, a mesma do link e da área do cliente
+  // (clientProposalValidityText); vencida, o cliente pede outra.
+  const validity = clientProposalValidityText(booking);
+  if (validity) {
+    doc.text(validity, 14, 48);
+  }
 
   const clientName = booking.client?.user?.name || booking.client?.name || booking.clientName || 'Cliente';
   // Achado (auditoria ponta a ponta): o telefone e o e-mail do cadastro vinham antes dos informados na
@@ -65,8 +113,10 @@ export async function generateBookingProposalPdf(booking: BookingDetails): Promi
   doc.text('Evento', 14, 77);
   doc.setFontSize(10);
   doc.text(`Título: ${booking.eventTitle || 'Evento'}`, 14, 82);
-  doc.text(`Início: ${formatDateTime(booking.eventDate)}`, 14, 87);
-  doc.text(`Término: ${formatDateTime(booking.eventEndDate)}`, 14, 92);
+  // Auditoria do orçamento (12/11/2026), D13 e D11: início e término no horário de Brasília e a duração pelas datas.
+  doc.text(`Início: ${formatBrasiliaDateTime(booking.eventDate)}`, 14, 87);
+  doc.text(`Término: ${formatBrasiliaDateTime(booking.eventEndDate)}`, 14, 92);
+  doc.text(`Duração: ${eventDurationText(booking.eventDate, booking.eventEndDate)}`, 110, 92);
   doc.text(`Local: ${booking.location || booking.eventLocation || '-'}`, 14, 97);
 
   const fullAddress = [booking.street, booking.addressNumber, booking.neighborhood, booking.city, booking.state, booking.zipCode]
@@ -83,7 +133,8 @@ export async function generateBookingProposalPdf(booking: BookingDetails): Promi
   const rows: string[][] = pricing.lines.map((line) => [
     `${line.quantity > 1 ? `${line.quantity}× ` : ''}${line.description}`,
     PRICING_LINE_TYPE_LABEL[line.type] ?? 'Item',
-    formatPrice(line.total),
+    // Auditoria do orçamento (12/11/2026), O21: frete ou pedágio sem preço sai "a combinar" / "à parte".
+    formatPricingLineTotal(line),
   ]);
   if (rows.length === 0) {
     if (booking.kit) rows.push([booking.kit.name || 'Kit', 'Kit', 'Incluído no total']);
@@ -123,6 +174,13 @@ export async function generateBookingProposalPdf(booking: BookingDetails): Promi
   doc.setFontSize(12);
   doc.text(`Total: ${formatBookingTotal(pricing.total)}`, 14, y);
   y += 10;
+  // O21: com frete a combinar ou pedágio à parte, o total não os inclui.
+  const toArrangeText = toArrangeNote(pricing.lines);
+  if (toArrangeText) {
+    doc.setFontSize(10);
+    doc.text(toArrangeText, 14, y - 4);
+    y += 4;
+  }
 
   doc.setFontSize(10);
   const notesText = booking.notes?.trim() ? booking.notes.trim() : 'Sem observações.';

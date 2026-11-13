@@ -79,11 +79,12 @@ const valorFinalDoPdf = () => {
   return pdfText.mock.calls[i + 1]?.[0];
 };
 
-// D8a e P16 (aprovadas em 02/11/2026): o PDF do painel, que vai ao cliente pelo "PDF + WhatsApp",
+// D8a e P16 (aprovadas em 02/11/2026): o PDF do painel, que ia ao cliente pelo "PDF + WhatsApp",
 // recalculava pelo catálogo × (eventDuration || 4) — serviço multiplicado por horas, equipamento por campos
 // que não existem (R$ 0) — e listava o cachê de cada colaborador como linha do cliente. Agora mostra as
-// mesmas linhas e o mesmo total da página do cliente e do PDF do cliente.
-describe('BookingDetailPage — o PDF e o WhatsApp do painel usam o total da reserva (D8a)', () => {
+// mesmas linhas e o mesmo total da página do cliente e do PDF do cliente. Auditoria do orçamento (12/11/2026),
+// E8: o "PDF + WhatsApp" saiu (o cliente recebe o link da proposta); o PDF ficou de uso interno.
+describe('BookingDetailPage — o PDF do painel usa o total da reserva (D8a)', () => {
   let open: MockInstance<typeof window.open>;
 
   beforeEach(() => {
@@ -115,17 +116,16 @@ describe('BookingDetailPage — o PDF e o WhatsApp do painel usam o total da res
     expect(escritos).toContain(`- ${formatPrice(150)}`);
   });
 
-  // P14 parte 2 (aprovada em 02/11/2026): o texto vem de utils/whatsappTemplates (proposalPdfWhatsAppText), com o
-  // total da mesma função de preço; o WhatsApp abre no clique, antes de o PDF terminar.
-  it('"PDF + WhatsApp": a mensagem leva o mesmo total do PDF', async () => {
+  // Auditoria do orçamento (12/11/2026), E8: antes o "PDF + WhatsApp" abria o WhatsApp com o total do dia ("Segue em
+  // PDF a proposta") e baixava o PDF para anexar; o PDF parado divergia do link depois de qualquer mudança.
+  it('sem "PDF + WhatsApp": "Baixar PDF" só baixa o PDF, sem abrir o WhatsApp', async () => {
     await renderFicha();
+    expect(screen.queryByRole('button', { name: 'PDF + WhatsApp' })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'PDF + WhatsApp' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar PDF' }));
 
-    expect(open).toHaveBeenCalledTimes(1);
-    const mensagem = new URL(String(open.mock.calls[0][0])).searchParams.get('text') ?? '';
-    expect(mensagem).toContain('Valor total: R$ 1.350,00.');
     await waitFor(() => expect(valorFinalDoPdf()).toBe(formatPrice(1350)));
+    expect(open).not.toHaveBeenCalled();
   });
 
   it('reserva antiga sem itens gravados: o PDF lista só os nomes e o valor final é o totalPrice', async () => {

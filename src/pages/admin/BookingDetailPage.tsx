@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef, type ChangeEvent } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Trash2, 
@@ -32,7 +32,8 @@ import {
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatBookingTotal, formatPrice } from '@/utils/formatPrice';
-import { bookingPricing, PRICING_LINE_TYPE_LABEL, type BookingPricingLine } from '@/utils/bookingPricing';
+import { bookingPricing, formatPricingLineTotal, PRICING_LINE_TYPE_LABEL, toArrangeNote, type BookingPricingLine } from '@/utils/bookingPricing';
+import { eventDurationText, formatBrasiliaDateTime, proposalValidity } from '@/utils/generateBookingProposalPdf';
 import { formatBookingPaymentStatus } from '@/utils/typeSafeFormatters';
 import { bookingStatusLabel, bookingStatusVariant, deliveryStatusLabel, DELIVERY_STATUS_OPTIONS } from '@/utils/bookingStatus';
 import { COLLABORATOR_ROLE_OPTIONS } from '@/utils/collaboratorRoles';
@@ -60,12 +61,11 @@ import {
 import { SUPPORT_EMAIL } from '../../data/site';
 import { formatBookingCode } from '../../utils/bookingCode';
 import { bookingEmail, bookingPhone, toWhatsAppNumber } from '../../utils/bookingContact';
-import { openWhatsAppUntracked } from '../../utils/whatsapp';
+import { formatBrasiliaDate } from '../../utils/whatsapp';
 import {
   bookingCancelledWhatsAppText,
   bookingConfirmedWhatsAppText,
   crewOnTheWayWhatsAppText,
-  proposalPdfWhatsAppText,
 } from '../../utils/whatsappTemplates';
 import { notifyClientPayload } from '../../utils/notifyClient';
 import { NotifyClientCheckbox } from '../../components/bookings/NotifyClientCheckbox';
@@ -177,6 +177,81 @@ type BookingDetails = BaseBookingDetails & {
   reviewLink?: string | null;
 };
 
+// ── Auditoria do orçamento (12/11/2026) ─────────────────────────────────────────
+
+// O25 (exibição): escada, local coberto, estacionamento e a hora da montagem. O /orcamento e o briefing escrevem as
+// respostas como a pessoa marcou (com "Não sei") no texto do pedido (specialRequests) e gravam o sim/não do cadastro
+// (o que a equipe vê na escala). A ficha mostra a resposta escrita quando ela existe; sem ela, o sim/não do cadastro.
+// O texto livre do briefing ("O cliente também disse", sempre a última resposta) não conta: uma linha "Escadas no
+// acesso: ..." digitada ali não passa pela resposta marcada.
+const answerInRequest = (text: string | null | undefined, label: string): string | null => {
+  if (!text) return null;
+  const answers = text.split(/^O cliente também disse:/m)[0];
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = answers.match(new RegExp(`^${escaped}:[ \\t]*(.+)$`, 'm'));
+  return match ? match[1].trim() || null : null;
+};
+const yesNo = (value: boolean | null | undefined): string | null => (value === true ? 'Sim' : value === false ? 'Não' : null);
+
+const brasiliaTime = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const validDate = (value?: string | null): Date | null => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+/** D13: "10/01/2027, das 18:00 às 23:00" (ou com a data do término, se for outro dia), no horário de Brasília. */
+function eventWhenText(start?: string | null, end?: string | null): string | null {
+  const from = validDate(start);
+  if (!from) return null;
+  const startText = `${formatBrasiliaDate(from)}, às ${brasiliaTime.format(from)}`;
+  const to = validDate(end);
+  if (!to || to <= from) return startText;
+  const sameDay = formatBrasiliaDate(to) === formatBrasiliaDate(from);
+  return sameDay
+    ? `${formatBrasiliaDate(from)}, das ${brasiliaTime.format(from)} às ${brasiliaTime.format(to)}`
+    : `${startText} até ${formatBrasiliaDate(to)}, às ${brasiliaTime.format(to)}`;
+}
+
+interface VenueAnswer {
+  label: string;
+  value: string;
+  /** Veio da resposta escrita do cliente (e não do sim/não do cadastro). */
+  answered: boolean;
+}
+
+function venueAnswers(b: {
+  specialRequests?: string | null;
+  requiresStairs?: boolean | null;
+  isCovered?: boolean | null;
+  hasParking?: boolean | null;
+  setupTime?: string | null;
+  eventDate?: string | null;
+}): { setup: string | null; rows: VenueAnswer[] } {
+  const text = b.specialRequests;
+  const setupAt = validDate(b.setupTime);
+  const eventAt = validDate(b.eventDate);
+  const setup = setupAt
+    ? (eventAt && formatBrasiliaDate(eventAt) === formatBrasiliaDate(setupAt)
+        ? brasiliaTime.format(setupAt)
+        : `${formatBrasiliaDate(setupAt)}, às ${brasiliaTime.format(setupAt)}`)
+    : answerInRequest(text, 'Liberado para montar a partir de');
+  const row = (label: string, written: string | null, recorded: boolean | null | undefined): VenueAnswer | null => {
+    if (written) return { label, value: written, answered: true };
+    const value = yesNo(recorded);
+    return value ? { label, value, answered: false } : null;
+  };
+  const covered = answerInRequest(text, 'Local coberto');
+  // O briefing pergunta o ambiente (fechado, ao ar livre...), não "local coberto": mostra a resposta dele.
+  const environment = covered ? null : answerInRequest(text, 'Ambiente');
+  const rows = [
+    row('Escadas no acesso', answerInRequest(text, 'Escadas no acesso'), b.requiresStairs),
+    environment ? { label: 'Ambiente', value: environment, answered: true } : row('Local coberto', covered, b.isCovered),
+    row('Estacionamento ou carga e descarga', answerInRequest(text, 'Estacionamento ou carga e descarga'), b.hasParking),
+  ].filter((r): r is VenueAnswer => r !== null);
+  return { setup, rows };
+}
+
 // P14 (aprovada em 02/11/2026), parte 2: as trocas de status da ficha que podem levar um aviso pelo WhatsApp. O
 // WhatsApp é opcional (caixa na janela); sem telefone, a janela muda só o status.
 type StatusAction = 'confirm' | 'cancel' | 'on_the_way';
@@ -215,7 +290,31 @@ export const BookingDetailPage = () => {
   
   const [actionLoading, setActionLoading] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
-  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  // Auditoria do orçamento (12/11/2026), E8: "Enviar link pelo WhatsApp" aciona o botão de envio do cartão Confirmação
+  // (o "Enviar proposta"/"Reenviar proposta" do SendProposalPanel, pela ref sendButtonRef): o mesmo envio (que registra
+  // o envio e a validade), a mesma confirmação com frete a combinar e a mesma janela com "Abrir WhatsApp" e o texto
+  // pronto (proposalWhatsAppText), sem uma segunda cópia dessa lógica aqui. Botão ocupado (enviando) não reage.
+  const proposalSendButtonRef = useRef<HTMLButtonElement>(null);
+  const triggerProposalSend = () => {
+    proposalSendButtonRef.current?.click();
+  };
+
+  // Auditoria do orçamento (12/11/2026), E8, onda 2: a Proposta Rápida, depois de salvar, abre a ficha com
+  // location.state = { sendProposal: true } (no lugar do antigo "PDF + WhatsApp"). A ficha rola até o "Enviar proposta"
+  // e põe o foco no botão, sem enviar nada sozinha; o painel só existe em rascunho ou pendente (fora disso, nada acontece).
+  // Depois o estado é limpo, para não repetir ao recarregar a página.
+  const location = useLocation();
+  const cameToSendProposal = Boolean((location.state as { sendProposal?: unknown } | null)?.sendProposal);
+  useEffect(() => {
+    if (!cameToSendProposal || !booking) return;
+    const button = proposalSendButtonRef.current;
+    if (button) {
+      button.focus({ preventScroll: true });
+      // Sem "behavior": a rolagem segue o CSS do site (suave; instantânea com "reduzir movimento" ligado).
+      button.scrollIntoView?.({ block: 'center' });
+    }
+    navigate({ pathname: location.pathname, search: location.search, hash: location.hash }, { replace: true });
+  }, [cameToSendProposal, booking, navigate, location.pathname, location.search, location.hash]);
   
   // Confirmation form states
   const [confirmPrice, setConfirmPrice] = useState('');
@@ -379,7 +478,8 @@ export const BookingDetailPage = () => {
     const MARGIN = 14;
     const PAGE_W = 210;
     const PAGE_H = 297;
-    const dataEmissao = new Date().toLocaleDateString('pt-BR');
+    // Auditoria do orçamento (12/11/2026), D13: a data de emissão é a de Brasília, não a do aparelho.
+    const dataEmissao = formatBrasiliaDate(new Date());
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
     // ── Logo embutido (base64) ───────────────────────────────────────────────
@@ -401,7 +501,12 @@ export const BookingDetailPage = () => {
 
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Emitida em: ${dataEmissao}   |   Validade: 7 dias   |   Ref: #${formatBookingCode(booking.id).toUpperCase()}`, 72, 23);
+    // Auditoria do orçamento (12/11/2026), O10/C5/D5: a validade é a do link (booking.proposal.validUntil, a que vale), não
+    // "7 dias" contados do dia em que o PDF foi baixado; sem ela (sem envio, ou reserva já fora de pendente), o PDF não
+    // fala de validade. E8: este PDF é de uso interno (o cliente recebe o link, que mostra a reserva atual).
+    const validity = proposalValidity(booking);
+    const validityText = validity ? `   |   ${validity.expired ? 'Venceu em' : 'Válida até'} ${validity.date}` : '';
+    doc.text(`Emitida em: ${dataEmissao}${validityText}   |   Ref: #${formatBookingCode(booking.id).toUpperCase()}`, 72, 23);
 
     // ── Responsável ──────────────────────────────────────────────────────────
     let curY = 42;
@@ -420,7 +525,9 @@ export const BookingDetailPage = () => {
     doc.text('CLIENTE', MARGIN + 3, curY + 4.2);
 
     curY += 9;
-    const clientName = booking.client?.name || booking.clientName || 'Nao informado';
+    // Auditoria do orçamento (12/11/2026), O32/C14: o nome do cadastro vem em client.user.name (a API não manda
+    // client.name); antes, cliente cadastrado saía "Nao informado".
+    const clientName = booking.client?.user?.name || booking.client?.name || booking.clientName || 'Nao informado';
     const clientPhone = bookingPhone(booking) || '-';
     const clientEmail = bookingEmail(booking) || '-';
     doc.setFontSize(9);
@@ -449,10 +556,12 @@ export const BookingDetailPage = () => {
     doc.text('EVENTO', MARGIN + 3, curY + 4.2);
 
     curY += 9;
-    const duracao = booking.eventDuration || 4;
+    // Auditoria do orçamento (12/11/2026), D11: a duração sai das datas (antes, o eventDuration gravado, que ficava
+    // velho depois de mudar as datas, ou 4 h inventadas); D13: início e término no horário de Brasília.
+    const duracao = eventDurationText(booking.eventDate, booking.eventEndDate);
     const eventLabel = booking.location || booking.eventLocation || '-';
-    const startDate = new Date(booking.eventDate).toLocaleString('pt-BR');
-    const endDate = booking.eventEndDate ? new Date(booking.eventEndDate).toLocaleString('pt-BR') : '-';
+    const startDate = formatBrasiliaDateTime(booking.eventDate);
+    const endDate = formatBrasiliaDateTime(booking.eventEndDate);
     const fullAddress = [booking.street, booking.addressNumber, booking.neighborhood, booking.city, booking.state, booking.zipCode].filter(Boolean).join(', ');
 
     doc.setFontSize(9);
@@ -464,7 +573,7 @@ export const BookingDetailPage = () => {
     doc.setFont('helvetica', 'bold');
     doc.text('Duracao:', 110, curY);
     doc.setFont('helvetica', 'normal');
-    doc.text(`${duracao}h`, 125, curY);
+    doc.text(duracao, 125, curY);
     curY += 5;
     doc.setFont('helvetica', 'bold');
     doc.text('Inicio:', MARGIN, curY);
@@ -487,8 +596,8 @@ export const BookingDetailPage = () => {
 
     // ── Itens da proposta ─────────────────────────────────────────────────────
     // D8a e P16 (aprovadas em 02/11/2026): as linhas e o valor final vêm da reserva (pricing da API), os
-    // mesmos da página do cliente e do PDF da área do cliente. Antes este PDF, que vai ao cliente pelo
-    // "PDF + WhatsApp", recalculava pelo catálogo × (eventDuration || 4): serviço multiplicado por horas,
+    // mesmos da página do cliente e do PDF da área do cliente. Antes este PDF, que ia ao cliente pelo
+    // "PDF + WhatsApp" (saiu, E8), recalculava pelo catálogo × (eventDuration || 4): serviço multiplicado por horas,
     // equipamento e kit por campos que não existem no cadastro (R$ 0), desconto de um campo inexistente e
     // os cachês da equipe como linhas do cliente. Reserva antiga sem itens gravados lista só os nomes.
     const pricing = bookingPricing(booking);
@@ -516,7 +625,9 @@ export const BookingDetailPage = () => {
       || '';
 
     for (const line of pricing.lines) {
-      itemRows.push(['', line.description, PRICING_LINE_TYPE_LABEL[line.type] ?? 'Item', String(line.quantity), formatPrice(line.unitPrice), formatPrice(line.discount), formatPrice(line.total)]);
+      // Auditoria do orçamento (12/11/2026), O21: frete ou pedágio sem preço (toArrange) sai "a combinar" / "à parte".
+      const toArrange = Boolean(line.toArrange);
+      itemRows.push(['', line.description, PRICING_LINE_TYPE_LABEL[line.type] ?? 'Item', String(line.quantity), toArrange ? '-' : formatPrice(line.unitPrice), toArrange ? '-' : formatPrice(line.discount), formatPricingLineTotal(line)]);
       itemImages.push(imageOf(line));
     }
     if (itemRows.length === 0) {
@@ -612,6 +723,14 @@ export const BookingDetailPage = () => {
     doc.text('VALOR FINAL DA PROPOSTA:', boxX + 4, finY + 5.5);
     // Auditoria do orçamento (12/11/2026), O3: pedido ainda sem valor sai "Em preparação", não "R$ 0,00".
     doc.text(formatBookingTotal(pricing.total), boxX + boxW - 4, finY + 5.5, { align: 'right' });
+    // O21: com frete a combinar ou pedágio à parte, o total não os inclui (a frase da página do cliente e do e-mail).
+    const toArrangeText = toArrangeNote(pricing.lines);
+    if (toArrangeText) {
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(...C_MUTED);
+      doc.text(doc.splitTextToSize(toArrangeText, boxW), boxX, finY + 13);
+    }
 
     // ── Observações (à esquerda do resumo financeiro) ─────────────────────────
     if (booking.notes?.trim()) {
@@ -678,26 +797,8 @@ export const BookingDetailPage = () => {
     }
   };
 
-  const handleDownloadAndWhatsApp = async () => {
-    const normalizedPhone = booking ? toWhatsAppNumber(bookingPhone(booking)) : null;
-    if (!booking || !normalizedPhone) {
-      addNotification({ type: 'error', title: 'WhatsApp inválido', message: 'O cliente não tem um telefone válido cadastrado.' });
-      return;
-    }
-    try {
-      setSendingWhatsApp(true);
-      // P14 parte 2: o texto vem de utils/whatsappTemplates (saem os links de /cliente/painel e /cadastro), e o
-      // WhatsApp abre antes do PDF: depois da espera do PDF (que baixa as fotos dos itens) o navegador pode bloquear
-      // a aba. Sem o evento de conversão do GA (D7).
-      openWhatsAppUntracked(normalizedPhone, proposalPdfWhatsAppText(booking));
-      await generateBookingPdf();
-      addNotification({ type: 'success', title: 'WhatsApp aberto', message: 'PDF baixado. Anexe-o na conversa do WhatsApp.' });
-    } catch (err: unknown) {
-      addNotification({ type: 'error', title: 'Erro', message: err instanceof Error ? err.message : 'Não foi possível abrir o WhatsApp.' });
-    } finally {
-      setSendingWhatsApp(false);
-    }
-  };
+  // Auditoria do orçamento (12/11/2026), E8: saiu o "PDF + WhatsApp" (o PDF anexado na conversa ficava parado no valor
+  // do dia; o link da proposta mostra sempre a reserva atual). Ver triggerProposalSend.
   // ─────────────────────────────────────────────────────────────────────────────
 
   // Anexos: o upload ficava inline no JSX; a lixeira de cada anexo não tinha ação (o backend já
@@ -768,6 +869,8 @@ export const BookingDetailPage = () => {
     });
     if (booking.kit?.items) process(booking.kit.items);
         if (booking.kits) booking.kits.forEach((k) => process(k.items || ('kit' in k ? k.kit?.items : undefined) || []));
+    // Auditoria do orçamento (12/11/2026), E1–E3: os serviços que vêm no kit (logística, roadie, técnicos) entram na
+    // lista: são trabalho da equipe (a escala usa a lista só para sugerir quem chamar) e já estão no preço do kit.
     // Conferência de 07/11/2026: booking.services são os serviços do cadastro ligados à reserva (o técnico marcado
     // no pedido, os da Proposta Rápida), sem itemType: o process acima os ignorava, e a seção dizia "Nenhum serviço
     // nesta reserva" com o técnico nos itens.
@@ -775,6 +878,20 @@ export const BookingDetailPage = () => {
       if (s?.name) services.add(s.name);
     });
     return Array.from(services);
+  }, [booking]);
+
+  // Serviços que vêm só pelo kit (não ligados à reserva à parte): a ficha marca "Incluso no kit", para ninguém achar
+  // que são cobrados de novo.
+  const kitOnlyServices = useMemo(() => {
+    const names = new Set<string>();
+    const fromKit = (items: unknown[] | undefined) => (items || []).forEach((item) => {
+      const name = (item as { service?: { name?: string } } | null)?.service?.name;
+      if (name) names.add(name);
+    });
+    fromKit(booking?.kit?.items);
+    booking?.kits?.forEach((k) => fromKit(k.items || ('kit' in k ? k.kit?.items : undefined)));
+    booking?.services?.forEach((s) => { if (s?.name) names.delete(s.name); });
+    return names;
   }, [booking]);
 
   // Dados do formulário de edição com referência ESTÁVEL. Achado (revisão): `initialData={{ ...booking }}`
@@ -832,6 +949,14 @@ export const BookingDetailPage = () => {
   // O mesmo contato que os botões de WhatsApp e o PDF usam (ver utils/bookingContact).
   const clientPhone = bookingPhone(booking);
   const clientEmail = bookingEmail(booking);
+  // Auditoria do orçamento (12/11/2026), O14/C4: as mesmas linhas que o cliente vê (itens, frete, pedágio, cupom e
+  // ajuste), da mesma função de preço (pricing da API).
+  const pricing = bookingPricing(booking);
+  const eventWhen = eventWhenText(booking.eventDate, booking.eventEndDate);
+  const eventDuration = eventDurationText(booking.eventDate, booking.eventEndDate);
+  const venue = venueAnswers(booking);
+  const kitEntries = booking.kits && booking.kits.length > 0 ? booking.kits : (booking.kit ? [booking.kit] : []);
+  const equipmentEntries = booking.equipments || [];
 
   return (
     <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
@@ -886,12 +1011,17 @@ export const BookingDetailPage = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleDownloadBookingPdf} isLoading={generatingPdf} leftIcon={<FileText className="h-4 w-4" />}>
+            {/* E8: PDF de uso interno; o cliente recebe o link da proposta. */}
+            <Button variant="outline" size="sm" onClick={handleDownloadBookingPdf} isLoading={generatingPdf} leftIcon={<FileText className="h-4 w-4" />} title="PDF para uso interno. O cliente recebe o link da proposta, que mostra a reserva atual.">
               Baixar PDF
             </Button>
-            <Button variant="outline" size="sm" onClick={handleDownloadAndWhatsApp} isLoading={sendingWhatsApp} leftIcon={<MessageSquare className="h-4 w-4" />}>
-              PDF + WhatsApp
-            </Button>
+            {/* E8: no lugar do "PDF + WhatsApp". Só com a proposta em aberto (rascunho ou pendente): é quando o servidor
+                aceita o envio e o link abre. Sem telefone válido, desligado (o "Enviar proposta" do cartão manda o e-mail). */}
+            {canConfirm && (
+              <Button variant="outline" size="sm" onClick={triggerProposalSend} disabled={!toWhatsAppNumber(clientPhone)} leftIcon={<MessageSquare className="h-4 w-4" />} title="O mesmo envio do botão Enviar proposta: registra o envio, manda o e-mail (se a reserva tiver e-mail) e abre a janela com o WhatsApp.">
+                Enviar link pelo WhatsApp
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={handleExportBooking} leftIcon={<Download className="h-4 w-4" />}>
               Exportar JSON
             </Button>
@@ -913,9 +1043,13 @@ export const BookingDetailPage = () => {
             <h3 className="text-xs font-medium text-primary uppercase tracking-wider mb-4">Confirmação</h3>
             {canConfirm ? (
               <div className="space-y-3">
-                {/* D11 (aprovada em 02/11/2026): link seguro da proposta, e-mail pela fila e WhatsApp com o mesmo link. */}
+                {/* D11 (aprovada em 02/11/2026): link seguro da proposta, e-mail pela fila e WhatsApp com o mesmo link. O
+                    painel já mostra o último envio (valor e validade) e o aviso "A reserva mudou depois do último envio"
+                    (proposal.changedSinceSent): a ficha não repete o aviso. E8: o "Enviar link pelo WhatsApp" do
+                    cabeçalho e a vinda da Proposta Rápida usam o botão de envio dele (sendButtonRef). */}
                 <SendProposalPanel
                   booking={booking}
+                  sendButtonRef={proposalSendButtonRef}
                   onSent={() => {
                     setProposalHistoryKey((key) => key + 1);
                     void fetchBooking();
@@ -993,20 +1127,37 @@ export const BookingDetailPage = () => {
                     </div>
                     <div>
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Data e horário</p>
+                      {/* Auditoria do orçamento (12/11/2026), D13: início e término no horário de Brasília. */}
                       <p className="text-sm font-semibold text-foreground">
-                        {eventDate
-                          ? `${eventDate.toLocaleDateString('pt-BR')} às ${eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-                          : 'Data não informada'}
+                        {eventWhen || 'Data não informada'}
                       </p>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* Antes: "Duração Estimada: 4h" inventado quando não havia duração. */}
-                    {booking.estimatedDuration && (
-                      <Badge variant="outline">Duração estimada: {booking.estimatedDuration}</Badge>
+                    {/* D11: a duração sai das datas. Antes: "Duração Estimada: 4h" inventado quando não havia duração. */}
+                    {eventDuration !== '-' ? (
+                      <Badge variant="outline">Duração: {eventDuration}</Badge>
+                    ) : (
+                      booking.estimatedDuration && <Badge variant="outline">Duração estimada: {booking.estimatedDuration}</Badge>
                     )}
                     {eventDate && isToday(eventDate) && <Badge variant="success">Evento hoje</Badge>}
                   </div>
+                  {/* Auditoria do orçamento (12/11/2026), O25: a hora da montagem e as respostas de acesso do cliente
+                      (com "Não sei" como ele marcou); sem resposta escrita, o sim/não do cadastro, que a equipe vê. */}
+                  <section aria-labelledby="ficha-montagem-acesso" className="space-y-2">
+                    <h4 id="ficha-montagem-acesso" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Montagem e acesso</h4>
+                    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                      {[{ label: 'Montagem a partir de', value: venue.setup || 'Não informado' }, ...venue.rows].map((r) => (
+                        <div key={r.label} className="contents">
+                          <dt className="text-muted-foreground">{r.label}</dt>
+                          <dd className="min-w-0 break-words font-medium text-foreground">{r.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    {venue.rows.length > 0 && venue.rows.every((r) => !r.answered) && (
+                      <p className="text-xs text-muted-foreground">Valores do cadastro da reserva: o cliente não respondeu estas perguntas pelo site.</p>
+                    )}
+                  </section>
                 </div>
 
                 <div className="w-full md:w-auto md:min-w-[280px] p-6 rounded-2xl bg-muted/40 border border-border">
@@ -1049,12 +1200,14 @@ export const BookingDetailPage = () => {
                 <h3 className="text-lg font-bold text-foreground">Itens da reserva</h3>
               </div>
 
+              {/* Auditoria do orçamento (12/11/2026), O14/C4: a reserva só de equipamentos dizia "Nenhum kit" e "Nenhum
+                  serviço", como se estivesse vazia: os equipamentos não apareciam. */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
                   <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border pb-2">Kits</h4>
                   <div className="space-y-3">
-                    {((booking.kits && booking.kits.length > 0) || booking.kit) ? (
-                      (booking.kits && booking.kits.length > 0 ? booking.kits : (booking.kit ? [booking.kit] : [])).map((k, idx) => (
+                    {kitEntries.length > 0 ? (
+                      kitEntries.map((k, idx) => (
                         <div key={idx} className="flex items-center gap-3 p-3 rounded-2xl bg-muted/30 border border-border">
                           <div className="h-10 w-10 shrink-0 rounded-xl bg-card border border-border flex items-center justify-center">
                             <Package className="text-muted-foreground" size={18} />
@@ -1072,13 +1225,32 @@ export const BookingDetailPage = () => {
                 </div>
 
                 <div className="space-y-4">
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border pb-2">Equipamentos</h4>
+                  <div className="space-y-3">
+                    {equipmentEntries.length > 0 ? (
+                      equipmentEntries.map((e, idx) => (
+                        <div key={e.id ?? idx} className="flex items-center gap-3 p-3 rounded-2xl bg-muted/30 border border-border">
+                          <div className="h-10 w-10 shrink-0 rounded-xl bg-card border border-border flex items-center justify-center">
+                            <Package className="text-muted-foreground" size={18} />
+                          </div>
+                          <p className="flex-1 min-w-0 text-sm font-semibold text-foreground truncate">{e.name || 'Equipamento sem nome'}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Nenhum equipamento avulso nesta reserva.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
                   <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border pb-2">Serviços</h4>
                   <div className="space-y-2">
                     {requiredServices.length > 0 ? (
                       requiredServices.map((s, idx) => (
-                        <div key={idx} className="flex items-center gap-3 p-3 rounded-2xl border border-border">
+                        <div key={idx} className="flex flex-wrap items-center gap-3 p-3 rounded-2xl border border-border">
                           <Zap size={14} className="text-primary shrink-0" />
                           <span className="text-sm font-semibold text-foreground">{s}</span>
+                          {kitOnlyServices.has(s) && <Badge variant="outline" size="sm">Incluso no kit</Badge>}
                         </div>
                       ))
                     ) : (
@@ -1203,12 +1375,48 @@ export const BookingDetailPage = () => {
                     <h3 className="text-xs font-medium uppercase tracking-wider">Valor da reserva</h3>
                   </div>
                   {/* Auditoria do orçamento (12/11/2026), O3: "Em preparação" no pedido ainda sem valor, como no cliente. */}
-                  <p className="text-3xl font-bold break-words">{formatBookingTotal(booking.totalPrice)}</p>
+                  <p className="text-3xl font-bold break-words">{formatBookingTotal(pricing.total)}</p>
                   <p className="mt-3 inline-flex items-center rounded-full border border-primary-foreground/30 bg-primary-foreground/10 px-2.5 py-0.5 text-xs font-semibold">
                     Pagamento: {formatBookingPaymentStatus(booking.paymentStatus)}
                   </p>
                 </div>
-                <div className="p-4 sm:p-6">
+                <div className="p-4 sm:p-6 space-y-6">
+                  {/* O14/C4: as linhas da proposta como o cliente vê (página do cliente, link e PDFs): itens, frete,
+                      pedágio, desconto do cupom e ajuste no valor final. Antes, só o total. */}
+                  {(pricing.lines.length > 0 || pricing.couponDiscount) && (
+                    <div className="space-y-2 text-sm">
+                      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">O que o cliente vê</h4>
+                      {pricing.lines.length > 0 && (
+                        <ul className="space-y-2" aria-label="Linhas da proposta">
+                          {pricing.lines.map((line, idx) => (
+                            <li key={idx} className="flex justify-between gap-3">
+                              <span className="text-muted-foreground min-w-0 break-words">
+                                {line.quantity > 1 ? `${line.quantity}× ` : ''}{line.description}
+                              </span>
+                              <span className="font-medium text-foreground shrink-0">{formatPricingLineTotal(line)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {pricing.couponDiscount && (
+                        <div className="flex justify-between gap-3">
+                          <span className="text-muted-foreground">Desconto{pricing.couponDiscount.code ? ` (${pricing.couponDiscount.code})` : ''}:</span>
+                          <span className="font-medium text-foreground shrink-0">− {formatPrice(pricing.couponDiscount.amount)}</span>
+                        </div>
+                      )}
+                      {pricing.adjustment !== 0 && (
+                        <div className="flex justify-between gap-3">
+                          <span className="text-muted-foreground">Ajuste no valor final:</span>
+                          <span className="font-medium text-foreground shrink-0">{pricing.adjustment < 0 ? '− ' : '+ '}{formatPrice(Math.abs(pricing.adjustment))}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between gap-3 border-t border-border pt-2 font-semibold">
+                        <span className="text-foreground">Total:</span>
+                        <span className="text-foreground shrink-0">{formatBookingTotal(pricing.total)}</span>
+                      </div>
+                      {toArrangeNote(pricing.lines) && <p className="text-xs text-muted-foreground">{toArrangeNote(pricing.lines)}</p>}
+                    </div>
+                  )}
                   <BookingFinancialSummary booking={booking} />
                 </div>
               </Card>
@@ -1396,7 +1604,9 @@ export const BookingDetailPage = () => {
         <div className="min-w-0">
           <AdminBookingForm
             initialData={editInitialData}
-            onSuccess={() => { setEditModalOpen(false); fetchBooking(); }}
+            // Auditoria do orçamento (12/11/2026): a edição pode mudar o que o link mostra; o Histórico recarrega para
+            // marcar o envio que ficou para trás.
+            onSuccess={() => { setEditModalOpen(false); fetchBooking(); setProposalHistoryKey((key) => key + 1); }}
             onDirtyChange={setEditDirty}
             onCancel={() => guardClose(() => setEditModalOpen(false))}
           />

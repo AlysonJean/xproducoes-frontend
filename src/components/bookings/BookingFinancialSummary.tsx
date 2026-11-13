@@ -1,7 +1,7 @@
 import React from 'react';
 import { BookingDetails } from '@/types/types';
 import { DollarSign, TrendingUp, Users, Package } from 'lucide-react';
-import { formatPrice } from '@/utils/formatPrice';
+import { formatBookingTotal, formatPrice } from '@/utils/formatPrice';
 import { isActiveAssignmentStatus } from '@/utils/assignmentStatus';
 
 interface BookingFinancialSummaryProps {
@@ -17,6 +17,23 @@ const getMarginTone = (m: number) => {
   return 'text-destructive bg-destructive/10 border-destructive/20';
 };
 
+// Auditoria do orçamento (12/11/2026), O16 (exibição): o custo de cada escala. Os valores chegam do banco como texto
+// ("300.00", "0.00"). Antes, um totalPayment "0.00" (texto não vazio) contava como preenchido e escondia o valor por
+// hora × horas que o "Alocar equipe e confirmar" manda; e a escala só com cachê fixo (fixedRate) ficava fora do custo.
+// Ordem: o total gravado; sem ele, valor por hora × horas; sem os dois, o cachê fixo.
+type CrewCostFields = { totalPayment?: unknown; hourlyRate?: unknown; totalHours?: unknown; fixedRate?: unknown };
+const amount = (value: unknown): number => {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
+const assignmentCost = (assignment: CrewCostFields): number => {
+  const total = amount(assignment.totalPayment);
+  if (total > 0) return total;
+  const byHour = Math.round(amount(assignment.hourlyRate) * amount(assignment.totalHours) * 100) / 100;
+  if (byHour > 0) return byHour;
+  return amount(assignment.fixedRate);
+};
+
 export const BookingFinancialSummary: React.FC<BookingFinancialSummaryProps> = ({ booking }) => {
   // Cálculo de Receita
   const revenue = Number(booking.totalPrice || 0);
@@ -25,19 +42,10 @@ export const BookingFinancialSummary: React.FC<BookingFinancialSummaryProps> = (
   // contagem; a linha continua em "Colaboradores atribuídos", com o selo "Escala cancelada".
   const crew = (booking.eventCollaborators || []).filter((assignment) => isActiveAssignmentStatus(assignment.status));
 
-  // Cálculo de Custos de Equipe
-  const collaboratorsCost = crew.reduce((acc, curr) => {
-    // Usa totalPayment se existir
-    if (curr.totalPayment) return acc + Number(curr.totalPayment);
-
-    // Fallback: Tenta calcular baseado em horas e taxa
-    // Se hourlyRate não estiver explícito na atribuição, teria que pegar do colaborador, mas vamos assumir 0 no fallback seguro
-    if (curr.totalHours && curr.hourlyRate) { // hourlyRate não está tipado diretamente no eventCollaborator da interface bookingDetails, mas vamos checar
-        return acc + (Number(curr.totalHours) * Number(curr.hourlyRate || 0));
-    }
-
-    return acc;
-  }, 0);
+  // Cálculo de Custos de Equipe (O16: total gravado, valor por hora × horas ou cachê fixo; ver assignmentCost)
+  const collaboratorsCost = crew.reduce((acc, curr) => acc + assignmentCost(curr), 0);
+  // Escala ativa sem valor nenhum: o custo dela entra como R$ 0, e a ficha avisa.
+  const crewWithoutCost = crew.filter((assignment) => assignmentCost(assignment) === 0).length;
 
   // Custos de Equipamentos (fixo ou estimado? Por enquanto 0, futuramente pode vir do cadastro de equipment.replacementCost se quebrar, mas aqui é custo operacional?)
   // Vamos considerar custo 0 para equipamentos próprios por enquanto, ou adicionar campo no futuro.
@@ -58,9 +66,12 @@ export const BookingFinancialSummary: React.FC<BookingFinancialSummaryProps> = (
           <DollarSign className="w-5 h-5 text-primary" />
           Financeiro
         </h4>
-        <span className={`px-3 py-1 rounded-full text-sm font-bold border ${tone}`}>
-          Margem: {margin.toFixed(1)}%
-        </span>
+        {/* O3: sem valor da reserva ("Em preparação") não há margem a mostrar (antes, "Margem: 0.0%" em vermelho). */}
+        {revenue > 0 && (
+          <span className={`px-3 py-1 rounded-full text-sm font-bold border ${tone}`}>
+            Margem: {margin.toFixed(1)}%
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-3">
@@ -70,7 +81,7 @@ export const BookingFinancialSummary: React.FC<BookingFinancialSummaryProps> = (
             <Package className="w-4 h-4" /> Receita total
           </p>
           <p className="text-xl font-bold text-foreground break-words">
-            {formatPrice(revenue)}
+            {formatBookingTotal(revenue)}
           </p>
         </div>
 
@@ -85,6 +96,11 @@ export const BookingFinancialSummary: React.FC<BookingFinancialSummaryProps> = (
           <p className="text-xs text-muted-foreground mt-1">
             {crew.length} colaboradores
           </p>
+          {crewWithoutCost > 0 && (
+            <p className="text-xs text-warning mt-1">
+              {crewWithoutCost === 1 ? '1 sem valor definido' : `${crewWithoutCost} sem valor definido`} (entra como R$ 0,00)
+            </p>
+          )}
         </div>
 
         {/* Lucro */}

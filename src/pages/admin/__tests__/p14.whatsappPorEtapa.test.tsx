@@ -5,7 +5,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 // P14 (aprovada em 02/11/2026), parte 2: "o WhatsApp ao cliente vira botões 'Enviar no WhatsApp' com texto pronto em
 // cada etapa". Antes a ficha só tinha os avisos amarrados à troca de status (que paravam sem telefone) e o
 // "PDF + WhatsApp"; não havia botão de recebimento, véspera nem avaliação, e o WhatsApp do painel contava como
-// conversão no GA (D7: o GA não recebe o painel).
+// conversão no GA (D7: o GA não recebe o painel). Auditoria do orçamento (12/11/2026), E8: o "PDF + WhatsApp" virou
+// "Enviar link pelo WhatsApp".
 const { bookingAPI, addNotification, gaEvent } = vi.hoisted(() => ({
   bookingAPI: {
     getById: vi.fn(), updateStatus: vi.fn(), updateDeliveryStatus: vi.fn(), delete: vi.fn(), confirmWithDetails: vi.fn(),
@@ -206,19 +207,24 @@ describe('BookingDetailPage — WhatsApp por etapa (P14 parte 2)', () => {
     expect(gaEvent).not.toHaveBeenCalled();
   });
 
-  it('"PDF + WhatsApp": o texto da proposta em PDF, aberto no clique, sem evento do GA', async () => {
-    await renderFicha({ ...base, status: 'CONFIRMED' });
+  // Auditoria do orçamento (12/11/2026), E8: o "PDF + WhatsApp" (PDF parado no valor do dia, "Segue em PDF a proposta")
+  // virou "Enviar link pelo WhatsApp": o envio do "Enviar proposta" e o texto com o link, que mostra a reserva atual.
+  it('"Enviar link pelo WhatsApp": o texto da proposta com o link, aberto no clique de "Abrir WhatsApp", sem evento do GA', async () => {
+    bookingAPI.sendProposal.mockResolvedValue({
+      data: { link: 'https://xproducoeseeventos.com.br/proposta#token=t1', expiresAt: '2027-12-10T02:59:59.999Z', email: { status: 'queued' } },
+    });
+    await renderFicha(base);
+    expect(screen.queryByRole('button', { name: 'PDF + WhatsApp' })).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'PDF + WhatsApp' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar link pelo WhatsApp' }));
+    const janela = await screen.findByRole('dialog', { name: 'Proposta enviada' });
+    fireEvent.click(within(janela).getByRole('button', { name: 'Abrir WhatsApp' }));
 
     expect(open).toHaveBeenCalledTimes(1);
-    expect(aberto().texto).toBe([
-      'Olá, Ana! Segue em PDF a proposta do seu evento "Formatura da Ana" (20/12/2027).',
-      'Valor total: R$ 900,00.',
-      'Para ajustar algo ou confirmar, é só responder esta mensagem.',
-    ].join('\n'));
+    expect(aberto().para).toBe('https://wa.me/5531988887777');
+    expect(aberto().texto).toContain('https://xproducoeseeventos.com.br/proposta#token=t1');
+    expect(aberto().texto).not.toContain('Segue em PDF');
     expect(gaEvent).not.toHaveBeenCalled();
-    await waitFor(() => expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({ title: 'WhatsApp aberto' })));
   });
 
   it('cartão Histórico: e-mails da reserva que saíram ou falharam e o pedido de avaliação, em palavras simples', async () => {

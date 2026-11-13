@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type Ref } from 'react';
 import axios from 'axios';
 import { Copy, MessageSquare, RefreshCw, Send } from 'lucide-react';
 import { Alert, Button, ConfirmModal, Modal } from '@/components/ui/StandardComponents';
@@ -66,6 +66,12 @@ interface SendProposalPanelProps {
   };
   /** Depois de cada envio: a ficha recarrega (o rascunho vira pendente) e o histórico também. */
   onSent: () => void;
+  /**
+   * Auditoria do orçamento (12/11/2026), E8: o botão de envio ("Enviar proposta"/"Reenviar proposta"), para a ficha
+   * acionar o mesmo envio pelo "Enviar link pelo WhatsApp" do cabeçalho e pôr o foco nele quando vem da Proposta
+   * Rápida, sem depender da ordem dos botões do painel.
+   */
+  sendButtonRef?: Ref<HTMLButtonElement>;
 }
 
 const errorMessage = (error: unknown): string => {
@@ -80,7 +86,7 @@ const sentAtText = new Intl.DateTimeFormat('pt-BR', {
   timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
 });
 
-export function SendProposalPanel({ booking, onSent }: SendProposalPanelProps) {
+export function SendProposalPanel({ booking, onSent, sendButtonRef }: SendProposalPanelProps) {
   const { addNotification } = useNotifications();
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<SendProposalResult | null>(null);
@@ -158,7 +164,7 @@ export function SendProposalPanel({ booking, onSent }: SendProposalPanelProps) {
       {lastSent?.changedSinceSent !== true && lastSent?.expired === true && (
         <Alert variant="warning" title="A proposta venceu" description="Reenvie para o link voltar a abrir, com 7 dias novos de validade." />
       )}
-      <Button fullWidth size="sm" variant="secondary" onClick={startSend} isLoading={sending && !result} leftIcon={<Send className="h-4 w-4" />}>
+      <Button ref={sendButtonRef} fullWidth size="sm" variant="secondary" onClick={startSend} isLoading={sending && !result} leftIcon={<Send className="h-4 w-4" />}>
         {lastSent ? 'Reenviar proposta' : 'Enviar proposta'}
       </Button>
 

@@ -77,7 +77,9 @@ const waMe = (open: MockInstance<typeof window.open>) => {
 // Achado (auditoria ponta a ponta): os botões manuais da ficha (PDF + WhatsApp, avisos de status) e o
 // PDF usavam o telefone e o e-mail do cadastro antes dos informados na reserva — a proposta de Ana ia
 // para o WhatsApp de outro cliente —, e os avisos de status abriam o wa.me sem o DDI (31 é a Holanda).
-// O servidor já usa o contato da reserva primeiro (whatsappService.bookingPhone).
+// O servidor já usa o contato da reserva primeiro (whatsappService.bookingPhone). Auditoria do orçamento
+// (12/11/2026), E8: o "PDF + WhatsApp" saiu; o link pelo WhatsApp sai do "Enviar proposta" (o contato dele está em
+// BookingDetailPage.auditoriaOrcamento.test.tsx).
 describe('BookingDetailPage — contato do cliente nos botões manuais', () => {
   let open: MockInstance<typeof window.open>;
 
@@ -100,13 +102,13 @@ describe('BookingDetailPage — contato do cliente nos botões manuais', () => {
     expect(screen.queryByText('dono@empresa.test')).not.toBeInTheDocument();
   });
 
-  it('"PDF + WhatsApp": o PDF e a conversa usam o contato da reserva, com DDI', async () => {
+  it('"Baixar PDF": o PDF usa o contato da reserva, não o do cadastro', async () => {
     await renderFicha(reservaNoCadastroDoAdmin);
 
-    fireEvent.click(screen.getByRole('button', { name: 'PDF + WhatsApp' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar PDF' }));
 
-    await waitFor(() => expect(open).toHaveBeenCalledTimes(1));
-    expect(waMe(open)).toBe('https://wa.me/5531988887777');
+    await waitFor(() => expect(pdfText).toHaveBeenCalledWith('(31) 98888-7777', expect.any(Number), expect.any(Number)));
+    expect(open).not.toHaveBeenCalled();
     const escritos = pdfText.mock.calls.map((c) => c[0]);
     expect(escritos).toContain('(31) 98888-7777');
     expect(escritos).toContain('ana@cliente.test');
