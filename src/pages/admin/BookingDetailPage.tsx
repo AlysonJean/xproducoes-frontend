@@ -398,6 +398,12 @@ export const BookingDetailPage = () => {
 
   const handleConfirmWithDetails = async () => {
     if (!booking?.id) return;
+    // Auditoria do orçamento (12/11/2026), O33 (junção da onda 2): o servidor recusa valor final zero ou negativo com
+    // "Dados de entrada inválidos"; a ficha para antes, com o motivo (como a agenda). Em branco, fica o valor de hoje.
+    if (confirmPrice.trim() !== '' && !(Number(confirmPrice) > 0)) {
+      addNotification({ type: 'error', title: 'Valor inválido', message: 'O valor final precisa ser maior que zero. Em branco, fica o valor de hoje.' });
+      return;
+    }
     try {
       setActionLoading(true);
             const payload: { totalPrice?: number; collaborators?: Array<{ collaboratorId: string; role: string }> } = {};
@@ -415,8 +421,9 @@ export const BookingDetailPage = () => {
       await fetchBooking();
       setConfirmModalOpen(false);
       addNotification({ type: 'success', title: 'Reserva confirmada', message: 'Valor e equipe salvos.' });
-        } catch {
-      addNotification({ type: 'error', title: 'Erro ao confirmar', message: 'Não foi possível confirmar a reserva.' });
+        } catch (e: unknown) {
+      // O motivo do servidor (409 de equipamento em uso, colaborador sem acesso, 400) em vez do genérico.
+      addNotification({ type: 'error', title: 'Erro ao confirmar', message: e instanceof Error && e.message ? e.message : 'Não foi possível confirmar a reserva.' });
     } finally {
       setActionLoading(false);
     }
@@ -1515,7 +1522,7 @@ export const BookingDetailPage = () => {
           <Alert variant="info" title="Confira o valor" description="Revise o valor final do serviço antes de confirmar e alocar a equipe." />
           <div className="space-y-4">
             <Input
-              label="Valor total do serviço (R$)"
+              label="Valor final, com frete e pedágio (R$)"
               type="number"
               step="0.01"
               value={confirmPrice}
@@ -1583,8 +1590,8 @@ export const BookingDetailPage = () => {
               await fetchBooking();
               setEventModalOpen(false);
               addNotification({ type: 'success', title: 'Equipe salva', message: 'Equipe alocada e reserva confirmada.' });
-            } catch {
-              addNotification({ type: 'error', title: 'Erro ao salvar equipe', message: 'Não foi possível salvar a equipe.' });
+            } catch (e: unknown) {
+              addNotification({ type: 'error', title: 'Erro ao salvar equipe', message: e instanceof Error && e.message ? e.message : 'Não foi possível salvar a equipe.' });
             } finally {
               setActionLoading(false);
             }
