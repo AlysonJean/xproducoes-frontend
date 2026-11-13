@@ -7,7 +7,18 @@
 // anterior da API durante o deploy), faz a mesma conta, conferida pelo mesmo vetor de casos nos testes
 // dos dois lados.
 
+import { formatPrice } from './formatPrice';
+
 type Money = number | string | null | undefined;
+
+/**
+ * Auditoria do orçamento (12/11/2026), O21/D9: linha de frete ou de pedágio sem preço ("Frete a combinar" quando o
+ * frete não deu para calcular; "Pedágio à parte" quando há pedágio sem preço). Vale R$ 0 sem ser de graça: as telas
+ * mostram "a combinar"/"à parte" no lugar de "R$ 0,00" e dizem que o total não a inclui. Quem marca é o servidor
+ * (toArrangeKind em backend/src/services/booking/bookingPricing.ts, que manda `toArrange` na linha); a conta daqui
+ * é o espelho para a resposta sem `pricing`: item personalizado, valor zero e a descrição gravada.
+ */
+export type ToArrangeKind = 'freight' | 'toll';
 
 export interface BookingPricingLine {
   description: string;
@@ -19,6 +30,8 @@ export interface BookingPricingLine {
   equipmentId: string | null;
   serviceId: string | null;
   kitId: string | null;
+  /** O21/D9: só nas linhas sem preço (frete a combinar, pedágio à parte). */
+  toArrange?: ToArrangeKind;
 }
 
 export interface BookingPricing {
@@ -65,6 +78,41 @@ const toCents = (value: Money): number => {
   return Number.isFinite(n) ? Math.round(n * 100) : 0;
 };
 const fromCents = (cents: number): number => cents / 100;
+
+/** O21/D9: a mesma marca do servidor (toArrangeKind), para a resposta sem `pricing`. */
+export function toArrangeKind(item: { itemType?: string | null; totalPrice?: Money; description?: string | null }): ToArrangeKind | null {
+  if (item.itemType && item.itemType !== 'CUSTOM') return null;
+  if (Math.max(0, toCents(item.totalPrice)) !== 0) return null;
+  const text = (item.description ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  if (/^frete\b/.test(text) && /\ba combinar\b/.test(text)) return 'freight';
+  if (/^pedagio\b/.test(text) && /\ba parte\b/.test(text)) return 'toll';
+  return null;
+}
+
+/** O que a tela escreve no lugar do valor da linha sem preço. */
+export const TO_ARRANGE_TEXT: Record<ToArrangeKind, string> = { freight: 'a combinar', toll: 'à parte' };
+
+/** O valor da linha como as telas mostram: "a combinar"/"à parte" na linha sem preço, o preço nas outras. */
+export function formatPricingLineTotal(line: { total: number; toArrange?: ToArrangeKind | null }): string {
+  return line.toArrange ? TO_ARRANGE_TEXT[line.toArrange] : formatPrice(line.total);
+}
+
+/** Os tipos de linha sem preço, sem repetir, o frete antes do pedágio. */
+export function toArrangeKinds(lines: Array<{ toArrange?: ToArrangeKind | null }>): ToArrangeKind[] {
+  const kinds = new Set(lines.map((line) => line.toArrange).filter(Boolean));
+  return (['freight', 'toll'] as const).filter((kind) => kinds.has(kind));
+}
+
+/** A frase de quando o total não inclui o frete ou o pedágio (a mesma do e-mail da proposta); null sem eles. */
+export function toArrangeNote(lines: Array<{ toArrange?: ToArrangeKind | null }>): string | null {
+  const kinds = toArrangeKinds(lines);
+  const freight = kinds.includes('freight');
+  const toll = kinds.includes('toll');
+  if (freight && toll) return 'O frete (a combinar) e o pedágio (à parte) não estão no total.';
+  if (freight) return 'O frete ainda vai ser combinado com a equipe e não está no total.';
+  if (toll) return 'O pedágio é cobrado à parte e não está no total.';
+  return null;
+}
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -214,17 +262,21 @@ export function serviceLine(service: ServicePricingInput, hours: number | null):
 /** O resumo de preço da reserva: o da API (`pricing`) quando veio; sem ele, a mesma conta do servidor. */
 export function bookingPricing(b: PricedBookingLike): BookingPricing {
   if (b.pricing && typeof b.pricing.total === 'number' && Array.isArray(b.pricing.lines)) return b.pricing;
-  const lines: BookingPricingLine[] = (b.items ?? []).map((item) => ({
-    description: item.description,
-    quantity: item.quantity && item.quantity > 0 ? item.quantity : 1,
-    unitPrice: fromCents(toCents(item.unitPrice)),
-    discount: fromCents(toCents(item.discount)),
-    total: fromCents(Math.max(0, toCents(item.totalPrice))),
-    type: item.itemType || 'CUSTOM',
-    equipmentId: item.equipmentId ?? null,
-    serviceId: item.serviceId ?? null,
-    kitId: item.kitId ?? null,
-  }));
+  const lines: BookingPricingLine[] = (b.items ?? []).map((item) => {
+    const toArrange = toArrangeKind(item);
+    return {
+      description: item.description,
+      quantity: item.quantity && item.quantity > 0 ? item.quantity : 1,
+      unitPrice: fromCents(toCents(item.unitPrice)),
+      discount: fromCents(toCents(item.discount)),
+      total: fromCents(Math.max(0, toCents(item.totalPrice))),
+      type: item.itemType || 'CUSTOM',
+      equipmentId: item.equipmentId ?? null,
+      serviceId: item.serviceId ?? null,
+      kitId: item.kitId ?? null,
+      ...(toArrange ? { toArrange } : {}),
+    };
+  });
   const subtotalCents = lines.reduce((sum, l) => sum + toCents(l.total), 0);
   const couponCents = Math.max(0, toCents(b.discountAmount));
   const totalCents = Math.max(0, toCents(b.totalPrice));

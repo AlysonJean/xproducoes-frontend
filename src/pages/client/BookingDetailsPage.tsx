@@ -6,8 +6,8 @@ import { ArrowLeft, FileDown, FileText, Mail, MessageCircle, Plus, Trash2, Uploa
 import { apiFetch } from '@/services/api';
 import type { BookingDetails } from '@/types/types';
 import { formatBookingTotal, formatPrice, hasBookingTotal } from '@/utils/formatPrice';
-import { bookingPricing } from '@/utils/bookingPricing';
-import { bookingStatusVariant, clientBookingStatusLabel } from '@/utils/bookingStatus';
+import { bookingPricing, formatPricingLineTotal, toArrangeNote } from '@/utils/bookingPricing';
+import { bookingStatusVariant, clientBookingStatusLabel, clientProposalValidityText } from '@/utils/bookingStatus';
 import { Badge, Button, Card, ConfirmModal, Modal, buttonVariants } from '@/components/ui/StandardComponents';
 import { ClientPage, ClientPageError, ClientPageLoading } from '../../components/client/ClientPage';
 import { logger } from '../../utils/logger';
@@ -232,6 +232,10 @@ export const BookingDetailsPage = () => {
   // Pedido do briefing chega sem itens: o total fica zerado até a equipe preparar o orçamento.
   // Auditoria do orçamento (12/11/2026), O3: a mesma regra de formatBookingTotal; sem valor, nada de PDF da proposta.
   const hasPrice = hasBookingTotal(pricing.total);
+  // Auditoria do orçamento (12/11/2026), O21/D9: frete a combinar e pedágio à parte ficam fora do total, e a tela diz.
+  const toArrange = toArrangeNote(pricing.lines);
+  // O11/D6: a validade da proposta enviada (vencida: "peça uma nova").
+  const proposalValidity = clientProposalValidityText(booking);
   // D21: o cliente apaga comprovante só enquanto o pagamento não foi registrado (a mesma regra do servidor).
   const clientMayDeleteProof = booking.paymentStatus !== 'PAID' && booking.paymentStatus !== 'PARTIAL';
   // D20: texto pronto do contato com a equipe (o nome informado na reserva ou o da conta, o código inteiro
@@ -301,6 +305,7 @@ export const BookingDetailsPage = () => {
                   <Badge variant={bookingStatusVariant(booking.status)} size="lg">
                     {clientBookingStatusLabel(booking)}
                   </Badge>
+                  {proposalValidity && <p className="mt-2 text-sm text-muted-foreground">{proposalValidity}</p>}
                 </dd>
               </div>
             </dl>
@@ -426,7 +431,7 @@ export const BookingDetailsPage = () => {
                       <span className="text-muted-foreground min-w-0 break-words">
                         {line.quantity > 1 ? `${line.quantity}× ` : ''}{line.description}
                       </span>
-                      <span className="font-medium text-foreground shrink-0">{formatPrice(line.total)}</span>
+                      <span className="font-medium text-foreground shrink-0">{formatPricingLineTotal(line)}</span>
                     </li>
                   ))}
                 </ul>
@@ -448,6 +453,7 @@ export const BookingDetailsPage = () => {
                   <span className="text-foreground">Total:</span>
                   <span className="text-primary">{formatBookingTotal(pricing.total)}</span>
                 </div>
+                {toArrange && <p className="mt-2 text-sm text-muted-foreground">{toArrange}</p>}
               </div>
             </div>
           </Card>

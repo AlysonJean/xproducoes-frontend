@@ -64,10 +64,57 @@ export const deliveryStatusLabel = (status?: string | null) =>
 // reserva pendente cuja proposta a equipe enviou ("Enviar proposta" da ficha; a API manda proposal.sentAt) ganha este
 // rótulo; sem envio, o de sempre ("Pendente"). O valor ainda sem preço continua "Em preparação" (formatBookingTotal):
 // só dá para enviar proposta com valor.
+// Auditoria do orçamento (12/11/2026), O11/D6: a proposta vencida continuava "aguardando sua resposta" (o link já dizia
+// "venceu"). Agora ela aparece como vencida, e o cliente vê a validade.
 export const PROPOSAL_SENT_LABEL = 'Proposta enviada — aguardando sua resposta';
+export const PROPOSAL_EXPIRED_LABEL = 'Proposta vencida — peça uma nova';
 
-export const clientBookingStatusLabel = (booking: {
-  status?: string | null;
-  proposal?: { sentAt?: string | null } | null;
-}): string =>
-  booking.status === 'PENDING' && booking.proposal?.sentAt ? PROPOSAL_SENT_LABEL : bookingStatusLabel(booking.status);
+/**
+ * O resumo da proposta que a API manda em cada reserva (`proposal`, backend/src/services/proposal/proposalService.ts):
+ * sentAt (último envio), validUntil (a validade que vale: fim do dia em Brasília, nunca depois da véspera do evento),
+ * expired (venceu), sentTotal (o total que o link mostrava no último envio) e changedSinceSent (a reserva mudou
+ * depois do último envio). Sem envio, só sentAt nulo; os outros campos podem faltar (resposta antiga).
+ */
+export interface ProposalSummaryView {
+  sentAt?: string | null;
+  validUntil?: string | null;
+  expired?: boolean;
+  sentTotal?: number | null;
+  changedSinceSent?: boolean | null;
+}
+
+type ClientProposalBooking = { status?: string | null; proposal?: ProposalSummaryView | null };
+
+/** Proposta enviada de reserva pendente que já venceu: a conta do servidor (expired) ou a validade já passada. */
+export const proposalExpiredForClient = (booking: ClientProposalBooking, now: number = Date.now()): boolean => {
+  const proposal = booking.proposal;
+  if (booking.status !== 'PENDING' || !proposal?.sentAt) return false;
+  if (proposal.expired === true) return true;
+  const until = proposal.validUntil ? Date.parse(proposal.validUntil) : NaN;
+  return Number.isFinite(until) && now > until;
+};
+
+export const clientBookingStatusLabel = (booking: ClientProposalBooking): string => {
+  if (booking.status === 'PENDING' && booking.proposal?.sentAt) {
+    return proposalExpiredForClient(booking) ? PROPOSAL_EXPIRED_LABEL : PROPOSAL_SENT_LABEL;
+  }
+  return bookingStatusLabel(booking.status);
+};
+
+const brasiliaDay = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric' });
+
+/**
+ * A validade para o cliente, na reserva pendente com proposta enviada: "Proposta válida até DD/MM/AAAA." ou, vencida,
+ * "A validade da proposta acabou em DD/MM/AAAA. Fale com a equipe para receber uma nova." null sem proposta enviada
+ * (ou sem a validade, numa resposta antiga, enquanto não venceu).
+ */
+export const clientProposalValidityText = (booking: ClientProposalBooking, now: number = Date.now()): string | null => {
+  const proposal = booking.proposal;
+  if (booking.status !== 'PENDING' || !proposal?.sentAt) return null;
+  const until = proposal.validUntil ? new Date(proposal.validUntil) : null;
+  const day = until && !Number.isNaN(until.getTime()) ? brasiliaDay.format(until) : null;
+  if (proposalExpiredForClient(booking, now)) {
+    return `A validade da proposta acabou${day ? ` em ${day}` : ''}. Fale com a equipe para receber uma nova.`;
+  }
+  return day ? `Proposta válida até ${day}.` : null;
+};

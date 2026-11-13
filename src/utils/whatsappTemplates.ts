@@ -4,10 +4,13 @@ import { bookingPricing, formatBRL, type PricedBookingLike } from './bookingPric
 
 // P14 e D11 (aprovadas em 02/11/2026): "o WhatsApp ao cliente vira botões 'Enviar no WhatsApp' com texto pronto em
 // cada etapa". Os textos que o painel manda ao cliente ficam aqui, um por etapa: recebimento, proposta, confirmação,
-// véspera e avaliação (e os avisos de cancelamento e de equipe a caminho, e a mensagem do "PDF + WhatsApp"). O botão
-// abre o WhatsApp com openWhatsAppUntracked (utils/whatsapp), sem o evento de conversão do GA (D7). Datas e horas no
-// horário de Brasília, qualquer que seja o fuso do aparelho; o código da reserva inteiro (formatBookingCode); o total
-// pela função de preço única (bookingPricing, P16), o mesmo da ficha e da página do cliente.
+// véspera e avaliação (e os avisos de cancelamento e de equipe a caminho). O botão abre o WhatsApp com
+// openWhatsAppUntracked (utils/whatsapp), sem o evento de conversão do GA (D7). Datas e horas no horário de Brasília,
+// qualquer que seja o fuso do aparelho; o código da reserva inteiro (formatBookingCode); o total pela função de preço
+// única (bookingPricing, P16), o mesmo da ficha e da página do cliente.
+// Auditoria do orçamento (12/11/2026), E8 e O2/C2 (decisão da dona de 12/11: o cliente visita o link, que mostra sempre
+// a reserva atual): saiu a mensagem do "PDF + WhatsApp" ("Segue em PDF a proposta", com o valor total); a proposta vai
+// pelo link (proposalWhatsAppText), sem total "parado" que possa divergir dele.
 
 /** O que os textos leem da reserva (a ficha do painel tem tudo isso). */
 export interface StageBooking extends PricedBookingLike {
@@ -56,7 +59,10 @@ export const requestReceivedWhatsAppText = (b: StageBooking): string => {
   ].join('\n');
 };
 
-/** Proposta pronta: o link seguro (/proposta#token=...) e a validade, com a data do evento no horário de Brasília. */
+/**
+ * Proposta pronta: o link seguro (/proposta#token=...) e a validade, com a data do evento no horário de Brasília. Sem
+ * o total (O2/C2): os itens e o valor de agora estão no link.
+ */
 export const proposalWhatsAppText = (p: {
   clientName?: string | null;
   eventTitle?: string | null;
@@ -109,17 +115,6 @@ export const reviewRequestWhatsAppText = (b: StageBooking, reviewLink: string): 
     'Se puder, conte como foi numa avaliação no Google. Leva menos de um minuto e ajuda muito o nosso trabalho:',
     reviewLink,
   ].join('\n');
-
-/** "PDF + WhatsApp" da ficha: a mensagem que acompanha o PDF da proposta, com o valor total. */
-export const proposalPdfWhatsAppText = (b: StageBooking): string => {
-  const date = formatBrasiliaDate(b.eventDate);
-  const total = totalText(b);
-  return [
-    `${greeting(b)} Segue em PDF a proposta do seu evento${quotedTitle(b)}${date ? ` (${date})` : ''}.`,
-    total && `Valor total: ${total}.`,
-    'Para ajustar algo ou confirmar, é só responder esta mensagem.',
-  ].filter(Boolean).join('\n');
-};
 
 // Avisos que acompanham a troca de status na ficha. Decisão do dono de 08/11/2026: no tom das outras etapas (primeiro
 // nome, código sem "#", sem maiúsculas), no lugar dos textos antigos ("foi CANCELADA em nosso sistema", "A CAMINHO").

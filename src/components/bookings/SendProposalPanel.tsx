@@ -5,6 +5,9 @@ import { Alert, Button, ConfirmModal, Modal } from '@/components/ui/StandardComp
 import { bookingAPI } from '@/services/api';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { bookingPhone, toWhatsAppNumber } from '@/utils/bookingContact';
+import { bookingPricing, toArrangeKinds, type PricedBookingLike, type ToArrangeKind } from '@/utils/bookingPricing';
+import type { ProposalSummaryView } from '@/utils/bookingStatus';
+import { formatPrice } from '@/utils/formatPrice';
 import { formatBrasiliaDate, openWhatsAppUntracked } from '@/utils/whatsapp';
 import { proposalWhatsAppText } from '@/utils/whatsappTemplates';
 
@@ -14,6 +17,14 @@ import { proposalWhatsAppText } from '@/utils/whatsappTemplates';
 // WhatsApp", "Copiar link" e "Gerar novo link". O WhatsApp é envio manual do admin: o botão abre o WhatsApp com o
 // texto pronto, sem o evento de conversão do GA, dentro do próprio clique (depois de um await o navegador bloquearia
 // a aba). Reenviar manda o mesmo link; "Gerar novo link" pede confirmação, porque o link anterior para de funcionar.
+// Auditoria do orçamento (12/11/2026), decisão da dona de 12/11 (o link mostra sempre a reserva atual):
+// - O2/C2: o painel mostra o valor enviado (o da última vez, do resumo `proposal` da reserva, e o deste envio, na
+//   janela) e avisa "A reserva mudou depois do último envio — reenvie a proposta" (proposal.changedSinceSent, conta do
+//   servidor). Com envio anterior, o botão vira "Reenviar proposta" (7 dias novos de validade).
+// - O21/D9: com frete a combinar ou pedágio à parte (linha marcada pelo servidor), o botão pede confirmação antes de
+//   enviar. Não bloqueia: o frete pode não ter saído (Google fora, endereço não achado) e o admin pode querer mandar já
+//   e combinar o valor depois; a janela do envio repete o aviso com o que o servidor viu na hora (a ficha pode estar
+//   desatualizada, outra aba).
 
 export type ProposalEmailStatus = 'queued' | 'skipped_no_email' | 'skipped_preference' | 'failed';
 
@@ -21,6 +32,9 @@ interface SendProposalResult {
   link: string;
   expiresAt: string;
   email: { status: ProposalEmailStatus };
+  /** O total que o link mostrava no envio (servidor novo; pode faltar durante o deploy). */
+  total?: number;
+  toArrange?: ToArrangeKind[];
 }
 
 const PROPOSAL_EMAIL_STATUS_TEXT: Record<ProposalEmailStatus, string> = {
@@ -30,14 +44,25 @@ const PROPOSAL_EMAIL_STATUS_TEXT: Record<ProposalEmailStatus, string> = {
   failed: 'O e-mail não saiu. Mande o link pelo WhatsApp ou copie o link.',
 };
 
+const TO_ARRANGE_NAME: Record<ToArrangeKind, string> = { freight: 'frete a combinar', toll: 'pedágio à parte' };
+const toArrangeNames = (kinds: ToArrangeKind[]) => kinds.map((kind) => TO_ARRANGE_NAME[kind]).join(' e ');
+
+/** O aviso antes de enviar com linha sem preço. */
+const toArrangeConfirmText = (kinds: ToArrangeKind[]): string =>
+  kinds.length > 1
+    ? `A proposta tem ${toArrangeNames(kinds)}. No link, o cliente vê esses itens sem valor ("a combinar"/"à parte"), e o total não os inclui. Para mandar com o valor, edite a reserva antes de enviar.`
+    : `A proposta tem ${toArrangeNames(kinds)}. No link, o cliente vê esse item sem valor ("a combinar"/"à parte"), e o total não o inclui. Para mandar com o valor, edite a reserva antes de enviar.`;
+
 interface SendProposalPanelProps {
-  booking: {
+  booking: PricedBookingLike & {
     id: string;
     eventTitle?: string | null;
     eventDate?: string | null;
     clientName?: string | null;
     clientContact?: string | null;
     client?: { phone?: string | null; user?: { name?: string | null; email?: string | null } | null } | null;
+    /** O resumo da proposta que a ficha recebe da API (GET /bookings/:id). */
+    proposal?: ProposalSummaryView | null;
   };
   /** Depois de cada envio: a ficha recarrega (o rascunho vira pendente) e o histórico também. */
   onSent: () => void;
@@ -51,12 +76,20 @@ const errorMessage = (error: unknown): string => {
   return 'Não foi possível enviar a proposta agora. Tente de novo em alguns instantes.';
 };
 
+const sentAtText = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+});
+
 export function SendProposalPanel({ booking, onSent }: SendProposalPanelProps) {
   const { addNotification } = useNotifications();
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<SendProposalResult | null>(null);
   const [confirmRotate, setConfirmRotate] = useState(false);
+  const [confirmToArrange, setConfirmToArrange] = useState(false);
   const phone = toWhatsAppNumber(bookingPhone(booking));
+  const lastSent = booking.proposal?.sentAt ? booking.proposal : null;
+  // O21/D9: as linhas sem preço da reserva como a ficha a tem (marcadas pelo servidor em `pricing`).
+  const toArrange = toArrangeKinds(bookingPricing(booking).lines);
 
   const send = async (rotate: boolean) => {
     setSending(true);
@@ -70,7 +103,13 @@ export function SendProposalPanel({ booking, onSent }: SendProposalPanelProps) {
     } finally {
       setSending(false);
       setConfirmRotate(false);
+      setConfirmToArrange(false);
     }
+  };
+
+  const startSend = () => {
+    if (toArrange.length > 0) setConfirmToArrange(true);
+    else void send(false);
   };
 
   const whatsappText = result
@@ -98,11 +137,29 @@ export function SendProposalPanel({ booking, onSent }: SendProposalPanelProps) {
   };
 
   const emailOk = result?.email.status === 'queued';
+  const sentToArrange = result?.toArrange ?? [];
 
   return (
     <>
-      <Button fullWidth size="sm" variant="secondary" onClick={() => send(false)} isLoading={sending && !result} leftIcon={<Send className="h-4 w-4" />}>
-        Enviar proposta
+      {lastSent && (
+        <p className="text-xs text-muted-foreground">
+          Último envio: {sentAtText.format(new Date(lastSent.sentAt as string)).replace(', ', ' às ')}
+          {typeof lastSent.sentTotal === 'number' ? ` · valor enviado ${formatPrice(lastSent.sentTotal)}` : ''}
+          {lastSent.validUntil ? ` · ${lastSent.expired ? 'venceu em' : 'vale até'} ${formatBrasiliaDate(lastSent.validUntil)}` : ''}
+        </p>
+      )}
+      {lastSent?.changedSinceSent === true && (
+        <Alert
+          variant="warning"
+          title="A reserva mudou depois do último envio — reenvie a proposta"
+          description="O link já mostra a reserva atual, mas o cliente não foi avisado. Reenviar manda o mesmo link e dá 7 dias novos de validade."
+        />
+      )}
+      {lastSent?.changedSinceSent !== true && lastSent?.expired === true && (
+        <Alert variant="warning" title="A proposta venceu" description="Reenvie para o link voltar a abrir, com 7 dias novos de validade." />
+      )}
+      <Button fullWidth size="sm" variant="secondary" onClick={startSend} isLoading={sending && !result} leftIcon={<Send className="h-4 w-4" />}>
+        {lastSent ? 'Reenviar proposta' : 'Enviar proposta'}
       </Button>
 
       <Modal isOpen={result !== null} onClose={() => setResult(null)} title="Proposta enviada" size="md">
@@ -114,6 +171,22 @@ export function SendProposalPanel({ booking, onSent }: SendProposalPanelProps) {
               description={PROPOSAL_EMAIL_STATUS_TEXT[result.email.status]}
             />
             <p className="text-sm text-foreground">A proposta vale até {formatBrasiliaDate(result.expiresAt)}.</p>
+            {typeof result.total === 'number' && (
+              <p className="text-sm text-foreground">
+                Valor enviado: {formatPrice(result.total)}. O link mostra sempre a reserva atual: se ela mudar, reenvie.
+              </p>
+            )}
+            {sentToArrange.length > 0 && (
+              <Alert
+                variant="warning"
+                title={`Enviada com ${toArrangeNames(sentToArrange)}`}
+                description={
+                  sentToArrange.length > 1
+                    ? 'No link, esses itens aparecem sem valor e ficam fora do total. Combine os valores com o cliente.'
+                    : 'No link, esse item aparece sem valor e fica fora do total. Combine o valor com o cliente.'
+                }
+              />
+            )}
 
             <div className="space-y-1">
               <label htmlFor={`proposal-link-${booking.id}`} className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -159,6 +232,18 @@ export function SendProposalPanel({ booking, onSent }: SendProposalPanelProps) {
           </div>
         )}
       </Modal>
+
+      <ConfirmModal
+        isOpen={confirmToArrange}
+        onClose={() => setConfirmToArrange(false)}
+        onConfirm={() => send(false)}
+        title={`Enviar com ${toArrangeNames(toArrange)}?`}
+        message={toArrangeConfirmText(toArrange)}
+        variant="warning"
+        isLoading={sending}
+        confirmText="Enviar assim mesmo"
+        cancelText="Voltar"
+      />
 
       <ConfirmModal
         isOpen={confirmRotate}

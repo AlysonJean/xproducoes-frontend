@@ -5,6 +5,7 @@ import { BrandLoader } from '@/components/ui/BrandLoader';
 import { Card } from '@/components/ui/StandardComponents';
 import { NoticeCard, PROPOSAL_HELP_TEXT, ProposalShell, WhatsAppLink } from '@/components/proposal/ProposalShell';
 import { formatPrice } from '@/utils/formatPrice';
+import { formatPricingLineTotal, toArrangeNote, type ToArrangeKind } from '@/utils/bookingPricing';
 import { buildProposalReplyText } from '@/utils/whatsapp';
 
 // P15 (aprovada em 02/11/2026), parte 1: página da proposta, sem login, só de leitura. Achado: a página antiga
@@ -20,11 +21,16 @@ import { buildProposalReplyText } from '@/utils/whatsapp';
 // A página não tem Analytics (utils/analyticsExclusions), sai com noindex e no-referrer e usa o layout mínimo do
 // App.tsx (components/proposal/ProposalShell). O botão do WhatsApp é um link comum para o wa.me: sem o evento de
 // conversão do GA, e o texto leva título e data, nunca o link.
+// Auditoria do orçamento (12/11/2026): o link mostra sempre a reserva atual (decisão da dona de 12/11). O21/D9: as
+// linhas sem preço (frete a combinar, pedágio à parte; o servidor manda toArrange) aparecem como "a combinar"/"à
+// parte", nunca R$ 0,00, com a frase de que o total não as inclui. O11/D6: o link vencido responde 410 e a página diz
+// "Este link venceu ou foi trocado. Peça um novo link à equipe."
 
 interface ProposalLine {
   description: string;
   quantity: number;
   total: number;
+  toArrange?: ToArrangeKind;
 }
 
 interface OpenProposal {
@@ -79,6 +85,7 @@ function stateForError(error: unknown): ViewState {
 function OpenProposalView({ proposal }: { proposal: OpenProposal }) {
   const { pricing } = proposal;
   const place = [proposal.neighborhood, proposal.city].filter(Boolean).join(', ');
+  const toArrange = toArrangeNote(pricing.lines);
   return (
     <Card padding className="space-y-6">
       <div className="space-y-2">
@@ -116,7 +123,7 @@ function OpenProposalView({ proposal }: { proposal: OpenProposal }) {
                 <span className="min-w-0 break-words text-muted-foreground">
                   {line.quantity > 1 ? `${line.quantity}× ` : ''}{line.description}
                 </span>
-                <span className="shrink-0 font-medium text-foreground">{formatPrice(line.total)}</span>
+                <span className="shrink-0 font-medium text-foreground">{formatPricingLineTotal(line)}</span>
               </li>
             ))}
           </ul>
@@ -139,6 +146,7 @@ function OpenProposalView({ proposal }: { proposal: OpenProposal }) {
           <span className="text-foreground">Total:</span>
           <span className="text-primary">{formatPrice(pricing.total)}</span>
         </div>
+        {toArrange && <p className="text-sm text-muted-foreground">{toArrange}</p>}
       </div>
 
       <p className="flex items-center gap-2 text-sm font-medium text-foreground">

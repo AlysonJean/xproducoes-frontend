@@ -4,11 +4,12 @@ import {
   bookingConfirmedWhatsAppText,
   crewOnTheWayWhatsAppText,
   eventReminderWhatsAppText,
-  proposalPdfWhatsAppText,
+  proposalWhatsAppText,
   requestReceivedWhatsAppText,
   reviewRequestWhatsAppText,
   type StageBooking,
 } from '../whatsappTemplates';
+import * as templates from '../whatsappTemplates';
 
 // P14 (aprovada em 02/11/2026), parte 2: utils/whatsappTemplates é a fonte única dos textos de WhatsApp de cada etapa
 // (recebimento, proposta, confirmação, véspera e avaliação). Data e hora no horário de Brasília qualquer que seja o
@@ -79,14 +80,20 @@ describe('P14 parte 2 — textos de WhatsApp de cada etapa', () => {
     ].join('\n'));
   });
 
-  it('"PDF + WhatsApp": o PDF, a data e o total, sem os links de /cliente/painel e /cadastro de antes', () => {
-    const texto = proposalPdfWhatsAppText(RESERVA);
+  // Auditoria do orçamento (12/11/2026), E8 e O2/C2: a proposta vai pelo link, que mostra sempre a reserva atual. Saiu a
+  // mensagem do "PDF + WhatsApp" ("Segue em PDF a proposta", com o valor total); a do link não leva total nem PDF.
+  it('proposta: só o link e a validade, sem total "parado" nem PDF; a mensagem do "PDF + WhatsApp" não existe mais', () => {
+    const texto = proposalWhatsAppText({
+      clientName: 'Ana Souza', eventTitle: 'Formatura da Ana', eventDate: RESERVA.eventDate,
+      link: 'https://www.xproducoeseeventos.com.br/proposta#token=p1.TESTE', validUntil: '2027-12-15T02:59:59.999Z',
+    });
     expect(texto).toBe([
-      'Olá, Ana! Segue em PDF a proposta do seu evento "Formatura da Ana" (20/12/2027).',
-      'Valor total: R$ 1.350,00.',
-      'Para ajustar algo ou confirmar, é só responder esta mensagem.',
+      'Olá, Ana! A proposta do seu evento "Formatura da Ana" (20/12/2027) está pronta.',
+      'Veja os itens e o valor neste link: https://www.xproducoeseeventos.com.br/proposta#token=p1.TESTE',
+      'A proposta vale até 14/12/2027. Qualquer dúvida, é só responder esta mensagem.',
     ].join('\n'));
-    expect(texto).not.toMatch(/cadastro|painel|http/);
+    expect(texto).not.toMatch(/R\$|PDF/);
+    expect(templates).not.toHaveProperty('proposalPdfWhatsAppText');
   });
 
   it('o nome da conta vale quando a reserva não traz nome', () => {
