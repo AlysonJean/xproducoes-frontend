@@ -84,7 +84,8 @@ describe('BriefingPage', () => {
     fillVenueUnknown();
 
     tap('Som');
-    tap('Banda ao vivo');
+    // Auditoria do orçamento (12/11/2026), E11: o rótulo da banda mudou.
+    tap('Vai ter banda ao vivo (som para a banda)');
     type(/Quantas pessoas na banda/, '5');
     tap('Continuar');
 
@@ -105,7 +106,7 @@ describe('BriefingPage', () => {
     const [url, body, config] = post.mock.calls[0];
     expect(url).toBe('/bookings/guest');
     expect(body).toMatchObject({ source: 'briefing', status: 'PENDING', eventTitle: 'Casamento', location: 'A definir', city: 'Contagem', clientName: 'Ana Souza', clientEmail: 'ana@cliente.test' });
-    expect(body.specialRequests).toContain('Precisa de: Som, Banda ao vivo');
+    expect(body.specialRequests).toContain('Precisa de: Som, Vai ter banda ao vivo (som para a banda)');
     expect(body.specialRequests).toContain('Integrantes da banda: 5');
     expect(config.headers['Idempotency-Key']).toBeTruthy();
     expect(setAuthenticatedUser).toHaveBeenCalledWith({ id: 'u1', name: 'Ana' });
@@ -126,7 +127,7 @@ describe('BriefingPage', () => {
     expect(screen.queryByText(/se chover/)).toBeNull();
 
     tap('Voltar');
-    tap('Banda ao vivo');
+    tap('Vai ter banda ao vivo (som para a banda)');
     tap('Continuar');
     expect(screen.getByText(/A banda leva/)).toBeInTheDocument();
 

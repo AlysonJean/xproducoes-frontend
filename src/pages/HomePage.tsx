@@ -341,10 +341,11 @@ export const HomePage = () => {
             <div className="w-[1000px] h-[600px] bg-primary/10 blur-[180px] rounded-full" />
           </div>
           <div className="text-center mb-12">
-            <SectionEyebrow>Consultoria Express</SectionEyebrow>
+            {/* Auditoria do orçamento (12/11/2026), O27: o teste não abre mais o WhatsApp; leva ao pedido já preenchido. */}
+            <SectionEyebrow>Teste rápido</SectionEyebrow>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Mapeamento de Necessidades</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-              Responda a 3 perguntas rápidas e receba uma proposta pré-qualificada diretamente no WhatsApp.
+              Responda a 3 perguntas rápidas e continue o pedido de orçamento com as respostas já preenchidas.
             </p>
           </div>
           <div className="max-w-4xl mx-auto">

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useId, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import { ArrowLeft, ArrowRight, Check, Send } from 'lucide-react';
@@ -18,6 +18,7 @@ import {
   DJ_OPTIONS,
   EMPTY_BRIEFING,
   ENVIRONMENTS,
+  EVENT_CREW_OPTIONS,
   EVENT_TYPES,
   GUEST_RANGES,
   NEED_BAND,
@@ -25,6 +26,7 @@ import {
   NEEDS,
   VOLTAGES,
   YES_NO_UNKNOWN,
+  briefingPrefill,
   buildBriefingPayload,
   formatCep,
   isCompleteCep,
@@ -58,37 +60,48 @@ interface ChoiceProps {
   onSelect: (option: string) => void;
   error?: string;
   columns?: string;
+  /** Auditoria do orçamento (12/11/2026), E11: texto de ajuda da pergunta, ligado ao grupo (aria-describedby). */
+  hint?: string;
 }
 
 // Botões grandes, fáceis de tocar no celular. O mesmo componente serve para escolha única e múltipla.
-const Choice = ({ legend, options, selected, onSelect, error, columns = 'grid-cols-2' }: ChoiceProps) => (
-  <fieldset>
-    <legend className="mb-3 text-sm font-semibold text-foreground">{legend}</legend>
-    <div className={`grid gap-2 ${columns}`}>
-      {options.map((option) => {
-        const isSelected = Array.isArray(selected) ? selected.includes(option) : selected === option;
-        return (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={isSelected}
-            onClick={() => onSelect(option)}
-            className={`flex min-h-12 items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-sm font-medium text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-              isSelected ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/50'
-            }`}
-          >
-            <span>{option}</span>
-            {isSelected && <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />}
-          </button>
-        );
-      })}
-    </div>
-    <FieldError message={error} />
-  </fieldset>
-);
+const Choice = ({ legend, options, selected, onSelect, error, columns = 'grid-cols-2', hint }: ChoiceProps) => {
+  const hintId = useId();
+  return (
+    <fieldset aria-describedby={hint ? hintId : undefined}>
+      <legend className="mb-3 text-sm font-semibold text-foreground">{legend}</legend>
+      <div className={`grid gap-2 ${columns}`}>
+        {options.map((option) => {
+          const isSelected = Array.isArray(selected) ? selected.includes(option) : selected === option;
+          return (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={isSelected}
+              onClick={() => onSelect(option)}
+              className={`flex min-h-12 items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-sm font-medium text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                isSelected ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/50'
+              }`}
+            >
+              <span>{option}</span>
+              {isSelected && <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />}
+            </button>
+          );
+        })}
+      </div>
+      {hint && (
+        <p id={hintId} className="mt-2 text-sm text-muted-foreground">
+          {hint}
+        </p>
+      )}
+      <FieldError message={error} />
+    </fieldset>
+  );
+};
 
 export const BriefingPage: React.FC = () => {
   const navigate = useNavigate();
+  const { pathname, search } = useLocation();
   const { user, setAuthenticatedUser } = useAuth();
   const { addNotification } = useNotifications();
   const { save: saveDraft, load: loadDraft, clear: clearDraft } = useFormDraft<{ step: number; answers: Partial<BriefingAnswers> }>(DRAFT_KEY);
@@ -128,6 +141,22 @@ export const BriefingPage: React.FC = () => {
     }
     setDraftChecked(true);
   }, [loadDraft]);
+
+  // Auditoria do orçamento (12/11/2026), O27: respostas que vieram no endereço (teste da Home, página de painel de LED
+  // por cidade) entram por cima do rascunho, no primeiro passo, para a pessoa conferir; depois o endereço fica limpo,
+  // e recarregar a página não volta a trocar o que ela mudou.
+  useEffect(() => {
+    if (!draftChecked) return;
+    const prefill = briefingPrefill(search);
+    if (Object.keys(prefill).length === 0) return;
+    setAnswers((current) => ({
+      ...current,
+      ...prefill,
+      needs: prefill.needs ? [...new Set([...current.needs, ...prefill.needs])] : current.needs,
+    }));
+    setStep(0);
+    navigate(pathname, { replace: true });
+  }, [draftChecked, search, pathname, navigate]);
 
   // Nome, telefone e e-mail ficam fora do rascunho: o aparelho pode ser compartilhado.
   useEffect(() => {
@@ -242,7 +271,7 @@ export const BriefingPage: React.FC = () => {
   const hasBand = answers.needs.includes(NEED_BAND);
   const hasDj = answers.needs.includes(NEED_DJ);
   const outdoors = answers.environment === 'Ao ar livre';
-  const detailsAnswered = Boolean(answers.voltage || answers.setupTime || answers.soundLimit || answers.rainCover || answers.bandInstruments || answers.bandRider || answers.djOption);
+  const detailsAnswered = Boolean(answers.eventCrew || answers.voltage || answers.setupTime || answers.soundLimit || answers.rainCover || answers.bandInstruments || answers.bandRider || answers.djOption);
   const isLastStep = step === BRIEFING_STEPS.length - 1;
   const showAddress = answers.venueKnown === 'yes' && (manualAddress || isCompleteCep(answers.zipCode));
 
@@ -409,6 +438,15 @@ export const BriefingPage: React.FC = () => {
 
           {step === 3 && (
             <>
+              {/* Auditoria do orçamento (12/11/2026), E11: montar e buscar depois ou técnico durante todo o evento. */}
+              <Choice
+                legend="Montamos e buscamos depois, ou um técnico fica durante todo o evento?"
+                options={EVENT_CREW_OPTIONS}
+                selected={answers.eventCrew}
+                onSelect={(option) => pick('eventCrew', option)}
+                columns="grid-cols-1 sm:grid-cols-3"
+                hint="O técnico entra na proposta como item, pelas horas do evento, quando não vem no kit."
+              />
               <Choice legend="As tomadas do local são de qual tensão?" options={VOLTAGES} selected={answers.voltage} onSelect={(option) => pick('voltage', option)} columns="grid-cols-3" />
               <Input label="A partir de que horas podemos montar?" type="time" value={answers.setupTime} onChange={(event) => update({ setupTime: event.target.value })} />
               <Choice legend="O local tem horário limite para som?" options={YES_NO_UNKNOWN} selected={answers.soundLimit} onSelect={(option) => pick('soundLimit', option)} columns="grid-cols-3" />

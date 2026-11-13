@@ -6,7 +6,7 @@ import { isWithinLocalDateRange } from '../../utils/dateRange';
 import { downloadBookingsSpreadsheet } from '../../utils/bookingExport';
 import { BOOKING_STATUS_OPTIONS, DELIVERY_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '../../utils/bookingStatus';
 import { logger } from '../../utils/logger';
-import { formatPrice } from '../../utils/formatPrice';
+import { formatBookingTotal, hasBookingTotal } from '../../utils/formatPrice';
 import { normalizeString } from '../../utils/string';
 import { bookingEmail } from '../../utils/bookingContact';
 import { notifyClientPayload } from '../../utils/notifyClient';
@@ -634,8 +634,9 @@ export const BookingListPage = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <Badge variant="success" size="lg" className="font-bold">
-                          {formatPrice(safeParsePrice(booking.totalPrice))}
+                        {/* Auditoria do orçamento (12/11/2026), O3: pedido ainda sem valor sai "Em preparação", não "R$ 0,00". */}
+                        <Badge variant={hasBookingTotal(safeParsePrice(booking.totalPrice)) ? 'success' : 'outline'} size="lg" className="font-bold">
+                          {formatBookingTotal(safeParsePrice(booking.totalPrice))}
                         </Badge>
                       </td>
                       <td className="px-6 py-4">

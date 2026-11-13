@@ -119,7 +119,8 @@ describe('Lote 14b — páginas de serviço × cidade conferidas com o catálogo
     expect(getServiceBySlug('aluguel-som')?.benefits).toEqual([
       'Caixas ativas, mesas digitais e microfones profissionais',
       'Técnicos disponíveis durante todo o evento',
-      'Montagem organizada pela equipe técnica',
+      // Auditoria do orçamento (12/11/2026), E5: a montagem vem nos kits de entrega; no avulso é à parte.
+      'Montagem incluída nos kits de entrega (no avulso, à parte)',
     ]);
   });
 });

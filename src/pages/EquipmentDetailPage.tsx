@@ -283,8 +283,10 @@ export const EquipmentDetailPage = () => {
           items={[
             // P20 (decisão do dono de 08/11/2026): sem promessa absoluta ("zero falhas", "sempre no horário").
             { icon: Shield, iconColor: 'success', title: 'Equipamento Revisado', description: 'Testado antes de cada entrega.' },
-            { icon: Package, iconColor: 'info', title: 'Suporte Especializado', description: 'Nossa equipe técnica disponível para auxiliar na configuração se necessário.' },
-            { icon: Zap, iconColor: 'primary', title: 'Entrega no Horário Combinado', description: 'A equipe leva o equipamento no horário combinado, antes do evento.' },
+            // Auditoria do orçamento (12/11/2026), E5: a montagem do equipamento avulso é cobrada à parte, pelo serviço de
+            // montagem do catálogo (decisão da dona de 12/11); nos kits de entrega ela vem incluída. O frete entra na proposta.
+            { icon: Package, iconColor: 'info', title: 'Montagem à Parte', description: 'Precisa de ajuda para montar? Acrescente o serviço de montagem no pedido. Nos kits de entrega, a montagem já vem incluída.' },
+            { icon: Zap, iconColor: 'primary', title: 'Entrega no Horário Combinado', description: 'A equipe leva o equipamento no horário combinado, antes do evento. O frete vem na proposta.' },
           ]}
         />
 

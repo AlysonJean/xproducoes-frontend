@@ -5,22 +5,37 @@
 export const BRIEFING_STEPS = ['O evento', 'O local', 'O que você precisa', 'Detalhes', 'Seus dados'] as const;
 
 export const EVENT_TYPES = ['Casamento', 'Aniversário ou 15 anos', 'Corporativo', 'Formatura', 'Show ou festival', 'Evento religioso', 'Outro'];
-export const GUEST_RANGES = ['Até 50', '50 a 100', '100 a 200', '200 a 500', 'Mais de 500', 'Ainda não sei'];
+// Auditoria do orçamento (12/11/2026), E9 e E11: o maior kit atende até 500 pessoas; acima disso é sob consulta.
+export const GUEST_OVER_500 = 'Mais de 500 (sob consulta)';
+export const GUEST_RANGES = ['Até 50', '50 a 100', '100 a 200', '200 a 500', GUEST_OVER_500, 'Ainda não sei'];
 export const ENVIRONMENTS = ['Fechado', 'Coberto', 'Ao ar livre', 'Ainda não sei'];
 export const YES_NO_UNKNOWN = ['Sim', 'Não', 'Não sei'];
 export const VOLTAGES = ['110V', '220V', 'Não sei'];
-export const NEEDS = ['Som', 'Iluminação', 'Palco', 'DJ', 'Banda ao vivo', 'Microfones', 'Ainda não sei, quero ajuda'];
+
+// Auditoria do orçamento (12/11/2026), E10 e E11: as estruturas do catálogo (palco, trave, backdrop) e o telão ou
+// painel de LED, que é sob consulta (parceiro); "Banda ao vivo" parecia que a empresa leva a banda: é o som para ela.
+export const NEED_STRUCTURES = 'Estruturas (palco, trave, backdrop)';
+export const NEED_LED = 'Telão / painel de LED (sob consulta)';
+export const NEED_BAND = 'Vai ter banda ao vivo (som para a banda)';
+export const NEED_DJ = 'DJ';
+export const NEEDS = ['Som', 'Iluminação', NEED_STRUCTURES, NEED_LED, NEED_DJ, NEED_BAND, 'Microfones', 'Ainda não sei, quero ajuda'];
 export const DJ_OPTIONS = ['Preciso de um DJ', 'Já tenho DJ, com equipamento', 'Já tenho DJ, sem equipamento'];
 
-export const NEED_BAND = 'Banda ao vivo';
-export const NEED_DJ = 'DJ';
+// Auditoria do orçamento (12/11/2026), E11: numa entrega há duas formas de atender (decisão da dona de 06/11): a
+// equipe monta e busca depois, ou um técnico fica durante todo o evento (item à parte, pelas horas do evento, quando
+// não vem no kit). Pergunta opcional, no passo de detalhes, que já é todo opcional.
+export const EVENT_CREW_OPTIONS = ['Montar e buscar depois', 'Técnico durante todo o evento', 'Não sei'];
 
 export const NOT_DEFINED = 'A definir';
 
 // Quem preenche não vê este número; ele vai junto no registro, para saber qual texto a pessoa leu.
-export const BRIEFING_TERMS_VERSION = '2026-11';
+// Auditoria do orçamento (12/11/2026), O22 e D10: saiu "Sinal, hora extra e cancelamento seguem as condições da
+// proposta" (nenhuma proposta traz essas condições, e a política de reserva ainda não está publicada). Entra o fluxo
+// real: o pedido não é reserva; a proposta vem pelo link, com o frete e o pedágio; a data só fica confirmada com o
+// aceite e o sinal. Texto novo, versão nova.
+export const BRIEFING_TERMS_VERSION = '2026-11-12';
 export const BRIEFING_TERMS =
-  'Estou ciente de que o orçamento considera as informações acima e que mudanças no local, no horário, no público ou na energia podem alterar o valor. Energia adequada no local, licenças (como ECAD e prefeitura) e danos causados por convidados são de responsabilidade do contratante. Sinal, hora extra e cancelamento seguem as condições da proposta.';
+  'Estou ciente de que o orçamento considera as informações acima e que mudanças no local, no horário, no público ou na energia podem alterar o valor. Energia adequada no local, licenças (como ECAD e prefeitura) e danos causados por convidados são de responsabilidade do contratante. Este pedido ainda não é uma reserva: a equipe confere a disponibilidade e manda a proposta num link, com o frete e o pedágio, quando houver, e a data só fica confirmada depois que eu aceitar a proposta e pagar o sinal.';
 
 export interface BriefingAnswers {
   eventType: string;
@@ -51,6 +66,7 @@ export interface BriefingAnswers {
   bandInstruments: string;
   bandRider: string;
   djOption: string;
+  eventCrew: string;
   name: string;
   phone: string;
   email: string;
@@ -86,6 +102,7 @@ export const EMPTY_BRIEFING: BriefingAnswers = {
   bandInstruments: '',
   bandRider: '',
   djOption: '',
+  eventCrew: '',
   name: '',
   phone: '',
   email: '',
@@ -186,6 +203,7 @@ export function buildBriefingText(answers: BriefingAnswers, acceptedAt: Date): s
     ['A banda leva os instrumentos', hasBand ? answers.bandInstruments : ''],
     ['A banda tem rider técnico', hasBand ? answers.bandRider : ''],
     ['DJ', hasDj ? answers.djOption : ''],
+    ['Durante o evento', answers.eventCrew],
     ['Tensão da tomada', answers.voltage],
     ['Liberado para montar a partir de', answers.setupTime],
     ['O local tem horário limite para som', answers.soundLimit],
@@ -256,6 +274,48 @@ export function buildBriefingPayload(answers: BriefingAnswers, options: { logged
     ...(!options.loggedIn ? { clientEmail: answers.email.trim() } : {}),
     specialRequests: buildBriefingText(answers, options.acceptedAt),
   };
+}
+
+// Auditoria do orçamento (12/11/2026), O27: o teste da Home e a página de painel de LED por cidade abrem o briefing
+// com respostas no endereço (?tipo=...&publico=...&ambiente=...&precisa=...). Só vale o que é uma das opções da página;
+// o resto é ignorado.
+const PREFILL_KEYS = { eventType: 'tipo', guests: 'publico', environment: 'ambiente', needs: 'precisa' } as const;
+
+export interface BriefingPrefill {
+  eventType?: string;
+  guests?: string;
+  environment?: string;
+  needs?: string[];
+}
+
+/** O endereço do briefing com as respostas já escolhidas. */
+export function briefingHref(prefill: BriefingPrefill): string {
+  const params = new URLSearchParams();
+  if (prefill.eventType) params.set(PREFILL_KEYS.eventType, prefill.eventType);
+  if (prefill.guests) params.set(PREFILL_KEYS.guests, prefill.guests);
+  if (prefill.environment) params.set(PREFILL_KEYS.environment, prefill.environment);
+  for (const need of prefill.needs ?? []) params.append(PREFILL_KEYS.needs, need);
+  const query = params.toString();
+  return query ? `/briefing?${query}` : '/briefing';
+}
+
+/** As respostas que vieram no endereço, só as que são opções da página. */
+export function briefingPrefill(search: string): BriefingPrefill {
+  const params = new URLSearchParams(search);
+  const option = (key: string, options: readonly string[]) => {
+    const value = params.get(key);
+    return value && options.includes(value) ? value : undefined;
+  };
+  const prefill: BriefingPrefill = {};
+  const eventType = option(PREFILL_KEYS.eventType, EVENT_TYPES);
+  const guests = option(PREFILL_KEYS.guests, GUEST_RANGES);
+  const environment = option(PREFILL_KEYS.environment, ENVIRONMENTS);
+  const needs = [...new Set(params.getAll(PREFILL_KEYS.needs).filter((need) => NEEDS.includes(need)))];
+  if (eventType) prefill.eventType = eventType;
+  if (guests) prefill.guests = guests;
+  if (environment) prefill.environment = environment;
+  if (needs.length > 0) prefill.needs = needs;
+  return prefill;
 }
 
 export interface CepAddress {

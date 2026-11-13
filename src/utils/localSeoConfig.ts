@@ -1,3 +1,5 @@
+import { NEED_LED } from './briefing';
+
 export const TARGET_CITIES = [
   { slug: 'belo-horizonte', name: 'Belo Horizonte', uf: 'MG', demonym: 'belo-horizontino' },
   { slug: 'nova-lima', name: 'Nova Lima', uf: 'MG', demonym: 'nova-limense' },
@@ -20,8 +22,15 @@ export interface ServiceContent {
   benefits?: string[];
   features?: string[];
   faq?: FAQItem[];
+  /** Auditoria do orçamento (12/11/2026), E10: serviço sob consulta (parceiro), sem estoque próprio. */
+  onRequest?: boolean;
+  /** Opção do briefing que o botão da página já marca (utils/briefing: briefingHref). */
+  briefingNeed?: string;
 }
 
+// Auditoria do orçamento (12/11/2026), E5, E10 e E16: sem "pacote básico" (não existe); a montagem vem incluída nos kits
+// de entrega e é à parte no equipamento avulso; o técnico de som é item do pedido; o painel de LED é sob consulta, por
+// parceiro, sem prometer equipamento próprio, e o botão abre o briefing com o LED já marcado.
 // Textos conferidos com o catálogo publicado em 09/11/2026 (decisões do dono do mesmo dia): sem marcas que não estão
 // no estoque (JBL, Yamaha, RCF) e sem citar marcas; sem laser/strobo, "5.000 pessoas", "Box Truss Q30", equipamento
 // reserva no local nem "sem cabos aparentes"; painel de LED fica sob consulta (parceiro), sem P3/P5 nem "impacto
@@ -37,18 +46,19 @@ export const TARGET_SERVICES: ServiceContent[] = [
 
 A qualidade do som é o que define a energia da sua festa. Na **X Produções**, você encontra caixas ativas, subwoofers, mesas de som e microfones profissionais para que cada palavra do discurso e cada música sejam ouvidas com clareza.
 
-### O que incluímos no pacote básico?
+### O que você encontra
 *   **Caixas Ativas e Subwoofers:** caixas de 15" e subwoofers ativos, dimensionados para o local.
 *   **Mesa de Som:** Digital ou analógica, conforme a necessidade da banda ou DJ.
 *   **Microfones Sem Fio:** Tecnologia UHF para evitar interferências.
-*   **Técnico de Som:** Profissional para montagem e operação durante o evento (opcional).
+*   **Técnico de Som:** operação durante todo o evento, como item do pedido, pelas horas do evento (alguns kits já trazem o técnico).
+*   **Montagem:** incluída nos kits de entrega; no equipamento avulso, é à parte, pelo serviço de montagem.
 
 Nossos equipamentos são revisados antes de cada evento.
     `,
     benefits: [
       "Caixas ativas, mesas digitais e microfones profissionais",
       "Técnicos disponíveis durante todo o evento",
-      "Montagem organizada pela equipe técnica"
+      "Montagem incluída nos kits de entrega (no avulso, à parte)"
     ],
     faq: [
       {
@@ -82,7 +92,7 @@ Trabalhamos com projetos personalizados de iluminação arquitetural para valori
       "Projetos personalizados em 3D",
       "Equipamentos LED de baixo consumo",
       "Variedade de cores e efeitos",
-      "Instalação feita pela equipe técnica"
+      "Montagem incluída nos kits de entrega (no avulso, à parte)"
     ],
     faq: [
       {
@@ -95,7 +105,21 @@ Trabalhamos com projetos personalizados de iluminação arquitetural para valori
     slug: 'aluguel-painel-led', 
     name: 'Aluguel de Painel de LED', 
     keywords: ['painel de led', 'telão de led', 'video wall'],
-    description: 'Painel de LED sob consulta, conforme a data e o tamanho do espaço do evento.'
+    description: 'Painel de LED sob consulta, conforme a data e o tamanho do espaço do evento.',
+    onRequest: true,
+    briefingNeed: NEED_LED,
+    longDescription: `
+## Painel de LED sob consulta
+
+O painel de LED não faz parte do nosso estoque: trabalhamos com parceiro, e o tamanho, o valor e a disponibilidade dependem da data e do espaço do evento.
+
+No pedido de orçamento, marque **${NEED_LED}** e conte o tamanho do local. A equipe confere com o parceiro e responde na proposta, junto com o som e a luz.
+    `,
+    benefits: [
+      "Sob consulta, com parceiro",
+      "Tamanho conforme a data e o espaço do evento",
+      "No mesmo pedido do som e da luz"
+    ]
   },
   { 
     slug: 'aluguel-palco-estrutura', 

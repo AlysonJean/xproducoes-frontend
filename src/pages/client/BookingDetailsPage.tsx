@@ -5,7 +5,7 @@ import ReactGA from 'react-ga4';
 import { ArrowLeft, FileDown, FileText, Mail, MessageCircle, Plus, Trash2, Upload } from 'lucide-react';
 import { apiFetch } from '@/services/api';
 import type { BookingDetails } from '@/types/types';
-import { formatPrice } from '@/utils/formatPrice';
+import { formatBookingTotal, formatPrice, hasBookingTotal } from '@/utils/formatPrice';
 import { bookingPricing } from '@/utils/bookingPricing';
 import { bookingStatusVariant, clientBookingStatusLabel } from '@/utils/bookingStatus';
 import { Badge, Button, Card, ConfirmModal, Modal, buttonVariants } from '@/components/ui/StandardComponents';
@@ -230,7 +230,8 @@ export const BookingDetailsPage = () => {
   // D8a e P16: o resumo de preço da API (linhas, desconto, ajuste e o valor final), o mesmo dos PDFs.
   const pricing = bookingPricing(booking);
   // Pedido do briefing chega sem itens: o total fica zerado até a equipe preparar o orçamento.
-  const hasPrice = pricing.total > 0;
+  // Auditoria do orçamento (12/11/2026), O3: a mesma regra de formatBookingTotal; sem valor, nada de PDF da proposta.
+  const hasPrice = hasBookingTotal(pricing.total);
   // D21: o cliente apaga comprovante só enquanto o pagamento não foi registrado (a mesma regra do servidor).
   const clientMayDeleteProof = booking.paymentStatus !== 'PAID' && booking.paymentStatus !== 'PARTIAL';
   // D20: texto pronto do contato com a equipe (o nome informado na reserva ou o da conta, o código inteiro
@@ -250,15 +251,18 @@ export const BookingDetailsPage = () => {
       description={<span className="break-all">Reserva #{booking.id}</span>}
       actions={
         <>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownloadProposal}
-            isLoading={downloadingProposal}
-            leftIcon={<FileDown className="h-4 w-4" aria-hidden="true" />}
-          >
-            {downloadingProposal ? 'Gerando PDF...' : 'Baixar proposta (PDF)'}
-          </Button>
+          {/* Auditoria do orçamento (12/11/2026), O3: o PDF saía com "Total: R$ 0,00" no pedido ainda sem valor. */}
+          {hasPrice && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadProposal}
+              isLoading={downloadingProposal}
+              leftIcon={<FileDown className="h-4 w-4" aria-hidden="true" />}
+            >
+              {downloadingProposal ? 'Gerando PDF...' : 'Baixar proposta (PDF)'}
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -442,7 +446,7 @@ export const BookingDetailsPage = () => {
               <div className={pricing.lines.length > 0 || pricing.couponDiscount ? 'border-t border-border pt-3' : ''}>
                 <div className="flex justify-between gap-3 text-lg font-bold">
                   <span className="text-foreground">Total:</span>
-                  <span className="text-primary">{hasPrice ? formatPrice(pricing.total) : 'Em preparação'}</span>
+                  <span className="text-primary">{formatBookingTotal(pricing.total)}</span>
                 </div>
               </div>
             </div>

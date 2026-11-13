@@ -8,6 +8,8 @@ import { useCart } from '@/hooks/useCart';
 import BrandLoader from '../components/ui/BrandLoader';
 import type { Service } from '../types/types';
 import { formatPrice } from '../utils/typeSafeFormatters';
+import { serviceMinutesText } from '../utils/bookingPricing';
+import { wholeEventRuleText } from '../utils/wholeEventService';
 import { transformService } from '../utils/transformService';
 import { SEO } from '../components/SEO';
 import { useNotifications } from '../contexts/NotificationContext';
@@ -145,6 +147,9 @@ export const ServiceDetailPage = () => {
   // Lote 13, técnico durante o evento: o pedido de cliente ou convidado só aceita serviço ativo (o servidor recusa o
   // resto com 400). Serviço "em breve", em manutenção ou inativo não vai ao carrinho, como no cartão do serviço.
   const canAdd = service.status === 'ACTIVE';
+  // Auditoria do orçamento (12/11/2026), O5: a mesma condição de serviceLine (marcado e com duração maior que zero).
+  const coveredMinutes = Number(service.duration ?? 0);
+  const coversWholeEvent = service.coversWholeEvent === true && Number.isInteger(coveredMinutes) && coveredMinutes > 0;
 
   return (
     <PageLayout title={service.name} hideTitle breadcrumbs={[LIST_CRUMB, { label: service.name }]}>
@@ -250,10 +255,18 @@ export const ServiceDetailPage = () => {
                 <div className="text-right">
                   <div className="text-4xl font-black text-foreground">
                     {formatPrice(service.price)}
-                    <span className="text-sm font-normal ml-1">/ serviço</span>
+                    <span className="text-sm font-normal ml-1">{coversWholeEvent ? `/ até ${serviceMinutesText(coveredMinutes)} de evento` : '/ serviço'}</span>
                   </div>
                 </div>
               </div>
+
+              {/* Auditoria do orçamento (12/11/2026), O5 e E6: o serviço que acompanha o evento todo dizia "/ serviço" e o
+                  servidor cobra pelas horas do evento (serviceLine): a regra em palavras, a mesma da caixa do pedido. */}
+              {coversWholeEvent && (
+                <p className="text-sm text-muted-foreground mb-4">
+                  Acompanha o evento todo: {wholeEventRuleText(service, null)}
+                </p>
+              )}
 
               <div className="flex justify-between items-center mb-2">
                 <span className="text-muted-foreground flex items-center gap-2"><Clock className="w-4 h-4" aria-hidden="true" /> Duração</span>

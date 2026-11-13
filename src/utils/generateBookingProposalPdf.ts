@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatPrice } from './formatPrice';
+import { formatBookingTotal, formatPrice } from './formatPrice';
 import { bookingPricing, PRICING_LINE_TYPE_LABEL } from './bookingPricing';
 import { bookingEmail, bookingPhone } from './bookingContact';
 import type { BookingDetails } from '../types/types';
@@ -119,8 +119,9 @@ export async function generateBookingProposalPdf(booking: BookingDetails): Promi
     y += 2;
   }
 
+  // Auditoria do orçamento (12/11/2026), O3: pedido ainda sem valor sai "Em preparação", não "R$ 0,00".
   doc.setFontSize(12);
-  doc.text(`Total: ${formatPrice(pricing.total)}`, 14, y);
+  doc.text(`Total: ${formatBookingTotal(pricing.total)}`, 14, y);
   y += 10;
 
   doc.setFontSize(10);

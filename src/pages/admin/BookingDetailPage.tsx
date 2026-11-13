@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatPrice } from '@/utils/formatPrice';
+import { formatBookingTotal, formatPrice } from '@/utils/formatPrice';
 import { bookingPricing, PRICING_LINE_TYPE_LABEL, type BookingPricingLine } from '@/utils/bookingPricing';
 import { formatBookingPaymentStatus } from '@/utils/typeSafeFormatters';
 import { bookingStatusLabel, bookingStatusVariant, deliveryStatusLabel, DELIVERY_STATUS_OPTIONS } from '@/utils/bookingStatus';
@@ -541,7 +541,7 @@ export const BookingDetailPage = () => {
       head: [['', 'Item / Descricao', 'Tipo', 'Qtd', 'Unitario', 'Desconto', 'Total']],
       body: itemRows.length > 0
         ? itemRows
-        : [['', '(conforme contrato)', '', '-', '-', '-', formatPrice(pricing.total)]],
+        : [['', '(conforme contrato)', '', '-', '-', '-', formatBookingTotal(pricing.total)]],
       styles: { fontSize: 8.5, cellPadding: 2.5, textColor: C_TEXT },
       headStyles: { fillColor: C_DARK, textColor: C_WHITE, fontStyle: 'bold', fontSize: 8 },
       alternateRowStyles: { fillColor: C_LIGHT },
@@ -610,7 +610,8 @@ export const BookingDetailPage = () => {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.text('VALOR FINAL DA PROPOSTA:', boxX + 4, finY + 5.5);
-    doc.text(formatPrice(pricing.total), boxX + boxW - 4, finY + 5.5, { align: 'right' });
+    // Auditoria do orçamento (12/11/2026), O3: pedido ainda sem valor sai "Em preparação", não "R$ 0,00".
+    doc.text(formatBookingTotal(pricing.total), boxX + boxW - 4, finY + 5.5, { align: 'right' });
 
     // ── Observações (à esquerda do resumo financeiro) ─────────────────────────
     if (booking.notes?.trim()) {
@@ -1201,7 +1202,8 @@ export const BookingDetailPage = () => {
                     <CreditCard size={18} />
                     <h3 className="text-xs font-medium uppercase tracking-wider">Valor da reserva</h3>
                   </div>
-                  <p className="text-3xl font-bold break-words">{formatPrice(Number(booking.totalPrice || 0))}</p>
+                  {/* Auditoria do orçamento (12/11/2026), O3: "Em preparação" no pedido ainda sem valor, como no cliente. */}
+                  <p className="text-3xl font-bold break-words">{formatBookingTotal(booking.totalPrice)}</p>
                   <p className="mt-3 inline-flex items-center rounded-full border border-primary-foreground/30 bg-primary-foreground/10 px-2.5 py-0.5 text-xs font-semibold">
                     Pagamento: {formatBookingPaymentStatus(booking.paymentStatus)}
                   </p>

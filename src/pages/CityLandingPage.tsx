@@ -16,6 +16,7 @@ import { useState, useEffect, useId } from 'react';
 import { logger } from '../utils/logger';
 import { getWhatsAppPhone } from '../utils/whatsapp';
 import { formatPhoneDisplay } from '../data/site';
+import { briefingHref } from '../utils/briefing';
 import { NotFoundPage } from './NotFoundPage';
 
 export const CityLandingPage = () => {
@@ -53,7 +54,13 @@ export const CityLandingPage = () => {
 
   // Sem "| X-Produções" aqui: o <SEO>/PageLayout já acrescentam o nome do site (saía duplicado).
   const title = `${service.name} em ${city.name}, ${city.uf}`;
-  const description = `${service.name} profissional para eventos em ${city.name}. ${service.description} Entrega e montagem em ${city.name} e região. Peça seu orçamento!`;
+  // Auditoria do orçamento (12/11/2026), E5 e E10: "Entrega e montagem" valia para tudo e para o LED, que é sob
+  // consulta. A montagem vem incluída nos kits de entrega; o LED é por parceiro.
+  const coverage = service.onRequest
+    ? `Atendemos ${city.name} e região, sob consulta.`
+    : `Entrega em ${city.name} e região, com montagem incluída nos kits de entrega.`;
+  const description = `${service.name} profissional para eventos em ${city.name}. ${service.description} ${coverage} Peça seu orçamento!`;
+  const quoteHref = service.briefingNeed ? briefingHref({ needs: [service.briefingNeed] }) : '/briefing';
   const whatsAppPhone = getWhatsAppPhone();
 
   // Base FAQ Schema
@@ -131,7 +138,7 @@ export const CityLandingPage = () => {
           {/* Achado: eram <Link><Button> aninhados (botão dentro de link). Agora o próprio link
               tem a aparência de botão. */}
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link to="/briefing" className={buttonVariants({ size: 'lg', className: 'w-full sm:w-auto' })}>
+            <Link to={quoteHref} className={buttonVariants({ size: 'lg', className: 'w-full sm:w-auto' })}>
               Solicitar Orçamento Grátis
             </Link>
             <Link to="/portfolio" className={buttonVariants({ variant: 'outline', size: 'lg', className: 'w-full sm:w-auto' })}>
@@ -212,11 +219,14 @@ export const CityLandingPage = () => {
         <div className="lg:col-span-4 space-y-8">
            <div className="sticky top-24">
              <div className="bg-card border border-border rounded-xl p-6 shadow-lg mb-6">
-                <h2 className="text-xl font-bold mb-4 text-foreground">Pronto para reservar?</h2>
+                {/* Auditoria do orçamento (12/11/2026), O22: o pedido não é reserva; a data só fica confirmada com o
+                    aceite da proposta e o sinal. O botão vai ao briefing (o contato grava fora das reservas). */}
+                <h2 className="text-xl font-bold mb-4 text-foreground">Quer um orçamento?</h2>
                 <p className="text-muted-foreground mb-6">
-                  Garanta a data do seu evento em {city.name} hoje mesmo. A agenda costuma lotar rápido!
+                  Conte como vai ser o seu evento em {city.name}. A equipe confere a disponibilidade da data e manda a
+                  proposta; a data fica confirmada depois do aceite e do sinal.
                 </p>
-                <Link to="/contato" className={buttonVariants({ fullWidth: true, className: 'mb-3' })}>
+                <Link to={quoteHref} className={buttonVariants({ fullWidth: true, className: 'mb-3' })}>
                   Solicitar Cotação
                 </Link>
                 {/* Achado: aqui aparecia "(31) 97580-8477" — o telefone do desenvolvedor (crédito do

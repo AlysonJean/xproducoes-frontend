@@ -5,6 +5,20 @@ import { authAPI } from '../../services/api';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { logger } from '../../utils/logger';
 import type { ReferralStats } from '../../types/domains/dashboard';
+import { SITE_NAME } from '../../data/site';
+
+// Auditoria do orçamento (12/11/2026), O9, D4 e E7: o cartão prometia "10% de desconto na primeira locação". O código
+// de indicação (backend/src/services/referralService.ts) vale nos itens, com teto, não desconta frete nem pedágio e
+// vale uma vez por cliente (não só na primeira locação); a recompensa de quem indica tem o mesmo teto e vence em 90
+// dias. Os números são os do servidor (REFERRAL_MAX_DISCOUNT, REWARD_MAX_DISCOUNT e REWARD_VALIDITY_DAYS).
+const REFERRAL_MAX_DISCOUNT = 150;
+const REWARD_VALIDITY_DAYS = 90;
+// O link levava a /orcamento, que sem carrinho manda ao briefing, e o briefing não tem campo de cupom. Os kits levam
+// ao carrinho, e o pedido com carrinho tem o campo do código.
+const REFERRAL_LANDING_PATH = '/kits';
+
+const referralRuleText = (percent: number) =>
+  `${percent}% de desconto nos itens (até R$ ${REFERRAL_MAX_DISCOUNT}; não vale para frete nem pedágio; uma vez por cliente)`;
 
 // Achado (produto): negócio pediu um jeito de trazer clientes novos via indicação de
 // clientes existentes — reaproveita o sistema de Coupon (ver referralService.ts no
@@ -38,7 +52,7 @@ export const ReferralCard = () => {
   // (bytes certos até a chamada de window.open) e só quebra depois da navegação real, ou
   // seja, é o servidor do WhatsApp que não lida bem com caracteres astrais nesse link.
   // Evitado aqui em vez de perseguir um bug de terceiro para um emoji decorativo.
-  const shareMessage = `Oi! Tô alugando equipamentos de som, luz e estrutura com a X Produções e recomendo demais! Use meu código *${stats.code}* e ganhe ${stats.discountPercent}% de desconto na sua primeira locação: ${window.location.origin}/orcamento`;
+  const shareMessage = `Oi! Conheça a ${SITE_NAME}: aluguel de som, luz e estrutura para eventos. Com o meu código *${stats.code}* você ganha ${referralRuleText(stats.discountPercent)}. Escolha os itens e use o código no pedido: ${window.location.origin}${REFERRAL_LANDING_PATH}`;
 
   const handleCopy = async () => {
     try {
@@ -63,8 +77,9 @@ export const ReferralCard = () => {
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-semibold text-foreground">Indique um amigo</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Você e seu amigo ganham <strong>{stats.discountPercent}% de desconto</strong> quando ele fizer a primeira
-              locação com o seu código.
+              Seu amigo ganha <strong>{referralRuleText(stats.discountPercent)}</strong> no pedido com o seu código.
+              Quando a locação dele for concluída, você ganha um código de {stats.discountPercent}% nos itens (também até
+              R$ {REFERRAL_MAX_DISCOUNT}), válido por {REWARD_VALIDITY_DAYS} dias.
             </p>
 
             <div className="mt-4 flex flex-col sm:flex-row gap-3">

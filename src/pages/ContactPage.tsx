@@ -326,25 +326,33 @@ export const ContactPage = () => {
           Dúvidas Frequentes
         </h2>
 
+        {/* Auditoria do orçamento (12/11/2026), E5, E12 e B14: "toda a logística e montagem técnica" e "suporte remoto
+            ou presencial" valiam para tudo. A regra real (decisões da dona de 06 e 12/11): o kit de entrega inclui a
+            entrega e a montagem, com frete só pelos km acima de 15 km; o equipamento avulso paga frete (a partir de
+            R$ 50) e a montagem é à parte; o técnico no evento é um item do pedido. */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center sm:text-left">
           <div className="space-y-3">
-            <h3 className="text-foreground font-bold text-lg">Qual o prazo para reserva?</h3>
+            <h3 className="text-foreground font-bold text-lg">Com quanta antecedência pedir?</h3>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Recomendamos reservar com pelo menos 7 a 15 dias de antecedência para garantir a disponibilidade total.
+              Recomendamos pedir o orçamento com 7 a 15 dias de antecedência. A data fica confirmada depois que você
+              aceita a proposta e paga o sinal.
             </p>
           </div>
 
           <div className="space-y-3">
             <h3 className="text-foreground font-bold text-lg">Fazem entrega e montagem?</h3>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Sim! Nossa equipe cuida de toda a logística e montagem técnica no local do evento.
+              Nos kits de entrega, sim: a entrega, a montagem e a retirada estão incluídas, e o frete só é cobrado pelos
+              km acima de 15 km da nossa sede. No equipamento avulso, o frete começa em R$ 50 e a montagem é à parte,
+              pelo serviço de montagem do catálogo.
             </p>
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-foreground font-bold text-lg">Suporte técnico no evento?</h3>
+            <h3 className="text-foreground font-bold text-lg">Tem técnico durante o evento?</h3>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Oferecemos suporte remoto ou presencial (opcional) durante toda a duração do seu evento.
+              Sim, como item do pedido: marque "Quero um técnico durante todo o evento" no orçamento. O valor segue as
+              horas do evento, e alguns kits já trazem o técnico de som.
             </p>
           </div>
         </div>

@@ -5,7 +5,7 @@ import { ptBR } from 'date-fns/locale/pt-BR';
 import { apiFetch } from '@/services/api';
 import { asArray } from '@/utils/normalize';
 import { toNumber } from '@/utils/typeSafeFormatters';
-import { formatPrice } from '@/utils/formatPrice';
+import { formatBookingTotal } from '@/utils/formatPrice';
 import type { BookingStatus } from '@/types/enums';
 import { BOOKING_STATUS_OPTIONS, bookingStatusLabel, bookingStatusVariant } from '@/utils/bookingStatus';
 import { COLLABORATOR_ROLE_OPTIONS, collaboratorRoleLabel } from '@/utils/collaboratorRoles';
@@ -198,8 +198,9 @@ const BookingDetailsModal = ({
               </div>
               <div>
                 <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Valor</h4>
+                {/* Auditoria do orçamento (12/11/2026), O3: pedido ainda sem valor sai "Em preparação", não "R$ 0,00". */}
                 <p className="text-2xl font-bold text-foreground">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValue)}
+                  {formatBookingTotal(toNumber(totalValue))}
                 </p>
               </div>
             </div>
@@ -290,7 +291,7 @@ const DayEventsModal = ({
                   </div>
                </div>
                <div className="text-right shrink-0">
-                  <p className="text-sm font-bold text-foreground">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValue)}</p>
+                  <p className="text-sm font-bold text-foreground">{formatBookingTotal(toNumber(totalValue))}</p>
                   <p className="text-xs text-muted-foreground">Ver detalhes</p>
                </div>
              </div>
@@ -796,7 +797,7 @@ export const BookingCalendarPage = () => {
                             </div>
                             <div className="flex items-center justify-between text-sm text-muted-foreground">
                                 <span>Valor</span>
-                                <span className="text-foreground">{formatPrice(toNumber(hovered.resource.totalPrice))}</span>
+                                <span className="text-foreground">{formatBookingTotal(toNumber(hovered.resource.totalPrice))}</span>
                             </div>
                         </div>
                     </Card>

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { formatPrice } from '../../utils/typeSafeFormatters';
+import { serviceMinutesText } from '../../utils/bookingPricing';
 import { normalizeImageUrl, getPlaceholderUrl } from '../../utils/imageUtils';
 import { OptimizedImage } from '../../components/ui/OptimizedImage';
 import type { Service } from '../../types/types';
@@ -102,6 +103,9 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
 
   const currentStatus = service.status || 'ACTIVE';
   const isActive = currentStatus === 'ACTIVE';
+  // Auditoria do orçamento (12/11/2026), O5: a mesma condição de serviceLine (marcado e com duração maior que zero).
+  const coveredMinutes = Number(service.duration ?? 0);
+  const coversWholeEvent = service.coversWholeEvent === true && Number.isInteger(coveredMinutes) && coveredMinutes > 0;
 
   // Achado (Lighthouse/axe-core contra produção real): mesmo problema do EquipmentCard —
   // aria-label fixo não incluía o badge de status visível ("Ativo"/"Em Breve"), violando
@@ -151,10 +155,21 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
       )}
 
       <div className="flex justify-between items-center px-4 pb-4 mt-4">
-        <span className="text-lg font-semibold text-primary">
-          <span className="text-xs font-normal mr-1">a partir de</span>
-          {formatPrice(service.price || 0)}
-        </span>
+        {/* Auditoria do orçamento (12/11/2026), O5 e E6: o serviço que acompanha o evento todo cobra pelas horas do
+            evento (serviceLine), não um valor fixo: o cartão diz as horas cobertas e que a hora a mais é proporcional. */}
+        {coversWholeEvent ? (
+          <span className="text-lg font-semibold text-primary">
+            {formatPrice(service.price || 0)}
+            <span className="block text-xs font-normal text-muted-foreground">
+              até {serviceMinutesText(coveredMinutes)} de evento; hora a mais proporcional
+            </span>
+          </span>
+        ) : (
+          <span className="text-lg font-semibold text-primary">
+            <span className="text-xs font-normal mr-1">a partir de</span>
+            {formatPrice(service.price || 0)}
+          </span>
+        )}
         <Button
           type="button"
           size="icon"

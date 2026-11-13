@@ -19,7 +19,10 @@ interface ServiceFilters {
 }
 
 const PAGE_TITLE = 'Serviços Especializados';
-const PAGE_DESCRIPTION = 'Conheça nossos serviços de DJ, iluminação, sonorização e produção de eventos.';
+// Auditoria do orçamento (12/11/2026), E16: "Produtores" e "produção de eventos" não estão no catálogo. Os serviços
+// são DJ, técnico de som, técnico de iluminação, montagem e logística (e o VJ, que depende de telão contratado à parte).
+const PAGE_DESCRIPTION = 'Conheça nossos serviços de DJ, técnico de som, técnico de iluminação, montagem e logística.';
+const SEO_DESCRIPTION = 'DJ, técnico de som, técnico de iluminação, montagem e logística para o seu evento em Belo Horizonte e região.';
 
 export const ServiceListPage: React.FC = () => {
   const [services, setServices] = useState<Service[]>([]);
@@ -110,7 +113,7 @@ export const ServiceListPage: React.FC = () => {
             branch de loading — por isso o título/h1 e o <SEO> aqui são os reais da página. */}
         <SEO
           title="Serviços para Eventos"
-          description="DJs, Técnicos de Som, Iluminadores e Produtores para seu evento em Belo Horizonte."
+          description={SEO_DESCRIPTION}
         />
         <div className="flex flex-col items-center justify-center min-h-[400px]">
           <BrandLoader size={120} label="Carregando serviços..." />
@@ -124,7 +127,7 @@ export const ServiceListPage: React.FC = () => {
       <PageLayout title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
         <SEO
           title="Serviços para Eventos"
-          description="DJs, Técnicos de Som, Iluminadores e Produtores para seu evento em Belo Horizonte."
+          description={SEO_DESCRIPTION}
         />
         <PageError message={error} onRetry={fetchData} />
       </PageLayout>
@@ -135,7 +138,7 @@ export const ServiceListPage: React.FC = () => {
     <PageLayout title={PAGE_TITLE} description={PAGE_DESCRIPTION}>
       <SEO 
         title="Serviços para Eventos" 
-        description="DJs, Técnicos de Som, Iluminadores e Produtores para seu evento em Belo Horizonte."
+        description={SEO_DESCRIPTION}
       />
       <SearchAndFilters
         searchQuery={filters.searchQuery}

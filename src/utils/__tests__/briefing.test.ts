@@ -19,7 +19,8 @@ const base: BriefingAnswers = {
   environment: 'Ao ar livre',
   stairs: 'Não sei',
   parking: 'Não',
-  needs: ['Som', 'Banda ao vivo'],
+  // Auditoria do orçamento (12/11/2026), E11: o rótulo da banda mudou.
+  needs: ['Som', 'Vai ter banda ao vivo (som para a banda)'],
   bandSize: '5',
   rainCover: 'Não',
   name: ' Ana Souza ',
@@ -112,7 +113,7 @@ describe('buildBriefingText', () => {
     expect(text).toContain('Evento: Casamento');
     expect(text).toContain('Data: 20/03/2027');
     expect(text).toContain('Escadas no acesso: Não sei');
-    expect(text).toContain('Precisa de: Som, Banda ao vivo');
+    expect(text).toContain('Precisa de: Som, Vai ter banda ao vivo (som para a banda)');
     expect(text).toContain('Integrantes da banda: 5');
     expect(text).toContain('Tem proteção em caso de chuva: Não');
     expect(text).toContain('01/01/2027, 12:30:00');

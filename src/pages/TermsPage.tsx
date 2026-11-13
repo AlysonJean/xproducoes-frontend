@@ -4,7 +4,7 @@ import { SUPPORT_EMAIL, formatPhoneDisplay } from '../data/site';
 
 // Data da última revisão do TEXTO destes termos. Atualize sempre que o conteúdo mudar.
 // Achado: antes era `new Date()` — a página dizia ter sido atualizada "hoje" em todo acesso.
-const LAST_UPDATED = '01/11/2026';
+const LAST_UPDATED = '12/11/2026';
 
 export const TermsPage = () => {
   const phone = getWhatsAppPhone();
@@ -28,11 +28,10 @@ export const TermsPage = () => {
             <p className="text-muted-foreground leading-relaxed mb-4">
               Nossos serviços são destinados para:
             </p>
+            {/* Auditoria do orçamento (12/11/2026), E16: "Consultoria em eventos" e "Venda de acessórios" não existem. */}
             <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
-              <li>Locação de equipamentos audiovisuais</li>
-              <li>Consultoria em eventos</li>
-              <li>Suporte técnico especializado</li>
-              <li>Venda de acessórios</li>
+              <li>Locação de equipamentos de som, iluminação e estrutura para eventos</li>
+              <li>Serviços para o evento: DJ, técnico de som, técnico de iluminação, montagem e logística</li>
             </ul>
           </section>
 
