@@ -102,7 +102,7 @@ describe('Páginas por cidade — montagem, LED sob consulta e sem "pacote bási
     expect(seo).not.toContain('Entrega e montagem em');
     expect(screen.getByRole('link', { name: 'Solicitar Orçamento Grátis' })).toHaveAttribute('href', '/briefing');
     expect(screen.queryByText(/Garanta a data/)).not.toBeInTheDocument();
-    expect(normalizado(screen.getByText('Quer um orçamento?').nextElementSibling?.textContent)).toContain('a data fica confirmada depois do aceite e do sinal');
+    expect(normalizado(screen.getByText('Quer um orçamento?').nextElementSibling?.textContent)).toContain('a data fica confirmada depois do aceite e da parcela inicial');
   });
 
   it('painel de LED: sob consulta, por parceiro, sem prometer equipamento próprio; o botão abre o briefing com o LED marcado', async () => {

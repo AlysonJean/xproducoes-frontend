@@ -1,5 +1,5 @@
 // P3 (decisão aprovada em 02/11/2026): cartão no topo do painel com os pedidos de clientes aguardando resposta e a
-// idade do mais antigo — cinza até 4 h, amarelo até 24 h, vermelho depois (24 h é o prazo que o site promete). Os
+// idade do mais antigo — cinza até 4 h, amarelo até 24 h, vermelho depois (24 h é a meta interna de resposta; o site promete até 5 dias). Os
 // pedidos com a data do evento já passada aparecem à parte. Cada linha abre a lista de Reservas já filtrada (mesmas
 // regras do número do menu); os mais antigos primeiro. Sem pedidos esperando e sem passados, o cartão não aparece.
 import React from 'react';

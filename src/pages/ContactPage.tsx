@@ -342,7 +342,7 @@ export const ContactPage = () => {
             <h3 className="text-foreground font-bold text-lg">Com quanta antecedência pedir?</h3>
             <p className="text-muted-foreground text-sm leading-relaxed">
               Recomendamos pedir o orçamento com 7 a 15 dias de antecedência. A data fica confirmada depois que você
-              aceita a proposta e paga o sinal.
+              aceita a proposta e paga a parcela inicial.
             </p>
           </div>
 

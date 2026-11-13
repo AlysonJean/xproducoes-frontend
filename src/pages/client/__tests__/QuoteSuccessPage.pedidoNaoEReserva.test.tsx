@@ -24,7 +24,7 @@ describe('QuoteSuccessPage — o pedido recebido não é reserva (O22)', () => {
     const texto = screen.getByText(/Recebemos seu pedido/).textContent?.replace(/\s+/g, ' ');
     expect(texto).toContain('Ele ainda não é uma reserva');
     expect(texto).toContain('manda a proposta num link, por e-mail ou WhatsApp, com os itens, o frete e o pedágio, quando houver');
-    expect(texto).toContain('A data só fica confirmada depois que você aceitar a proposta e pagar o sinal.');
+    expect(texto).toContain('A data só fica confirmada depois que você aceitar a proposta e pagar a parcela inicial.');
     expect(texto).not.toMatch(/50%|48 h|cancelamento/);
   });
 });

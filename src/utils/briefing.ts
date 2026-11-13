@@ -34,10 +34,11 @@ export const NOT_DEFINED = 'A definir';
 // Auditoria do orçamento (12/11/2026), O22 e D10: saiu "Sinal, hora extra e cancelamento seguem as condições da
 // proposta" (nenhuma proposta traz essas condições, e a política de reserva ainda não está publicada). Entra o fluxo
 // real: o pedido não é reserva; a proposta vem pelo link, com o frete e o pedágio; a data só fica confirmada com o
-// aceite e o sinal. Texto novo, versão nova.
-export const BRIEFING_TERMS_VERSION = '2026-11-12';
+// aceite e o sinal. Texto novo, versão nova. Em 13/11/2026 (roteiro do contrato): "parcela inicial" no lugar de "sinal"
+// (pelo Código Civil, "sinal" são arras, e a empresa teria de devolver em dobro se falhasse); versão nova.
+export const BRIEFING_TERMS_VERSION = '2026-11-13';
 export const BRIEFING_TERMS =
-  'Estou ciente de que o orçamento considera as informações acima e que mudanças no local, no horário, no público ou na energia podem alterar o valor. Energia adequada no local, licenças (como ECAD e prefeitura) e danos causados por convidados são de responsabilidade do contratante. Este pedido ainda não é uma reserva: a equipe confere a disponibilidade e manda a proposta num link, com o frete e o pedágio, quando houver, e a data só fica confirmada depois que eu aceitar a proposta e pagar o sinal.';
+  'Estou ciente de que o orçamento considera as informações acima e que mudanças no local, no horário, no público ou na energia podem alterar o valor. Energia adequada no local, licenças (como ECAD e prefeitura) e danos causados por convidados são de responsabilidade do contratante. Este pedido ainda não é uma reserva: a equipe confere a disponibilidade e manda a proposta num link, com o frete e o pedágio, quando houver, e a data só fica confirmada depois que eu aceitar a proposta e pagar a parcela inicial.';
 
 export interface BriefingAnswers {
   eventType: string;

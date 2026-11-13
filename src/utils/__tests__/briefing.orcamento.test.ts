@@ -64,13 +64,14 @@ describe('briefing — texto de ciência com o fluxo real (O22)', () => {
     expect(BRIEFING_TERMS).not.toContain('condições da proposta');
     expect(BRIEFING_TERMS).toContain('Este pedido ainda não é uma reserva');
     expect(BRIEFING_TERMS).toContain('manda a proposta num link, com o frete e o pedágio, quando houver');
-    expect(BRIEFING_TERMS).toContain('a data só fica confirmada depois que eu aceitar a proposta e pagar o sinal');
+    expect(BRIEFING_TERMS).toContain('a data só fica confirmada depois que eu aceitar a proposta e pagar a parcela inicial');
+    expect(BRIEFING_TERMS.toLowerCase()).not.toContain(' sinal');
     expect(BRIEFING_TERMS).not.toMatch(/50%|48 h|cancelamento/);
   });
 
   it('texto novo, versão nova (o registro diz qual texto a pessoa leu)', () => {
-    expect(BRIEFING_TERMS_VERSION).toBe('2026-11-12');
-    expect(buildBriefingText(base, ACCEPTED)).toContain('(texto 2026-11-12)');
+    expect(BRIEFING_TERMS_VERSION).toBe('2026-11-13');
+    expect(buildBriefingText(base, ACCEPTED)).toContain('(texto 2026-11-13)');
   });
 });
 

@@ -220,11 +220,11 @@ export const CityLandingPage = () => {
            <div className="sticky top-24">
              <div className="bg-card border border-border rounded-xl p-6 shadow-lg mb-6">
                 {/* Auditoria do orçamento (12/11/2026), O22: o pedido não é reserva; a data só fica confirmada com o
-                    aceite da proposta e o sinal. O botão vai ao briefing (o contato grava fora das reservas). */}
+                    aceite da proposta e a parcela inicial. O botão vai ao briefing (o contato grava fora das reservas). */}
                 <h2 className="text-xl font-bold mb-4 text-foreground">Quer um orçamento?</h2>
                 <p className="text-muted-foreground mb-6">
                   Conte como vai ser o seu evento em {city.name}. A equipe confere a disponibilidade da data e manda a
-                  proposta; a data fica confirmada depois do aceite e do sinal.
+                  proposta; a data fica confirmada depois do aceite e da parcela inicial.
                 </p>
                 <Link to={quoteHref} className={buttonVariants({ fullWidth: true, className: 'mb-3' })}>
                   Solicitar Cotação

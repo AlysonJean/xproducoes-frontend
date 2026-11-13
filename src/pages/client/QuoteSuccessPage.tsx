@@ -204,12 +204,12 @@ export const QuoteSuccessPage = () => {
       }
     >
       {/* Auditoria do orçamento (12/11/2026), O22: o pedido não é reserva. A equipe manda a proposta pelo link, com o
-          frete e o pedágio; a data só fica confirmada com o aceite e o sinal (sem os detalhes da política, ainda não
+          frete e o pedágio; a data só fica confirmada com o aceite e a parcela inicial (sem os detalhes da política, ainda não
           publicada). */}
       <p className="text-foreground">
         Recebemos seu pedido. Ele ainda não é uma reserva: nossa equipe confere a disponibilidade e manda a proposta
         num link, por e-mail ou WhatsApp, com os itens, o frete e o pedágio, quando houver. A data só fica confirmada
-        depois que você aceitar a proposta e pagar o sinal.
+        depois que você aceitar a proposta e pagar a parcela inicial.
       </p>
       {bookingId && (
         <p>

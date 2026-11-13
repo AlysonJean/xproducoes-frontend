@@ -152,7 +152,7 @@ const HOUR_MS = 60 * 60 * 1000;
 
 export type WaitingTone = 'muted' | 'warning' | 'destructive';
 
-/** Idade do pedido mais antigo e a cor: cinza até 4 h, amarelo até 24 h (o prazo que o site promete), vermelho depois. */
+/** Idade do pedido mais antigo e a cor: cinza até 4 h, amarelo até 24 h (a meta interna; o site promete até 5 dias), vermelho depois. */
 export function waitingAge(oldestWaitingAt: string | null, now: number = Date.now()): { hours: number; tone: WaitingTone } | null {
   if (!oldestWaitingAt) return null;
   const createdAt = Date.parse(oldestWaitingAt);
