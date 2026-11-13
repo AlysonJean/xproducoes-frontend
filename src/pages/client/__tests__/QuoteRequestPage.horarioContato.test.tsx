@@ -65,7 +65,8 @@ const corpoEnviado = async (rota = '/bookings') => {
   return post.mock.calls.find((c) => c[0] === rota)![1] as Record<string, unknown>;
 };
 
-const local = (ano: number, mes: number, dia: number, h: number, m = 0) => new Date(ano, mes - 1, dia, h, m, 0, 0).toISOString();
+// Auditoria do orçamento (12/11/2026), fuso: o horário digitado é o de Brasília (-03:00), em qualquer aparelho.
+const local = (ano: number, mes: number, dia: number, h: number, m = 0) => new Date(Date.UTC(ano, mes - 1, dia, h + 3, m, 0, 0)).toISOString();
 
 // Auditoria do orçamento (12/11/2026). O6: "Hora de Início da Montagem" virava o início do evento e o "Tempo de Operação" a
 // duração: montagem às 15h e festa das 19h às 23h gravava o evento das 15h às 19h, ou cobrava 4 h a mais de kit e 8 h de
@@ -90,6 +91,8 @@ describe('QuoteRequestPage — início e término do evento, montagem à parte, 
     expect(screen.getByLabelText('Hora da montagem (opcional)')).toHaveAttribute('type', 'time');
     expect(screen.queryByLabelText(/Tempo de Operação/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Hora de Início da Montagem/)).not.toBeInTheDocument();
+    // Fuso (auditoria do orçamento, 12/11/2026): o horário pedido é o de Brasília, em qualquer aparelho.
+    expect(screen.getByText('Horário de Brasília.')).toBeInTheDocument();
   });
 
   it('O6: montagem 15h e festa 19h–23h grava o evento das 19h às 23h (4 h), a montagem às 15h, e cobra kit e técnico pelas 4 h do evento', async () => {

@@ -31,15 +31,17 @@ const base: BriefingAnswers = {
 const loggedOut = { loggedIn: false, now: NOW };
 
 describe('eventRange', () => {
+  // Auditoria do orçamento (12/11/2026), fuso: as horas são as de Brasília em qualquer aparelho (20/03/2027, -03:00).
   it('término menor que o início é a madrugada do dia seguinte', () => {
     const { start, end, hours } = eventRange({ ...base, startTime: '20:00', endTime: '02:00' });
-    expect(end.getDate()).toBe(start.getDate() + 1);
+    expect(start.toISOString()).toBe('2027-03-20T23:00:00.000Z');
+    expect(end.toISOString()).toBe('2027-03-21T05:00:00.000Z');
     expect(hours).toBe(6);
   });
 
   it('sem horário definido, usa a faixa padrão só para a data existir', () => {
     const { start, hours } = eventRange({ ...base, timeUnknown: true, startTime: '', endTime: '' });
-    expect(start.getHours()).toBe(19);
+    expect(start.toISOString()).toBe('2027-03-20T22:00:00.000Z');
     expect(hours).toBe(4);
   });
 });

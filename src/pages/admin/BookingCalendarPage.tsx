@@ -507,6 +507,12 @@ export const BookingCalendarPage = () => {
 
   const confirmWithDetails = async () => {
     if (!confirmBookingId) return;
+    // Auditoria do orçamento (12/11/2026), O33: valor final zero ou negativo não sai daqui (o servidor também recusa, com a
+    // mensagem genérica da validação). Em branco, o valor da reserva fica como está.
+    if (confirmPrice !== '' && !(Number(confirmPrice) > 0)) {
+      addNotification({ type: 'error', title: 'Valor final inválido', message: 'O valor final precisa ser maior que zero. Em branco, fica o valor de hoje.' });
+      return;
+    }
     try {
       setActionLoading(confirmBookingId + 'CONFIRM');
       const payload: Partial<CalendarBooking> = {};
@@ -525,24 +531,42 @@ export const BookingCalendarPage = () => {
       setConfirmOpen(false);
       setConfirmBookingId(null);
       addNotification({ type: 'success', title: 'Agenda Confirmada', message: 'Valor e equipe alocados com sucesso.' });
-        } catch {
-      addNotification({ type: 'error', title: 'Erro de Confirmação', message: 'Falha ao salvar detalhes da agenda.' });
+        } catch (err: unknown) {
+      // Auditoria do orçamento (12/11/2026), O33: o motivo do servidor aparece (valor final zero ou negativo, conflito de
+      // equipamento, quem está sem acesso).
+      addNotification({ type: 'error', title: 'Erro de Confirmação', message: err instanceof Error && err.message ? err.message : 'Falha ao salvar detalhes da agenda.' });
     } finally {
       setActionLoading(null);
     }
   };
 
-  const updateDates = async (id: string, start: Date, end: Date) => {
-    await apiFetch(`/bookings/${id}`, {
+  // Auditoria do orçamento (12/11/2026), O1/A1/C1: arrastar ou esticar manda só o início e o término; o servidor tira a
+  // duração das datas (antes ia `duration`, que a validação descartava) e refaz o valor como na criação (hora extra do
+  // kit, diárias, técnico do evento todo). A resposta traz o valor novo e o aviso (recalculation).
+  const updateDates = async (id: string, start: Date, end: Date) =>
+    apiFetch<{ totalPrice?: number | string; eventDuration?: number; recalculation?: { message?: string | null } | null } | null>(`/bookings/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         eventDate: start.toISOString(),
         eventEndDate: end.toISOString(),
-        duration: Math.max(1, Math.round((end.getTime() - start.getTime()) / 3600000))
       })
     });
+
+  // Depois de gravar: a agenda passa a mostrar as datas, a duração e o valor novos, e avisa quando o valor mudou (ou
+  // quando ficou como estava por um motivo que a equipe precisa saber, como "Frete a combinar").
+  const applyMovedBooking = (event: CalendarEvent, s: Date, e: Date, saved: Awaited<ReturnType<typeof updateDates>>) => {
+    const totalPrice = saved && saved.totalPrice !== undefined ? toNumber(saved.totalPrice) : event.resource.totalPrice;
+    const duration = saved && typeof saved.eventDuration === 'number' ? saved.eventDuration : Math.max(1, Math.ceil((e.getTime() - s.getTime()) / 3600000));
+    setEvents((curr) => curr.map((ev) => (ev.resource.id === event.resource.id
+      ? { ...ev, start: s, end: e, resource: { ...ev.resource, eventDate: s.toISOString(), eventEndDate: e.toISOString(), duration, totalPrice } }
+      : ev)));
+    const message = saved?.recalculation?.message;
+    if (message) addNotification({ type: 'info', title: 'Valor da reserva', message });
   };
+
+  // O1: o conflito de equipamento da reserva confirmada (409) e o término antes do início (400) chegam com o motivo.
+  const moveErrorMessage = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback);
 
     const onEventDrop = async ({ event, start, end }: EventInteractionArgs<CalendarEvent>) => {
     const s = new Date(start);
@@ -550,11 +574,12 @@ export const BookingCalendarPage = () => {
     const prev = events;
     try {
       setEvents((curr) => curr.map((ev) => (ev === event ? { ...ev, start: s, end: e } : ev)));
-      await updateDates(event.resource.id, s, e);
+      const saved = await updateDates(event.resource.id, s, e);
+      applyMovedBooking(event, s, e, saved);
       addNotification({ type: 'success', title: 'Horário alterado', message: 'Data e horário da reserva atualizados.' });
-    } catch {
+    } catch (err: unknown) {
       setEvents(prev);
-      addNotification({ type: 'error', title: 'Erro ao mover', message: 'Não foi possível alterar a data da reserva.' });
+      addNotification({ type: 'error', title: 'Erro ao mover', message: moveErrorMessage(err, 'Não foi possível alterar a data da reserva.') });
     }
   };
 
@@ -564,11 +589,12 @@ export const BookingCalendarPage = () => {
     const prev = events;
     try {
       setEvents((curr) => curr.map((ev) => (ev === event ? { ...ev, start: s, end: e } : ev)));
-      await updateDates(event.resource.id, s, e);
+      const saved = await updateDates(event.resource.id, s, e);
+      applyMovedBooking(event, s, e, saved);
       addNotification({ type: 'success', title: 'Duração alterada', message: 'Duração da reserva atualizada.' });
-    } catch {
+    } catch (err: unknown) {
       setEvents(prev);
-      addNotification({ type: 'error', title: 'Erro ao alterar', message: 'Não foi possível alterar a duração da reserva.' });
+      addNotification({ type: 'error', title: 'Erro ao alterar', message: moveErrorMessage(err, 'Não foi possível alterar a duração da reserva.') });
     }
   };
 
@@ -827,7 +853,8 @@ export const BookingCalendarPage = () => {
             <div className="space-y-6 py-2">
                <Alert variant="info" title="Confira os dados" description="Defina o valor final e, se quiser, o colaborador responsável." />
                <div className="space-y-4">
-                  <Input label="Valor final (R$)" type="number" step="0.01" value={confirmPrice} onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirmPrice(e.target.value)} />
+                  {/* O12: aqui é o total (com frete e pedágio); no "Editar" é o valor dos itens, sem o frete. */}
+                  <Input label="Valor final (R$)" type="number" step="0.01" value={confirmPrice} onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirmPrice(e.target.value)} description="O total da reserva, com frete e pedágio. Em branco, fica o valor de hoje." />
                   <Select
                       label="Colaborador responsável (opcional)"
                       value={confirmCollaboratorId}

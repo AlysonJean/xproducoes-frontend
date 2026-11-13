@@ -587,13 +587,15 @@ export const QuoteRequestPage: React.FC = () => {
                 error={errors.eventDate?.message}
               />
 
-              {/* O6: início e término do evento, como no briefing; a montagem é outro campo. */}
+              {/* O6: início e término do evento, como no briefing; a montagem é outro campo. Auditoria do orçamento
+                  (12/11/2026), fuso: o horário é o de Brasília, onde o evento acontece (utils/quoteSubmission.ts). */}
               <Input
                 label="Início do evento *"
                 type="time"
                 leftIcon={<Clock className="h-4 w-4" />}
                 {...register('startTime')}
                 error={errors.startTime?.message}
+                helperText="Horário de Brasília."
               />
 
               <Input

@@ -31,10 +31,14 @@ const manualBookingSchema = z
     zipCode: z.string().min(1, 'CEP é obrigatório.'),
     addressNumber: z.string().min(1, 'Número é obrigatório.'),
     addressComplement: z.string().optional(),
-    // D8a (aprovada em 02/11/2026): valor final opcional, o mesmo do formulário completo. Em branco, o
-    // servidor calcula pelo kit ou pelos equipamentos e pelas horas do evento (antes nascia com R$ 0).
-    finalValue: z.number().positive('O valor final deve ser maior que zero.').optional(),
+    // D8a (aprovada em 02/11/2026): valor opcional, o mesmo do formulário completo. Em branco, o servidor calcula
+    // pelo kit ou pelos equipamentos e pelas horas do evento (antes nascia com R$ 0). Auditoria do orçamento
+    // (12/11/2026), O12/A7/C6: é o valor dos itens, sem o frete; o total é esse valor + frete + pedágio.
+    finalValue: z.number().positive('O valor dos itens deve ser maior que zero.').optional(),
+    // O15/C7: "Observações para o cliente" (notes, saem na proposta e na área do cliente) e "Observações internas"
+    // (internalNotes, só a equipe vê). Antes o único campo ia para o cliente.
     notes: z.string().optional(),
+    internalNotes: z.string().max(5000, 'Texto muito longo.').optional(),
   })
   .refine(
         (data) => {
@@ -45,7 +49,12 @@ const manualBookingSchema = z
       message: 'É necessário selecionar um kit ou pelo menos um equipamento.',
       path: ['kitId'],
     }
-  );
+  )
+  // Auditoria do orçamento (12/11/2026), O1: o fim vem depois do início (o servidor também recusa).
+  .refine((data) => !(data.eventDate && data.eventEndDate && new Date(data.eventEndDate) <= new Date(data.eventDate)), {
+    message: 'O fim precisa ser depois do início.',
+    path: ['eventEndDate'],
+  });
 type ManualBookingFormData = z.infer<typeof manualBookingSchema>;
 
 // Rádio nativo com a cor da marca e foco visível (antes: `rounded`, sem estilo de foco).
@@ -173,10 +182,13 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
     setServerError(null);
     try {
       // Converter as datas para formato ISO datetime
-      const { finalValue, ...rest } = data;
+      const { finalValue, internalNotes, ...rest } = data;
       const payload = {
         ...rest,
+        // O12: o valor dos itens vai como totalPrice; o servidor soma o frete e o pedágio.
         ...(finalValue ? { totalPrice: finalValue } : {}),
+        // O15: as observações internas só vão com texto.
+        ...(internalNotes?.trim() ? { internalNotes } : {}),
         eventDate: new Date(data.eventDate).toISOString(),
         eventEndDate: new Date(data.eventEndDate).toISOString(),
         status: 'CONFIRMED' as const,
@@ -333,21 +345,30 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
             {...register('finalValue', {
               setValueAs: (v: unknown) => (v === '' || v === null || v === undefined ? undefined : Number(v)),
             })}
-            label="Valor final (R$)"
+            label="Valor dos itens, sem frete (R$)"
             placeholder="Calculado pelos itens"
-            description={equipmentUnit === 'day'
-              ? 'Opcional. Em branco, é calculado pelo kit ou pelos equipamentos e pelas diárias do evento.'
-              : 'Opcional. Em branco, é calculado pelo kit ou pelos equipamentos e pelas horas do evento.'}
+            description={`Opcional. Em branco, é calculado pelo kit ou pelos equipamentos e pelas ${equipmentUnit === 'day' ? 'diárias' : 'horas'} do evento. O frete e o pedágio, quando houver, entram à parte: total = itens + frete + pedágio.`}
             error={errors.finalValue?.message}
             className="w-full"
           />
 
-          <Textarea
-            {...register('notes')}
-            label="Observações (opcional)"
-            rows={3}
-            className="w-full"
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Textarea
+              {...register('notes')}
+              label="Observações para o cliente (opcional)"
+              description="Saem na proposta, nos PDFs e na área do cliente."
+              rows={3}
+              className="w-full"
+            />
+            <Textarea
+              {...register('internalNotes')}
+              label="Observações internas (opcional)"
+              description="Só a equipe vê. Não saem na proposta nem para o cliente."
+              rows={3}
+              className="w-full"
+              error={errors.internalNotes?.message}
+            />
+          </div>
 
           {/* Seleção de Kit ou Equipamentos */}
           <div className="space-y-4">

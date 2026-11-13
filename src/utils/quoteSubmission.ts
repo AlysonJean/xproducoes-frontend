@@ -1,3 +1,5 @@
+import { brasiliaDateISO, brasiliaDateTime, brasiliaParts, nextDateISO } from './brasiliaTime';
+
 // Mensagem de sucesso do envio de orçamento (QuoteRequestPage). No checkout de convidado
 // com e-mail que já tem conta, o backend aceita o pedido nessa conta mas não autentica
 // ninguém (`existingAccount: true`) — a pessoa precisa entrar para acompanhar o pedido.
@@ -10,9 +12,10 @@ export function quoteSuccessMessage(responseData: { existingAccount?: boolean; [
 // Auditoria do orçamento (12/11/2026), O6: o /orcamento pede o início e o término do evento, como o briefing, e a hora
 // da montagem num campo à parte. Antes a "Hora de Início da Montagem" virava o início do evento e o "Tempo de Operação"
 // a duração: montagem às 15h e festa das 19h às 23h gravava o evento das 15h às 19h, ou cobrava 4 h a mais de kit e 8 h
-// de técnico. Hora local do navegador, como no briefing. Término antes do início (ou igual a ele, não) é a madrugada
-// do dia seguinte: a festa que acaba às 2h. Evento (ou aluguel por diária) de mais de um dia: a data do término,
-// opcional, leva o término para esse dia (antes, o "Tempo de Operação" aceitava 30 h ou 48 h).
+// de técnico. Horário de Brasília, como no briefing (auditoria do orçamento, 12/11/2026, fuso: antes era o do aparelho,
+// e quem pedia de outro fuso gravava outra hora; ver utils/brasiliaTime.ts). Término antes do início (ou igual a ele,
+// não) é a madrugada do dia seguinte: a festa que acaba às 2h. Evento (ou aluguel por diária) de mais de um dia: a data
+// do término, opcional, leva o término para esse dia (antes, o "Tempo de Operação" aceitava 30 h ou 48 h).
 
 export interface QuoteTimesInput {
   eventDate?: unknown;
@@ -35,11 +38,8 @@ export interface QuoteEventRange {
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-const localDate = (date: string, time: string): Date => {
-  const [y, m, d] = date.split('-').map(Number);
-  const [hh, mm] = time.split(':').map(Number);
-  return new Date(y, m - 1, d, hh, mm, 0, 0);
-};
+// Data e hora no horário de Brasília (inválida vira Invalid Date, que as contas abaixo recusam).
+const brasiliaDate = (date: string, time: string): Date => brasiliaDateTime(date, time) ?? new Date(Number.NaN);
 
 const textOf = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
@@ -63,34 +63,35 @@ export function quoteEventRange(input: QuoteTimesInput): QuoteEventRange | null 
   if (!DATE_RE.test(date) || !TIME_RE.test(startTime) || !TIME_RE.test(endTime) || endDateKind === 'before') return null;
   const multiDay = endDateKind === 'after';
   if (!multiDay && startTime === endTime) return null;
-  const start = localDate(date, startTime);
-  const end = localDate(multiDay ? textOf(input.endDate) : date, endTime);
+  const start = brasiliaDate(date, startTime);
+  let end = brasiliaDate(multiDay ? textOf(input.endDate) : date, endTime);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
-  if (!multiDay && end <= start) end.setDate(end.getDate() + 1);
+  if (!multiDay && end <= start) end = brasiliaDate(nextDateISO(date), endTime);
   const setupTime = textOf(input.setupTime);
   return {
     start,
     end,
     hours: (end.getTime() - start.getTime()) / 3_600_000,
-    setup: TIME_RE.test(setupTime) ? localDate(date, setupTime) : null,
+    setup: TIME_RE.test(setupTime) ? brasiliaDate(date, setupTime) : null,
   };
 }
 
-/** O fim da linha da duração: "" no mesmo dia, " (termina no dia seguinte)" ou " (termina em 12/01)". */
+/** O fim da linha da duração: "" no mesmo dia, " (termina no dia seguinte)" ou " (termina em 12/01)". Dias de Brasília. */
 export function quoteEventEndNote(range: Pick<QuoteEventRange, 'start' | 'end'>): string {
-  const day = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
-  const days = Math.round((day(range.end) - day(range.start)) / 86_400_000);
+  const start = brasiliaParts(range.start);
+  const end = brasiliaParts(range.end);
+  const day = (d: typeof start) => Date.UTC(d.year, d.month - 1, d.day);
+  const days = Math.round((day(end) - day(start)) / 86_400_000);
   if (days <= 0) return '';
   if (days === 1) return ' (termina no dia seguinte)';
   const p = (n: number) => String(n).padStart(2, '0');
-  const year = range.end.getFullYear() === range.start.getFullYear() ? '' : `/${range.end.getFullYear()}`;
-  return ` (termina em ${p(range.end.getDate())}/${p(range.end.getMonth() + 1)}${year})`;
+  const year = end.year === start.year ? '' : `/${end.year}`;
+  return ` (termina em ${p(end.day)}/${p(end.month)}${year})`;
 }
 
-/** "AAAA-MM-DD" de hoje no aparelho. */
+/** "AAAA-MM-DD" de hoje em Brasília (a data do evento é a de lá; antes, a do aparelho). */
 export function todayISO(now: Date = new Date()): string {
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
+  return brasiliaDateISO(now);
 }
 
 // Auditoria do orçamento (12/11/2026), O25: escada, local coberto e estacionamento sem resposta pré-marcada, com "Não

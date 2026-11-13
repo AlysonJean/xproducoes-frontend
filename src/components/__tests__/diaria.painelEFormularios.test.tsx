@@ -67,7 +67,8 @@ describe('Diária no painel (lote 13)', () => {
     render(<ManualBookingModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />);
 
     expect(await screen.findByLabelText(/^Caixa Ativa - R\$\s720,00\/diária$/)).toBeInTheDocument();
-    expect(screen.getByText('Opcional. Em branco, é calculado pelo kit ou pelos equipamentos e pelas diárias do evento.')).toBeInTheDocument();
+    // Auditoria do orçamento (12/11/2026), O12: o texto diz também que o frete e o pedágio ficam à parte.
+    expect(screen.getByText('Opcional. Em branco, é calculado pelo kit ou pelos equipamentos e pelas diárias do evento. O frete e o pedágio, quando houver, entram à parte: total = itens + frete + pedágio.')).toBeInTheDocument();
     expect(screen.queryByText(/pelas horas do evento/)).not.toBeInTheDocument();
   });
 
@@ -76,7 +77,8 @@ describe('Diária no painel (lote 13)', () => {
     render(<ManualBookingModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />);
 
     expect(await screen.findByLabelText(/^Caixa Ativa - R\$\s720,00\/hora$/)).toBeInTheDocument();
-    expect(screen.getByText('Opcional. Em branco, é calculado pelo kit ou pelos equipamentos e pelas horas do evento.')).toBeInTheDocument();
+    // Auditoria do orçamento (12/11/2026), O12: o texto diz também que o frete e o pedágio ficam à parte.
+    expect(screen.getByText('Opcional. Em branco, é calculado pelo kit ou pelos equipamentos e pelas horas do evento. O frete e o pedágio, quando houver, entram à parte: total = itens + frete + pedágio.')).toBeInTheDocument();
   });
 
   it('formulário de reservas (criação) com a chave "day": "pelas diárias do evento"', async () => {

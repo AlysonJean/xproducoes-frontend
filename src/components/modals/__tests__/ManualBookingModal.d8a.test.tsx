@@ -25,8 +25,9 @@ const salvar = async (extra: Array<[string, string]> = []) => {
 };
 
 // D8a (aprovada em 02/11/2026): "Adicionar Reserva Manual" na agenda não tinha campo de valor e criava a
-// reserva confirmada com R$ 0. Agora tem "Valor final (R$)", opcional; em branco, o servidor calcula.
-describe('ManualBookingModal — "Valor final (R$)" (D8a)', () => {
+// reserva confirmada com R$ 0. Agora tem o valor, opcional; em branco, o servidor calcula. Auditoria do orçamento
+// (12/11/2026), O12: o campo é "Valor dos itens, sem frete (R$)" e o servidor soma o frete e o pedágio.
+describe('ManualBookingModal — "Valor dos itens, sem frete (R$)" (D8a e O12)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     apiFetch.mockImplementation((url: string, opts?: { method?: string }) => {
@@ -36,8 +37,8 @@ describe('ManualBookingModal — "Valor final (R$)" (D8a)', () => {
     });
   });
 
-  it('com valor final: vai como totalPrice, sem o campo do formulário no corpo', async () => {
-    const enviado = await salvar([['Valor final (R$)', '1800']]);
+  it('com valor dos itens: vai como totalPrice, sem o campo do formulário no corpo', async () => {
+    const enviado = await salvar([['Valor dos itens, sem frete (R$)', '1800']]);
     expect(enviado).toMatchObject({ totalPrice: 1800, kitId: 'kit-1', status: 'CONFIRMED' });
     expect(enviado).not.toHaveProperty('finalValue');
   });

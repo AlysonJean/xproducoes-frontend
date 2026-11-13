@@ -25,6 +25,8 @@ import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
 import { NotifyClientCheckbox } from '../bookings/NotifyClientCheckbox';
 import { notifyClientPayload } from '../../utils/notifyClient';
 import { useEquipmentPriceUnit } from '../../hooks/usePricingRules';
+import { bookingPricing, type BookingItemLike, type BookingPricing } from '../../utils/bookingPricing';
+import { formatPrice } from '../../utils/formatPrice';
 import {
   ATTACHMENT_ACCEPT,
   ATTACHMENT_RULE_TEXT,
@@ -76,13 +78,18 @@ const bookingFormSchema = (isEditing: boolean) => z
     zipCode: z.string().min(1, 'CEP é obrigatório'),
     addressNumber: z.string().min(1, 'Número é obrigatório'),
     addressComplement: z.string(),
+    // Auditoria do orçamento (12/11/2026), O15/C7: "Observações para o cliente" (notes: saem na proposta, nos PDFs e na
+    // área do cliente) e "Observações internas" (internalNotes: só a equipe vê). Antes havia só "Observações", que ia
+    // para o cliente, e a edição nem mostrava as internas.
     notes: z.string(),
+    internalNotes: z.string().optional(),
     status: z.string(),
     deliveryStatus: z.string(),
-    // Campos admin-only. D8a (aprovada em 02/11/2026): um valor final só, opcional. Em branco, o servidor
-    // calcula pelos itens, com as horas tiradas das datas. Antes era o "Valor do Serviço", obrigatório e
-    // gravado à parte do total (e a página do cliente somava os dois).
-    finalValue: z.number().positive('O valor final deve ser maior que zero.').optional(),
+    // Campos admin-only. D8a (aprovada em 02/11/2026): um valor só, opcional. Em branco, o servidor calcula pelos
+    // itens, com as horas tiradas das datas. Antes era o "Valor do Serviço", obrigatório e gravado à parte do total.
+    // Auditoria do orçamento (12/11/2026), O12/A7/C6: é o valor dos itens, sem o frete; o total é esse valor + frete +
+    // pedágio (antes era o total, e o cliente via "Frete R$ 220" e "Ajuste − R$ 220").
+    finalValue: z.number().positive('O valor dos itens deve ser maior que zero.').optional(),
     paymentProof: z.unknown(), // FileList será tratado no submit
     paymentStatus: z.string(), // '' = não informado
   })
@@ -94,6 +101,14 @@ const bookingFormSchema = (isEditing: boolean) => z
     }
     if (!d.clientName?.trim()) ctx.addIssue({ code: 'custom', path: ['clientName'], message: 'Informe o nome do cliente.' });
     if (!d.clientContact?.trim()) ctx.addIssue({ code: 'custom', path: ['clientContact'], message: 'Informe o contato do cliente.' });
+  })
+  // Auditoria do orçamento (12/11/2026), O1: o término vem depois do início (o servidor também recusa).
+  .superRefine((d, ctx) => {
+    const start = new Date(d.eventDate).getTime();
+    const end = new Date(d.eventEndDate).getTime();
+    if (d.eventDate && d.eventEndDate && Number.isFinite(start) && Number.isFinite(end) && end <= start) {
+      ctx.addIssue({ code: 'custom', path: ['eventEndDate'], message: 'O término precisa ser depois do início.' });
+    }
   })
   .refine(
     (d) =>
@@ -133,6 +148,56 @@ interface RawBooking extends Omit<Booking, 'kits' | 'equipments'> {
   venue?: { street?: string; neighborhood?: string; city?: string; state?: string; zipCode?: string; addressNumber?: string; addressComplement?: string };
   equipments?: Array<{ name?: string }>;
   services?: Array<{ name?: string }>;
+  // O15 e O1: as observações internas, os itens, o resumo de preço e a chave do histórico (só na ficha, GET /:id).
+  internalNotes?: string | null;
+  idempotencyKey?: string | null;
+  items?: BookingItemLike[] | null;
+  discountAmount?: number | string | null;
+  coupon?: { code?: string | null } | null;
+  pricing?: BookingPricing | null;
+}
+
+// Auditoria do orçamento (12/11/2026), O1: o que decide se salvar refaz o valor. O servidor compara com o que está
+// gravado; aqui a tela avisa antes de salvar, com a mesma regra para o endereço (o texto que vai ao Google, sem acento
+// nem caixa; o complemento e o nome do local não contam).
+type AddressFields = Pick<BookingFormData, 'street' | 'addressNumber' | 'neighborhood' | 'city' | 'state' | 'zipCode'>;
+const addressKey = (a: Partial<AddressFields>): string =>
+  [a.street, a.addressNumber, a.neighborhood, a.city, a.state, a.zipCode]
+    .map((v) => (v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim())
+    .join('|');
+const FREIGHT_LINE_RE = /^(frete|pedagio)\b/;
+const isFreightDescription = (text: string): boolean =>
+  FREIGHT_LINE_RE.test(text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase());
+
+interface EditValueInfo {
+  pricing: BookingPricing | null;
+  /**
+   * Importada do histórico (HIST-…), encerrada ou sem itens gravados (pedido do briefing): o servidor não recalcula (ver
+   * bookingCrudService.updateBooking). Sem os itens lidos (aberta pela lista, com a leitura falhando), null.
+   */
+  closedReason: 'historico' | 'encerrada' | 'sem_itens' | null;
+}
+
+/** O aviso da edição quando as datas ou o endereço mudaram (null quando nada que muda o valor mudou). */
+function editValueNotice(params: { datesChanged: boolean; addressChanged: boolean; typedValue: boolean; info: EditValueInfo | null }): string | null {
+  const { datesChanged, addressChanged, typedValue, info } = params;
+  // O servidor só refaz o frete da reserva que tem a linha do frete (sem os itens lidos, a tela não sabe e avisa).
+  const freightChanged = addressChanged && (!info?.pricing || info.pricing.lines.some((l) => isFreightDescription(l.description)));
+  if (!datesChanged && !freightChanged) return null;
+  if (info?.closedReason === 'historico') return 'Reserva do histórico: mudar datas ou endereço não muda o valor.';
+  if (info?.closedReason === 'encerrada') return 'Reserva cancelada, concluída ou reembolsada: mudar datas ou endereço não muda o valor.';
+  if (info?.closedReason === 'sem_itens') return 'Reserva sem itens gravados: mudar datas ou endereço não muda o valor. Se precisar, digite o valor dos itens.';
+  const parts = [
+    ...(datesChanged ? ['os itens do catálogo são recalculados pelo novo horário (hora extra do kit, diárias e técnico)'] : []),
+    ...(freightChanged ? ['o frete é calculado de novo para o endereço novo'] : []),
+  ];
+  const negotiated = !typedValue && !!info?.pricing && info.pricing.lines.length > 0 && Math.round(info.pricing.adjustment * 100) !== 0;
+  const valueText = typedValue
+    ? ' O total fica com o valor dos itens digitado, mais o frete e o pedágio.'
+    : negotiated
+      ? ' O valor dos itens digitado antes continua; digite outro se quiser mudar.'
+      : '';
+  return `Ao salvar, ${parts.join(' e ')}, como na criação. Linhas digitadas à mão ficam como estão, e o novo valor aparece depois de salvar.${valueText}`;
 }
 
 // Na edição: o tipo de cliente é o da reserva, e os itens dela aparecem só para leitura.
@@ -170,6 +235,12 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
   // D11 (aprovada em 02/11/2026): reserva criada já Confirmada avisa o cliente uma vez, com "Avisar o cliente por
   // e-mail" marcada por padrão. Fora do rascunho do formulário: a escolha vale para este envio.
   const [notifyClient, setNotifyClient] = useState(true);
+  // O15: na criação as observações internas são novas; na edição, só depois de lidas da reserva (a lista de Reservas
+  // abre a edição sem elas: mandar o campo vazio apagaria as que existem).
+  const [internalNotesKnown, setInternalNotesKnown] = useState(!isEditing);
+  // O1: o valor de hoje e se o servidor recalcula; datas e endereço como abriram (para o aviso antes de salvar).
+  const [valueInfo, setValueInfo] = useState<EditValueInfo | null>(null);
+  const originalRef = useRef<{ eventDate: string; eventEndDate: string; address: string } | null>(null);
 
   const draftKey = `xp-draft-admin-booking-${initialData?.id || 'new'}`;
   const { save: saveDraft, load: loadDraft, clear: clearDraft } = useFormDraft<Omit<BookingFormData, 'paymentProof'>>(draftKey);
@@ -213,9 +284,11 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
     if (!isDirty) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      const { paymentProof: _paymentProof, ...draftable } = watchedValues;
+      const { paymentProof: _paymentProof, internalNotes, ...draftable } = watchedValues;
       void _paymentProof;
-      saveDraft(draftable);
+      // Auditoria do orçamento (12/11/2026), O15: sem as observações internas lidas, o rascunho não as guarda; restaurá-lo
+      // depois, com elas lidas, mandaria o campo vazio e as apagaria.
+      saveDraft(internalNotesKnown ? { ...draftable, internalNotes } : draftable);
     }, 500);
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -230,7 +303,12 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
     // D8a: o rascunho salvo pela versão anterior do formulário guarda o "Valor do Serviço" (serviceValue);
     // ele volta no "Valor final", para não perder o que foi digitado.
     const { serviceValue: legacyValue, ...saved } = draftPrompt.values as typeof draftPrompt.values & { serviceValue?: number | null };
-    const values = saved.finalValue === undefined && legacyValue ? { ...saved, finalValue: legacyValue } : saved;
+    const restored = saved.finalValue === undefined && legacyValue ? { ...saved, finalValue: legacyValue } : saved;
+    // O12: a versão anterior da edição abria o campo com o total da reserva (com o frete); esse número não foi digitado e,
+    // como valor dos itens, somaria o frete de novo. Fica de fora.
+    const values = editedBooking && restored.finalValue !== undefined && Number(restored.finalValue) === Number(editedBooking.totalPrice)
+      ? { ...restored, finalValue: undefined }
+      : restored;
     reset(editedBooking ? { ...values, clientType: editClientTypeOf(editedBooking) } : values);
     setDraftPrompt(null);
   };
@@ -283,6 +361,27 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
 
         if (initialData) {
           const booking = initialData as RawBooking;
+          // O15 e O1: a lista de Reservas abre a edição com a linha da lista, sem as observações internas e sem os itens.
+          // Nesse caso a reserva é lida (GET /bookings/:id, a mesma da ficha); se a leitura falhar, as observações
+          // internas ficam de fora deste salvar.
+          let details: RawBooking = booking;
+          if (booking.internalNotes === undefined) {
+            const full = await apiFetch<RawBooking>(`/bookings/${initialData.id}`).catch(() => null);
+            if (full && typeof full === 'object' && !Array.isArray(full)) details = { ...booking, ...full };
+          }
+          setInternalNotesKnown(details.internalNotes !== undefined);
+          // Itens lidos (o resumo de preço da API ou os itens); sem nenhum (pedido do briefing), o servidor não recalcula.
+          const valuePricing = details.pricing || details.items ? bookingPricing(details) : null;
+          setValueInfo({
+            pricing: valuePricing,
+            closedReason: details.idempotencyKey?.startsWith('HIST-')
+              ? 'historico'
+              : ['CANCELLED', 'COMPLETED', 'REFUNDED'].includes(String(details.status))
+                ? 'encerrada'
+                : valuePricing && valuePricing.lines.length === 0
+                  ? 'sem_itens'
+                  : null,
+          });
           const eventDate = (booking.eventDate as string) || '';
           const eventEndDate = (booking.eventEndDate as string) || eventDate;
           const location = booking.location || '';
@@ -314,11 +413,22 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
             addressNumber: address.addressNumber || '',
             addressComplement: address.addressComplement || '',
             notes: (booking.notes as string) || '',
+            internalNotes: details.internalNotes ?? '',
             status: (booking.status as string) || 'PENDING',
             deliveryStatus: (booking.deliveryStatus as string) || 'PENDING',
-            finalValue: Number(booking.totalPrice) || undefined,
+            // O12: o campo é o valor dos itens, sem o frete; abre vazio (antes abria com o total, que ia de volta como
+            // valor digitado a cada salvar e travava o recálculo das datas e do endereço).
+            finalValue: undefined,
             paymentStatus: booking.paymentStatus || '',
           });
+          originalRef.current = {
+            eventDate: toLocalInput(eventDate),
+            eventEndDate: toLocalInput(eventEndDate),
+            address: addressKey({
+              street: address.street, addressNumber: address.addressNumber, neighborhood: address.neighborhood,
+              city: address.city, state: address.state, zipCode: address.zipCode,
+            }),
+          };
         }
 
         const draft = loadDraft();
@@ -375,14 +485,18 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
         addressNumber: data.addressNumber,
         addressComplement: data.addressComplement,
         notes: data.notes,
+        // O15: na edição vai sempre que foi lido ('' apaga); na criação, só com texto.
+        internalNotes: isEditing
+          ? (internalNotesKnown ? data.internalNotes ?? '' : undefined)
+          : data.internalNotes?.trim() ? data.internalNotes : undefined,
         status: isEditing ? undefined : data.status,
         deliveryStatus: data.deliveryStatus,
       };
 
       // Adicionar campos admin se for admin
       if (isAdmin) {
-        // D8a: o valor final vai como totalPrice; em branco, o servidor calcula pelos itens (na edição, o
-        // total atual fica como está).
+        // D8a e O12: o valor dos itens vai como totalPrice (o servidor soma o frete e o pedágio); em branco, o servidor
+        // calcula pelos itens (na edição, recalcula só se as datas ou o endereço mudarem).
         if (data.finalValue) {
           payload.totalPrice = data.finalValue;
         }
@@ -396,9 +510,12 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
 
       let savedId: string | undefined;
       if (isEditing && initialData) {
-        await apiFetch(`/bookings/${initialData.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+        const saved = await apiFetch<{ recalculation?: { message?: string | null } | null } | null>(`/bookings/${initialData.id}`, { method: 'PUT', body: JSON.stringify(payload) });
         savedId = initialData.id;
         addNotification({ type: 'success', title: 'Reserva atualizada', message: 'As alterações foram salvas.' });
+        // O1: o servidor diz o que mudou no valor (de quanto para quanto, frete a combinar, linhas que ficaram).
+        const recalculation = saved && typeof saved === 'object' ? saved.recalculation : null;
+        if (recalculation?.message) addNotification({ type: 'info', title: 'Valor da reserva', message: recalculation.message });
       } else {
         const created = await apiFetch<{ id?: string }>(`/bookings`, { method: 'POST', body: JSON.stringify(payload) });
         savedId = created?.id;
@@ -434,6 +551,23 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
   const equipmentUnit = useEquipmentPriceUnit(!isEditing && !loading);
 
   if (loading) return <BrandLoader size={100} label="Carregando formulário de reserva..." />;
+
+  // O1: o aviso de recálculo, enquanto a pessoa muda datas ou endereço na edição.
+  const original = originalRef.current;
+  const valueNotice = isEditing && original
+    ? editValueNotice({
+        datesChanged: watchedValues.eventDate !== original.eventDate || watchedValues.eventEndDate !== original.eventEndDate,
+        addressChanged: addressKey(watchedValues) !== original.address,
+        typedValue: Boolean(watchedValues.finalValue),
+        info: valueInfo,
+      })
+    : null;
+  // O12: o valor de hoje, com o frete à parte, no texto do campo da edição.
+  const todayPricing = valueInfo?.pricing;
+  const todayFreight = todayPricing ? todayPricing.lines.filter((l) => isFreightDescription(l.description)).reduce((sum, l) => sum + l.total, 0) : 0;
+  const todayText = todayPricing && todayPricing.lines.length > 0
+    ? ` Hoje: ${formatPrice(todayPricing.total)} no total${todayFreight > 0 ? `, com ${formatPrice(todayFreight)} de frete e pedágio` : ''}.`
+    : '';
 
   // Na edição, só para leitura: o nome do cliente cadastrado e os itens da reserva.
   const registeredClientName = editedBooking?.client?.user?.name || editedBooking?.client?.name || editedBooking?.clientName;
@@ -597,26 +731,27 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
           </div>
         </FormSection>
 
+        {valueNotice && <Alert variant="info" title="O valor da reserva será recalculado" description={valueNotice} />}
+
         {isAdmin && (
           <FormSection title="Configurações Admin" description="Campos disponíveis apenas para administradores">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="Valor final (R$)"
+                label="Valor dos itens, sem frete (R$)"
                 type="number"
                 step="0.01"
                 min="0"
                 {...register('finalValue', {
-                  // Em branco vira "sem valor final" (o servidor calcula), não NaN.
+                  // Em branco vira "sem valor digitado" (o servidor calcula), não NaN.
                   setValueAs: (v: unknown) => (v === '' || v === null || v === undefined ? undefined : Number(v)),
                 })}
                 error={errors.finalValue?.message}
-                placeholder={isEditing ? 'Valor atual mantido' : 'Calculado pelos itens'}
-                // Na edição o servidor não recalcula: sem valor final, o total da reserva fica como está.
+                placeholder={isEditing ? 'Segue o valor da reserva' : 'Calculado pelos itens'}
+                // O12: o frete e o pedágio ficam fora deste campo e entram no total. Na edição, em branco, o servidor
+                // recalcula só se as datas ou o endereço mudarem (O1).
                 description={isEditing
-                  ? 'Opcional. O valor que o cliente paga, o mesmo em todo lugar. Em branco, o valor atual da reserva fica como está.'
-                  : equipmentUnit === 'day'
-                    ? 'Opcional. O valor que o cliente paga, o mesmo em todo lugar. Em branco, é calculado pelos itens e pelas diárias do evento.'
-                    : 'Opcional. O valor que o cliente paga, o mesmo em todo lugar. Em branco, é calculado pelos itens e pelas horas do evento.'}
+                  ? `Opcional. O frete e o pedágio entram à parte: total = itens${todayPricing?.couponDiscount ? ' − cupom' : ''} + frete + pedágio.${todayText} Em branco, o valor segue a reserva: com datas ou endereço novos, os itens do catálogo e o frete são recalculados como na criação.`
+                  : `Opcional. Em branco, é calculado pelos itens e pelas ${equipmentUnit === 'day' ? 'diárias' : 'horas'} do evento. O frete e o pedágio, quando houver, entram à parte: total = itens + frete + pedágio.`}
               />
               <Input
                 type="file"
@@ -635,9 +770,31 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
           </FormSection>
         )}
 
-        <FormSection title="Outros" description="Notas e estados">
+        <FormSection title="Observações" description="O que o cliente vê e o que fica só com a equipe">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Textarea label="Observações" rows={3} {...register('notes')} />
+            <Textarea
+              label="Observações para o cliente"
+              rows={3}
+              {...register('notes')}
+              description="Saem na proposta, nos PDFs e na área do cliente."
+            />
+            {internalNotesKnown ? (
+              <Textarea
+                label="Observações internas"
+                rows={3}
+                {...register('internalNotes')}
+                description="Só a equipe vê. Não saem na proposta nem para o cliente."
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                As observações internas não puderam ser lidas agora e ficam como estão. Para editá-las, abra a reserva pela ficha.
+              </p>
+            )}
+          </div>
+        </FormSection>
+
+        <FormSection title="Outros" description="Estados da reserva">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid grid-cols-2 gap-4">
               {/* Na edição o status não aparece: o servidor não o grava por aqui, e ele muda pelos botões
                   da ficha e pela lista de Reservas (confirmar confere conflito e avisa o cliente). */}

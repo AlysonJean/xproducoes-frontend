@@ -2,6 +2,8 @@
 // itens do catálogo; as respostas viram um texto legível em specialRequests, que o painel mostra na
 // ficha da reserva, e o envio cria o cadastro dele (POST /bookings/guest).
 
+import { brasiliaDateTime, nextDateISO } from './brasiliaTime';
+
 export const BRIEFING_STEPS = ['O evento', 'O local', 'O que você precisa', 'Detalhes', 'Seus dados'] as const;
 
 export const EVENT_TYPES = ['Casamento', 'Aniversário ou 15 anos', 'Corporativo', 'Formatura', 'Show ou festival', 'Evento religioso', 'Outro'];
@@ -122,15 +124,18 @@ export function isCompleteCep(value: string): boolean {
   return digitsOf(value).length === 8;
 }
 
-// Hora local do navegador, como no /orcamento. Término menor ou igual ao início é madrugada do dia
-// seguinte (festa que acaba às 2h). Sem horário definido, vale a faixa padrão só para a data existir;
-// o texto do briefing avisa a equipe que o horário está a confirmar.
+// Horário de Brasília, como no /orcamento (auditoria do orçamento, 12/11/2026, fuso: antes era o do aparelho, e quem
+// preenchia de outro fuso gravava outra hora; ver utils/brasiliaTime.ts). Término menor ou igual ao início é madrugada
+// do dia seguinte (festa que acaba às 2h). Sem horário definido, vale a faixa padrão só para a data existir; o texto do
+// briefing avisa a equipe que o horário está a confirmar.
+const brasiliaDate = (date: string, time: string): Date => brasiliaDateTime(date, time) ?? new Date(Number.NaN);
+
 export function eventRange(answers: BriefingAnswers): { start: Date; end: Date; hours: number } {
   const startTime = answers.timeUnknown ? EMPTY_BRIEFING.startTime : answers.startTime;
   const endTime = answers.timeUnknown ? EMPTY_BRIEFING.endTime : answers.endTime;
-  const start = new Date(`${answers.eventDate}T${startTime}:00`);
-  const end = new Date(`${answers.eventDate}T${endTime}:00`);
-  if (end <= start) end.setDate(end.getDate() + 1);
+  const start = brasiliaDate(answers.eventDate, startTime);
+  let end = brasiliaDate(answers.eventDate, endTime);
+  if (end <= start) end = brasiliaDate(nextDateISO(answers.eventDate), endTime);
   return { start, end, hours: Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 3_600_000)) };
 }
 
@@ -248,7 +253,8 @@ export interface BriefingPayload {
 export function buildBriefingPayload(answers: BriefingAnswers, options: { loggedIn: boolean; acceptedAt: Date }): BriefingPayload {
   const { start, end, hours } = eventRange(answers);
   const known = answers.venueKnown === 'yes';
-  const setup = answers.setupTime ? new Date(`${answers.eventDate}T${answers.setupTime}:00`) : null;
+  // A hora da montagem também é a de Brasília (fuso, acima).
+  const setup = answers.setupTime ? brasiliaDateTime(answers.eventDate, answers.setupTime) : null;
   return {
     source: 'briefing',
     status: 'PENDING',

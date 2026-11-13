@@ -32,7 +32,7 @@ const EVENTO: Array<[string, string]> = [
   ['Estado', 'MG'],
   ['CEP', '30110-000'],
   ['Número', '123'],
-  ['Valor final (R$)', '500'],
+  ['Valor dos itens, sem frete (R$)', '500'],
 ];
 
 const novaReservaManual = async () => {

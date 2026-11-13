@@ -33,8 +33,10 @@ const reserva = (extra: Record<string, unknown> = {}) => ({
 
 // D8a (aprovada em 02/11/2026): o formulário exigia o "Valor do Serviço" (sem ele não criava nem editava) e o
 // mandava como serviceValue, gravado à parte do total — e o total da reserva só de kit nascia R$ 0. Agora o
-// campo é "Valor final (R$)", opcional, e vai como totalPrice; em branco, o servidor calcula pelos itens.
-describe('AdminBookingForm — "Valor final (R$)" (D8a)', () => {
+// campo é opcional e vai como totalPrice; em branco, o servidor calcula pelos itens. Auditoria do orçamento
+// (12/11/2026), O12: o campo é o valor dos itens, sem frete ("Valor dos itens, sem frete (R$)"); o servidor soma o
+// frete e o pedágio. Na edição ele abre vazio (antes abria com o total, que voltava como valor digitado).
+describe('AdminBookingForm — "Valor dos itens, sem frete (R$)" (D8a e O12)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
@@ -50,6 +52,7 @@ describe('AdminBookingForm — "Valor final (R$)" (D8a)', () => {
     render(<AdminBookingForm defaultClientType="manual" onSuccess={onSuccess} onCancel={vi.fn()} />);
     await screen.findByRole('button', { name: 'Criar reserva' });
     expect(screen.queryByLabelText('Valor do Serviço (R$)')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Valor final (R$)')).not.toBeInTheDocument();
     preencher(NOVA);
 
     fireEvent.click(screen.getByRole('button', { name: 'Criar reserva' }));
@@ -59,11 +62,11 @@ describe('AdminBookingForm — "Valor final (R$)" (D8a)', () => {
     expect(corpo('POST')).not.toHaveProperty('serviceValue');
   });
 
-  it('cria com valor final: vai como totalPrice', async () => {
+  it('cria com valor dos itens: vai como totalPrice', async () => {
     const onSuccess = vi.fn();
     render(<AdminBookingForm defaultClientType="manual" onSuccess={onSuccess} onCancel={vi.fn()} />);
     await screen.findByRole('button', { name: 'Criar reserva' });
-    preencher([...NOVA, ['Valor final (R$)', '2500']]);
+    preencher([...NOVA, ['Valor dos itens, sem frete (R$)', '2500']]);
 
     fireEvent.click(screen.getByRole('button', { name: 'Criar reserva' }));
 
@@ -72,30 +75,35 @@ describe('AdminBookingForm — "Valor final (R$)" (D8a)', () => {
     expect(corpo('POST')).not.toHaveProperty('serviceValue');
   });
 
-  it('edição: o campo abre com o total da reserva e o valor novo vai como totalPrice', async () => {
+  it('edição: o campo abre vazio (não com o total), salvar sem digitar não manda totalPrice, e o valor digitado vai como totalPrice', async () => {
     const onSuccess = vi.fn();
     render(<AdminBookingForm initialData={reserva({ totalPrice: '1250.00' })} onSuccess={onSuccess} onCancel={vi.fn()} />);
     await screen.findByRole('button', { name: 'Salvar alterações' });
-    expect(screen.getByLabelText('Valor final (R$)')).toHaveValue(1250);
+    expect(screen.getByLabelText('Valor dos itens, sem frete (R$)')).toHaveValue(null);
 
-    preencher([['Valor final (R$)', '1400']]);
     fireEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }));
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(corpo('PUT')).not.toHaveProperty('totalPrice');
 
+    apiFetch.mockClear();
+    onSuccess.mockClear();
+    preencher([['Valor dos itens, sem frete (R$)', '1400']]);
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }));
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
     expect(corpo('PUT')).toMatchObject({ totalPrice: 1400 });
     expect(corpo('PUT')).not.toHaveProperty('serviceValue');
   });
 
-  it('texto do campo: na criação, em branco é calculado; na edição, em branco o valor atual fica como está', async () => {
+  it('texto do campo: o frete e o pedágio entram à parte; na criação, em branco é calculado; na edição, em branco segue a reserva', async () => {
     const { unmount } = render(<AdminBookingForm defaultClientType="manual" onSuccess={vi.fn()} onCancel={vi.fn()} />);
     await screen.findByRole('button', { name: 'Criar reserva' });
-    expect(screen.getByText(/Em branco, é calculado pelos itens e pelas horas do evento\./)).toBeInTheDocument();
+    expect(screen.getByText(/Em branco, é calculado pelos itens e pelas horas do evento\. O frete e o pedágio, quando houver, entram à parte: total = itens \+ frete \+ pedágio\./)).toBeInTheDocument();
     unmount();
 
     render(<AdminBookingForm initialData={reserva({ totalPrice: '1250.00' })} onSuccess={vi.fn()} onCancel={vi.fn()} />);
     await screen.findByRole('button', { name: 'Salvar alterações' });
-    expect(screen.getByText(/Em branco, o valor atual da reserva fica como está\./)).toBeInTheDocument();
-    expect(screen.queryByText(/calculado pelos itens/)).not.toBeInTheDocument();
+    expect(screen.getByText(/total = itens \+ frete \+ pedágio\. Em branco, o valor segue a reserva: com datas ou endereço novos, os itens do catálogo e o frete são recalculados como na criação\./)).toBeInTheDocument();
+    expect(screen.queryByText(/o valor atual da reserva fica como está/)).not.toBeInTheDocument();
   });
 
   it('rascunho da versão anterior com o "Valor do Serviço": volta no "Valor final" e vai como totalPrice', async () => {
@@ -114,7 +122,7 @@ describe('AdminBookingForm — "Valor final (R$)" (D8a)', () => {
     await screen.findByRole('button', { name: 'Salvar alterações' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Restaurar' }));
-    expect(screen.getByLabelText('Valor final (R$)')).toHaveValue(700);
+    expect(screen.getByLabelText('Valor dos itens, sem frete (R$)')).toHaveValue(700);
     fireEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }));
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());

@@ -12,6 +12,7 @@ import { useFormDraft } from '../../hooks/useFormDraft';
 import { api } from '../../services/api';
 import { logger } from '../../utils/logger';
 import { quoteSuccessMessage } from '../../utils/quoteSubmission';
+import { brasiliaDateISO } from '../../utils/brasiliaTime';
 import {
   BRIEFING_STEPS,
   BRIEFING_TERMS,
@@ -129,10 +130,10 @@ export const BriefingPage: React.FC = () => {
   const toggleNeed = (need: string) =>
     update({ needs: answers.needs.includes(need) ? answers.needs.filter((item) => item !== need) : [...answers.needs, need] });
 
-  // Só no navegador: no servidor não há rascunho nem o fuso de quem está preenchendo.
+  // Só no navegador: no servidor não há rascunho. A data mínima é hoje em Brasília, onde o evento acontece (auditoria do
+  // orçamento, 12/11/2026, fuso; antes era o dia no aparelho de quem preenche).
   useEffect(() => {
-    const now = new Date();
-    setMinDate(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`);
+    setMinDate(brasiliaDateISO());
     const draft = loadDraft();
     if (draft) {
       setAnswers((current) => ({ ...current, ...draft.values.answers }));
@@ -333,6 +334,7 @@ export const BriefingPage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <Input label="Começa às" type="time" value={answers.startTime} onChange={(event) => update({ startTime: event.target.value })} error={errors.startTime} />
                   <Input label="Termina às" type="time" value={answers.endTime} onChange={(event) => update({ endTime: event.target.value })} />
+                  <p className="col-span-2 text-xs text-muted-foreground">Horário de Brasília.</p>
                 </div>
               )}
               <label className="flex items-center gap-2 text-sm text-foreground">
