@@ -49,7 +49,7 @@ export function buildPageTitle(title: string): string {
   return `${title} | ${SITE_NAME}`;
 }
 
-/** Formata os dígitos de um telefone brasileiro (com ou sem DDI 55) como "(31) 98925-2272". */
+/** Formata os dígitos de um telefone brasileiro (com ou sem DDI 55) como "(31) 99976-0416". */
 export function formatPhoneDisplay(digits: string): string {
   let local = digits.replace(/\D/g, '');
   if (local.length >= 12 && local.startsWith('55')) local = local.slice(2);

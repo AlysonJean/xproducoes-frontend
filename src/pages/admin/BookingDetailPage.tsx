@@ -58,10 +58,10 @@ import {
   openBookingAttachment,
   uploadBookingAttachment,
 } from '../../utils/bookingAttachments';
-import { SUPPORT_EMAIL } from '../../data/site';
+import { SUPPORT_EMAIL, formatPhoneDisplay } from '../../data/site';
 import { formatBookingCode } from '../../utils/bookingCode';
 import { bookingEmail, bookingPhone, toWhatsAppNumber } from '../../utils/bookingContact';
-import { formatBrasiliaDate } from '../../utils/whatsapp';
+import { formatBrasiliaDate, getWhatsAppPhone } from '../../utils/whatsapp';
 import {
   bookingCancelledWhatsAppText,
   bookingConfirmedWhatsAppText,
@@ -764,7 +764,8 @@ export const BookingDetailPage = () => {
     fy += 5;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.text('Tel/WhatsApp: (31) 98925-2272', MARGIN, fy);
+    // O telefone comercial vem da mesma fonte do botão de WhatsApp (mudou em 13/11/2026); antes estava escrito à mão.
+    doc.text(`Tel/WhatsApp: ${formatPhoneDisplay(getWhatsAppPhone())}`, MARGIN, fy);
     doc.text(`E-mail: ${SUPPORT_EMAIL}`, 95, fy);
 
     fy += 5;

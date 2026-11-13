@@ -30,7 +30,7 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
 
   // Achado (auditoria do design system): o número padrão era "+351123456789" (fictício, de Portugal)
   // e a exibição só formatava o DDI 351. Sem número explícito, usa o oficial configurado
-  // (VITE_WHATSAPP_PHONE, com DDI); a exibição segue o padrão brasileiro "(31) 98925-2272".
+  // (VITE_WHATSAPP_PHONE, com DDI); a exibição segue o padrão brasileiro "(31) 99976-0416".
   const targetNumber = phoneNumber ? normalizePhone(phoneNumber) : getWhatsAppPhone();
 
   const messageTemplates = {

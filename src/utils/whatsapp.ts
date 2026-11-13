@@ -23,7 +23,8 @@ export const getWhatsAppPhone = (opts?: { countryCode?: string }): string => {
   const digits = normalizePhone(raw);
 
   // Se não veio nada, usa fallback conhecido (BR)
-  if (!digits) return '5531989252272';
+  // Telefone comercial desde 13/11/2026 (decisão de Alyson): (31) 99976-0416.
+  if (!digits) return '5531999760416';
 
   // Se já começa com DDI, mantém
   if (digits.startsWith(ddi)) return digits;

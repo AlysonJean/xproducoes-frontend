@@ -28,12 +28,12 @@ describe('schemaGenerator - domínio e logo corretos nos dados estruturados (JSO
   });
 });
 
-// Achado: o JSON-LD publicava +55 31 99852-2380 (o WhatsApp do site é (31) 98925-2272), rua/CEP
+// Achado: o JSON-LD publicava +55 31 99852-2380 (o WhatsApp do site é o comercial, (31) 99976-0416 desde 13/11/2026), rua/CEP
 // de placeholder e perfis sociais não confirmados.
 describe('schemaGenerator - contato publicado para o Google', () => {
   it('telefone é o mesmo do WhatsApp do site', () => {
-    expect(generateLocalBusinessSchema().telephone).toBe('+5531989252272');
-    expect(generateOrganizationSchema().contactPoint.telephone).toBe('+5531989252272');
+    expect(generateLocalBusinessSchema().telephone).toBe('+5531999760416');
+    expect(generateOrganizationSchema().contactPoint.telephone).toBe('+5531999760416');
   });
 
   // O CEP entrou depois de confirmado pelo dono (06/11/2026); o Perfil da Empresa no Google entrou no sameAs em 09/11.
