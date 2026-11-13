@@ -14,6 +14,7 @@ import { logger } from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { BookingChatPanel } from '../../components/client/BookingChatPanel';
+import { ClientContractCard } from '../../components/proposal/ClientContractCard';
 import { bookingEmail, bookingPhone } from '../../utils/bookingContact';
 import { formatBookingCode } from '../../utils/bookingCode';
 import { buildBookingContactText, buildWhatsAppUrl, getWhatsAppPhone } from '../../utils/whatsapp';
@@ -456,6 +457,12 @@ export const BookingDetailsPage = () => {
               </div>
             </div>
           </Card>
+
+          {/* Aceite online (13/11/2026): o contrato aceito pelo site (estado, data, vencimentos, baixar e, no prazo,
+              "Desistir da contratação"). Sem contrato (ou com o aceite desligado), nada aparece. */}
+          {booking.contractSummary && (
+            <ClientContractCard bookingId={booking.id} summary={booking.contractSummary} onChanged={fetchBookingDetails} />
+          )}
 
           {/* Comprovantes de Pagamento */}
           <Card padding>

@@ -4,10 +4,10 @@ import { MessageCircle } from 'lucide-react';
 import { Card, buttonVariants } from '@/components/ui/StandardComponents';
 import { buildWhatsAppUrl, getWhatsAppPhone } from '@/utils/whatsapp';
 import {
-  COMPANY_ADDRESS_LINE,
-  COMPANY_CITY_LINE,
   COMPANY_CNPJ,
+  COMPANY_FULL_ADDRESS,
   COMPANY_LEGAL_NAME,
+  COMPANY_REGISTERED_NAME,
   SITE_NAME,
   SUPPORT_EMAIL,
   buildPageTitle,
@@ -48,13 +48,14 @@ export function WhatsAppLink({ text }: { text: string }) {
   );
 }
 
-// Dados da empresa: só o que já está em src/data/site.ts.
+// Dados da empresa: só o que já está em src/data/site.ts. Aceite online (13/11/2026): a página onde o contrato é aceito
+// mostra o nome empresarial do CNPJ e o endereço completo, com CEP (Decreto 7.962/2013, art. 2º, I e II).
 function CompanyFooter() {
   return (
     <footer className="pt-8 text-center space-y-1 text-xs text-muted-foreground">
       <p className="font-semibold uppercase tracking-wider">{COMPANY_LEGAL_NAME}</p>
-      <p>CNPJ {COMPANY_CNPJ}</p>
-      <p>{COMPANY_ADDRESS_LINE} • {COMPANY_CITY_LINE}</p>
+      <p>{COMPANY_REGISTERED_NAME} • CNPJ {COMPANY_CNPJ}</p>
+      <p>{COMPANY_FULL_ADDRESS}</p>
       <p>{SUPPORT_EMAIL}</p>
     </footer>
   );

@@ -1,4 +1,6 @@
 
+import type { BookingContractSummary } from './contract';
+
 // ================================
 // ENUMS
 // ================================
@@ -631,6 +633,8 @@ export interface BookingDetails {
   pricing?: BookingPricing | null;
   // D11: quando a equipe enviou a proposta ("Enviar proposta" da ficha); null sem envio.
   proposal?: { sentAt: string | null } | null;
+  // Aceite online (13/11/2026): estado do contrato aceito pelo site; null sem contrato (ou com o aceite desligado).
+  contractSummary?: BookingContractSummary | null;
   eventLocation?: string;
   location?: string;
   street?: string;

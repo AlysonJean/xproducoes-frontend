@@ -72,6 +72,7 @@ import { StageWhatsAppPanel } from '../../components/bookings/StageWhatsAppPanel
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { BookingCollaborators } from '../../components/bookings/BookingCollaborators';
 import { BookingFinancialSummary } from '../../components/bookings/BookingFinancialSummary';
+import { AdminContractCard } from '../../components/proposal/AdminContractCard';
 import { 
   Button, 
   Card, 
@@ -1114,6 +1115,12 @@ export const BookingDetailPage = () => {
                   <BookingFinancialSummary booking={booking} />
                 </div>
               </Card>
+            )}
+
+            {/* Aceite online (13/11/2026): o contrato aceito pelo site (quem aceitou, documento, IP, navegador,
+                impressão digital, PDF, reenvio do e-mail e a trilha). Só admin; sem contrato, nada aparece. */}
+            {user?.role === 'ADMIN' && booking.id && booking.contractSummary && (
+              <AdminContractCard bookingId={booking.id} summary={booking.contractSummary} />
             )}
 
             <Card className="p-6 space-y-6">

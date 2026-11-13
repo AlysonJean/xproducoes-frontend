@@ -5,6 +5,13 @@ import { normalizeString } from '../utils/string';
 import { API_BASE_URL, API_URL } from '../utils/apiConfig';
 import { createAndClickAnchor } from '../utils/dom';
 import { formatBookingCode } from '../utils/bookingCode';
+import type {
+  ClientContract,
+  ContractAccepted,
+  ContractOtp,
+  ContractParty,
+  ContractPrepared,
+} from '../types/contract';
 
 // ✅ PRODUCTION-SAFE LOGGING
 logDebug('API Configuration', {
@@ -309,11 +316,13 @@ async function apiResponse(endpoint: string, options: RequestInit = {}): Promise
   if (!response.ok) {
     // Tentar extrair mensagem detalhada do servidor
     let message = '';
+    let body: unknown;
     try {
       const text = await response.text();
       if (text) {
         try {
           const data = JSON.parse(text);
+          body = data;
           message = (data.message || data.error || '') as string;
         } catch {
           // Página de erro do proxy (502/503/504 da Vercel, com tags e fontes): não vai para a tela.
@@ -338,7 +347,14 @@ async function apiResponse(endpoint: string, options: RequestInit = {}): Promise
 
     // P15: o status vai junto para a tela que precisa separar os casos (a página da proposta mostra uma mensagem para
     // link inválido, outra para link vencido ou trocado e outra para o serviço fora do ar). A mensagem não muda.
-    throw Object.assign(new Error(message), { status: response.status });
+    // Aceite online (13/11/2026): o corpo JSON do erro (code, attemptsLeft, fieldErrors, retryAfter) e o Retry-After
+    // também vão junto, para o aceite dizer o que houve com o código e com cada campo (readApiError).
+    const retryAfter = response.headers.get('Retry-After');
+    throw Object.assign(new Error(message), {
+      status: response.status,
+      ...(body !== undefined ? { body } : {}),
+      ...(retryAfter ? { retryAfter } : {}),
+    });
   }
 
   return response;
@@ -368,10 +384,29 @@ export const apiFetch = async <T = unknown>(
 // O servidor gera o orçamento na hora, a partir da reserva atual (backend/src/services/pdf); o site só baixa. Antes a
 // área do cliente, a ficha do painel e a Proposta Rápida montavam cada uma o seu PDF no navegador (jsPDF).
 
-/** O nome do arquivo no Content-Disposition do servidor (orcamento-<código>.pdf), ou null sem ele. */
+/**
+ * O nome do arquivo no Content-Disposition do servidor (orcamento-<código>.pdf), ou null sem ele. Aceite online
+ * (13/11/2026): só letras sem acento, números, ponto, hífen e sublinhado, sem ponto no começo e sempre terminando em
+ * .pdf (o nome vem de fora e vira o nome do arquivo salvo no aparelho).
+ */
 export function filenameFromDisposition(header: string | null): string | null {
   const match = /filename="?([^";]+)"?/i.exec(header ?? '');
-  return match ? match[1].trim() : null;
+  const safe = (match?.[1] ?? '').trim().replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^[.-]+/, '');
+  if (!safe) return null;
+  return /\.pdf$/i.test(safe) ? safe : `${safe}.pdf`;
+}
+
+/**
+ * Um PDF da API como arquivo (Blob) e o nome que o servidor deu (null sem o cabeçalho). Aceite online (13/11/2026): a
+ * página da proposta mostra o contrato no visualizador com este arquivo, os mesmos bytes que o servidor guardou e de
+ * que calculou a impressão digital. Erro: o mesmo do apiFetch (mensagem e status).
+ */
+export async function fetchPdf(endpoint: string, options: RequestInit = {}): Promise<{ blob: Blob; filename: string | null }> {
+  const response = await apiResponse(endpoint, options);
+  const raw = await response.blob();
+  // Sem o Content-Type (proxy), o visualizador do navegador não reconhece o arquivo como PDF.
+  const blob = raw.type ? raw : new Blob([raw], { type: 'application/pdf' });
+  return { blob, filename: filenameFromDisposition(response.headers.get('Content-Disposition')) };
 }
 
 /**
@@ -379,10 +414,9 @@ export function filenameFromDisposition(header: string | null): string | null {
  * cabeçalho não chega (em desenvolvimento a API é de outra origem). Erro: o mesmo do apiFetch (mensagem e status).
  */
 export async function downloadPdf(endpoint: string, options: RequestInit = {}, fallbackName = 'orcamento.pdf'): Promise<void> {
-  const response = await apiResponse(endpoint, options);
-  const blob = await response.blob();
+  const { blob, filename } = await fetchPdf(endpoint, options);
   const url = URL.createObjectURL(blob);
-  createAndClickAnchor({ href: url, download: filenameFromDisposition(response.headers.get('Content-Disposition')) || fallbackName });
+  createAndClickAnchor({ href: url, download: filename || fallbackName });
   // O endereço do arquivo vale até o download começar; solto depois de um minuto (soltar na hora cancela o download
   // em alguns navegadores).
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
@@ -401,6 +435,79 @@ export const quotePdfAPI = {
   forClient: (bookingId: string) => downloadPdf(`/bookings/${encodeURIComponent(bookingId)}/quote-pdf`, {}, quoteFileName(bookingId)),
   /** Ficha do painel (admin). */
   forAdmin: (bookingId: string) => downloadPdf(`/admin/bookings/${encodeURIComponent(bookingId)}/quote-pdf`, {}, quoteFileName(bookingId)),
+};
+
+// ===== Aceite online e contrato (13/11/2026) =====
+// As chamadas do "CONTRATO DA API" do roteiro da leva B. Com CONTRACTS_ENABLED=false, o servidor responde 404 em todas
+// e o /proposals/view não oferece o aceite (a página nem chama estas rotas).
+
+/** O erro de uma chamada da API, lido do corpo JSON que vem junto (ver apiResponse). */
+export interface ApiErrorInfo {
+  status: number | null;
+  message: string;
+  /** code do contrato da API: INVALID_CODE, CODE_EXPIRED, CONTRACT_CHANGED, ALREADY_ACCEPTED, WITHDRAWAL_CLOSED... */
+  code: string | null;
+  attemptsLeft: number | null;
+  /** Erro por campo, pelo caminho do corpo ("party.document", "party.address.zipCode"...). */
+  fieldErrors: Record<string, string>;
+  /** Segundos até poder tentar de novo (429): retryAfter do corpo ou o cabeçalho Retry-After. */
+  retryAfterSeconds: number | null;
+}
+
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+
+export function readApiError(error: unknown): ApiErrorInfo {
+  const err = asRecord(error);
+  const body = asRecord(err.body);
+  const fieldErrors: Record<string, string> = {};
+  Object.entries(asRecord(body.fieldErrors)).forEach(([field, reason]) => {
+    if (typeof reason === 'string' && reason) fieldErrors[field] = reason;
+  });
+  const retryAfter = Number(body.retryAfter ?? err.retryAfter);
+  return {
+    status: typeof err.status === 'number' ? err.status : null,
+    message: error instanceof Error ? error.message : '',
+    code: typeof body.code === 'string' ? body.code : null,
+    attemptsLeft: typeof body.attemptsLeft === 'number' ? body.attemptsLeft : null,
+    fieldErrors,
+    retryAfterSeconds: Number.isFinite(retryAfter) && retryAfter > 0 ? Math.ceil(retryAfter) : null,
+  };
+}
+
+// O código do link vai no CORPO, como no /proposals/view (nunca no endereço), com o mesmo referrerPolicy "origin".
+const proposalPost = (body: Record<string, unknown>): RequestInit => ({
+  method: 'POST',
+  body: JSON.stringify(body),
+  referrerPolicy: 'origin',
+});
+const contractFileName = (bookingId: string) => `contrato-${formatBookingCode(bookingId).replace(/[^A-Za-z0-9-]+/g, '-')}.pdf`;
+const bookingPath = (bookingId: string) => encodeURIComponent(bookingId);
+
+export const contractAPI = {
+  // Página da proposta (sem login, pelo código do link).
+  prepare: (token: string, party: ContractParty) =>
+    apiFetch<ContractPrepared>('/proposals/contract/prepare', proposalPost({ token, party })),
+  /** O PDF exato preparado (o mesmo da impressão digital), para o visualizador e o download. */
+  pdf: (token: string, contractId: string) => fetchPdf('/proposals/contract/pdf', proposalPost({ token, contractId })),
+  /** Baixa o contrato direto (passo 3 e reabertura do link aceito). */
+  download: (token: string, contractId: string) =>
+    downloadPdf('/proposals/contract/pdf', proposalPost({ token, contractId }), 'contrato.pdf'),
+  sendCode: (token: string, contractId: string) => apiFetch<ContractOtp>('/proposals/contract/otp', proposalPost({ token, contractId })),
+  accept: (token: string, input: { contractId: string; sha256: string; code: string }) =>
+    apiFetch<ContractAccepted>('/proposals/contract/accept', proposalPost({ token, ...input, agreed: true })),
+  withdraw: (token: string) => apiFetch<{ withdrawnAt: string }>('/proposals/contract/withdraw', proposalPost({ token })),
+  // Área do cliente (login do dono da reserva).
+  forClient: (bookingId: string) => apiFetch<ClientContract>(`/bookings/${bookingPath(bookingId)}/contract`),
+  downloadForClient: (bookingId: string) =>
+    downloadPdf(`/bookings/${bookingPath(bookingId)}/contract.pdf`, {}, contractFileName(bookingId)),
+  withdrawForClient: (bookingId: string) =>
+    apiFetch<{ withdrawnAt: string }>(`/bookings/${bookingPath(bookingId)}/contract/withdraw`, { method: 'POST', body: '{}' }),
+  // Ficha do painel (admin).
+  forAdmin: (bookingId: string) => apiFetch<unknown>(`/admin/bookings/${bookingPath(bookingId)}/contract`),
+  downloadForAdmin: (bookingId: string) =>
+    downloadPdf(`/admin/bookings/${bookingPath(bookingId)}/contract.pdf`, {}, contractFileName(bookingId)),
+  resend: (bookingId: string) => apiFetch<unknown>(`/admin/bookings/${bookingPath(bookingId)}/contract/resend`, { method: 'POST', body: '{}' }),
 };
 
 // ===== 🔗 API ENDPOINTS =====

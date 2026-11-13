@@ -84,7 +84,8 @@ describe('Instagram — políticas', () => {
       .split(';')
       .map((directive) => directive.trim())
       .find((directive) => directive.startsWith('frame-src '));
-    expect(frameSrc?.split(/\s+/)).toEqual(['frame-src', "'self'", 'https://accounts.google.com', 'https://www.instagram.com']);
+    // Aceite online (13/11/2026): blob: para o contrato em PDF no quadro da página da proposta (endereço local do arquivo).
+    expect(frameSrc?.split(/\s+/)).toEqual(['frame-src', "'self'", 'blob:', 'https://accounts.google.com', 'https://www.instagram.com']);
     // O resto da política não mudou de forma: frame-ancestors continua 'none'.
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp.split(';').filter((d) => d.trim().startsWith('frame-src'))).toHaveLength(1);

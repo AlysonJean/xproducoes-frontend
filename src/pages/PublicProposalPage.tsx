@@ -4,6 +4,8 @@ import { apiFetch, quotePdfAPI } from '@/services/api';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { Button, Card } from '@/components/ui/StandardComponents';
 import { NoticeCard, PROPOSAL_HELP_TEXT, ProposalShell, WhatsAppLink } from '@/components/proposal/ProposalShell';
+import { ContractAcceptance } from '@/components/proposal/ContractAcceptance';
+import type { ProposalContractStatus } from '@/types/contract';
 import { formatPrice } from '@/utils/formatPrice';
 import { formatPricingLineTotal, toArrangeNote, type ToArrangeKind } from '@/utils/bookingPricing';
 import { buildProposalReplyText } from '@/utils/whatsapp';
@@ -28,6 +30,13 @@ import { buildProposalReplyText } from '@/utils/whatsapp';
 // Orçamento em PDF (13/11/2026): "Baixar orçamento (PDF)" baixa o orçamento que o servidor gera na hora, a partir da
 // reserva atual (a página continua sendo a fonte da verdade). O código vai no corpo do POST /proposals/pdf, com o
 // mesmo controle do /proposals/view: link vencido ou trocado não baixa, e a página diz por quê.
+// Aceite online (13/11/2026): com contract.enabled = true na resposta (CONTRACTS_ENABLED no servidor), a página mostra
+// o aceite em passos abaixo da proposta (components/proposal/ContractAcceptance): "Aceitar proposta" no estado NONE ou
+// PREPARED, a confirmação no ACCEPTED e "Contratação desistida" no WITHDRAWN. Sem contract (ou com enabled false e
+// nenhum contrato aceito), nada muda: a proposta continua só de leitura, e o aceite segue com a equipe. O contrato já
+// aceito ou desistido aparece sempre, também com a chave desligada depois e na resposta { state: "closed" } (reserva
+// confirmada, ou validade vencida depois do aceite): o link é o caminho permanente para baixar o contrato e desistir no
+// prazo de 7 dias (CDC, art. 49).
 
 interface ProposalLine {
   description: string;
@@ -45,18 +54,26 @@ interface OpenProposal {
   neighborhood: string | null;
   pricing: { lines: ProposalLine[]; discount: number | null; adjustment: number; total: number };
   validUntil: string;
+  contract?: ProposalContractStatus | null;
 }
 
-type ProposalResponse = OpenProposal | { state: 'closed' };
+type ProposalResponse = OpenProposal | { state: 'closed'; contract?: ProposalContractStatus | null };
 
 type ViewState =
   | { kind: 'loading' }
   | { kind: 'invalid' }
   | { kind: 'gone' }
-  | { kind: 'closed' }
+  | { kind: 'closed'; contract?: ProposalContractStatus | null; token?: string }
   | { kind: 'unavailable' }
   | { kind: 'error' }
   | { kind: 'open'; proposal: OpenProposal; token: string };
+
+/** O contrato já foi aceito (ou desistido) pelo site. */
+const isSigned = (contract?: ProposalContractStatus | null): contract is ProposalContractStatus =>
+  contract?.state === 'ACCEPTED' || contract?.state === 'WITHDRAWN';
+/** A página mostra o aceite: a chave ligada (começar ou seguir o aceite) ou um contrato aceito ou desistido. */
+const showsContract = (contract?: ProposalContractStatus | null): contract is ProposalContractStatus =>
+  contract?.enabled === true || isSigned(contract);
 
 const MESSAGES: Record<Exclude<ViewState['kind'], 'loading' | 'open'>, string> = {
   invalid: 'Este link não é válido. Peça um novo link à equipe.',
@@ -99,6 +116,10 @@ function pdfErrorMessage(error: unknown): string {
 
 function OpenProposalView({ proposal, token }: { proposal: OpenProposal; token: string }) {
   const { pricing } = proposal;
+  const offersContract = showsContract(proposal.contract);
+  // Desistida (o servidor manda a proposta da reserva cancelada pela desistência): sem validade e sem o orçamento em
+  // PDF (o POST /proposals/pdf responde 409 nela).
+  const withdrawn = proposal.contract?.state === 'WITHDRAWN';
   const place = [proposal.neighborhood, proposal.city].filter(Boolean).join(', ');
   const toArrange = toArrangeNote(pricing.lines);
   const [downloading, setDownloading] = useState(false);
@@ -177,29 +198,39 @@ function OpenProposalView({ proposal, token }: { proposal: OpenProposal; token: 
         {toArrange && <p className="text-sm text-muted-foreground">{toArrange}</p>}
       </div>
 
-      <p className="flex items-center gap-2 text-sm font-medium text-foreground">
-        <ShieldCheck className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-        Válida até {dateBR.format(new Date(proposal.validUntil))}
-      </p>
-
-      <div className="space-y-2">
-        <Button
-          variant="outline"
-          onClick={downloadPdf}
-          isLoading={downloading}
-          leftIcon={<FileDown className="h-4 w-4" aria-hidden="true" />}
-        >
-          {downloading ? 'Gerando PDF...' : 'Baixar orçamento (PDF)'}
-        </Button>
-        {downloadError && (
-          <p role="alert" className="text-sm text-destructive">
-            {downloadError}
+      {!withdrawn && (
+        <>
+          <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <ShieldCheck className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+            Válida até {dateBR.format(new Date(proposal.validUntil))}
           </p>
-        )}
-      </div>
+
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              onClick={downloadPdf}
+              isLoading={downloading}
+              leftIcon={<FileDown className="h-4 w-4" aria-hidden="true" />}
+            >
+              {downloading ? 'Gerando PDF...' : 'Baixar orçamento (PDF)'}
+            </Button>
+            {downloadError && (
+              <p role="alert" className="text-sm text-destructive">
+                {downloadError}
+              </p>
+            )}
+          </div>
+        </>
+      )}
 
       <div className="space-y-2">
-        <p className="text-sm text-muted-foreground">Para confirmar ou ajustar a proposta, fale com a equipe.</p>
+        <p className="text-sm text-muted-foreground">
+          {withdrawn
+            ? 'Para contratar de novo, fale com a equipe.'
+            : offersContract
+              ? 'Dúvidas ou ajustes na proposta? Fale com a equipe.'
+              : 'Para confirmar ou ajustar a proposta, fale com a equipe.'}
+        </p>
         <WhatsAppLink text={buildProposalReplyText({ eventTitle: proposal.eventTitle, eventDate: proposal.eventDate })} />
       </div>
     </Card>
@@ -208,6 +239,12 @@ function OpenProposalView({ proposal, token }: { proposal: OpenProposal; token: 
 
 export default function PublicProposalPage() {
   const [view, setView] = useState<ViewState>({ kind: 'loading' });
+  // Aceite online: com a resposta "já aceita" (ALREADY_ACCEPTED), abre a proposta de novo, que volta na confirmação.
+  const [reloadKey, setReloadKey] = useState(0);
+  const reload = () => {
+    setView({ kind: 'loading' });
+    setReloadKey((key) => key + 1);
+  };
 
   useEffect(() => {
     let active = true;
@@ -223,7 +260,9 @@ export default function PublicProposalPage() {
           method: 'POST',
           body: JSON.stringify({ token }),
           referrerPolicy: 'origin',
-        }).then((data): ViewState => (data.state === 'open' ? { kind: 'open', proposal: data, token } : { kind: 'closed' }))
+        }).then((data): ViewState =>
+          data.state === 'open' ? { kind: 'open', proposal: data, token } : { kind: 'closed', contract: data.contract, token },
+        )
       : Promise.resolve({ kind: 'invalid' });
     next.catch(stateForError).then((state) => {
       if (active) setView(state);
@@ -231,7 +270,7 @@ export default function PublicProposalPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [reloadKey]);
 
   return (
     <ProposalShell>
@@ -241,7 +280,13 @@ export default function PublicProposalPage() {
         </div>
       )}
       {view.kind === 'open' && <OpenProposalView proposal={view.proposal} token={view.token} />}
-      {view.kind !== 'loading' && view.kind !== 'open' && (
+      {view.kind === 'open' && showsContract(view.proposal.contract) && (
+        <ContractAcceptance token={view.token} contract={view.proposal.contract} onReload={reload} />
+      )}
+      {view.kind === 'closed' && view.token && isSigned(view.contract) && (
+        <ContractAcceptance token={view.token} contract={view.contract} onReload={reload} />
+      )}
+      {view.kind !== 'loading' && view.kind !== 'open' && !(view.kind === 'closed' && isSigned(view.contract)) && (
         <NoticeCard
           message={MESSAGES[view.kind]}
           whatsappText={view.kind === 'closed' ? 'Olá! Quero falar sobre a minha reserva já confirmada.' : PROPOSAL_HELP_TEXT}
