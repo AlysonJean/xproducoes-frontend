@@ -9,6 +9,8 @@ import type { Equipment, Kit, Service } from '../types/types';
 import { useAuth } from './AuthContext';
 import { NotificationContext } from './NotificationContext';
 import { logger } from '../utils/logger';
+import { ConfirmModal } from '../components/modals/ConfirmModal';
+import { applyCatalogSnapshot, fetchCatalogSnapshot, isAvailableForOrder } from '../utils/cartCatalog';
 
 type Cart = Booking & { services?: Service[] };
 
@@ -18,9 +20,21 @@ interface CartContextType {
   isLoading: boolean;
   isGuestCart: boolean;
   fetchCart: () => Promise<void>;
-  addItem: (item: Equipment | Kit | Service, type: 'equipment' | 'kit' | 'service') => Promise<void>;
+  /** true quando o item entrou (false: indisponível, já estava ou a pessoa manteve o kit de antes). */
+  addItem: (item: Equipment | Kit | Service, type: 'equipment' | 'kit' | 'service') => Promise<boolean>;
   removeItem: (itemId: string, type?: 'equipment' | 'service' | 'kit') => Promise<void>;
   clearCart: () => Promise<void>;
+  /**
+   * Auditoria do orçamento (12/11/2026), O19: visitante, relê do catálogo os itens guardados no navegador; com conta,
+   * busca o carrinho do servidor (`force` ignora o intervalo mínimo entre buscas).
+   */
+  refreshCart: (options?: { force?: boolean }) => Promise<void>;
+}
+
+interface KitSwapQuestion {
+  current: string;
+  next: string;
+  resolve: (confirmed: boolean) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -112,6 +126,36 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     fetchCart();
   }, [fetchCart]);
 
+  // Auditoria do orçamento (12/11/2026), O19: /carrinho e /orcamento chamam ao abrir. O visitante tem a cópia de cada
+  // item do dia em que entrou no carrinho; ela é trocada pela do catálogo (preço, tipo e horas do kit, composição,
+  // status), e o item que sumiu fica marcado, com o nome. Falha de rede deixa a cópia como está. Com conta, o carrinho
+  // vem do servidor, já com o catálogo de agora.
+  const refreshCart = useCallback(async (options?: { force?: boolean }) => {
+    if (!isAuthenticated) {
+      const snapshot = await fetchCatalogSnapshot(readGuestCart(), apiFetch);
+      // Nada relido (carrinho vazio ou rede fora): não grava nada no navegador.
+      if (![snapshot.kits, snapshot.equipments, snapshot.services].some((bucket) => Object.keys(bucket).length > 0)) return;
+      const updated = applyCatalogSnapshot(readGuestCart(), snapshot);
+      writeGuestCart(updated);
+      setCart(updated);
+      return;
+    }
+    if (options?.force) lastFetchedAt.current = null;
+    await fetchCart();
+  }, [isAuthenticated, fetchCart]);
+
+  // Auditoria do orçamento (12/11/2026), O24: o segundo kit trocava o primeiro calado. Agora pergunta, num modal deste
+  // provedor, para valer em todo lugar que põe kit no carrinho (cartão, página do kit, comparação).
+  const [kitSwap, setKitSwap] = useState<KitSwapQuestion | null>(null);
+  const askKitSwap = useCallback(
+    (current: string, next: string) => new Promise<boolean>((resolve) => setKitSwap({ current, next, resolve })),
+    [],
+  );
+  const answerKitSwap = (confirmed: boolean) => {
+    kitSwap?.resolve(confirmed);
+    setKitSwap(null);
+  };
+
   const notifCtx = useContext(NotificationContext);
   const notifCtxAddNotification = notifCtx?.addNotification;
   const addNotification = useCallback<NonNullable<typeof notifCtx>['addNotification']>(
@@ -135,19 +179,31 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     (async () => {
       try {
         let merged: Cart | null = null;
-        if (guestCart.kit?.id) {
-          merged = await apiFetch('/cart/add-kit', { method: 'POST', body: JSON.stringify({ kitId: guestCart.kit.id }) }) as Cart;
-        }
-        for (const eq of (guestCart.equipments as Equipment[]) ?? []) {
-          merged = await apiFetch('/cart/add', { method: 'POST', body: JSON.stringify({ equipmentId: eq.id }) }) as Cart;
-        }
-        for (const svc of guestCart.services ?? []) {
-          merged = await apiFetch('/cart/add-service', { method: 'POST', body: JSON.stringify({ serviceId: svc.id }) }) as Cart;
-        }
+        // Auditoria do orçamento (12/11/2026), O23: o carrinho da conta recusa item que não está ativo. Um item
+        // recusado não derruba os outros: cada um vai sozinho, e o aviso diz o que ficou de fora.
+        const skipped: string[] = [];
+        const add = async (name: string | undefined, path: string, body: Record<string, string>) => {
+          try {
+            merged = await apiFetch(path, { method: 'POST', body: JSON.stringify(body) }) as Cart;
+          } catch (e) {
+            // Só a recusa do item (400: não está ativo; 404: saiu do catálogo) fica de fora. Rede, sessão ou servidor fora
+            // interrompem a cópia, e o carrinho do navegador fica guardado (antes, tudo virava "indisponível" e sumia).
+            const status = (e as { status?: number } | null)?.status;
+            if (status !== 400 && status !== 404) throw e;
+            skipped.push(name || 'Item');
+            logger.warn('Item do carrinho de convidado não entrou na conta', 'CartContext', e);
+          }
+        };
+        if (guestCart.kit?.id) await add(guestCart.kit.name, '/cart/add-kit', { kitId: guestCart.kit.id });
+        for (const eq of (guestCart.equipments as Equipment[]) ?? []) await add(eq.name, '/cart/add', { equipmentId: eq.id });
+        for (const svc of guestCart.services ?? []) await add(svc.name, '/cart/add-service', { serviceId: svc.id });
         clearGuestCartStorage();
         if (merged) {
           setCart(merged);
           addNotification({ type: 'success', title: 'Carrinho recuperado', message: 'Os itens que você tinha selecionado foram adicionados à sua conta.' });
+        }
+        if (skipped.length > 0) {
+          addNotification({ type: 'warning', title: 'Itens indisponíveis', message: `Não entraram no carrinho por não estarem disponíveis agora: ${skipped.join(', ')}.` });
         }
       } catch (e) {
         logger.error('Falha ao mesclar carrinho de convidado após login', 'CartContext', e);
@@ -155,19 +211,30 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     })();
   }, [isAuthenticated, addNotification]);
 
-  const addItem = useCallback(async (item: Equipment | Kit | Service, type: 'equipment' | 'kit' | 'service') => {
+  const addItem = useCallback(async (item: Equipment | Kit | Service, type: 'equipment' | 'kit' | 'service'): Promise<boolean> => {
     // Deduplicação
     if (type === 'kit' && cart?.kit && cart.kit.id === (item as Kit).id) {
       addNotification({ type: 'warning', title: 'Kit já está no carrinho', message: 'Este kit já foi adicionado.' });
-      return;
+      return false;
     }
     if (type === 'equipment' && cart?.equipments?.some((e) => ('equipmentId' in e ? e.equipmentId : e.id) === (item as Equipment).id)) {
       addNotification({ type: 'warning', title: 'Item já está no carrinho', message: 'Este equipamento já foi adicionado.' });
-      return;
+      return false;
     }
     if (type === 'service' && cart?.services?.some((s) => s.id === (item as Service).id)) {
       addNotification({ type: 'warning', title: 'Serviço já está no carrinho', message: 'Este serviço já foi adicionado.' });
-      return;
+      return false;
+    }
+    // Auditoria do orçamento (12/11/2026), O23: item que não está ativo (em breve, em manutenção, inativo) não entra;
+    // antes entrava pelo cartão, pela comparação ou pelos favoritos e só voltava no envio do pedido.
+    if (!isAvailableForOrder(item)) {
+      addNotification({ type: 'warning', title: 'Indisponível no momento', message: `${item.name || 'Este item'} não está disponível no momento e não entrou no carrinho.` });
+      return false;
+    }
+    // O24: o carrinho tem um kit só; trocar pede confirmação.
+    if (type === 'kit' && cart?.kit?.id) {
+      const confirmed = await askKitSwap(cart.kit.name || 'atual', item.name || 'novo');
+      if (!confirmed) return false;
     }
 
     // Convidado: carrinho vive só no navegador, sem chamada de API nem exigência de login.
@@ -188,7 +255,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       const value = type === 'equipment' ? Number((item as Equipment).pricePerHour || 0) : Number((item as Kit | Service).price || 0);
       ReactGA.event({ category: 'ecommerce', action: 'add_to_cart', label, value });
       addNotification({ type: 'success', title: 'Adicionado', message: `${label || 'Item'} adicionado ao carrinho.` });
-      return;
+      return true;
     }
 
     const previousCart = cart;
@@ -202,7 +269,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         setCart(updatedCart as Cart);
         ReactGA.event({ category: "ecommerce", action: "add_to_cart", label: kitItem.name, value: Number(kitItem.price || 0) });
         addNotification({ type: 'success', title: 'Kit adicionado', message: 'Kit adicionado ao carrinho.' });
-        return;
+        return true;
       }
 
       if (type === 'service') {
@@ -214,7 +281,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         setCart(updatedCart as Cart);
         ReactGA.event({ category: "ecommerce", action: "add_to_cart", label: serviceItem.name, value: Number(serviceItem.price || 0) });
         addNotification({ type: 'success', title: 'Serviço adicionado', message: 'Serviço adicionado ao carrinho.' });
-        return;
+        return true;
       }
 
       // equipment
@@ -226,18 +293,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setCart(updatedCart as Cart);
       ReactGA.event({ category: "ecommerce", action: "add_to_cart", label: equipmentItem.name, value: Number(equipmentItem.pricePerHour || 0) });
       addNotification({ type: 'success', title: 'Item adicionado', message: 'Item adicionado ao carrinho.' });
+      return true;
     } catch (e: unknown) {
       setCart(previousCart ?? null);
       const message = e instanceof Error ? e.message : 'Não foi possível adicionar o item ao carrinho.';
       if (message.includes('401') || normalizeString(message).includes('unauthorized')) {
         addNotification({ type: 'error', title: 'Sessão expirada', message: 'Faça login novamente para continuar.' });
         window.location.href = '/login';
-        return;
+        return false;
       }
       addNotification({ type: 'error', title: 'Erro ao adicionar', message });
       throw new Error(message);
     }
-  }, [cart, addNotification, isAuthenticated]);
+  }, [cart, addNotification, isAuthenticated, askKitSwap]);
 
   const removeItem = useCallback(async (itemId: string, type: 'equipment' | 'service' | 'kit' = 'equipment') => {
     if (!isAuthenticated) {
@@ -315,10 +383,25 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     fetchCart,
     addItem,
     removeItem,
-    clearCart
-  }), [cart, itemCount, isLoading, isAuthenticated, fetchCart, addItem, removeItem, clearCart]);
+    clearCart,
+    refreshCart
+  }), [cart, itemCount, isLoading, isAuthenticated, fetchCart, addItem, removeItem, clearCart, refreshCart]);
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return (
+    <CartContext.Provider value={value}>
+      {children}
+      <ConfirmModal
+        isOpen={!!kitSwap}
+        onClose={() => answerKitSwap(false)}
+        onConfirm={() => answerKitSwap(true)}
+        title="Trocar o kit?"
+        message={kitSwap ? `Seu carrinho já tem o kit “${kitSwap.current}”. Trocar pelo kit “${kitSwap.next}”?` : undefined}
+        confirmText="Trocar o kit"
+        cancelText="Manter o atual"
+        variant="warning"
+      />
+    </CartContext.Provider>
+  );
 };
 
 export const MemoizedCartProvider = React.memo(CartProvider);

@@ -73,20 +73,13 @@ export const ComparePage = () => {
     return cart?.equipments?.some((e: { equipment?: { id: string }, id?: string }) => e.equipment?.id === item.id || e.id === item.id);
   };
 
-  const handleAddToCart = (item: CompareItem) => {
+  // Auditoria do orçamento (12/11/2026), O23/O24: o carrinho avisa o resultado (recusa o item indisponível e pergunta
+  // antes de trocar o kit); antes esta tela dizia "Adicionado" na hora, mesmo quando nada entrava.
+  const handleAddToCart = async (item: CompareItem) => {
     try {
-      addItem(item as never, (item.type as "kit" | "service" | "equipment") || 'equipment');
-      addNotification({
-        type: 'success',
-        title: 'Adicionado',
-        message: `${item.name} foi adicionado ao seu orçamento.`
-      });
-    } catch (e: unknown) {
-      addNotification({
-        type: 'error',
-        title: 'Erro',
-        message: e instanceof Error ? e.message : 'Não foi possível adicionar ao orçamento.'
-      });
+      await addItem(item as never, (item.type as "kit" | "service" | "equipment") || 'equipment');
+    } catch {
+      // O carrinho já mostrou o erro.
     }
   };
 
@@ -223,8 +216,9 @@ export const ComparePage = () => {
               {compareItems.map((item) => {
                 const inCart = !!(cart && isItemInCart(item as CompareItem));
                 // Lote 13: serviço que não está ativo não vai ao carrinho (o pedido de cliente só aceita serviço ativo),
-                // como no cartão e na página do serviço. Kit e equipamento seguem como antes.
-                const unavailable = item.type === 'service' && !!item.status && item.status !== 'ACTIVE';
+                // como no cartão e na página do serviço. Auditoria do orçamento (12/11/2026), O23: vale também para o
+                // kit e o equipamento.
+                const unavailable = !!item.status && item.status !== 'ACTIVE';
                 return (
                   <td key={item.id} className="p-4 text-center">
                     <div className="space-y-2">

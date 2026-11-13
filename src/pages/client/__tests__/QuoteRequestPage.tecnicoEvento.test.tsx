@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 const { post, apiFetch, useCart, useAuth, addNotification } = vi.hoisted(() => ({
@@ -52,7 +52,12 @@ const abrir = async (carrinho: Record<string, unknown>, servicos: object[] = [TE
   await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 };
 
-const duracao = (horas: string) => fireEvent.change(screen.getByLabelText('Tempo de Operação (horas) *'), { target: { value: horas } });
+// Auditoria do orçamento (12/11/2026), O6: as horas do evento saem do início e do término (antes, "Tempo de Operação").
+const horario = (inicio: string, termino: string) => {
+  fireEvent.change(screen.getByLabelText('Início do evento *'), { target: { value: inicio } });
+  fireEvent.change(screen.getByLabelText('Término do evento *'), { target: { value: termino } });
+};
+const SEIS_HORAS: [string, string] = ['17:00', '23:00'];
 
 const subtotalDoCupom = async () => {
   fireEvent.change(screen.getByLabelText('Código do cupom'), { target: { value: 'BEMVINDO10' } });
@@ -63,10 +68,14 @@ const subtotalDoCupom = async () => {
 
 const enviar = async () => {
   const campos: Array<[string, string]> = [
-    ['Nome/Local do Evento *', 'Espaço VIP'], ['Data do Evento *', '2027-01-10'], ['CEP *', '30110-000'], ['Rua *', 'Av. Brasil'],
+    ['Nome/Local do Evento *', 'Espaço VIP'], ['Data do Evento *', '2030-01-10'], ['CEP *', '30110-000'], ['Rua *', 'Av. Brasil'],
     ['Número *', '123'], ['Bairro *', 'Centro'], ['Cidade *', 'Belo Horizonte'], ['Estado *', 'MG'],
   ];
   for (const [label, value] of campos) fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  // O25: escada, coberto e estacionamento são obrigatórios, sem resposta pré-marcada.
+  for (const grupo of ['Local com escadas? *', 'Local coberto? *', 'Tem estacionamento? *']) {
+    fireEvent.click(within(screen.getByRole('group', { name: grupo })).getByLabelText('Sim'));
+  }
   fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pedido de Orçamento' }));
   await waitFor(() => expect(post.mock.calls.some((c) => c[0] === '/bookings')).toBe(true));
   return post.mock.calls.find((c) => c[0] === '/bookings')![1] as { serviceIds?: string[]; kitId?: string; equipmentIds?: string[] };
@@ -95,7 +104,7 @@ describe('QuoteRequestPage — caixa do técnico durante todo o evento', { timeo
     expect(screen.queryByLabelText(/DJ Profissional/)).not.toBeInTheDocument();
 
     fireEvent.click(caixa);
-    duracao('6');
+    horario(...SEIS_HORAS);
 
     expect(screen.queryByText(FRASE_SEM_TECNICO)).not.toBeInTheDocument();
     expect(caixa).toHaveAccessibleDescription(/No seu evento de 6 h: R\$\s600,00\.$/);
@@ -107,7 +116,7 @@ describe('QuoteRequestPage — caixa do técnico durante todo o evento', { timeo
 
   it('desmarcada: o pedido não leva o técnico e a estimativa não o soma', async () => {
     await abrir({ kit: KIT_ENTREGA });
-    duracao('6');
+    horario(...SEIS_HORAS);
 
     expect(await subtotalDoCupom()).toBe(1200);
     const corpo = await enviar();
@@ -119,7 +128,7 @@ describe('QuoteRequestPage — caixa do técnico durante todo o evento', { timeo
     const caixa = screen.getByLabelText(CAIXA_UNICA);
     fireEvent.click(caixa);
     fireEvent.click(caixa);
-    duracao('4');
+    horario('19:00', '23:00');
 
     expect(screen.getByText(FRASE_SEM_TECNICO)).toBeInTheDocument();
     expect(await subtotalDoCupom()).toBe(1200);
@@ -128,7 +137,7 @@ describe('QuoteRequestPage — caixa do técnico durante todo o evento', { timeo
   it('só equipamento: a caixa aparece e o técnico de 8 h sai R$ 800', async () => {
     await abrir({ equipments: [CAIXA] });
     fireEvent.click(screen.getByLabelText(CAIXA_UNICA));
-    duracao('8');
+    horario('15:00', '23:00');
 
     expect(await subtotalDoCupom()).toBe(10 * 8 + 800);
     expect((await enviar()).serviceIds).toEqual(['sv-tec']);
@@ -165,7 +174,7 @@ describe('QuoteRequestPage — caixa do técnico durante todo o evento', { timeo
     expect(luz).toHaveAccessibleDescription(/^R\$\s250,00 até 3 h de evento; cada hora a mais sai proporcional\.$/);
     fireEvent.click(som);
     fireEvent.click(luz);
-    duracao('6');
+    horario(...SEIS_HORAS);
 
     expect(await subtotalDoCupom()).toBe(1200 + 600 + 500);
     expect((await enviar()).serviceIds).toEqual(['sv-tec', 'sv-luz']);
@@ -174,7 +183,7 @@ describe('QuoteRequestPage — caixa do técnico durante todo o evento', { timeo
   it('técnico já no carrinho: sem caixa para ele, a estimativa cobra pelas horas e o envio não repete o id', async () => {
     await abrir({ kit: KIT_ENTREGA, services: [{ id: 'sv-tec', name: TECNICO.name, price: 300, duration: 180 }] });
     expect(screen.queryByLabelText(CAIXA_UNICA)).not.toBeInTheDocument();
-    duracao('6');
+    horario(...SEIS_HORAS);
 
     expect(await subtotalDoCupom()).toBe(1200 + 600);
     expect((await enviar()).serviceIds).toEqual(['sv-tec']);
@@ -184,7 +193,7 @@ describe('QuoteRequestPage — caixa do técnico durante todo o evento', { timeo
     await abrir({ kit: KIT_ENTREGA });
     const caixa = screen.getByLabelText(CAIXA_UNICA);
     fireEvent.click(caixa);
-    duracao('6.25');
+    horario('16:45', '23:00');
 
     expect(caixa).toHaveAccessibleDescription(/No seu evento de 7 h: R\$\s700,00\.$/);
     expect(await subtotalDoCupom()).toBe(1200 + 700);
@@ -192,7 +201,7 @@ describe('QuoteRequestPage — caixa do técnico durante todo o evento', { timeo
 
   it('DJ no carrinho continua com preço fixo, qualquer duração', async () => {
     await abrir({ kit: KIT_ENTREGA, services: [{ id: 'sv-dj', name: DJ.name, price: 800, duration: 180, coversWholeEvent: false }] });
-    duracao('8');
+    horario('15:00', '23:00');
 
     expect(await subtotalDoCupom()).toBe(1200 + 800);
   });

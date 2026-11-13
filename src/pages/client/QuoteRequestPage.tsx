@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
 import ReactGA from 'react-ga4';
 import { v4 as uuidv4 } from 'uuid';
-import { MapPin, Calendar, Clock, Info, User, Phone, Navigation2, Building2, Tag, X, Mail, ShoppingBag } from 'lucide-react';
+import { MapPin, Calendar, Clock, Info, User, Phone, Navigation2, Building2, Tag, X, Mail, ShoppingBag, Wrench } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -21,18 +21,29 @@ import {
   buttonVariants
 } from '../../components/ui/StandardComponents';
 import { BrandLoader } from '../../components/ui/BrandLoader';
-import { quoteRequestSchema } from '../../validators/bookingSchema';
-import type { Booking } from '../../types/types';
+import { buildQuoteRequestSchema } from '../../validators/bookingSchema';
+import type { Booking, Equipment, Service } from '../../types/types';
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
 import { formatPrice } from '../../utils/formatPrice';
 import { useEquipmentPriceUnit, useFreightRules } from '../../hooks/usePricingRules';
-import { equipmentUnitsForHours, kitPriceLine, serviceLine } from '../../utils/bookingPricing';
+import { equipmentUnitsForHours, kitPriceLine, serviceLine, serviceMinutesText } from '../../utils/bookingPricing';
 import { kitFulfillment } from '../../utils/kitInfo';
-import { wholeEventRuleText } from '../../utils/wholeEventService';
-import { useWholeEventServices } from '../../hooks/useWholeEventServices';
+import { isWholeEventService, wholeEventRuleText } from '../../utils/wholeEventService';
+import { useCatalogServices } from '../../hooks/useCatalogServices';
 import { Checkbox } from '../../components/ui/Checkbox';
-import { quoteSuccessMessage } from '../../utils/quoteSubmission';
+import {
+  couponDiscount,
+  logisticsFlags,
+  parseCouponRule,
+  quoteEventEndNote,
+  quoteEventRange,
+  quoteRequestText,
+  quoteSuccessMessage,
+  todayISO,
+  type CouponRule,
+} from '../../utils/quoteSubmission';
+import { findSetupService, isAvailableForOrder, kitServiceIds } from '../../utils/cartCatalog';
 import { freightRulesText, orderNeedsDelivery } from '../../utils/freightInfo';
 import { TrustStrip } from '../../components/ui/TrustStrip';
 import { ClientPage } from '../../components/client/ClientPage';
@@ -49,8 +60,17 @@ const logisticsQuestions = [
   { field: 'hasParking', legend: 'Tem estacionamento?' },
 ] as const;
 
-type QuoteFormInput = z.input<typeof quoteRequestSchema>;
-type QuoteFormData = z.output<typeof quoteRequestSchema>;
+// Auditoria do orçamento (12/11/2026), O25: nenhuma resposta pré-marcada (antes vinha "Não" nas três) e "Não sei" é uma
+// resposta, como no briefing.
+const logisticsOptions = [
+  { value: 'yes', label: 'Sim' },
+  { value: 'no', label: 'Não' },
+  { value: 'unknown', label: 'Não sei' },
+] as const;
+
+type QuoteFormSchema = ReturnType<typeof buildQuoteRequestSchema>;
+type QuoteFormInput = z.input<QuoteFormSchema>;
+type QuoteFormData = z.output<QuoteFormSchema>;
 
 interface QuoteBookingPayload {
   eventDate: string;
@@ -68,8 +88,9 @@ interface QuoteBookingPayload {
   isCovered: boolean;
   hasParking: boolean;
   notes?: string;
+  specialRequests: string;
   status: 'PENDING';
-  setupTime: string;
+  setupTime?: string;
   clientName?: string;
   clientContact?: string;
   clientEmail?: string;
@@ -79,10 +100,23 @@ interface QuoteBookingPayload {
   couponCode?: string;
 }
 
+// Auditoria do orçamento (12/11/2026), O7: o cupom guarda o código e a regra que a validação devolveu; o desconto
+// mostrado é refeito a cada mudança do subtotal (couponDiscount), em vez de ficar o valor do momento da validação.
 interface AppliedCoupon {
   code: string;
+  rule: CouponRule | null;
+  /** O desconto que a validação devolveu: só vale quando a regra não veio (servidor anterior). */
   discountAmount: number;
 }
+
+interface CouponProblem {
+  code: string;
+  reason: string;
+}
+
+type CartEquipment = Equipment | { equipmentId: string; equipment: Equipment };
+
+const equipmentOf = (item: CartEquipment): Equipment => ('equipment' in item && item.equipment ? item.equipment : (item as Equipment));
 
 function getEquipmentUnitPrice(item: { pricePerHour?: number | string; equipment?: { pricePerHour?: number | string } }): number {
   return Number(('pricePerHour' in item ? item.pricePerHour : item.equipment?.pricePerHour) || 0);
@@ -95,8 +129,8 @@ function getEquipmentMinimum(item: { minimumRentalDuration?: number | null; equi
 }
 
 export const QuoteRequestPage: React.FC = () => {
-  const { cart, clearCart, isLoading: cartLoading } = useCart();
-  const equipments = useMemo(() => cart?.equipments ?? [], [cart]);
+  const { cart, clearCart, isLoading: cartLoading, refreshCart } = useCart();
+  const equipments = useMemo(() => (cart?.equipments ?? []) as CartEquipment[], [cart]);
   const services = useMemo(() => cart?.services ?? [], [cart]);
   const kit = cart?.kit;
   const navigate = useNavigate();
@@ -109,64 +143,132 @@ export const QuoteRequestPage: React.FC = () => {
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
+  const [couponProblem, setCouponProblem] = useState<CouponProblem | null>(null);
+  const isGuest = !user?.id;
 
+  // Auditoria do orçamento (12/11/2026), O19: ao abrir, o carrinho do navegador é relido do catálogo (preço, tipo e
+  // horas do kit, status); o item que sumiu ou ficou indisponível aparece marcado, com o nome.
+  useEffect(() => {
+    Promise.resolve(refreshCart?.()).catch(() => undefined);
+  }, [refreshCart]);
+
+  // O26: quem pede sem conta informa o nome e o e-mail; o WhatsApp com DDD vale para todos (ver bookingSchema).
+  const schema = useMemo(() => buildQuoteRequestSchema({ guest: isGuest }), [isGuest]);
   const {
     register,
     handleSubmit,
     watch,
+    getValues,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<QuoteFormInput, unknown, QuoteFormData>({
-        resolver: zodResolver(quoteRequestSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
-      requiresStairs: 'no',
-      isCovered: 'no',
-      hasParking: 'no',
       startTime: '19:00',
+      endTime: '',
+      phone: '',
     },
   });
+
+  // O26: o WhatsApp de quem tem conta vem do cadastro, e a pessoa pode trocar.
+  useEffect(() => {
+    if (user?.phone && !getValues('phone')) setValue('phone', user.phone);
+  }, [user?.phone, getValues, setValue]);
 
   // Estimativa de subtotal no front, com a regra do servidor (backend/src/services/booking/bookingPricing.ts;
   // decisões do dono de 06/11): kit pelo preço do evento, nunca vezes as horas; equipamento por hora ou por
   // diária (24 h para cima), conforme EQUIPMENT_PRICE_UNIT; serviços fixos. Só pré-visualiza o desconto do
   // cupom antes do envio; o valor final e autoritativo continua sendo calculado e validado no servidor.
   const equipmentUnit = useEquipmentPriceUnit();
-  const durationValue = Number(watch('duration')) || 0;
+  // O6: as horas do evento saem do início e do término (as da montagem não contam); a data do término, só no evento
+  // de mais de um dia. Sem a data ainda, as horas são as do relógio, no dia de hoje.
+  const [eventDateValue, startTimeValue, endTimeValue, endDateValue] = watch(['eventDate', 'startTime', 'endTime', 'endDate']);
+  const eventRange = quoteEventRange({
+    eventDate: eventDateValue || todayISO(),
+    startTime: startTimeValue,
+    endTime: endTimeValue,
+    endDate: eventDateValue ? endDateValue : undefined,
+  });
+  const durationHours = eventRange?.hours ?? 0;
 
   // Lote 13, técnico durante o evento (decisão do dono de 06/11/2026): numa entrega o cliente escolhe entre "a equipe
   // monta e busca depois" e "um técnico fica durante todo o evento". A caixa aparece quando o pedido tem kit de
   // entrega ou equipamento (nunca no pedido só com kit de retirada) e o dono marcou algum serviço "Pode acompanhar o
   // evento todo": uma caixa por serviço marcado. O serviço que já está no carrinho não ganha caixa (já vai no pedido).
   // Marcada, o id do serviço vai em serviceIds, e o servidor cobra pelas horas do evento (serviceLine).
-  const eventHours = durationValue > 0 ? Math.max(1, Math.ceil(durationValue)) : null;
-  const wholeEventServices = useWholeEventServices();
+  const eventHours = durationHours > 0 ? Math.max(1, Math.ceil(durationHours)) : null;
+  const catalogServices = useCatalogServices();
+  const wholeEventServices = useMemo(() => catalogServices.filter(isWholeEventService), [catalogServices]);
+  // E1: o serviço que já vem dentro do kit (itens do kit com serviço) nunca é cobrado de novo: nem pela caixa do
+  // técnico, nem pelo serviço igual posto no carrinho.
+  const kitServices = useMemo(() => kitServiceIds(kit), [kit]);
+  const isDeliveryKit = Boolean(kit?.id && kitFulfillment(kit) === 'DELIVERY_SETUP');
+  const hasDelivery = isDeliveryKit || equipments.length > 0;
   const [technicianIds, setTechnicianIds] = useState<string[]>([]);
-  const technicianOffers = useMemo(() => {
-    const deliveryOrEquipment = Boolean(kit?.id && kitFulfillment(kit) === 'DELIVERY_SETUP') || equipments.length > 0;
-    return deliveryOrEquipment ? wholeEventServices.filter((s) => !services.some((it) => it.id === s.id)) : [];
-  }, [kit, equipments, services, wholeEventServices]);
-  const chosenTechnicians = useMemo(() => technicianOffers.filter((s) => technicianIds.includes(s.id)), [technicianOffers, technicianIds]);
-  // Os serviços do pedido com a marcação de agora (o carrinho salvo antes pode não ter o campo), mais os técnicos marcados.
-  const orderServices = useMemo(
-    () => [...services.map((it) => wholeEventServices.find((s) => s.id === it.id) ?? it), ...chosenTechnicians],
-    [services, wholeEventServices, chosenTechnicians],
+  const technicianOffers = useMemo(
+    () => (hasDelivery ? wholeEventServices.filter((s) => !services.some((it) => it.id === s.id) && !kitServices.has(s.id)) : []),
+    [hasDelivery, services, wholeEventServices, kitServices],
   );
+  const includedTechnicians = useMemo(
+    () => (hasDelivery ? wholeEventServices.filter((s) => kitServices.has(s.id)) : []),
+    [hasDelivery, wholeEventServices, kitServices],
+  );
+  const chosenTechnicians = useMemo(() => technicianOffers.filter((s) => technicianIds.includes(s.id)), [technicianOffers, technicianIds]);
   const toggleTechnician = (id: string, checked: boolean) =>
     setTechnicianIds((prev) => (checked ? [...prev.filter((x) => x !== id), id] : prev.filter((x) => x !== id)));
 
+  // E5: equipamento avulso sem kit de entrega tem a montagem cobrada à parte, pelo serviço de montagem do catálogo
+  // (findSetupService). Com kit de entrega a montagem já vem no kit, e a caixa não aparece.
+  const setupService = useMemo(() => findSetupService(catalogServices), [catalogServices]);
+  const offersSetup = equipments.length > 0 && !isDeliveryKit;
+  const setupInCart = Boolean(setupService && services.some((it) => it.id === setupService.id));
+  // E1: o serviço de montagem que o kit já traz (item do kit, mesmo num kit de retirada) não é oferecido nem cobrado.
+  const setupInKit = Boolean(setupService && kitServices.has(setupService.id));
+  const [wantsSetup, setWantsSetup] = useState(false);
+  const chosenSetup: Service | null = offersSetup && setupService && !setupInCart && !setupInKit && wantsSetup ? setupService : null;
+
+  // Os serviços do carrinho com o cadastro de agora (o carrinho salvo antes pode não ter a marcação), menos os que já
+  // vêm no kit, mais os técnicos e a montagem marcados.
+  const cartServices = useMemo(() => services.map((it) => catalogServices.find((s) => s.id === it.id) ?? it), [services, catalogServices]);
+  const orderServices = useMemo(
+    () => [...cartServices.filter((it) => !kitServices.has(it.id)), ...chosenTechnicians, ...(chosenSetup ? [chosenSetup] : [])],
+    [cartServices, kitServices, chosenTechnicians, chosenSetup],
+  );
+
+  // O19/O23: item que sumiu do catálogo ou não está ativo não vai no pedido; aparece com o nome.
+  const unavailableNames = useMemo(
+    () => [
+      ...(kit && !isAvailableForOrder(kit) ? [kit.name] : []),
+      ...equipments.map(equipmentOf).filter((eq) => !isAvailableForOrder(eq)).map((eq) => eq.name),
+      ...cartServices.filter((svc) => !isAvailableForOrder(svc)).map((svc) => svc.name),
+    ],
+    [kit, equipments, cartServices],
+  );
+
   const subtotal = useMemo(() => {
     // Lote 13 (06/11/2026): o kit com horas incluídas e valor de hora extra cobra as horas cheias a mais,
-    // como o servidor (kitPriceLine). Sem a duração ainda, só o preço do evento.
-    const kitsPrice = kit ? kitPriceLine(kit, durationValue > 0 ? Math.max(1, Math.ceil(durationValue)) : null).cents / 100 : 0;
+    // como o servidor (kitPriceLine). Sem os horários ainda, só o preço do evento.
+    const kitsPrice = kit && isAvailableForOrder(kit) ? kitPriceLine(kit, eventHours).cents / 100 : 0;
     // Unidades de cada equipamento pela conta do servidor (equipmentUnits): horas cheias (4,5 h contam 5 h)
     // ou diárias (24 h para cima, no mínimo o mínimo de diárias do cadastro de cada equipamento).
     const equipmentsPrice = equipments.reduce(
-      (sum, it) => sum + getEquipmentUnitPrice(it) * (equipmentUnitsForHours(equipmentUnit, durationValue, getEquipmentMinimum(it)) ?? 0),
+      (sum, it) =>
+        isAvailableForOrder(equipmentOf(it))
+          ? sum + getEquipmentUnitPrice(it) * (equipmentUnitsForHours(equipmentUnit, durationHours, getEquipmentMinimum(it)) ?? 0)
+          : sum,
       0,
     );
     // Lote 13: o serviço que acompanha o evento todo cobra pelas horas, como o servidor (serviceLine); os outros, fixos.
-    const servicesPrice = orderServices.reduce((sum, it) => sum + serviceLine(it, eventHours).cents / 100, 0);
+    const servicesPrice = orderServices.reduce((sum, it) => (isAvailableForOrder(it) ? sum + serviceLine(it, eventHours).cents / 100 : sum), 0);
     return kitsPrice + equipmentsPrice + servicesPrice;
-  }, [kit, equipments, orderServices, eventHours, durationValue, equipmentUnit]);
+  }, [kit, equipments, orderServices, eventHours, durationHours, equipmentUnit]);
+
+  // O7: o desconto acompanha o subtotal de agora.
+  const coupon = useMemo(() => {
+    if (!appliedCoupon) return null;
+    if (!appliedCoupon.rule) return { amount: Math.min(appliedCoupon.discountAmount, subtotal), belowMinimum: false };
+    return couponDiscount(appliedCoupon.rule, subtotal);
+  }, [appliedCoupon, subtotal]);
 
   // Frete por km (decisões do dono de 06/11/2026, item frete-km): o site não calcula o frete (o cálculo consulta
   // o Google e fica no servidor, e o valor vem na proposta); só explica a regra, com os valores do servidor.
@@ -174,23 +276,33 @@ export const QuoteRequestPage: React.FC = () => {
   const freightRules = useFreightRules();
   const freightText = freightRules && orderNeedsDelivery(kit, equipments.length) ? freightRulesText(freightRules) : null;
 
+  // O7: o convidado manda o e-mail, para o servidor conferir o limite por cliente e a auto-indicação com a conta dele.
+  const requestCouponCheck = async (code: string, email: string | undefined) => {
+    const resp = await api.post('/coupons/validate', { code, subtotal, ...(email ? { email } : {}) });
+    // api.ts desembrulha automaticamente o envelope { success, data } — resp.data já é o
+    // payload interno; resp.data?.data cobre o caso defensivo de vir sem o envelope.
+    return (resp?.data?.data ?? resp?.data) as { valid?: boolean; reason?: string; code?: string; discountAmount?: number; rule?: unknown } | undefined;
+  };
+
+  const guestEmail = () => (isGuest ? String(getValues('email') ?? '').trim() || undefined : undefined);
+
   const handleApplyCoupon = async () => {
     const code = couponInput.trim();
     if (!code) return;
 
     setCouponLoading(true);
     setCouponError(null);
+    setCouponProblem(null);
     try {
-      const resp = await api.post('/coupons/validate', { code, subtotal });
-      // api.ts desembrulha automaticamente o envelope { success, data } — resp.data já é o
-      // payload interno; resp.data?.data cobre o caso defensivo de vir sem o envelope.
-      const result = resp?.data?.data ?? resp?.data;
+      const result = await requestCouponCheck(code, guestEmail());
       if (result?.valid) {
-        setAppliedCoupon({ code: code.toUpperCase(), discountAmount: Number(result.discountAmount) || 0 });
+        const rule = parseCouponRule(result.rule);
+        const discountAmount = Number(result.discountAmount) || 0;
+        setAppliedCoupon({ code: (result.code || code).toUpperCase(), rule, discountAmount });
         addNotification({
           type: 'success',
           title: 'Cupom aplicado!',
-          message: `Desconto de ${formatPrice(result.discountAmount)} aplicado ao seu orçamento.`,
+          message: `Desconto de ${formatPrice(rule ? couponDiscount(rule, subtotal).amount : discountAmount)} no pedido de agora. Ele acompanha as mudanças do pedido.`,
         });
       } else {
         setAppliedCoupon(null);
@@ -208,10 +320,12 @@ export const QuoteRequestPage: React.FC = () => {
     setAppliedCoupon(null);
     setCouponInput('');
     setCouponError(null);
+    setCouponProblem(null);
   };
 
-  const onSubmit: SubmitHandler<QuoteFormData> = async (data) => {
+  const sendOrder = async (data: QuoteFormData, couponToUse: AppliedCoupon | null) => {
     setServerError(null);
+    setCouponProblem(null);
 
     if (!equipments.length && !kit?.id && !services.length) {
       setServerError('Adicione algum item ao carrinho antes de prosseguir.');
@@ -220,6 +334,14 @@ export const QuoteRequestPage: React.FC = () => {
         title: 'Carrinho vazio',
         message: 'Adicione algum item ao carrinho antes de prosseguir.'
       });
+      return;
+    }
+
+    // O23: a recusa diz qual item.
+    if (unavailableNames.length > 0) {
+      const msg = `Não dá para enviar com item indisponível: ${unavailableNames.join(', ')}. Tire do carrinho e envie de novo.`;
+      setServerError(msg);
+      addNotification({ type: 'warning', title: 'Item indisponível', message: msg });
       return;
     }
 
@@ -234,17 +356,33 @@ export const QuoteRequestPage: React.FC = () => {
       return;
     }
 
-    try {
-      // Construir payload para o backend
-      const [hh, mm] = data.startTime.split(':').map(Number);
-      const [yyyy, mon, dd] = data.eventDate.split('-').map(Number);
-      const eventStart = new Date(yyyy, mon - 1, dd, hh, mm, 0, 0);
-      const eventEnd = new Date(eventStart.getTime() + (data.duration * 3600 * 1000));
+    // O6: o evento é do início ao término (a validação garante os dois); a montagem vai à parte, quando veio.
+    const range = quoteEventRange(data);
+    if (!range) {
+      setServerError('Confira a data e os horários do evento.');
+      return;
+    }
 
-            const bookingData: QuoteBookingPayload = {
-        eventDate: eventStart.toISOString(),
-        eventEndDate: eventEnd.toISOString(),
-        eventDuration: data.duration,
+    // O7: antes do envio, o cupom é validado de novo com o subtotal e o e-mail de agora. Recusado, a pessoa decide
+    // (tirar e enviar, ou revisar), sem perder nada do formulário. Sem resposta da validação, o servidor confere no envio.
+    if (couponToUse) {
+      try {
+        const check = await requestCouponCheck(couponToUse.code, isGuest ? data.email || undefined : undefined);
+        if (check && check.valid === false) {
+          setCouponProblem({ code: couponToUse.code, reason: check.reason || 'Cupom inválido.' });
+          return;
+        }
+      } catch (err: unknown) {
+        logger.warn('Validação do cupom antes do envio falhou; o servidor confere no envio', 'QuoteRequestPage', err);
+      }
+    }
+
+    try {
+      const eventDuration = Math.max(1, Math.ceil(range.hours));
+      const bookingData: QuoteBookingPayload = {
+        eventDate: range.start.toISOString(),
+        eventEndDate: range.end.toISOString(),
+        eventDuration,
         location: data.venue,
         street: data.street,
         neighborhood: data.neighborhood,
@@ -253,37 +391,38 @@ export const QuoteRequestPage: React.FC = () => {
         zipCode: data.zipCode,
         addressNumber: data.addressNumber,
         addressComplement: data.addressComplement || undefined,
-        requiresStairs: data.requiresStairs === 'yes',
-        isCovered: data.isCovered === 'yes',
-        hasParking: data.hasParking === 'yes',
+        // O25: "Não sei" grava o caso comum; a resposta como a pessoa marcou vai no texto do pedido.
+        ...logisticsFlags(data),
+        specialRequests: quoteRequestText({ ...data, setupTime: range.setup ? data.setupTime : null }),
         notes: data.notes || undefined,
         status: 'PENDING',
-        setupTime: eventStart.toISOString(),
-        clientName: user?.name || data.name || undefined,
-        clientContact: user?.phone || data.phone || user?.email || data.email || undefined,
+        ...(range.setup ? { setupTime: range.setup.toISOString() } : {}),
+        clientName: user?.name || data.name?.trim() || undefined,
+        clientContact: data.phone.trim(),
       };
 
       if (data.email) bookingData.clientEmail = data.email;
       if (kit?.id) bookingData.kitId = kit.id;
-      if (appliedCoupon) bookingData.couponCode = appliedCoupon.code;
-      
+      if (couponToUse) bookingData.couponCode = couponToUse.code;
+
       const equipmentIds = equipments.map((it) => {
         if ('id' in it) return it.id;
         return it.equipmentId;
       }).filter(Boolean);
-      
-      // Lote 13: os técnicos marcados na caixa vão junto com os serviços do carrinho, sem repetir.
-      const serviceIds = Array.from(new Set([...services.map((it) => it.id), ...chosenTechnicians.map((it) => it.id)])).filter(Boolean);
-      
+
+      // Lote 13: os técnicos marcados na caixa vão junto com os serviços do carrinho, sem repetir. E1: o serviço que já
+      // vem no kit não vai de novo. E5: a montagem marcada vai como o serviço do catálogo.
+      const serviceIds = Array.from(new Set(orderServices.map((it) => it.id))).filter(Boolean);
+
       if (equipmentIds.length > 0) bookingData.equipmentIds = equipmentIds;
       if (serviceIds.length > 0) bookingData.serviceIds = serviceIds;
 
       const idempotencyKey = uuidv4();
-      
-      addNotification({ 
-        type: 'info', 
-        title: 'Processando', 
-        message: 'Enviando seu pedido de orçamento...' 
+
+      addNotification({
+        type: 'info',
+        title: 'Processando',
+        message: 'Enviando seu pedido de orçamento...'
       });
 
       const endpoint = user?.id ? '/bookings' : '/bookings/guest';
@@ -315,45 +454,51 @@ export const QuoteRequestPage: React.FC = () => {
       });
 
       await clearCart();
-      
+
       addNotification({
         type: 'success',
         title: 'Sucesso!',
         message: quoteSuccessMessage(responseData)
       });
-      
-      const statePayload = { 
-        booking: createdBooking, 
-        formData: data,
+
+      const statePayload = {
+        booking: createdBooking,
+        formData: { ...data, duration: eventDuration },
         cartItems: [
           ...(kit?.id ? [{ name: kit?.name ? `Kit: ${kit.name}` : 'Kit Selecionado' }] : []),
-          ...equipments.map((it) => {
-            if ('name' in it) return { name: it.name };
-            return { name: it.equipment.name };
-          }),
-          ...services.map((it) => ({ name: it.name })),
-          ...chosenTechnicians.map((it) => ({ name: it.name }))
+          ...equipments.map((it) => ({ name: equipmentOf(it).name })),
+          ...orderServices.map((it) => ({ name: it.name })),
         ]
       };
 
       navigate(createdBooking?.id ? `/orcamento-sucesso/${createdBooking.id}` : '/orcamento-sucesso', { state: statePayload });
-        } catch (err: unknown) {
+    } catch (err: unknown) {
       logger.error('Erro ao criar booking', 'QuoteRequestPage', err);
       const msg = (axios.isAxiosError(err) && err.response?.data?.message) || (err instanceof Error ? err.message : null) || 'Erro ao salvar pedido.';
       setServerError(msg);
-      
+      // O19/O23: item que ficou indisponível entre abrir a página e enviar: o carrinho é relido e o aviso diz qual.
+      if (/não está disponível/i.test(msg)) Promise.resolve(refreshCart?.({ force: true })).catch(() => undefined);
+
       ReactGA.event({
         category: "ecommerce",
         action: "purchase_error",
         label: msg.substring(0, 50)
       });
 
-      addNotification({ 
-        type: 'error', 
-        title: 'Falha no envio', 
-        message: msg 
+      addNotification({
+        type: 'error',
+        title: 'Falha no envio',
+        message: msg
       });
     }
+  };
+
+  const onSubmit: SubmitHandler<QuoteFormData> = (data) => sendOrder(data, appliedCoupon);
+
+  // O7: "Tirar o cupom e enviar": manda o mesmo formulário, sem o cupom.
+  const sendWithoutCoupon = () => {
+    handleRemoveCoupon();
+    void handleSubmit((data) => sendOrder(data, null))();
   };
 
   // Achado: com o carrinho vazio (o link de indicação cai aqui), a pessoa preenchia o formulário
@@ -391,6 +536,10 @@ export const QuoteRequestPage: React.FC = () => {
     );
   }
 
+  const durationMinutes = Math.round(durationHours * 60);
+  const endNote = eventRange ? quoteEventEndNote(eventRange) : '';
+  const discount = coupon?.amount ?? 0;
+
   return (
     <ClientPage
       width="4xl"
@@ -398,6 +547,13 @@ export const QuoteRequestPage: React.FC = () => {
       description="Revise os detalhes abaixo para que possamos preparar o melhor serviço para você."
     >
       <Card className="p-4 shadow-xl sm:p-8">
+        {unavailableNames.length > 0 && (
+          <Alert variant="warning" className="mb-8">
+            {unavailableNames.length === 1 ? 'Este item não está disponível agora' : 'Estes itens não estão disponíveis agora'}:{' '}
+            <strong>{unavailableNames.join(', ')}</strong>. Tire do <Link to="/carrinho" className="underline">carrinho</Link> para enviar o pedido.
+          </Alert>
+        )}
+
         {serverError && (
           <Alert variant="error" className="mb-8">
             {serverError}
@@ -431,8 +587,9 @@ export const QuoteRequestPage: React.FC = () => {
                 error={errors.eventDate?.message}
               />
 
+              {/* O6: início e término do evento, como no briefing; a montagem é outro campo. */}
               <Input
-                label="Hora de Início da Montagem *"
+                label="Início do evento *"
                 type="time"
                 leftIcon={<Clock className="h-4 w-4" />}
                 {...register('startTime')}
@@ -440,14 +597,37 @@ export const QuoteRequestPage: React.FC = () => {
               />
 
               <Input
-                label="Tempo de Operação (horas) *"
-                type="number"
+                label="Término do evento *"
+                type="time"
                 leftIcon={<Clock className="h-4 w-4" />}
-                {...register('duration')}
-                error={errors.duration?.message}
-                placeholder="Ex.: 5"
+                {...register('endTime')}
+                error={errors.endTime?.message}
+                helperText="Se acabar depois da meia-noite, é o horário do dia seguinte."
+              />
+
+              <Input
+                label="Data do término (opcional)"
+                type="date"
+                leftIcon={<Calendar className="h-4 w-4" />}
+                {...register('endDate')}
+                error={errors.endDate?.message}
+                helperText="Só para evento ou aluguel de mais de um dia. Em branco, o término é no mesmo dia (ou na madrugada seguinte)."
+              />
+
+              <Input
+                label="Hora da montagem (opcional)"
+                type="time"
+                leftIcon={<Wrench className="h-4 w-4" />}
+                {...register('setupTime')}
+                error={errors.setupTime?.message}
+                helperText="A partir de quando o local libera a montagem. Não muda o horário do evento."
               />
             </Grid>
+            {durationMinutes > 0 && (
+              <p className="mt-6 text-sm text-muted-foreground">
+                Duração do evento: {serviceMinutesText(durationMinutes)}{endNote}.
+              </p>
+            )}
           </section>
 
           {/* Seção 2: Endereço */}
@@ -468,7 +648,7 @@ export const QuoteRequestPage: React.FC = () => {
                 error={errors.zipCode?.message}
                 placeholder="00000-000"
               />
-              
+
               <Input
                 label="Rua *"
                 autoComplete="address-line1"
@@ -519,14 +699,13 @@ export const QuoteRequestPage: React.FC = () => {
             <div className="grid grid-cols-1 gap-6 rounded-2xl border border-border/50 bg-muted/30 p-4 sm:p-6 md:grid-cols-3">
               {logisticsQuestions.map(({ field, legend }) => (
                 <fieldset key={field} className="space-y-3">
-                  <legend className="mb-3 text-sm font-semibold text-foreground">{legend}</legend>
-                  <div className="flex gap-6">
-                    <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm text-foreground">
-                      <input type="radio" value="yes" {...register(field)} className="h-4 w-4 accent-primary" /> Sim
-                    </label>
-                    <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm text-foreground">
-                      <input type="radio" value="no" {...register(field)} className="h-4 w-4 accent-primary" /> Não
-                    </label>
+                  <legend className="mb-3 text-sm font-semibold text-foreground">{legend} *</legend>
+                  <div className="flex flex-wrap gap-x-6">
+                    {logisticsOptions.map(({ value, label }) => (
+                      <label key={value} className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm text-foreground">
+                        <input type="radio" value={value} {...register(field)} className="h-4 w-4 accent-primary" /> {label}
+                      </label>
+                    ))}
                   </div>
                   {errors[field] && <p className="text-sm text-destructive">{errors[field]?.message}</p>}
                 </fieldset>
@@ -535,8 +714,8 @@ export const QuoteRequestPage: React.FC = () => {
           </section>
 
           {/* Lote 13, técnico durante o evento (decisão do dono de 06/11/2026): montar e buscar depois, ou um técnico
-              durante todo o evento, cobrado pelas horas. */}
-          {technicianOffers.length > 0 && (
+              durante todo o evento, cobrado pelas horas. E1: o técnico que o kit já traz aparece como incluso. */}
+          {(technicianOffers.length > 0 || includedTechnicians.length > 0) && (
             <section className={sectionClass} aria-labelledby="tecnico-no-evento">
               <h2 id="tecnico-no-evento" className={sectionTitleClass}>
                 <span className={sectionIconClass} aria-hidden="true">
@@ -545,6 +724,9 @@ export const QuoteRequestPage: React.FC = () => {
                 Técnico no evento
               </h2>
               <div className="space-y-4">
+                {includedTechnicians.map((svc) => (
+                  <p key={svc.id} className="text-sm font-semibold text-foreground">{svc.name} incluso no kit.</p>
+                ))}
                 {technicianOffers.map((svc) => (
                   <Checkbox
                     key={svc.id}
@@ -555,27 +737,63 @@ export const QuoteRequestPage: React.FC = () => {
                     onChange={(e) => toggleTechnician(svc.id, e.target.checked)}
                   />
                 ))}
-                {chosenTechnicians.length === 0 && (
+                {/* E5: "a equipe monta" vale para o kit de entrega; no avulso, a montagem é à parte (seção abaixo). */}
+                {isDeliveryKit && chosenTechnicians.length === 0 && includedTechnicians.length === 0 && (
                   <p className="text-sm text-muted-foreground">Sem técnico, a equipe monta antes do evento e busca depois que ele termina.</p>
                 )}
               </div>
             </section>
           )}
 
-          {/* Seção 4: Contato Adicional (se necessário) */}
-          {!user?.id && (
-            <section className={sectionClass}>
-              <h2 className={sectionTitleClass}>
+          {/* E5: montagem do equipamento avulso, cobrada à parte pelo serviço de montagem do catálogo. */}
+          {offersSetup && (
+            <section className={sectionClass} aria-labelledby="montagem-no-local">
+              <h2 id="montagem-no-local" className={sectionTitleClass}>
                 <span className={sectionIconClass} aria-hidden="true">
-                  <User className="h-5 w-5" />
+                  <Wrench className="h-5 w-5" />
                 </span>
-                Sua Identidade
+                Montagem
               </h2>
-              <p className="text-sm text-muted-foreground -mt-2 mb-6">
-                Não é preciso criar conta antes — usamos esses dados para acompanhar seu pedido e você pode acessá-lo depois com este e-mail.
-              </p>
+              <div className="space-y-4">
+                {setupInKit && setupService ? (
+                  <p className="text-sm font-semibold text-foreground">{setupService.name} incluso no kit.</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    A montagem do equipamento avulso é cobrada à parte. Sem ela, a equipe entrega o equipamento e busca depois, e a montagem fica com você.
+                  </p>
+                )}
+                {setupService && !setupInCart && !setupInKit && (
+                  <Checkbox
+                    id="montagem-no-local-caixa"
+                    label="Montagem no local pela equipe"
+                    description={`${setupService.name}: ${formatPrice(setupService.price)}.`}
+                    checked={wantsSetup}
+                    onChange={(e) => setWantsSetup(e.target.checked)}
+                  />
+                )}
+                {setupService && setupInCart && (
+                  <p className="text-sm font-semibold text-foreground">A montagem pela equipe ({setupService.name}) já está no seu carrinho.</p>
+                )}
+              </div>
+            </section>
+          )}
 
-              <Grid columns={{ sm: 1, md: 2 }} gap={6}>
+          {/* Seção 4: Contato. O26: WhatsApp com DDD para todos; nome e e-mail para quem pede sem conta. */}
+          <section className={sectionClass}>
+            <h2 className={sectionTitleClass}>
+              <span className={sectionIconClass} aria-hidden="true">
+                <User className="h-5 w-5" />
+              </span>
+              {isGuest ? 'Sua Identidade' : 'Seu contato'}
+            </h2>
+            <p className="text-sm text-muted-foreground -mt-2 mb-6">
+              {isGuest
+                ? 'Não é preciso criar conta antes — usamos esses dados para acompanhar seu pedido e você pode acessá-lo depois com este e-mail.'
+                : 'É por este WhatsApp que a equipe fala com você sobre o pedido.'}
+            </p>
+
+            <Grid columns={{ sm: 1, md: 2 }} gap={6}>
+              {isGuest && (
                 <Input
                   label="Seu Nome *"
                   autoComplete="name"
@@ -583,7 +801,9 @@ export const QuoteRequestPage: React.FC = () => {
                   {...register('name')}
                   error={errors.name?.message}
                 />
+              )}
 
+              {isGuest && (
                 <Input
                   label="Seu E-mail *"
                   type="email"
@@ -592,18 +812,19 @@ export const QuoteRequestPage: React.FC = () => {
                   {...register('email')}
                   error={errors.email?.message}
                 />
+              )}
 
-                <Input
-                  label="Telefone (WhatsApp, opcional)"
-                  type="tel"
-                  autoComplete="tel"
-                  leftIcon={<Phone className="h-4 w-4" />}
-                  {...register('phone')}
-                  error={errors.phone?.message}
-                />
-              </Grid>
-            </section>
-          )}
+              <Input
+                label="WhatsApp com DDD *"
+                type="tel"
+                autoComplete="tel"
+                leftIcon={<Phone className="h-4 w-4" />}
+                placeholder="(31) 98888-7777"
+                {...register('phone')}
+                error={errors.phone?.message}
+              />
+            </Grid>
+          </section>
 
           {/* Seção 5: Observações */}
           <section className={sectionClass}>
@@ -639,7 +860,9 @@ export const QuoteRequestPage: React.FC = () => {
                     Cupom {appliedCoupon.code} aplicado
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Desconto de {formatPrice(appliedCoupon.discountAmount)}
+                    {coupon?.belowMinimum && appliedCoupon.rule?.minOrderValue != null
+                      ? `Este cupom vale a partir de ${formatPrice(appliedCoupon.rule.minOrderValue)} em itens; com o pedido de agora, ele não dá desconto.`
+                      : `Desconto de ${formatPrice(discount)}`}
                   </p>
                 </div>
                 <Button
@@ -684,26 +907,43 @@ export const QuoteRequestPage: React.FC = () => {
                   <span>Subtotal estimado</span>
                   <span className="tabular-nums">{formatPrice(subtotal)}</span>
                 </div>
-                {appliedCoupon && (
+                {appliedCoupon && discount > 0 && (
                   <div className="flex justify-between font-semibold text-success">
                     <span>Desconto ({appliedCoupon.code})</span>
-                    <span className="tabular-nums">- {formatPrice(appliedCoupon.discountAmount)}</span>
+                    <span className="tabular-nums">- {formatPrice(discount)}</span>
                   </div>
                 )}
+                {/* Auditoria do orçamento (12/11/2026): o total do site não tem o frete; o e-mail e a proposta têm. */}
                 <div className="flex justify-between text-foreground font-bold text-base pt-2">
-                  <span>Total estimado</span>
+                  <span>Total estimado (sem frete)</span>
                   <span className="tabular-nums">
-                    {formatPrice(Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0)))}
+                    {formatPrice(Math.max(0, subtotal - discount))}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground italic pt-1">
-                  Valor estimado — o valor final será confirmado pela nossa equipe.
+                  Estimativa dos itens. O frete, calculado pela distância até o local, e o pedágio, quando houver, entram na proposta que a equipe envia; o valor final é confirmado nela.
                 </p>
               </div>
             )}
           </section>
 
           <div className="pt-6">
+            {couponProblem && (
+              <Alert variant="warning" className="mb-6">
+                <p>
+                  O cupom {couponProblem.code} não vale para este pedido: {couponProblem.reason}
+                </p>
+                <p className="mt-1">Você pode tirar o cupom e enviar assim mesmo; nada do que você preencheu se perde.</p>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  <Button type="button" size="sm" onClick={sendWithoutCoupon} isLoading={isSubmitting}>
+                    Tirar o cupom e enviar
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setCouponProblem(null)}>
+                    Revisar o pedido
+                  </Button>
+                </div>
+              </Alert>
+            )}
             <Button
               type="submit"
               size="lg"

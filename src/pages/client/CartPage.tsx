@@ -1,6 +1,6 @@
 // Caminho do arquivo: frontend/src/pages/client/CartPage.tsx
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import ReactGA from 'react-ga4';
 import { Package, ShoppingBag, Trash2 } from 'lucide-react';
@@ -12,10 +12,13 @@ import { useRecommendations } from '../../hooks/useRecommendations';
 import { asArray } from '../../utils/normalize';
 import type { Equipment, Service } from '../../types/types';
 import type { StandardVariant } from '../../components/ui/StandardComponents';
-import { Badge, Button, Card, ConfirmModal, buttonVariants } from '../../components/ui/StandardComponents';
+import { Alert, Badge, Button, Card, ConfirmModal, buttonVariants } from '../../components/ui/StandardComponents';
 import { ClientPage } from '../../components/client/ClientPage';
-import { useEquipmentPriceUnit } from '../../hooks/usePricingRules';
+import { useEquipmentPriceUnit, useFreightRules } from '../../hooks/usePricingRules';
 import { kitCompactInfo } from '../../utils/kitInfo';
+import { equipmentUnitText, equipmentUnitsForHours, serviceMinutesText } from '../../utils/bookingPricing';
+import { isAvailableForOrder, kitServiceIds } from '../../utils/cartCatalog';
+import { freightRulesText, orderNeedsDelivery } from '../../utils/freightInfo';
 
 // Selo do tipo de item (antes: blue/emerald/orange fixos em 10px).
 const itemTypeBadge: Record<'equipment' | 'service' | 'kit', { label: string; variant: StandardVariant }> = {
@@ -24,57 +27,106 @@ const itemTypeBadge: Record<'equipment' | 'service' | 'kit', { label: string; va
   kit: { label: 'Kit', variant: 'warning' },
 };
 
+// Auditoria do orçamento (12/11/2026), O5/A8, O19 e E1: cada linha do carrinho diz como o item é cobrado e quanto entra
+// na estimativa. `subtotal` é o que a linha soma; `note` explica (mínimo de diárias, regra do técnico, incluso no kit).
+interface CartLine {
+  id: string;
+  name: string;
+  price: number | string;
+  images: string[];
+  type: 'equipment' | 'service' | 'kit';
+  subtotal: number;
+  unitLabel: string;
+  note?: string;
+  available: boolean;
+  includedInKit?: boolean;
+}
+
 export const CartPage = () => {
-  const { cart, removeItem, itemCount, clearCart } = useCart();
+  const { cart, removeItem, itemCount, clearCart, refreshCart } = useCart();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [clearing, setClearing] = useState(false);
   // Diária (lote 13): o equipamento avulso é cobrado na unidade da chave do servidor (EQUIPMENT_PRICE_UNIT),
   // lida na hora, também para o item guardado no navegador antes de a chave virar.
   const equipmentUnit = useEquipmentPriceUnit();
+  const freightRules = useFreightRules();
 
-  // Equipamentos
-    const equipmentItems = asArray<{ equipmentId: string; equipment: Equipment } | Equipment>(cart?.equipments).map((item) => {
-    if ('equipmentId' in item) {
-      return {
-        id: item.equipmentId,
-        name: item.equipment.name,
-        price: item.equipment.pricePerHour || 0,
-        images: item.equipment.imageUrl ? [item.equipment.imageUrl] : (item.equipment.images || []),
-        type: 'equipment' as const,
-      };
-    }
+  // Auditoria do orçamento (12/11/2026), O19: ao abrir, o carrinho do navegador é relido do catálogo.
+  useEffect(() => {
+    Promise.resolve(refreshCart?.()).catch(() => undefined);
+  }, [refreshCart]);
+
+  // Equipamentos. O5/A8: na diária, a estimativa conta o mínimo de diárias de cada equipamento, como o servidor.
+  const equipmentItems: CartLine[] = asArray<{ equipmentId: string; equipment: Equipment } | Equipment>(cart?.equipments).map((entry) => {
+    const item: Equipment = 'equipmentId' in entry ? { ...entry.equipment, id: entry.equipmentId } : entry;
+    const units = equipmentUnitsForHours(equipmentUnit, 1, item.minimumRentalDuration ?? null) ?? 1;
+    const available = isAvailableForOrder(item);
+    const unitPrice = Number(item.pricePerHour) || 0;
     return {
       id: item.id,
       name: item.name,
       price: item.pricePerHour || 0,
       images: item.imageUrl ? [item.imageUrl] : (item.images || []),
       type: 'equipment' as const,
+      subtotal: available ? unitPrice * units : 0,
+      unitLabel: equipmentUnit === 'day' ? '/ diária' : '/ hora',
+      note: units > 1 ? `Mínimo de ${equipmentUnitText(units, equipmentUnit)}: ${formatPrice(unitPrice * units)}` : undefined,
+      available,
     };
   });
 
-  // Serviços
-    const serviceItems = asArray<Service>(cart?.services).map((item) => ({
-    id: item.id,
-    name: item.name,
-    price: item.price || 0,
-    images: item.imageUrl ? [item.imageUrl] : [],
-    type: 'service' as const,
-  }));
+  // Serviços. O5/A8: o que acompanha o evento todo mostra a regra (cobra pelas horas do evento), não "/ serviço". E1: o
+  // serviço que o kit do carrinho já traz aparece como incluso e não soma.
+  const kitServices = kitServiceIds(cart?.kit);
+  const serviceItems: CartLine[] = asArray<Service>(cart?.services).map((item) => {
+    const includedInKit = kitServices.has(item.id);
+    const available = isAvailableForOrder(item);
+    const minutes = Number(item.duration);
+    const wholeEvent = item.coversWholeEvent === true && Number.isInteger(minutes) && minutes > 0;
+    return {
+      id: item.id,
+      name: item.name,
+      price: item.price || 0,
+      images: item.imageUrl ? [item.imageUrl] : [],
+      type: 'service' as const,
+      subtotal: available && !includedInKit ? Number(item.price) || 0 : 0,
+      unitLabel: wholeEvent ? `até ${serviceMinutesText(minutes)} de evento` : '/ serviço',
+      note: includedInKit
+        ? 'Já vem no kit do carrinho: não é cobrado de novo.'
+        : wholeEvent
+          ? 'Acompanha o evento todo: cada hora a mais sai proporcional, pelas horas do seu evento.'
+          : undefined,
+      available,
+      includedInKit,
+    };
+  });
 
   // Kit único
-  const kitItem = cart?.kit
+  const kitAvailable = isAvailableForOrder(cart?.kit);
+  const kitItem: CartLine[] = cart?.kit
     ? [{
         id: cart.kit.id,
         name: cart.kit.name,
         price: cart.kit.price || 0,
         images: cart.kit.imageUrl ? [cart.kit.imageUrl] : [],
         type: 'kit' as const,
+        subtotal: kitAvailable ? Number(cart.kit.price) || 0 : 0,
+        unitLabel: 'por evento',
+        available: kitAvailable,
       }]
     : [];
 
   const items = [...equipmentItems, ...serviceItems, ...kitItem];
+  const unavailableNames = items.filter((item) => !item.available).map((item) => item.name);
 
-  const totalPrice = items.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
+  const totalPrice = items.reduce((acc, item) => acc + item.subtotal, 0);
+  // Frete (decisão de 12/11/2026): calculado pela distância e mostrado na proposta; o texto da regra vem de freightInfo.
+  const hasDelivery = orderNeedsDelivery(cart?.kit, equipmentItems.length);
+  const freightSentence = !hasDelivery
+    ? null
+    : freightRules
+      ? freightRulesText(freightRules)
+      : 'O frete é calculado pela distância até o local e aparece na proposta.';
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
 
@@ -130,6 +182,16 @@ export const CartPage = () => {
   };
 
   const handleProceedToQuote = () => {
+    // O23: com item indisponível, o pedido não segue; o aviso diz qual.
+    if (unavailableNames.length > 0) {
+      addNotification({
+        type: 'warning',
+        title: 'Item indisponível',
+        message: `Tire do carrinho para seguir: ${unavailableNames.join(', ')}.`,
+        duration: 5000,
+      });
+      return;
+    }
     if (itemCount > 0) {
       ReactGA.event({
         category: "ecommerce",
@@ -208,6 +270,13 @@ export const CartPage = () => {
           </Badge>
         </div>
 
+        {unavailableNames.length > 0 && (
+          <Alert variant="warning" className="mb-6">
+            {unavailableNames.length === 1 ? 'Este item não está disponível agora' : 'Estes itens não estão disponíveis agora'}:{' '}
+            <strong>{unavailableNames.join(', ')}</strong>. Tire do carrinho para seguir com o pedido.
+          </Alert>
+        )}
+
         <ul className="space-y-4">
           {items.map((item) => (
             <li
@@ -230,15 +299,23 @@ export const CartPage = () => {
                   )}
                 </div>
                 <div className="min-w-0">
-                  <Badge variant={itemTypeBadge[item.type].variant} size="sm" className="mb-2">
-                    {itemTypeBadge[item.type].label}
-                  </Badge>
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    <Badge variant={itemTypeBadge[item.type].variant} size="sm">
+                      {itemTypeBadge[item.type].label}
+                    </Badge>
+                    {!item.available && (
+                      <Badge variant="destructive" size="sm">
+                        Indisponível no momento
+                      </Badge>
+                    )}
+                  </div>
                   <h2 className="mb-1 break-words text-lg font-bold text-foreground sm:text-2xl">{item.name}</h2>
                   <p className="text-lg font-bold text-primary sm:text-xl">
-                    {formatPrice(item.price)}{' '}
+                    {item.includedInKit ? 'Incluso no kit' : formatPrice(item.price)}{' '}
                     {/* Decisão do dono de 06/11: kit por evento; equipamento avulso por hora ou por diária (EQUIPMENT_PRICE_UNIT). */}
-                    <span className="text-sm font-normal text-muted-foreground">{item.type === 'service' ? '/ serviço' : item.type === 'kit' ? 'por evento' : equipmentUnit === 'day' ? '/ diária' : '/ hora'}</span>
+                    {!item.includedInKit && <span className="text-sm font-normal text-muted-foreground">{item.unitLabel}</span>}
                   </p>
+                  {item.note && <p className="text-xs text-muted-foreground">{item.note}</p>}
                   {/* Lote 13 (06/11/2026): o tipo do kit e as horas incluídas, como no cartão do kit. */}
                   {item.type === 'kit' && cart?.kit && (
                     <p className="text-xs text-muted-foreground">{kitCompactInfo(cart.kit)}</p>
@@ -267,7 +344,7 @@ export const CartPage = () => {
                 {formatPrice(subtotal)}
               </div>
               <p className="leading-relaxed text-muted-foreground">
-                Este valor é uma estimativa parcial. Kits têm preço por evento, com hora extra quando o evento passa das horas incluídas no kit; equipamentos avulsos são {equipmentUnit === 'day' ? 'cobrados por diária (cada 24 horas do evento, com o mínimo de diárias de cada um)' : 'multiplicados pela duração do seu evento'}, e os serviços possuem valor fixo. Taxas de transporte serão validadas por nossa equipe.
+                Este valor é uma estimativa parcial. Kits têm preço por evento, com hora extra quando o evento passa das horas incluídas no kit; equipamentos avulsos são {equipmentUnit === 'day' ? 'cobrados por diária (cada 24 horas do evento, com o mínimo de diárias de cada um)' : 'multiplicados pela duração do seu evento'}. As horas do evento entram no pedido de orçamento.{freightSentence ? ` ${freightSentence}` : ''}
               </p>
             </div>
 

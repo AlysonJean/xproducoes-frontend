@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 const { post, useCart, useAuth, addNotification } = vi.hoisted(() => ({
@@ -103,8 +103,10 @@ describe('QuoteRequestPage: carrinho vazio', () => {
     const fill = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
     fill(FORM_FIELD, 'Espaço Kalahari');
     fill('Data do Evento *', '2030-03-20');
-    fill('Hora de Início da Montagem *', '19:00');
-    fill('Tempo de Operação (horas) *', '4');
+    // Auditoria do orçamento (12/11/2026): início e término do evento (O6), logística sem resposta pré-marcada (O25) e
+    // WhatsApp obrigatório (O26).
+    fill('Início do evento *', '19:00');
+    fill('Término do evento *', '23:00');
     fill('CEP *', '30110-000');
     fill('Rua *', 'Av. Brasil');
     fill('Número *', '100');
@@ -113,6 +115,10 @@ describe('QuoteRequestPage: carrinho vazio', () => {
     fill('Estado *', 'MG');
     fill('Seu Nome *', 'Ana Souza');
     fill('Seu E-mail *', 'ana@cliente.test');
+    fill('WhatsApp com DDD *', '(31) 98888-7777');
+    for (const grupo of ['Local com escadas? *', 'Local coberto? *', 'Tem estacionamento? *']) {
+      fireEvent.click(within(screen.getByRole('group', { name: grupo })).getByLabelText('Não sei'));
+    }
     fireEvent.submit(container.querySelector('form') as HTMLFormElement);
 
     await waitFor(() => expect(cleared).toBe(true));

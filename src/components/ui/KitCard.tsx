@@ -13,6 +13,7 @@ import { Button } from './Button';
 import { useCart } from '../../hooks/useCart';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { kitCompactInfo } from '../../utils/kitInfo';
+import { isAvailableForOrder } from '../../utils/cartCatalog';
 
 interface KitCardProps {
   kit: Kit;
@@ -70,8 +71,11 @@ export const KitCard: React.FC<KitCardProps> = ({
   const { addNotification } = useNotifications();
 
   const isAlreadyInCart = cart?.kit?.id === kit.id;
+  // Auditoria do orçamento (12/11/2026), O23: o "+" só põe no orçamento o kit ATIVO; o kit "em breve" ou em manutenção
+  // entrava no carrinho e só voltava no envio do pedido.
+  const canAdd = isAvailableForOrder(kit);
 
-  const handleQuickAdd = (e: React.MouseEvent) => {
+  const handleQuickAdd = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -83,13 +87,15 @@ export const KitCard: React.FC<KitCardProps> = ({
         });
         return;
     }
+    if (!canAdd) return;
 
-    addItem(kit, 'kit');
-    addNotification({
-        type: 'success',
-        title: 'Kit Adicionado',
-        message: `${kit.name} foi adicionado ao seu orçamento.`
-    });
+    // O carrinho avisa o resultado (e pergunta antes de trocar outro kit, O24); antes este cartão dizia "Kit
+    // Adicionado" na hora, mesmo quando nada entrava.
+    try {
+      await addItem(kit, 'kit');
+    } catch {
+      // O carrinho já mostrou o erro.
+    }
   };
 
   // Achado (Lighthouse/axe-core contra produção real): mesmo problema do EquipmentCard —
@@ -142,7 +148,9 @@ export const KitCard: React.FC<KitCardProps> = ({
                 description: kit.description,
                 pricePerHour: kit.price,
                 imageUrl: kit.imageUrl,
-                isAvailable: kit.isActive ?? true
+                isAvailable: kit.isActive ?? true,
+                // O23: a comparação sabe se o kit pode ir ao orçamento.
+                status: kit.status
               } satisfies Equipment}
               itemType="kit"
               size="sm"
@@ -172,8 +180,9 @@ export const KitCard: React.FC<KitCardProps> = ({
           type="button"
           size="icon"
           onClick={handleQuickAdd}
-          disabled={isAlreadyInCart}
-          aria-label={isAlreadyInCart ? `${kit.name} já está no orçamento` : `Adicionar ${kit.name} ao orçamento`}
+          disabled={isAlreadyInCart || !canAdd}
+          title={!canAdd ? 'Indisponível no momento' : undefined}
+          aria-label={isAlreadyInCart ? `${kit.name} já está no orçamento` : canAdd ? `Adicionar ${kit.name} ao orçamento` : `${kit.name}: indisponível no momento`}
         >
           {isAlreadyInCart ? <Check className="h-5 w-5" aria-hidden="true" /> : <Plus className="h-5 w-5" aria-hidden="true" />}
         </Button>

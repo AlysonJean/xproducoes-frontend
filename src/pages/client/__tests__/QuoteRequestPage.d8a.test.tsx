@@ -26,7 +26,7 @@ const CARRINHO = {
   services: [],
 };
 
-const subtotalDoCupom = async (unidade: 'hour' | 'day', horas: string) => {
+const subtotalDoCupom = async (unidade: 'hour' | 'day', inicio: string, termino: string, dataDoTermino?: string) => {
   apiFetch.mockResolvedValue({ equipmentPriceUnit: unidade, kitPrice: 'PER_EVENT' });
   render(
     <MemoryRouter initialEntries={['/orcamento']}>
@@ -36,7 +36,12 @@ const subtotalDoCupom = async (unidade: 'hour' | 'day', horas: string) => {
   await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/equipments/pricing-rules'));
   // A unidade chega do servidor depois da primeira pintura.
   await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
-  fireEvent.change(screen.getByLabelText('Tempo de Operação (horas) *'), { target: { value: horas } });
+  fireEvent.change(screen.getByLabelText('Início do evento *'), { target: { value: inicio } });
+  fireEvent.change(screen.getByLabelText('Término do evento *'), { target: { value: termino } });
+  if (dataDoTermino) {
+    fireEvent.change(screen.getByLabelText('Data do Evento *'), { target: { value: '2030-01-10' } });
+    fireEvent.change(screen.getByLabelText('Data do término (opcional)'), { target: { value: dataDoTermino } });
+  }
   fireEvent.change(screen.getByLabelText('Código do cupom'), { target: { value: 'BEMVINDO10' } });
   fireEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
   await waitFor(() => expect(post).toHaveBeenCalledWith('/coupons/validate', expect.anything()));
@@ -46,6 +51,9 @@ const subtotalDoCupom = async (unidade: 'hour' | 'day', horas: string) => {
 // Decisões do dono de 06/11 (P16): o kit tem preço por evento e o equipamento avulso custa por hora ou por
 // diária, conforme o servidor. A estimativa usada para validar o cupom multiplicava o kit pelas horas
 // (Kit de R$ 1.200 em 5 horas virava R$ 6.000).
+// Auditoria do orçamento (12/11/2026), O6: o /orcamento pede o início e o término do evento (antes, o "Tempo de Operação"
+// em horas); as horas da estimativa saem deles. O término antes do início é o dia seguinte; o evento de mais de um
+// dia usa a data do término.
 describe('QuoteRequestPage — estimativa do cupom com a regra do servidor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -55,14 +63,22 @@ describe('QuoteRequestPage — estimativa do cupom com a regra do servidor', () 
   });
 
   it('por hora (padrão): kit pelo preço do evento + equipamento × horas', async () => {
-    expect(await subtotalDoCupom('hour', '5')).toBe(1200 + 10 * 5);
+    expect(await subtotalDoCupom('hour', '18:00', '23:00')).toBe(1200 + 10 * 5);
   });
 
   it('meia hora a mais conta a hora cheia, como o servidor (4,5 h = 5 h do equipamento)', async () => {
-    expect(await subtotalDoCupom('hour', '4.5')).toBe(1200 + 10 * 5);
+    expect(await subtotalDoCupom('hour', '18:30', '23:00')).toBe(1200 + 10 * 5);
   });
 
-  it('por diária: 30 horas são 2 diárias do equipamento; o kit continua pelo preço do evento', async () => {
-    expect(await subtotalDoCupom('day', '30')).toBe(1200 + 10 * 2);
+  it('por diária: o evento de 5 h é 1 diária do equipamento; o kit continua pelo preço do evento', async () => {
+    expect(await subtotalDoCupom('day', '18:00', '23:00')).toBe(1200 + 10 * 1);
+  });
+
+  it('por diária: 30 horas (com a data do término) são 2 diárias do equipamento; o kit continua pelo preço do evento', async () => {
+    expect(await subtotalDoCupom('day', '18:00', '00:00', '2030-01-12')).toBe(1200 + 10 * 2);
+  });
+
+  it('por hora: a festa que vira a meia-noite (20h às 2h) conta 6 h', async () => {
+    expect(await subtotalDoCupom('hour', '20:00', '02:00')).toBe(1200 + 10 * 6);
   });
 });
