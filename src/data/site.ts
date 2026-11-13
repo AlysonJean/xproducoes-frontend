@@ -4,16 +4,19 @@
 // grafias diferentes, telefone do desenvolvedor exibido como WhatsApp comercial).
 
 export const SITE_NAME = 'X Produções';
+// Nome comercial (o nome fantasia). O nome empresarial do CNPJ é COMPANY_REGISTERED_NAME, logo abaixo.
 export const COMPANY_LEGAL_NAME = 'X Produções e Eventos';
 export const COMPANY_CNPJ = '55.343.824/0001-56';
 export const COMPANY_ADDRESS_LINE = "Rua Flor d'Água, 407, Jardim Alvorada";
 export const COMPANY_CITY_LINE = 'Belo Horizonte - MG';
-// Q7 (respostas do dono de 03/11/2026): nome empresarial do CNPJ, ainda A CONFERIR no Cartão CNPJ (a consulta
-// pública mostra um MEI aberto em 31/05/2024). Por enquanto só a política de reserva (rascunho, P17) o usa; o rodapé
-// continua com COMPANY_LEGAL_NAME até a correção do nome empresarial (E12).
-export const COMPANY_REGISTERED_NAME = '55.343.824 ERNANE M. S.';
+// Textos legais (13/11/2026): nome empresarial completo do CNPJ (MEI), confirmado por Alyson em 13/11/2026. Era a
+// forma abreviada "55.343.824 ERNANE M. S." (Q7, a conferir). O Decreto 7.962/2013, art. 2º, pede o nome empresarial e
+// o CNPJ em local visível do site: o rodapé, a política de privacidade e a política de reserva o mostram.
+export const COMPANY_REGISTERED_NAME = '55.343.824 ERNANE MOURA DA SILVA';
 // CEP do endereço do CNPJ, confirmado pelo dono em 06/11/2026 (o mesmo endereço acima, saída do frete).
 export const COMPANY_POSTAL_CODE = '30810-310';
+/** Endereço físico completo, com CEP, numa linha: rodapé, políticas e Termos (Decreto 7.962/2013, art. 2º, II). */
+export const COMPANY_FULL_ADDRESS = `${COMPANY_ADDRESS_LINE}, ${COMPANY_CITY_LINE}, CEP ${COMPANY_POSTAL_CODE}`;
 
 export const INSTAGRAM_URL = 'https://www.instagram.com/x_producoeseventos';
 export const INSTAGRAM_HANDLE = '@x_producoeseventos';
@@ -22,6 +25,10 @@ export const INSTAGRAM_HANDLE = '@x_producoeseventos';
 // mesmo do site e do backend. Antes o rodapé, contato, carreiras, imprensa e ajuda mostravam
 // @xproducoeseventos.com.br (com um "e" só), que não é o domínio da empresa.
 export const SUPPORT_EMAIL = 'suporte@xproducoeseeventos.com.br';
+
+// Textos legais (13/11/2026): prazo de resposta do atendimento (Decreto 7.962/2013, art. 4º, parágrafo único: a
+// resposta ao consumidor sai em até 5 dias). O Contato dizia "Respondemos em até 24h", sem regra que o sustentasse.
+export const SUPPORT_RESPONSE_LABEL = 'Atendimento: respondemos em até 5 dias';
 
 // P20 (decisão do dono de 08/11/2026, a partir da resposta de 03/11): o selo, o rodapé e o contato diziam "Desde 2015"
 // e "Mais de 10 anos de experiência", mas o CNPJ é de 2024. A frase fala da trajetória do dono, não da empresa. Uma

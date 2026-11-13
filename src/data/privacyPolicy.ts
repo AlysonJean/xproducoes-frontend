@@ -1,11 +1,4 @@
-import {
-  COMPANY_ADDRESS_LINE,
-  COMPANY_CITY_LINE,
-  COMPANY_CNPJ,
-  COMPANY_LEGAL_NAME,
-  COMPANY_POSTAL_CODE,
-  SUPPORT_EMAIL,
-} from './site';
+import { COMPANY_CNPJ, COMPANY_FULL_ADDRESS, COMPANY_LEGAL_NAME, COMPANY_REGISTERED_NAME, SUPPORT_EMAIL } from './site';
 import { GOOGLE_ANALYTICS_TRANSFER_NOTICE, INSTAGRAM_PLAYER_NOTICE } from './cookiePolicy';
 
 // D8c (aprovada em 02/11/2026), parte 4: "política de privacidade nova, escrita a partir do que o sistema faz (empresa,
@@ -17,20 +10,18 @@ import { GOOGLE_ANALYTICS_TRANSFER_NOTICE, INSTAGRAM_PLAYER_NOTICE } from './coo
 // publicado junto com esta versão. Mudou o texto, mude PRIVACY_POLICY_UPDATED_AT.
 // Pedido do dono de 09/11/2026 (Instagram): entram a linha "Meta (Instagram)" e a frase do player dos vídeos, no mesmo
 // dia da versão acima (a data continua 09/11/2026).
+// Textos legais (13/11/2026): versão nova com a seção "Dados de orçamentos e contratos" (bases legais, dados
+// necessários em destaque, registro do aceite com o código enviado ao e-mail, com quem os dados são compartilhados,
+// transferência pelo art. 33, IX, guarda do contrato por 10 anos e dos orçamentos não aceitos por até 12 meses,
+// direitos e canal), o nome empresarial completo do CNPJ em "Quem cuida dos seus dados" e o armazenamento temporário
+// no Render (D19, trocado em 12/11/2026; o Redis Cloud saiu da lista).
 
 /** Data da última revisão do texto (como LAST_UPDATED dos Termos). */
-export const PRIVACY_POLICY_UPDATED_AT = '09/11/2026';
+export const PRIVACY_POLICY_UPDATED_AT = '13/11/2026';
 
 export const PRIVACY_POLICY_TITLE = 'Política de Privacidade';
 
 export const PRIVACY_POLICY_DESCRIPTION = `Como a ${COMPANY_LEGAL_NAME} trata seus dados: o que guarda, para quê, com quem e por quanto tempo. Atualizada em ${PRIVACY_POLICY_UPDATED_AT}.`;
-
-/**
- * Q7: o nome empresarial do Cartão CNPJ (src/data/site.ts, COMPANY_REGISTERED_NAME) ainda está "a conferir". Enquanto
- * for null, a política mostra só o nome fantasia. Depois que o dono conferir, troque null por COMPANY_REGISTERED_NAME
- * (importado de './site') e ajuste o teste src/pages/__tests__/privacidade.d8c.test.tsx: este é o único lugar a mudar.
- */
-export const PRIVACY_CONTROLLER_REGISTERED_NAME: string | null = null;
 
 export interface PrivacyPolicyLink {
   label: string;
@@ -56,9 +47,9 @@ const paragraph = (text: string, link?: PrivacyPolicyLink): PrivacyPolicyBlock =
 const highlight = (text: string): PrivacyPolicyBlock => ({ kind: 'paragraph', text, highlight: true });
 const bullets = (...items: string[]): PrivacyPolicyBlock => ({ kind: 'list', items });
 
-const controllerName = PRIVACY_CONTROLLER_REGISTERED_NAME
-  ? `${COMPANY_LEGAL_NAME} (nome empresarial ${PRIVACY_CONTROLLER_REGISTERED_NAME})`
-  : COMPANY_LEGAL_NAME;
+// Q7 respondida (nome empresarial confirmado por Alyson em 13/11/2026): a política mostra o nome comercial e o nome
+// empresarial do CNPJ. Antes mostrava só o nome comercial, enquanto o nome estava "a conferir".
+const controllerName = `${COMPANY_LEGAL_NAME} (nome empresarial ${COMPANY_REGISTERED_NAME})`;
 
 const SAME_AS_BOOKING = 'O mesmo da reserva: 5 anos se ela foi contratada ou paga; 12 meses se não foi.';
 const ACCOUNTING_TERM = '5 anos contados de 1º de janeiro do ano seguinte ao evento';
@@ -74,7 +65,7 @@ export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
       bullets(
         `Nome: ${controllerName}`,
         `CNPJ: ${COMPANY_CNPJ}`,
-        `Endereço: ${COMPANY_ADDRESS_LINE}, ${COMPANY_CITY_LINE}, CEP ${COMPANY_POSTAL_CODE}`,
+        `Endereço: ${COMPANY_FULL_ADDRESS}`,
         `E-mail: ${SUPPORT_EMAIL}`
       ),
       paragraph(
@@ -171,6 +162,49 @@ export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
       paragraph('Não vendemos dados pessoais.'),
     ],
   },
+  // Textos legais (13/11/2026): orçamento, contrato e aceite pelo site (bases do art. 7º, V, II e VI; sem
+  // consentimento para enviar o contrato por e-mail). O WhatsApp não tem envio automático (sem API): ele só aparece
+  // como canal de conversa. Revisão (13/11/2026): o aceite fica no condicional (nasce desligado) e o pedido não aceito
+  // é apagado ou anonimizado (o backend, retentionService, anonimiza o pedido não contratado em 12 meses).
+  {
+    id: 'orcamentos-e-contratos',
+    title: 'Dados de orçamentos e contratos',
+    blocks: [
+      paragraph(
+        'Para fazer a proposta, emitir o contrato e cumprir o que foi combinado, tratamos os dados de quem contrata: nome ou razão social, CPF ou CNPJ, e-mail, telefone e endereço e, se for empresa, nome, CPF e cargo de quem aceita em nome dela. Junto vão os dados do evento: data, horário, local, itens e valores.'
+      ),
+      highlight(
+        'Estes dados são necessários para emitir e cumprir o contrato. Sem eles, não conseguimos fazer o contrato nem reservar a data. Por isso eles não dependem do seu consentimento.'
+      ),
+      paragraph('As bases legais (LGPD, art. 7º) são:'),
+      bullets(
+        'Execução do contrato e dos passos antes dele, a seu pedido (inciso V): fazer a proposta, emitir o contrato, enviar o código de confirmação e a cópia do contrato ao seu e-mail, cobrar e realizar o evento.',
+        'Cumprimento de obrigação legal (inciso II): guardar os documentos fiscais e da contabilidade.',
+        'Exercício regular de direitos em processo (inciso VI): guardar o contrato e o registro do aceite para provar o que foi combinado, se houver cobrança ou processo.'
+      ),
+      paragraph(
+        'Se a proposta oferecer o aceite pelo site e você aceitar por ele, guardamos o registro do aceite: nome e CPF ou CNPJ (e, se for empresa, nome, CPF e cargo de quem aceitou), o e-mail para o qual enviamos o código de confirmação e a conferência desse código, a data e a hora, o endereço IP, o navegador e o aparelho, a versão do contrato e a impressão digital do arquivo (hash SHA-256). O código vale por pouco tempo e não fica guardado de forma legível. O contrato aceito fica guardado sem alteração, e você recebe a cópia em PDF por e-mail.'
+      ),
+      paragraph(
+        'Esses dados passam pelos serviços de hospedagem, banco de dados, armazenamento de arquivos e e-mail listados na seção seguinte e vão para a contabilidade da empresa quando for preciso para cumprir as obrigações fiscais.'
+      ),
+      paragraph(
+        'O WhatsApp só entra como canal de conversa, quando você usa um botão do WhatsApp do site ou fala com a equipe por lá: não há envio automático do contrato por ele, e o que é escrito lá segue as regras do WhatsApp.'
+      ),
+      paragraph(
+        'Alguns desses serviços ficam fora do Brasil, principalmente nos Estados Unidos. Como esses dados são necessários para o contrato com você, para cumprir obrigação legal e para defender direitos num processo, a transferência se apoia na lei (LGPD, art. 33, IX).'
+      ),
+      paragraph('Por quanto tempo guardamos:'),
+      bullets(
+        'Contrato aceito pelo site, registro do aceite e dados de quem contratou: 10 anos depois do fim do contrato, mesmo que você exclua a conta.',
+        'Orçamentos que não foram aceitos: os dados pessoais são apagados ou anonimizados em até 12 meses depois do pedido.'
+      ),
+      paragraph(
+        'Durante o prazo de guarda, o contrato e o registro do aceite não são apagados a pedido, porque a guarda serve para cumprir a lei e defender direitos (LGPD, art. 7º, II e VI).'
+      ),
+      paragraph('Para pedir acesso, correção ou os outros direitos da seção "Seus direitos" sobre estes dados, escreva para', supportEmailLink),
+    ],
+  },
   {
     id: 'servicos',
     title: 'Serviços que tratam dados para nós e transferência para fora do Brasil',
@@ -186,13 +220,14 @@ export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
             'Hospeda o site, repassa as requisições do site ao servidor e conta as visitas sem cookies (Vercel Analytics).',
             'Estados Unidos e outros países (as páginas são montadas em São Paulo)',
           ],
-          ['Render', 'Servidor que processa contas, pedidos e reservas e guarda os registros de acesso.', 'Estados Unidos (Oregon)'],
-          ['Neon', 'Banco de dados com as contas, os pedidos e as reservas.', 'Estados Unidos (Virgínia)'],
+          // Textos legais (13/11/2026): desde 12/11/2026 (D19) o armazenamento temporário fica no Render (Oregon), e não
+          // mais no Redis Cloud (São Paulo).
           [
-            'Redis Cloud',
-            'Armazenamento temporário do servidor: fila de e-mails, contagem de tentativas, sessões encerradas e respostas guardadas por pouco tempo.',
-            'Brasil (São Paulo)',
+            'Render',
+            'Servidor que processa contas, pedidos e reservas e guarda os registros de acesso. Também guarda o armazenamento temporário do servidor: fila de e-mails, contagem de tentativas, sessões encerradas e respostas guardadas por pouco tempo.',
+            'Estados Unidos (Oregon)',
           ],
+          ['Neon', 'Banco de dados com as contas, os pedidos e as reservas.', 'Estados Unidos (Virgínia)'],
           [
             'Cloudinary',
             'Guarda fotos e arquivos: fotos de perfil, das avaliações e do mural, imagens do catálogo e, em modo privado, os comprovantes e anexos das reservas.',
@@ -294,6 +329,7 @@ export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
         'Conta: enquanto ela existir.',
         'Pedidos que não viraram contrato, com os anexos e as mensagens: 12 meses depois do pedido.',
         `Reservas contratadas ou pagas, com o comprovante e o chat: ${ACCOUNTING_TERM}. Exemplo: um evento de 2027 fica guardado até o fim de 2032.`,
+        'Contrato aceito pelo site, com o registro do aceite e os dados de quem contratou: 10 anos depois do fim do contrato.',
         'Mensagens do formulário de contato: 12 meses depois do envio.',
         'Fotos do mural: 90 dias depois do evento.',
         'Cópias de segurança do banco de dados: somem em até 90 dias.'
@@ -316,6 +352,7 @@ export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
         'A avaliação fica só com as estrelas, sem o comentário e as fotos.',
         'Pedidos que nunca foram contratados são cancelados, e os anexos e as mensagens deles são apagados.',
         `Reservas contratadas ou pagas guardam só o que a contabilidade precisa: data, itens, valores, situação, cupom, comprovante de pagamento e o chat da reserva. Elas ficam por ${ACCOUNTING_TERM}, sem o nome, o e-mail e o telefone.`,
+        'O contrato aceito pelo site e o registro do aceite, com os dados de quem contratou, ficam guardados por 10 anos depois do fim do contrato.',
         'O código da reserva leva até 5 letras do início do nome do cliente e continua nesse registro.',
         'As cópias de segurança somem em até 90 dias.',
         'O "Excluir cliente" do painel da administração segue a mesma regra.'

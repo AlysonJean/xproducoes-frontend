@@ -11,9 +11,12 @@ import {
   COMPANY_ADDRESS_LINE,
   COMPANY_CITY_LINE,
   COMPANY_CNPJ,
+  COMPANY_POSTAL_CODE,
+  COMPANY_REGISTERED_NAME,
   EXPERIENCE_SINCE,
   OPENING_HOURS_LABEL,
   SUPPORT_EMAIL,
+  SUPPORT_RESPONSE_LABEL,
   formatPhoneDisplay,
 } from '../data/site';
 import { useNotifications } from '../contexts/NotificationContext';
@@ -134,7 +137,9 @@ export const ContactPage = () => {
                   <a href={`mailto:${SUPPORT_EMAIL}`} className="text-muted-foreground text-sm hover:text-primary transition-colors break-all block">
                     {SUPPORT_EMAIL}
                   </a>
-                  <p className="text-xs text-muted-foreground mt-1">Respondemos em até 24h</p>
+                  {/* Textos legais (13/11/2026): o prazo do Decreto 7.962/2013 (art. 4º), de src/data/site.ts. Era
+                      "Respondemos em até 24h". */}
+                  <p className="text-xs text-muted-foreground mt-1">{SUPPORT_RESPONSE_LABEL}</p>
                 </div>
               </div>
 
@@ -161,7 +166,7 @@ export const ContactPage = () => {
                   <h3 className="font-semibold text-foreground mb-1">Localização</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
                     {COMPANY_ADDRESS_LINE}<br />
-                    {COMPANY_CITY_LINE}
+                    {COMPANY_CITY_LINE}, CEP {COMPANY_POSTAL_CODE}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">Atendemos toda a região</p>
                 </div>
@@ -174,7 +179,9 @@ export const ContactPage = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground mb-1">Empresa Registrada</h3>
-                  <p className="text-muted-foreground text-sm font-mono">{COMPANY_CNPJ}</p>
+                  {/* Textos legais (13/11/2026): o nome empresarial do CNPJ junto do número. */}
+                  <p className="text-muted-foreground text-sm">{COMPANY_REGISTERED_NAME}</p>
+                  <p className="text-muted-foreground text-sm font-mono">CNPJ {COMPANY_CNPJ}</p>
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                     {EXPERIENCE_SINCE}
                   </p>

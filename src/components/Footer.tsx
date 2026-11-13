@@ -1,18 +1,19 @@
 // src/components/Footer.tsx
 
-import { MapPinIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
+import { MapPinIcon, PhoneIcon, EnvelopeIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { useSettings } from '../contexts/SettingsContext';
 import { Link, useLocation } from 'react-router-dom';
 import ThemedLogo from './ui/ThemedLogo';
 import { getWhatsAppPhone, openWhatsApp } from '../utils/whatsapp';
 import {
-  COMPANY_ADDRESS_LINE,
-  COMPANY_CITY_LINE,
   COMPANY_CNPJ,
+  COMPANY_FULL_ADDRESS,
   COMPANY_LEGAL_NAME,
+  COMPANY_REGISTERED_NAME,
   EXPERIENCE_SINCE,
   INSTAGRAM_URL,
   SUPPORT_EMAIL,
+  SUPPORT_RESPONSE_LABEL,
   formatPhoneDisplay,
 } from '../data/site';
 import { GoogleReviewLink } from './ui/GoogleReviewLink';
@@ -146,11 +147,13 @@ export const Footer = () => {
               Equipamentos profissionais e atendimento próximo. {EXPERIENCE_SINCE}.
             </p>
 
-            {/* Contato (dados de src/data/site.ts; telefone = WhatsApp do site) */}
+            {/* Contato (dados de src/data/site.ts; telefone = WhatsApp do site). Textos legais (13/11/2026): o endereço
+                vai completo, com o CEP, e o prazo de resposta do atendimento aparece aqui (Decreto 7.962/2013, arts.
+                2º e 4º); o nome empresarial e o CNPJ ficam na linha do ©, embaixo. */}
             <div className="space-y-3 text-sm">
               <div className="flex items-start space-x-3 text-muted-foreground">
                 <MapPinIcon className="w-5 h-5 text-primary flex-shrink-0" aria-hidden="true" />
-                <span>{COMPANY_ADDRESS_LINE} — {COMPANY_CITY_LINE}</span>
+                <span>{COMPANY_FULL_ADDRESS}</span>
               </div>
               <div className="flex items-center space-x-3 text-muted-foreground">
                 <PhoneIcon className="w-5 h-5 text-primary flex-shrink-0" aria-hidden="true" />
@@ -163,6 +166,10 @@ export const Footer = () => {
                 <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-primary transition-colors break-all">
                   {SUPPORT_EMAIL}
                 </a>
+              </div>
+              <div className="flex items-center space-x-3 text-muted-foreground">
+                <ClockIcon className="w-5 h-5 text-primary flex-shrink-0" aria-hidden="true" />
+                <span>{SUPPORT_RESPONSE_LABEL}</span>
               </div>
               {/* P20: só aparece com o link do Perfil da Empresa no Google (GOOGLE_REVIEW_LINK no servidor). */}
               <GoogleReviewLink url={googleReviewUrl} />
@@ -200,12 +207,19 @@ export const Footer = () => {
             {/* Copyright */}
             <div className="text-center lg:text-left">
               <p className="text-sm text-muted-foreground">
-                © <span suppressHydrationWarning>{COPYRIGHT_YEAR.format(new Date())}</span> {COMPANY_LEGAL_NAME}. CNPJ: {COMPANY_CNPJ}
+                © <span suppressHydrationWarning>{COPYRIGHT_YEAR.format(new Date())}</span> {COMPANY_LEGAL_NAME}
+              </p>
+              {/* Textos legais (13/11/2026): nome empresarial completo do CNPJ ao lado do número (Decreto 7.962/2013,
+                  art. 2º, I). Antes o rodapé mostrava só o nome comercial. */}
+              <p className="text-sm text-muted-foreground mt-1">
+                Nome empresarial: {COMPANY_REGISTERED_NAME} · CNPJ: {COMPANY_CNPJ}
               </p>
               {/* Achado (Lighthouse/axe-core contra produção real): a opacidade /70 aqui
                   reduzia o contraste de text-muted-foreground — removida. */}
+              {/* Textos legais (13/11/2026), revisão: o crédito fica, sem o telefone do desenvolvedor, que podia ser
+                  confundido com o da empresa. O único telefone do rodapé é o do WhatsApp do site. */}
               <p className="text-xs text-muted-foreground mt-1">
-                Desenvolvido com ❤️ por Alyson Jean (31) 97580-8477
+                Desenvolvido com ❤️ por Alyson Jean
               </p>
             </div>
 

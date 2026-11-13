@@ -141,6 +141,7 @@ describe('Textos institucionais sem o que não existe (E16)', () => {
     expect(screen.getByText('Serviços para o evento: DJ, técnico de som, técnico de iluminação, montagem e logística')).toBeInTheDocument();
     expect(screen.queryByText('Consultoria em eventos')).not.toBeInTheDocument();
     expect(screen.queryByText('Venda de acessórios')).not.toBeInTheDocument();
-    expect(screen.getByText('Última atualização: 12/11/2026')).toBeInTheDocument();
+    // Textos legais (13/11/2026): Termos revistos (objeto, contratação, aceite pelo site e foro).
+    expect(screen.getByText('Última atualização: 13/11/2026')).toBeInTheDocument();
   });
 });

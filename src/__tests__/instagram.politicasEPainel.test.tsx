@@ -73,8 +73,8 @@ describe('Instagram — políticas', () => {
 
     const cookies = PRIVACY_POLICY_SECTIONS.find((section) => section.id === 'cookies');
     expect(cookies?.blocks.some((block) => block.kind === 'paragraph' && block.text === INSTAGRAM_PLAYER_NOTICE)).toBe(true);
-    // Mesma versão do dia (o texto novo é de 09/11/2026).
-    expect(PRIVACY_POLICY_UPDATED_AT).toBe('09/11/2026');
+    // O texto do Instagram é de 09/11/2026; a versão em vigor é a de 13/11/2026 (textos legais), que o manteve.
+    expect(PRIVACY_POLICY_UPDATED_AT).toBe('13/11/2026');
   });
 
   it('CSP (Report-Only): frame-src aceita o player do Instagram, além do login do Google', () => {

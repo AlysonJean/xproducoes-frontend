@@ -1,6 +1,7 @@
 import { Helmet } from 'react-helmet-async';
 import { PageLayout } from '../components/layouts/PageLayout';
 import { Alert } from '../components/ui/Alert';
+import { PolicyTable } from '../components/PolicyTable';
 import {
   RESERVATION_POLICY_DRAFT_NOTICE,
   RESERVATION_POLICY_PENDING_LABEL,
@@ -24,9 +25,26 @@ const PendingMark = ({ className = '' }: { className?: string }) => (
   </p>
 );
 
+// Textos legais (13/11/2026): as cláusulas que limitam direitos vêm em destaque (Código de Defesa do Consumidor, art.
+// 54, § 4º), no mesmo estilo da frase em destaque da Política de Privacidade; as tabelas de cancelamento usam a
+// PolicyTable das outras políticas, com o título visível.
+const HIGHLIGHT_CLASS = 'rounded-md border border-primary/40 bg-primary/5 p-4';
+
 const Block = ({ block }: { block: ReservationPolicyBlock }) => {
+  if (block.kind === 'table') {
+    return (
+      <div className={HIGHLIGHT_CLASS}>
+        <h3 className="mb-2 font-semibold text-foreground">{block.caption}</h3>
+        <PolicyTable caption={block.caption} columns={block.columns} rows={block.rows} />
+      </div>
+    );
+  }
   if (block.kind === 'paragraph') {
-    const text = <p className="text-muted-foreground leading-relaxed">{block.text}</p>;
+    const text = block.highlight ? (
+      <p className={`${HIGHLIGHT_CLASS} font-semibold leading-relaxed text-foreground`}>{block.text}</p>
+    ) : (
+      <p className="text-muted-foreground leading-relaxed">{block.text}</p>
+    );
     if (!block.pendingConfirmation) return text;
     return (
       <div className="space-y-2 rounded-md border border-dashed border-warning/50 p-3">
@@ -61,7 +79,8 @@ export const ReservationPolicyPage = () => (
       </>
     )}
     <div className="max-w-4xl mx-auto">
-      <div className="bg-card rounded-xl p-8 space-y-8 border border-border">
+      {/* Textos legais (13/11/2026): p-5 no celular, como a Privacidade, para as tabelas de cancelamento caberem. */}
+      <div className="bg-card rounded-xl p-5 sm:p-8 space-y-8 border border-border">
         {RESERVATION_POLICY_SECTIONS.map((section, index) => (
           <section key={section.id} id={section.id} aria-labelledby={`${section.id}-titulo`}>
             <h2 id={`${section.id}-titulo`} className="text-2xl font-semibold text-foreground mb-4">

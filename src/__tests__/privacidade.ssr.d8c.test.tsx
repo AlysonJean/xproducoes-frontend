@@ -6,9 +6,10 @@ import { Page } from '../../pages/all/+Page';
 import { COMPANY_REGISTERED_NAME } from '../data/site';
 
 // D7 e D8c (aprovadas em 02/11/2026): a Política de Privacidade e a Política de Cookies novas chegam no HTML que o
-// servidor entrega (o que o Google e quem abre o link sem JavaScript leem), com o título e a descrição certos e sem o
-// nome empresarial ainda não conferido (Q7). Mesmo arranjo de ssrNotFoundStatus.test.tsx: o app de verdade, pelo
-// onRenderHtml que o api/ssr.js usa na Vercel.
+// servidor entrega (o que o Google e quem abre o link sem JavaScript leem), com o título e a descrição certos. Mesmo
+// arranjo de ssrNotFoundStatus.test.tsx: o app de verdade, pelo onRenderHtml que o api/ssr.js usa na Vercel.
+// Textos legais (13/11/2026): versão de 13/11, com o nome empresarial confirmado (Q7) e a seção "Dados de orçamentos e
+// contratos".
 vi.mock('react-router-dom', async () => await vi.importActual('react-router'));
 vi.mock('../services/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../services/api')>()),
@@ -41,18 +42,19 @@ async function ssr(url: string) {
 }
 
 describe('D8c — /privacidade e /cookies no HTML do servidor', () => {
-  it('/privacidade: título, descrição, as tabelas e a regra de transferência, sem o nome empresarial', async () => {
+  it('/privacidade: título, descrição, as tabelas, a regra de transferência, o nome empresarial e a seção dos contratos', async () => {
     const page = await ssr('/privacidade');
 
     expect(page.notFound).toBe(false);
     expect(page.head).toMatch(/<title[^>]*>Política de Privacidade \| X Produções<\/title>/);
-    expect(page.head).toMatch(/<meta[^>]* name="description" content="Como a X Produções e Eventos trata seus dados[^"]*Atualizada em 09\/11\/2026\."/);
+    expect(page.head).toMatch(/<meta[^>]* name="description" content="Como a X Produções e Eventos trata seus dados[^"]*Atualizada em 13\/11\/2026\."/);
     expect(page.body).toMatch(/<h1[^>]*>Política de Privacidade<\/h1>/);
     expect(page.body).toContain('Dados tratados, finalidade, base legal e prazo');
     expect(page.body).toContain('Serviços usados pelo site e onde ficam');
     expect(page.body).toContain('LGPD, art. 33, IX');
     expect(page.body).toContain('LGPD, art. 33, VIII');
-    expect(page.body).not.toContain(COMPANY_REGISTERED_NAME);
+    expect(page.body).toContain(`(nome empresarial ${COMPANY_REGISTERED_NAME})`);
+    expect(page.body).toContain('Dados de orçamentos e contratos');
     expect(page.body.toLowerCase()).not.toContain('personalizar a experiência');
   });
 

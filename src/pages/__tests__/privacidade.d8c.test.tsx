@@ -4,17 +4,15 @@ import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { PrivacyPage } from '../PrivacyPage';
-import {
-  PRIVACY_CONTROLLER_REGISTERED_NAME,
-  PRIVACY_POLICY_SECTIONS,
-  PRIVACY_POLICY_UPDATED_AT,
-} from '../../data/privacyPolicy';
-import { COMPANY_REGISTERED_NAME, SUPPORT_EMAIL } from '../../data/site';
+import { PRIVACY_POLICY_SECTIONS, PRIVACY_POLICY_UPDATED_AT } from '../../data/privacyPolicy';
+import { SUPPORT_EMAIL } from '../../data/site';
 
 // D8c (aprovada em 02/11/2026), parte 4: a Política de Privacidade nova, escrita a partir do que o sistema faz. A
 // página antiga citava um provedor de pagamento e a finalidade "personalizar a experiência", que não existem, e não
 // tinha CNPJ, base legal, prazos, serviços usados, transferência para fora do Brasil, fotos do mural nem as regras da
 // exclusão da conta. Aqui: todas as seções do arquivo de dados aparecem na ordem pedida, com os fatos conferidos.
+// Textos legais (13/11/2026): versão nova, com a seção "Dados de orçamentos e contratos" (testada em
+// privacidade.contratos.test.tsx), o nome empresarial confirmado (Q7) e o armazenamento temporário no Render (D19).
 
 expect.extend(toHaveNoViolations);
 
@@ -35,11 +33,12 @@ const pageText = () => norm(document.body.textContent ?? '');
 afterEach(() => cleanup());
 
 describe('D8c — Política de Privacidade (src/data/privacyPolicy.ts)', () => {
-  it('tem as 11 seções pedidas, nesta ordem, e a página mostra cada título numerado', () => {
+  it('tem as 12 seções pedidas, nesta ordem, e a página mostra cada título numerado', () => {
     expect(PRIVACY_POLICY_SECTIONS.map((section) => section.id)).toEqual([
       'quem-cuida',
       'canal',
       'dados',
+      'orcamentos-e-contratos',
       'servicos',
       'cookies',
       'direitos',
@@ -70,16 +69,15 @@ describe('D8c — Política de Privacidade (src/data/privacyPolicy.ts)', () => {
     }
   });
 
-  it('quem cuida dos dados: nome fantasia, CNPJ, endereço com CEP e e-mail; sem o nome empresarial ainda não conferido (Q7)', () => {
-    expect(PRIVACY_CONTROLLER_REGISTERED_NAME).toBeNull();
+  it('quem cuida dos dados: nome comercial com o nome empresarial confirmado em 13/11 (Q7), CNPJ, endereço com CEP e e-mail', () => {
     renderPage();
     const section = within(document.getElementById('quem-cuida') as HTMLElement);
-    expect(section.getByText('Nome: X Produções e Eventos')).toBeInTheDocument();
+    expect(section.getByText('Nome: X Produções e Eventos (nome empresarial 55.343.824 ERNANE MOURA DA SILVA)')).toBeInTheDocument();
     expect(section.getByText('CNPJ: 55.343.824/0001-56')).toBeInTheDocument();
     expect(section.getByText("Endereço: Rua Flor d'Água, 407, Jardim Alvorada, Belo Horizonte - MG, CEP 30810-310")).toBeInTheDocument();
     expect(section.getByText(`E-mail: ${SUPPORT_EMAIL}`)).toBeInTheDocument();
-    expect(pageText()).not.toContain(COMPANY_REGISTERED_NAME);
-    expect(pageText()).not.toContain('ERNANE');
+    // A forma abreviada de antes (a conferir) não aparece mais.
+    expect(pageText()).not.toContain('ERNANE M. S.');
   });
 
   it('canal do titular: e-mail de atendimento com link, quem responde e a dispensa de encarregado da Resolução CD/ANPD nº 2/2022', () => {
@@ -143,7 +141,11 @@ describe('D8c — Política de Privacidade (src/data/privacyPolicy.ts)', () => {
     expect(countryOf('Vercel')).toBe('Estados Unidos e outros países (as páginas são montadas em São Paulo)');
     expect(countryOf('Render')).toBe('Estados Unidos (Oregon)');
     expect(countryOf('Neon')).toBe('Estados Unidos (Virgínia)');
-    expect(countryOf('Redis Cloud')).toBe('Brasil (São Paulo)');
+    // D19 (12/11/2026): o armazenamento temporário saiu do Redis Cloud (São Paulo) e foi para o Render (Oregon).
+    expect(within(table).queryByRole('rowheader', { name: 'Redis Cloud' })).toBeNull();
+    expect(norm(within(table).getByRole('rowheader', { name: 'Render' }).closest('tr')?.textContent ?? '')).toContain(
+      'Também guarda o armazenamento temporário do servidor: fila de e-mails, contagem de tentativas, sessões encerradas e respostas guardadas por pouco tempo.'
+    );
     // Revisão: a região da conta do Cloudinary não aparece no código e as imagens saem por servidores no mundo todo.
     expect(countryOf('Cloudinary')).toBe('Estados Unidos e outros países');
     expect(countryOf('Sentry')).toBe('Estados Unidos');
@@ -240,6 +242,9 @@ describe('D8c — Política de Privacidade (src/data/privacyPolicy.ts)', () => {
       'Reservas contratadas ou pagas, com o comprovante e o chat: 5 anos contados de 1º de janeiro do ano seguinte ao evento.'
     );
     expect(text).toContain('Exemplo: um evento de 2027 fica guardado até o fim de 2032.');
+    expect(text).toContain(
+      'Contrato aceito pelo site, com o registro do aceite e os dados de quem contratou: 10 anos depois do fim do contrato.'
+    );
     expect(text).toContain('Mensagens do formulário de contato: 12 meses depois do envio.');
     expect(text).toContain('Fotos do mural: 90 dias depois do evento.');
     expect(text).toContain('Cópias de segurança do banco de dados: somem em até 90 dias.');
@@ -262,6 +267,7 @@ describe('D8c — Política de Privacidade (src/data/privacyPolicy.ts)', () => {
       'A avaliação fica só com as estrelas, sem o comentário e as fotos.',
       'Pedidos que nunca foram contratados são cancelados, e os anexos e as mensagens deles são apagados.',
       'Reservas contratadas ou pagas guardam só o que a contabilidade precisa: data, itens, valores, situação, cupom, comprovante de pagamento e o chat da reserva. Elas ficam por 5 anos contados de 1º de janeiro do ano seguinte ao evento, sem o nome, o e-mail e o telefone.',
+      'O contrato aceito pelo site e o registro do aceite, com os dados de quem contratou, ficam guardados por 10 anos depois do fim do contrato.',
       'O código da reserva leva até 5 letras do início do nome do cliente e continua nesse registro.',
       'As cópias de segurança somem em até 90 dias.',
       'O "Excluir cliente" do painel da administração segue a mesma regra.',
@@ -278,15 +284,15 @@ describe('D8c — Política de Privacidade (src/data/privacyPolicy.ts)', () => {
     expect(text).toContain('continua no registro guardado da reserva, mesmo depois da exclusão da conta');
   });
 
-  it('versão de 09/11/2026 e SEO: título da aba e descrição com a data', async () => {
-    expect(PRIVACY_POLICY_UPDATED_AT).toBe('09/11/2026');
+  it('versão de 13/11/2026 e SEO: título da aba e descrição com a data', async () => {
+    expect(PRIVACY_POLICY_UPDATED_AT).toBe('13/11/2026');
     renderPage();
-    expect(norm(document.getElementById('versao')?.textContent ?? '')).toContain('Versão de 09/11/2026.');
+    expect(norm(document.getElementById('versao')?.textContent ?? '')).toContain('Versão de 13/11/2026.');
     expect(screen.getByRole('heading', { level: 1, name: 'Política de Privacidade' })).toBeInTheDocument();
     await waitFor(() => expect(document.title).toBe('Política de Privacidade | X Produções'));
     await waitFor(() =>
       expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBe(
-        'Como a X Produções e Eventos trata seus dados: o que guarda, para quê, com quem e por quanto tempo. Atualizada em 09/11/2026.'
+        'Como a X Produções e Eventos trata seus dados: o que guarda, para quê, com quem e por quanto tempo. Atualizada em 13/11/2026.'
       )
     );
   });

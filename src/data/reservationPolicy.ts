@@ -6,11 +6,14 @@
 // rodapé, as rotas (App.tsx) e o gerador do sitemap (scripts/generateSitemap.ts, que roda com tsx no build da
 // Vercel, fora do Vite) o leem. A P15 parte 2 ("Li e aceito a política") usa a versão e o endereço daqui.
 
-/** Versão do texto: muda a cada revisão, para o aceite da P15 guardar qual texto o cliente leu. */
-export const RESERVATION_POLICY_VERSION = '2026-11';
+/**
+ * Versão do texto: muda a cada revisão, para o aceite da P15 guardar qual texto o cliente leu. Textos legais
+ * (13/11/2026): a versão passa a ser a data da revisão, a mesma do modelo do contrato do servidor ("2026-11-13").
+ */
+export const RESERVATION_POLICY_VERSION = '2026-11-13';
 
 /** Data da última revisão do texto (como LAST_UPDATED dos Termos). Atualize junto com a versão. */
-export const RESERVATION_POLICY_UPDATED_AT = '12/11/2026';
+export const RESERVATION_POLICY_UPDATED_AT = '13/11/2026';
 
 /**
  * Só vira true quando o dono e o advogado aprovarem o texto e nenhuma seção estiver marcada "Texto proposto, a
