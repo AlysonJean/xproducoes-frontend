@@ -32,7 +32,6 @@ export type {
   ModalNames,
   ModalPropsMap,
   FavoriteItem,
-  GeminiSuggestionResponse,
   DiagnosticResult,
   KitFormData,
   KitCreateData,

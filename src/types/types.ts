@@ -960,10 +960,6 @@ export type FavoriteItem = {
   type: 'equipment' | 'kit';
 };
 
-export interface GeminiSuggestionResponse {
-  suggestion: string;
-}
-
 export interface DiagnosticResult {
   status: string;
   timestamp: string;

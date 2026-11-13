@@ -343,62 +343,9 @@ export const formatUserRole = (role: UserRole): string => {
   return roleMap[role] || role;
 };
 
-// ================================
-// UTILITÁRIOS DE CÁLCULO
-// ================================
-
-/**
- * ✅ TYPE-SAFE: Calcula preço total de equipamentos
- */
-export const calculateEquipmentTotal = (
-  equipments: Equipment[],
-  days: number = 1
-): number => {
-  return equipments.reduce((total, equipment) => {
-    return total + ((equipment.dailyPrice || 0) * days);
-  }, 0);
-};
-
-/**
- * ✅ TYPE-SAFE: Calcula preço total de kits
- */
-export const calculateKitTotal = (
-  kits: Kit[],
-  days: number = 1
-): number => {
-  return kits.reduce((total, kit) => {
-    return total + ((kit.price || 0) * days);
-  }, 0);
-};
-
-/**
- * ✅ TYPE-SAFE: Calcula desconto por período
- */
-export const calculatePeriodDiscount = (
-  dailyPrice: number,
-  days: number
-): { total: number; discount: number; originalTotal: number } => {
-  const originalTotal = dailyPrice * days;
-  let discount = 0;
-  
-  // Desconto progressivo
-  if (days >= 30) {
-    discount = 0.2; // 20% para mensais
-  } else if (days >= 7) {
-    discount = 0.1; // 10% para semanais
-  } else if (days >= 3) {
-    discount = 0.05; // 5% para 3+ dias
-  }
-  
-  const discountAmount = originalTotal * discount;
-  const total = originalTotal - discountAmount;
-  
-  return {
-    total,
-    discount: discountAmount,
-    originalTotal
-  };
-};
+// Auditoria do orçamento (12/11/2026), O41: saíram calculateEquipmentTotal, calculateKitTotal e
+// calculatePeriodDiscount. Nada as usava, e as contas não eram as do servidor (kit vezes dias, desconto por período
+// que a empresa não dá). A conta do pedido é a de utils/bookingPricing.ts.
 
 // ================================
 // SANITIZADORES
@@ -446,9 +393,6 @@ export default {
   formatUserRole,
   toNumber,
   calculateTotal,
-  calculateEquipmentTotal,
-  calculateKitTotal,
-  calculatePeriodDiscount,
   validatePrice,
   validateEquipment,
   validateKit,

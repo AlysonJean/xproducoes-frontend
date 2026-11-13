@@ -19,11 +19,10 @@ vi.mock('../../components/SEO', () => ({ SEO: () => null }));
 vi.mock('react-ga4', () => ({ default: { event: vi.fn() } }));
 
 import { KitCard } from '../../components/ui/KitCard';
-import { ExperienceLevelSelector } from '../../components/kits/ExperienceLevelSelector';
 import { KitDetailPage } from '../KitDetailPage';
 import { CartPage } from '../client/CartPage';
 import { ComparePage } from '../ComparePage';
-import { ExperienceLevel, type Kit, type KitExperienceLevel } from '../../types/types';
+import type { Kit } from '../../types/types';
 
 const KIT = {
   id: 'kit-combo',
@@ -77,15 +76,7 @@ describe('Preço do kit por evento em toda tela pública (D8a/P16, decisão de 0
     expect(economia.textContent).not.toMatch(/hora/);
   });
 
-  it('níveis do kit: "por evento"', () => {
-    const niveis: KitExperienceLevel[] = [
-      { id: 'n1', level: ExperienceLevel.SILVER, price: 150, includes: [], kitId: KIT.id },
-      { id: 'n2', level: ExperienceLevel.GOLD, price: 300, includes: [], kitId: KIT.id },
-    ];
-    render(<ExperienceLevelSelector levels={niveis} selected={null} onSelect={vi.fn()} basePrice={150} />);
-    expect(screen.getAllByText('por evento')).toHaveLength(2);
-    expect(screen.queryByText('/hora')).not.toBeInTheDocument();
-  });
+  // Auditoria do orçamento (12/11/2026), O4/B1: os níveis do kit saíram do site (o caso "níveis do kit" saiu junto).
 
   it('carrinho: kit "por evento", equipamento "/ hora" e o aviso não multiplica o kit pelas horas', () => {
     useCart.mockReturnValue({

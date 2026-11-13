@@ -7,7 +7,6 @@ import {
   formatDateTime,
   formatBookingStatus,
   sanitizeEmail,
-  calculatePeriodDiscount,
   calculateSavingsAmount,
   safeTransformEquipment,
   validateKit,
@@ -66,27 +65,6 @@ describe('typeSafeFormatters utilities', () => {
       const input = '  João.Silva@Email.COM  ';
       const result = sanitizeEmail(input);
       expect(result).toBe('joão.silva@email.com');
-    });
-  });
-
-  describe('calculatePeriodDiscount', () => {
-    it('applies progressive discounts (>=7d => 10%)', () => {
-      const { total, discount, originalTotal } = calculatePeriodDiscount(100, 10);
-      expect(originalTotal).toBe(1000);
-      expect(discount).toBeCloseTo(100, 5);
-      expect(total).toBeCloseTo(900, 5);
-    });
-
-    it('applies 20% for >=30 days and 5% for >=3 days', () => {
-      const m = calculatePeriodDiscount(50, 30);
-      expect(m.originalTotal).toBe(1500);
-      expect(m.discount).toBeCloseTo(300, 5);
-      expect(m.total).toBeCloseTo(1200, 5);
-
-      const w = calculatePeriodDiscount(200, 3);
-      expect(w.originalTotal).toBe(600);
-      expect(w.discount).toBeCloseTo(30, 5);
-      expect(w.total).toBeCloseTo(570, 5);
     });
   });
 

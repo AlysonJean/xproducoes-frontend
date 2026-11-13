@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { generateSeoFilename } from '../../utils/seoUtils';
 import { apiFetch } from '../../services/api';
 import { formatPrice, toNumber } from '../../utils/typeSafeFormatters';
-import type { Kit, Equipment, Service, KitExperienceLevel, Category } from '../../types/types';
+import type { Kit, Equipment, Service, Category } from '../../types/types';
 import { ItemStatus } from '../../types/types';
 import { BrandLoader } from '../ui/BrandLoader';
 import {
@@ -20,7 +20,6 @@ import {
   Select
 } from '../ui/StandardComponents';
 import { Search, Plus, Trash2, ShoppingBag, Calculator, Package, User } from 'lucide-react';
-import { ExperienceLevelsEditor } from '../kits/ExperienceLevelsEditor';
 import { useFormDraft } from '../../hooks/useFormDraft';
 import { KIT_FULFILLMENT_LABEL } from '../../utils/kitInfo';
 import type { KitFulfillment } from '../../utils/bookingPricing';
@@ -86,7 +85,6 @@ interface DraftableKitData {
   price: number;
   items: KitItemField[];
   status: ItemStatus;
-  experienceLevels: Partial<KitExperienceLevel>[];
   minimumRentalDuration?: string;
   extraHourPrice?: string;
   fulfillment?: KitFulfillment;
@@ -99,13 +97,8 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
   const [serverError, setServerError] = useState<string | null>(null);
   const [pageLoading, setPageLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [experienceLevels, setExperienceLevels] = useState<Partial<KitExperienceLevel>[]>(
-    initialData?.experienceLevels || []
-  );
-  const [experienceLevelsDirty, setExperienceLevelsDirty] = useState(false);
-  // O editor de níveis guarda o próprio estado a partir de initialLevels: ao restaurar um rascunho, a key nova o
-  // remonta com os níveis do rascunho (antes ele seguia com os de antes e os devolvia ao formulário).
-  const [levelsEditorKey, setLevelsEditorKey] = useState(0);
+  // Auditoria do orçamento (12/11/2026), O4/B1: o editor de níveis Silver/Gold/Platinum saiu do formulário. O envio
+  // não manda experienceLevels; sem o campo, o servidor não mexe nos níveis gravados (hoje nenhum kit tem).
 
   const draftKey = `xp-draft-kit-${initialData?.id || 'new'}`;
   const { save: saveDraft, load: loadDraft, clear: clearDraft } = useFormDraft<DraftableKitData>(draftKey);
@@ -134,12 +127,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
     },
   });
 
-  const isDirty = isFormDirty || experienceLevelsDirty;
-
-  const handleExperienceLevelsChange = (levels: Partial<KitExperienceLevel>[]) => {
-    setExperienceLevels(levels);
-    setExperienceLevelsDirty(true);
-  };
+  const isDirty = isFormDirty;
 
   useEffect(() => {
     onDirtyChange?.(isDirty);
@@ -253,7 +241,6 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
         price: watchedValues.price,
         items: watchedValues.items as KitItemField[],
         status: watchedValues.status,
-        experienceLevels,
         minimumRentalDuration: watchedValues.minimumRentalDuration,
         extraHourPrice: watchedValues.extraHourPrice,
         fulfillment: watchedValues.fulfillment,
@@ -263,7 +250,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(watchedValues), experienceLevels, isDirty]);
+  }, [JSON.stringify(watchedValues), isDirty]);
 
   const handleRestoreDraft = () => {
     if (!draftPrompt) return;
@@ -277,8 +264,6 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
       extraHourPrice: draftPrompt.values.extraHourPrice ?? '',
       fulfillment: draftPrompt.values.fulfillment ?? 'DELIVERY_SETUP',
     });
-    setExperienceLevels(draftPrompt.values.experienceLevels);
-    setLevelsEditorKey((k) => k + 1);
     setDraftPrompt(null);
   };
 
@@ -358,11 +343,6 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
     }));
     formData.append('items', JSON.stringify(mappedItems));
     
-    // Send experience levels
-    if (experienceLevels.length > 0) {
-      formData.append('experienceLevels', JSON.stringify(experienceLevels));
-    }
-
     if (file) {
       formData.append('image', file);
     }
@@ -604,19 +584,6 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
-
-            {/* 3. Experience Levels - Agora mais integrado */}
-            <div className="bg-card border rounded-2xl shadow-sm overflow-visible relative">
-              <div className="p-6">
-                <ExperienceLevelsEditor
-                  key={levelsEditorKey}
-                  kitId={initialData?.id || 'new'}
-                  initialLevels={experienceLevels}
-                  onChange={handleExperienceLevelsChange}
-                  basePrice={kitPrice || 0}
-                />
               </div>
             </div>
           </div>

@@ -46,6 +46,8 @@ export interface RecommendationItem {
   category?: string;
   type?: 'equipment' | 'kit';
   discount?: number;
+  /** Unidade do preço: "/diária", "/h" ou "por evento" (auditoria do orçamento, 12/11/2026, O41). */
+  priceSuffix?: string;
 }
 
 export interface RecommendationSectionProps {
@@ -344,6 +346,9 @@ export const RecommendationSection = ({
                             <span className="text-lg font-bold text-primary">
                               {formatCurrency(item.price)}
                             </span>
+                          )}
+                          {item.priceSuffix && (
+                            <span className="text-xs text-muted-foreground">{item.priceSuffix}</span>
                           )}
                         </div>
                       ) : (

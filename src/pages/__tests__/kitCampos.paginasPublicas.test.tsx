@@ -74,7 +74,8 @@ describe('Páginas públicas do kit — horas incluídas, hora extra e tipo', ()
     await paginaDoKit(ENTREGA);
 
     expect(screen.getByText('Entrega e montagem pela equipe')).toBeInTheDocument();
-    expect(screen.getByText('A equipe da X Produções leva o kit ao local do evento, monta e busca depois. Se preferir, um técnico fica durante todo o evento, cobrado à parte.')).toBeInTheDocument();
+    // Auditoria do orçamento (12/11/2026), E4: a frase da entrega diz o frete (kit sem técnico: a oferta à parte segue).
+    expect(screen.getByText('A equipe da X Produções leva o kit ao local do evento, monta e busca depois. O frete até 15 km da X Produções já vem no kit; acima disso, só os km a mais entram como frete. Se preferir, um técnico fica durante todo o evento, cobrado à parte.')).toBeInTheDocument();
     expect(screen.queryByText(/h incluídas/)).not.toBeInTheDocument();
     // Decisão do dono de 08/11/2026: o "Entrega Ágil" prometia o material "sempre no horário".
     expect(screen.getByText('Entrega no Horário Combinado')).toBeInTheDocument();

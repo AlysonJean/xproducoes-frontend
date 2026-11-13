@@ -11,11 +11,10 @@ import { FavoriteButton } from '../components/ui/FavoriteButton';
 import CompareButton from '../components/ui/CompareButton';
 import { formatPrice } from '../utils/typeSafeFormatters';
 import { toNumber, calculateSavingsAmount } from '../utils/typeSafeFormatters';
-import type { Kit, ExperienceLevel, Equipment } from '../types/types';
+import type { Kit, Equipment } from '../types/types';
 import { SEO } from '../components/SEO';
 import { transformKit } from '../utils/transformKit';
-import { KIT_FULFILLMENT_LABEL, KIT_FULFILLMENT_SENTENCE, kitFulfillment, kitHours } from '../utils/kitInfo';
-import { ExperienceLevelSelector } from '../components/kits/ExperienceLevelSelector';
+import { KIT_FULFILLMENT_LABEL, kitFulfillment, kitHours, kitPageSentence } from '../utils/kitInfo';
 import { RecommendationSection } from '../components/ui/RecommendationSection';
 import { useRecommendations } from '../hooks/useRecommendations';
 import { useEquipmentUnitOf } from '../hooks/usePricingRules';
@@ -41,7 +40,6 @@ export const KitDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const [selectedLevel, setSelectedLevel] = useState<ExperienceLevel | null>(null);
 
   // Recommendations hooks
   const similarRecommendations = useRecommendations({
@@ -144,7 +142,8 @@ export const KitDetailPage = () => {
       addNotification({
           type: 'success',
           title: 'Combo Adicionado',
-          message: `${kit.name} foi incluído no seu orçamento com desconto.`
+          // Auditoria do orçamento (12/11/2026), O4: sem "com desconto" (o kit entra pelo preço do evento).
+          message: `${kit.name} foi incluído no seu orçamento.`
       });
     } catch (e: unknown) {
       addNotification({
@@ -326,30 +325,22 @@ export const KitDetailPage = () => {
               )}
             </div>
 
-            {/* Lote 13 (aprovado pelo dono em 06/11/2026): cada kit é de um tipo só, dito numa frase simples. */}
+            {/* Lote 13 (aprovado pelo dono em 06/11/2026): cada kit é de um tipo só, dito numa frase simples. Auditoria do
+                orçamento (12/11/2026), E1/E4: a frase segue a composição do kit (técnico incluso ou à parte) e diz o
+                frete da entrega. */}
             <div className="mb-8 flex items-start gap-3 rounded-xl border border-border bg-muted/20 p-4">
               {fulfillment === 'CLIENT_PICKUP'
                 ? <Store className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
                 : <Truck className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />}
               <div>
                 <p className="font-semibold text-foreground">{KIT_FULFILLMENT_LABEL[fulfillment]}</p>
-                <p className="text-sm text-muted-foreground">{KIT_FULFILLMENT_SENTENCE[fulfillment]}</p>
+                <p className="text-sm text-muted-foreground">{kitPageSentence(kit)}</p>
               </div>
             </div>
 
-            {/* Seletor de nível, quando o kit tem */}
-            {kit.experienceLevels && kit.experienceLevels.length > 0 && (
-              <div className="mb-8 p-4 bg-muted/20 rounded-xl border border-border/50">
-                <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4">Configuração do Kit</h2>
-                <ExperienceLevelSelector
-                  levels={kit.experienceLevels}
-                  selected={selectedLevel}
-                  onSelect={setSelectedLevel}
-                  basePrice={kit.experienceLevels.find(l => l.level === 'SILVER')?.price}
-                />
-              </div>
-            )}
-
+            {/* Auditoria do orçamento (12/11/2026), O4/B1: saiu o seletor Silver/Gold/Platinum. Ele mostrava preço e
+                itens próprios, mas o pedido levava o kit pelo preço base. Decisão de 12/11: cada tamanho de festa é um
+                kit; os extras são serviços do catálogo e hora extra. */}
             <Button
               size="xl"
               fullWidth

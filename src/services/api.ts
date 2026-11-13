@@ -550,15 +550,8 @@ export const healthAPI = {
   detailed: () => api.get('/health/detailed'),
 };
 
-// ✅ QUOTE REQUESTS
-export const quoteAPI = {
-  submit: (data: Record<string, unknown>) => api.post('/quotes', data),
-  getAll: () => api.get('/quotes'),
-  getById: (id: string) => api.get(`/quotes/${id}`),
-  updateStatus: (id: string, status: string) => api.patch(`/quotes/${id}/status`, { status }),
-  respond: (id: string, response: Record<string, unknown>) =>
-    api.post(`/quotes/${id}/respond`, response),
-};
+// Auditoria do orçamento (12/11/2026), O41: saiu o quoteAPI. Nada o usava, e o /quotes do servidor (que também saiu)
+// simulava gravar o pedido. O pedido do site vai por POST /bookings ou /bookings/guest (QuoteRequestPage e BriefingPage).
 
 // ✅ FALLBACK PARA COMPATIBILIDADE
 export default api;
