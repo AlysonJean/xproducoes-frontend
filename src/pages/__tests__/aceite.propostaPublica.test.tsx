@@ -942,7 +942,7 @@ describe('aceite online — passo 1 mais curto (revisão de 14/11/2026, teste de
   });
 
   it('com o contato da reserva, ao escolher "Empresa": o nome passa para quem aceita e a razão social fica para preencher', async () => {
-    await abrirPasso1({ name: 'Ana Souza', email: 'ana@cliente.test', phone: '31988887777' });
+    await abrirPasso1({ name: 'Ana Souza', emailHint: 'an***@cliente.test', phoneHint: '(31) *****-7777' });
     fireEvent.click(screen.getByLabelText('Empresa (pessoa jurídica)'));
     expect(screen.getByLabelText('Razão social')).toHaveValue('');
     expect(screen.getByLabelText('Nome completo de quem aceita')).toHaveValue('Ana Souza');
@@ -956,14 +956,70 @@ describe('aceite online — passo 1 mais curto (revisão de 14/11/2026, teste de
     expect(await screen.findByRole('heading', { name: 'Seu evento' })).toBeInTheDocument();
   });
 
-  it('com o contato da reserva (prefill): nome, e-mail e telefone já vêm preenchidos; o endereço não', async () => {
-    await abrirPasso1({ name: 'Ana Souza', email: 'ana@cliente.test', phone: '+55 31 98888-7777' });
+  const PREFILL = { name: 'Ana Souza', emailHint: 'an***@cliente.test', phoneHint: '(31) *****-7777' };
+  const completarResto = () => {
+    digitar('CPF', '529.982.247-25');
+    digitar('CEP', '30140-000');
+    digitar('Número', '10');
+    digitar('Rua', 'Rua A');
+    digitar('Bairro', 'Savassi');
+    digitar('Cidade', 'Belo Horizonte');
+    digitar('Estado', 'MG');
+    fireEvent.click(screen.getByLabelText(/Para o meu próprio evento/));
+  };
+
+  it('com o contato da reserva: o nome preenchido e o e-mail e o telefone só mascarados (decisão de 14/11); o servidor completa', async () => {
+    await abrirPasso1(PREFILL);
 
     expect(screen.getByLabelText('Nome completo')).toHaveValue('Ana Souza');
-    expect(screen.getByLabelText('E-mail')).toHaveValue('ana@cliente.test');
-    expect(screen.getByLabelText('Telefone com DDD')).toHaveValue('(31) 98888-7777');
+    // Sem campo de e-mail nem de telefone: só o mascarado da reserva.
+    expect(screen.queryByLabelText('E-mail')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Telefone com DDD')).not.toBeInTheDocument();
+    expect(texto()).toContain('an***@cliente.test (o da reserva)');
+    expect(texto()).toContain('(31) *****-7777 (o da reserva)');
+    expect(texto()).toContain('O código de confirmação e a cópia do contrato vão para este e-mail.');
     expect(screen.getByLabelText('CEP')).toHaveValue('');
-    expect(screen.getByLabelText('Rua')).toHaveValue('');
+
+    completarResto();
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    await screen.findByRole('heading', { name: 'Passo 2 de 3: resumo, contrato e código' });
+    expect(contractAPI.prepare).toHaveBeenCalledWith(CODIGO, { ...PARTY_PF, email: '', phone: '', useBookingEmail: true, useBookingPhone: true });
+  });
+
+  it('"Usar outro e-mail": o campo abre com o foco; o digitado vai ao servidor e o telefone da reserva segue', async () => {
+    await abrirPasso1(PREFILL);
+    fireEvent.click(screen.getByRole('button', { name: 'Usar outro e-mail' }));
+    await waitFor(() => expect(screen.getByLabelText('E-mail')).toHaveFocus());
+    digitar('E-mail', 'outra@cliente.test');
+    // Dá para voltar ao da reserva.
+    expect(screen.getByRole('button', { name: 'Usar o e-mail da reserva (an***@cliente.test)' })).toBeInTheDocument();
+
+    completarResto();
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    await screen.findByRole('heading', { name: 'Passo 2 de 3: resumo, contrato e código' });
+    expect(contractAPI.prepare).toHaveBeenCalledWith(CODIGO, { ...PARTY_PF, email: 'outra@cliente.test', phone: '', useBookingPhone: true });
+  });
+
+  it('o e-mail da reserva não serviu (400 no campo): o campo abre para digitar, com o erro e o foco', async () => {
+    contractAPI.prepare.mockRejectedValueOnce(
+      apiError(400, { code: 'VALIDATION_ERROR', fieldErrors: { 'party.email': 'Informe um e-mail válido.' } }, 'Informe um e-mail válido.'),
+    );
+    await abrirPasso1(PREFILL);
+    completarResto();
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    expect(await screen.findByText('Informe um e-mail válido.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText('E-mail')).toHaveFocus());
+    expect(texto()).toContain('(31) *****-7777 (o da reserva)');
+  });
+
+  it('com o contato da reserva (prefill antigo, sem dicas): só o nome; e-mail e telefone para digitar', async () => {
+    await abrirPasso1({ name: 'Ana Souza', emailHint: null, phoneHint: null });
+    expect(screen.getByLabelText('Nome completo')).toHaveValue('Ana Souza');
+    expect(screen.getByLabelText('E-mail')).toHaveValue('');
+    expect(screen.getByLabelText('Telefone com DDD')).toHaveValue('');
+    digitar('E-mail', 'ana@cliente.test');
+    digitar('Telefone com DDD', '(31) 98888-7777');
 
     // Só falta o CPF, o endereço e a finalidade.
     digitar('CPF', '529.982.247-25');

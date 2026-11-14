@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/StandardComponents';
 import { cn } from '@/utils/cn';
 import { formatDocument, formatCpf, isValidCnpj, isValidCpf, onlyDigits } from '@/utils/document';
 import { lookupCep } from '@/utils/briefing';
+import type { ProposalPrefill } from '@/types/contract';
 import { BRAZIL_STATES, formatPhone, normalizePhone, validatePartyForm, type PartyForm, type PartyFormErrors } from './contractHelpers';
 
 // Aceite online (13/11/2026), passo 1: os dados de quem contrata. Texto de 16 px (também nos campos: abaixo disso o
@@ -136,11 +137,35 @@ export interface ContractPartyStepProps {
   submitting: boolean;
   /** Aviso geral (link vencido, proposta já aceita...), mostrado acima do botão. */
   alert?: ReactNode;
-  /** O nome que veio da reserva (prefill): ao escolher "Empresa", ele passa para "quem aceita pela empresa". */
-  prefillName?: string | null;
+  /**
+   * O contato da reserva (prefill): o nome passa para "quem aceita pela empresa" ao escolher "Empresa"; o e-mail e o
+   * telefone aparecem só mascarados, com "Usar outro".
+   */
+  prefill?: ProposalPrefill | null;
 }
 
-export function ContractPartyStep({ form, onChange, onSubmit, submitting, alert, prefillName }: ContractPartyStepProps) {
+/** O contato da reserva, mascarado, no lugar do campo; "Usar outro" abre o campo. */
+function BookingContact({ label, hint, note, otherLabel, onOther }: { label: string; hint: string; note?: string; otherLabel: string; onOther: () => void }) {
+  return (
+    <div className="space-y-1.5">
+      <p className="block text-base font-medium text-foreground">{label}</p>
+      <p className="rounded-lg border-2 border-border bg-muted/40 px-4 py-3 text-base">
+        <span className="break-all font-mono">{hint}</span> <span className="text-muted-foreground">(o da reserva)</span>
+      </p>
+      {note && <p className="text-base text-muted-foreground">{note}</p>}
+      <Button type="button" variant="ghost" size="sm" onClick={onOther} className="text-base normal-case tracking-normal">
+        {otherLabel}
+      </Button>
+    </div>
+  );
+}
+
+const EMAIL_NOTE = 'O código de confirmação e a cópia do contrato vão para este e-mail.';
+
+export function ContractPartyStep({ form, onChange, onSubmit, submitting, alert, prefill }: ContractPartyStepProps) {
+  const prefillName = prefill?.name;
+  const emailHint = prefill?.emailHint ?? null;
+  const phoneHint = prefill?.phoneHint ?? null;
   const [errors, setErrors] = useState<PartyFormErrors>({});
   const [cepStatus, setCepStatus] = useState<'idle' | 'loading' | 'notFound'>('idle');
   const formRef = useRef<HTMLFormElement>(null);
@@ -148,11 +173,18 @@ export function ContractPartyStep({ form, onChange, onSubmit, submitting, alert,
   const latestForm = useRef(form);
   const latestOnChange = useRef(onChange);
   const cepLookup = useRef<AbortController | null>(null);
+  // O campo que recebe o foco depois do próximo desenho (o primeiro com erro, ou o que acabou de abrir).
+  const pendingFocus = useRef<keyof PartyForm | null>(null);
   const pj = form.personType === 'PJ';
 
   useEffect(() => {
     latestForm.current = form;
     latestOnChange.current = onChange;
+    const field = pendingFocus.current;
+    if (field) {
+      pendingFocus.current = null;
+      formRef.current?.querySelector<HTMLElement>(`#contrato-${field}, [data-field="${field}"]`)?.focus();
+    }
   });
   useEffect(() => () => cepLookup.current?.abort(), []);
 
@@ -163,9 +195,15 @@ export function ContractPartyStep({ form, onChange, onSubmit, submitting, alert,
 
   const focusFirst = (found: PartyFormErrors) => {
     const first = FIELD_ORDER.find((key) => found[key]);
-    if (!first) return;
-    const el = formRef.current?.querySelector<HTMLElement>(`#contrato-${first}, [data-field="${first}"]`);
-    el?.focus();
+    if (first) pendingFocus.current = first;
+  };
+
+  /** "Usar outro e-mail/telefone": abre o campo vazio, com o foco nele; "usar o da reserva" volta ao mascarado. */
+  const chooseBooking = (field: 'email' | 'phone', value: boolean) => {
+    const flag = field === 'email' ? 'useBookingEmail' : 'useBookingPhone';
+    onChange({ ...form, [flag]: value, [field]: '' });
+    setErrors((current) => ({ ...current, [field]: undefined }));
+    if (!value) pendingFocus.current = field;
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -182,6 +220,16 @@ export function ContractPartyStep({ form, onChange, onSubmit, submitting, alert,
     setCepStatus('idle');
     const fromServer = await onSubmit(form);
     if (fromServer && Object.keys(fromServer).length > 0) {
+      // O e-mail ou o telefone da reserva não serviram (a reserva não tem, ou não é válido): o campo abre para digitar.
+      const reopenEmail = Boolean(fromServer.email) && form.useBookingEmail;
+      const reopenPhone = Boolean(fromServer.phone) && form.useBookingPhone;
+      if (reopenEmail || reopenPhone) {
+        onChange({
+          ...form,
+          useBookingEmail: form.useBookingEmail && !reopenEmail,
+          useBookingPhone: form.useBookingPhone && !reopenPhone,
+        });
+      }
       setErrors(fromServer);
       focusFirst(fromServer);
     }
@@ -353,28 +401,50 @@ export function ContractPartyStep({ form, onChange, onSubmit, submitting, alert,
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <TextField
-          name="email"
-          label="E-mail"
-          type="email"
-          inputMode="email"
-          autoComplete="email"
-          value={form.email}
-          error={errors.email}
-          hint="O código de confirmação e a cópia do contrato vão para este e-mail."
-          onChange={(v) => set('email', v)}
-        />
-        <TextField
-          name="phone"
-          label="Telefone com DDD"
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          value={form.phone}
-          error={errors.phone}
-          onChange={(v) => set('phone', v)}
-          onBlur={tidyPhone}
-        />
+        {form.useBookingEmail && emailHint ? (
+          <BookingContact label="E-mail" hint={emailHint} note={EMAIL_NOTE} otherLabel="Usar outro e-mail" onOther={() => chooseBooking('email', false)} />
+        ) : (
+          <div className="space-y-1.5">
+            <TextField
+              name="email"
+              label="E-mail"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={form.email}
+              error={errors.email}
+              hint={EMAIL_NOTE}
+              onChange={(v) => set('email', v)}
+            />
+            {emailHint && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => chooseBooking('email', true)} className="text-base normal-case tracking-normal">
+                Usar o e-mail da reserva ({emailHint})
+              </Button>
+            )}
+          </div>
+        )}
+        {form.useBookingPhone && phoneHint ? (
+          <BookingContact label="Telefone com DDD" hint={phoneHint} otherLabel="Usar outro telefone" onOther={() => chooseBooking('phone', false)} />
+        ) : (
+          <div className="space-y-1.5">
+            <TextField
+              name="phone"
+              label="Telefone com DDD"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={form.phone}
+              error={errors.phone}
+              onChange={(v) => set('phone', v)}
+              onBlur={tidyPhone}
+            />
+            {phoneHint && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => chooseBooking('phone', true)} className="text-base normal-case tracking-normal">
+                Usar o telefone da reserva ({phoneHint})
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       <fieldset className="space-y-4">

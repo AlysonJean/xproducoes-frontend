@@ -198,6 +198,9 @@ export interface PartyForm {
   /** PJ: quem aceita declara ter poderes para representar a empresa. */
   powers: boolean;
   purpose: ContractPurpose | '';
+  /** Usar o e-mail / o telefone da reserva (mostrados só mascarados; o servidor completa). */
+  useBookingEmail: boolean;
+  useBookingPhone: boolean;
 }
 
 /**
@@ -236,19 +239,21 @@ export const EMPTY_PARTY_FORM: PartyForm = {
   representativeRole: '',
   powers: false,
   purpose: '',
+  useBookingEmail: false,
+  useBookingPhone: false,
 };
 
 /**
- * O passo 1 começa com o contato da reserva (prefill do /proposals/view, revisão de 14/11/2026): nome, e-mail e
- * telefone; a pessoa confere, troca o que quiser e acrescenta o resto. O endereço fica vazio (o do evento não é o do
- * contratante): o CEP completa.
+ * O passo 1 começa com o contato da reserva (prefill do /proposals/view, revisão de 14/11/2026): o nome, e o e-mail e o
+ * telefone da reserva já escolhidos (só mascarados na tela; "Usar outro" abre o campo). O endereço fica vazio (o do
+ * evento não é o do contratante): o CEP completa.
  */
 export function partyFormFromPrefill(prefill?: ProposalPrefill | null): PartyForm {
   return {
     ...EMPTY_PARTY_FORM,
     name: prefill?.name?.trim() ?? '',
-    email: prefill?.email?.trim() ?? '',
-    phone: prefill?.phone ? formatPhone(prefill.phone.trim()) : '',
+    useBookingEmail: Boolean(prefill?.emailHint),
+    useBookingPhone: Boolean(prefill?.phoneHint),
   };
 }
 
@@ -309,9 +314,9 @@ export function validatePartyForm(form: PartyForm): PartyFormErrors {
     if (!form.representativeRole.trim()) errors.representativeRole = 'Informe o cargo de quem aceita.';
     if (!form.powers) errors.powers = 'Confirme que você tem poderes para representar a empresa.';
   }
-  if (!EMAIL_RE.test(form.email.trim())) errors.email = 'Informe um e-mail válido.';
+  if (!form.useBookingEmail && !EMAIL_RE.test(form.email.trim())) errors.email = 'Informe um e-mail válido.';
   const phone = normalizePhone(form.phone);
-  if (phone.length < 10 || phone.length > 11) errors.phone = 'Informe um telefone com DDD.';
+  if (!form.useBookingPhone && (phone.length < 10 || phone.length > 11)) errors.phone = 'Informe um telefone com DDD.';
   if (onlyDigits(form.zipCode).length !== 8) errors.zipCode = 'Informe o CEP (8 números).';
   if (!form.street.trim()) errors.street = 'Informe a rua.';
   if (!form.number.trim()) errors.number = 'Informe o número (ou "s/n").';
@@ -324,14 +329,17 @@ export function validatePartyForm(form: PartyForm): PartyFormErrors {
   return errors;
 }
 
-/** O corpo "party" do POST /proposals/contract/prepare: documento, telefone e CEP só com os números. */
+/**
+ * O corpo "party" do POST /proposals/contract/prepare: documento, telefone e CEP só com os números. Com o e-mail ou o
+ * telefone da reserva, o campo vai vazio com useBookingEmail / useBookingPhone (o servidor completa).
+ */
 export function partyFromForm(form: PartyForm): ContractParty {
   const party: ContractParty = {
     personType: form.personType,
     name: form.name.trim(),
     document: normalizeDocument(form.document),
-    email: form.email.trim(),
-    phone: normalizePhone(form.phone),
+    email: form.useBookingEmail ? '' : form.email.trim(),
+    phone: form.useBookingPhone ? '' : normalizePhone(form.phone),
     address: {
       street: form.street.trim(),
       number: form.number.trim(),
@@ -342,6 +350,8 @@ export function partyFromForm(form: PartyForm): ContractParty {
       ...(form.complement.trim() ? { complement: form.complement.trim() } : {}),
     },
     purpose: form.purpose as ContractPurpose,
+    ...(form.useBookingEmail ? { useBookingEmail: true as const } : {}),
+    ...(form.useBookingPhone ? { useBookingPhone: true as const } : {}),
   };
   if (form.personType === 'PJ') {
     party.representative = {

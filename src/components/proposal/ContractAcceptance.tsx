@@ -175,7 +175,7 @@ export function ContractAcceptance({ token, contract, onReload, prefill }: Contr
             onSubmit={(data) => prepare(data)}
             submitting={preparing}
             alert={alert}
-            prefillName={prefill?.name}
+            prefill={prefill}
           />
         )}
 

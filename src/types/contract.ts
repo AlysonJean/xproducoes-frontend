@@ -34,6 +34,10 @@ export interface ContractParty {
   address: ContractAddress;
   representative?: ContractRepresentative;
   purpose: ContractPurpose;
+  /** O e-mail da reserva (mascarado no passo 1): o servidor completa o e-mail no preparo e ignora o campo email. */
+  useBookingEmail?: true;
+  /** O telefone da reserva (mascarado no passo 1): o servidor completa o telefone no preparo e ignora o campo phone. */
+  useBookingPhone?: true;
 }
 
 /** Valor e vencimento de uma parcela (ISO 8601). */
@@ -90,12 +94,13 @@ export interface ContractAccepted {
 
 /**
  * O contato da reserva para começar o passo 1 (prefill do /proposals/view, revisão de 14/11/2026). Só vem enquanto o
- * aceite pode começar (aceite no ar e nenhum contrato aceito); o que a reserva não tiver vem null.
+ * aceite pode começar (aceite no ar e nenhum contrato aceito); o que a reserva não tiver vem null. O e-mail e o telefone
+ * vêm só mascarados ("an***@cliente.com.br", "(31) *****-7777"): com "usar o da reserva", o servidor completa no preparo.
  */
 export interface ProposalPrefill {
   name: string | null;
-  email: string | null;
-  phone: string | null;
+  emailHint: string | null;
+  phoneHint: string | null;
 }
 
 /**
