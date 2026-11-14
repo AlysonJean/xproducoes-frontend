@@ -89,6 +89,16 @@ export interface ContractAccepted {
 }
 
 /**
+ * O contato da reserva para começar o passo 1 (prefill do /proposals/view, revisão de 14/11/2026). Só vem enquanto o
+ * aceite pode começar (aceite no ar e nenhum contrato aceito); o que a reserva não tiver vem null.
+ */
+export interface ProposalPrefill {
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+/**
  * O campo contract do /proposals/view (também na resposta { state: "closed" }). contractId vem desde o preparado
  * (PREPARED, ACCEPTED, WITHDRAWN): com ele, o link aceito oferece "Baixar contrato (PDF)". withdrawnAt vem no WITHDRAWN.
  */

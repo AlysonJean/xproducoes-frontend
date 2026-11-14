@@ -496,7 +496,10 @@ export const contractAPI = {
   sendCode: (token: string, contractId: string) => apiFetch<ContractOtp>('/proposals/contract/otp', proposalPost({ token, contractId })),
   accept: (token: string, input: { contractId: string; sha256: string; code: string }) =>
     apiFetch<ContractAccepted>('/proposals/contract/accept', proposalPost({ token, ...input, agreed: true })),
-  withdraw: (token: string) => apiFetch<{ withdrawnAt: string }>('/proposals/contract/withdraw', proposalPost({ token })),
+  /** Desistência pelo link (revisão de 14/11/2026): primeiro o código, que vai ao e-mail que aceitou o contrato... */
+  withdrawCode: (token: string) => apiFetch<ContractOtp>('/proposals/contract/withdraw/code', proposalPost({ token })),
+  /** ...depois a desistência com ele. */
+  withdraw: (token: string, code: string) => apiFetch<{ withdrawnAt: string }>('/proposals/contract/withdraw', proposalPost({ token, code })),
   // Área do cliente (login do dono da reserva).
   forClient: (bookingId: string) => apiFetch<ClientContract>(`/bookings/${bookingPath(bookingId)}/contract`),
   downloadForClient: (bookingId: string) =>

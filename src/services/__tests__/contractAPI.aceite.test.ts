@@ -38,19 +38,22 @@ afterEach(() => {
 });
 
 describe('contractAPI — página da proposta', () => {
-  it('prepare, otp, accept e withdraw: POST com o código no corpo, CSRF e referrerPolicy "origin"', async () => {
+  it('prepare, otp, accept, código da desistência e withdraw: POST com o código no corpo, CSRF e referrerPolicy "origin"', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => json(200, { success: true, data: { ok: true } }));
 
     await contractAPI.prepare('p1.TESTE', PARTY);
     await contractAPI.sendCode('p1.TESTE', 'ct1');
     await contractAPI.accept('p1.TESTE', { contractId: 'ct1', sha256: 'abc123', code: '123456' });
-    await contractAPI.withdraw('p1.TESTE');
+    // Revisão de 14/11/2026: desistir pelo link pede antes o código (ao e-mail que aceitou) e manda o código junto.
+    await contractAPI.withdrawCode('p1.TESTE');
+    await contractAPI.withdraw('p1.TESTE', '654321');
 
     const calls = fetchMock.mock.calls.map(([url, init]) => ({ path: path(url), init: init as RequestInit }));
     expect(calls.map((c) => c.path)).toEqual([
       '/proposals/contract/prepare',
       '/proposals/contract/otp',
       '/proposals/contract/accept',
+      '/proposals/contract/withdraw/code',
       '/proposals/contract/withdraw',
     ]);
     calls.forEach(({ path: p, init }) => {
@@ -62,6 +65,7 @@ describe('contractAPI — página da proposta', () => {
     expect(JSON.parse(calls[1].init.body as string)).toEqual({ token: 'p1.TESTE', contractId: 'ct1' });
     expect(JSON.parse(calls[2].init.body as string)).toEqual({ token: 'p1.TESTE', contractId: 'ct1', sha256: 'abc123', code: '123456', agreed: true });
     expect(JSON.parse(calls[3].init.body as string)).toEqual({ token: 'p1.TESTE' });
+    expect(JSON.parse(calls[4].init.body as string)).toEqual({ token: 'p1.TESTE', code: '654321' });
   });
 
   it('pdf: o arquivo exato preparado (Blob) e o nome do servidor; download baixa o mesmo endereço', async () => {

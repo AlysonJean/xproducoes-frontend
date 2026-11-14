@@ -11,7 +11,7 @@ import { HelmetProvider } from 'react-helmet-async';
 const { apiFetch, quotePdfAPI, contractAPI } = vi.hoisted(() => ({
   apiFetch: vi.fn(),
   quotePdfAPI: { fromProposal: vi.fn() },
-  contractAPI: { prepare: vi.fn(), pdf: vi.fn(), download: vi.fn(), sendCode: vi.fn(), accept: vi.fn(), withdraw: vi.fn() },
+  contractAPI: { prepare: vi.fn(), pdf: vi.fn(), download: vi.fn(), sendCode: vi.fn(), accept: vi.fn(), withdrawCode: vi.fn(), withdraw: vi.fn() },
 }));
 vi.mock('@/services/api', async () => {
   const actual = await vi.importActual<typeof import('@/services/api')>('@/services/api');
@@ -83,6 +83,7 @@ const ACEITO = {
 };
 
 const apiError = (status: number, body: object, message = 'falhou') => Object.assign(new Error(message), { status, body });
+const CODIGO_DESISTENCIA = { sentTo: 'an***@cliente.test', expiresAt: '2027-12-01T15:10:00.000Z' };
 
 const montar = () => {
   window.history.replaceState(null, '', `/proposta#token=${CODIGO}`);
@@ -146,11 +147,15 @@ beforeEach(() => {
   Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
   contractAPI.prepare.mockResolvedValue(preparado());
   contractAPI.pdf.mockResolvedValue({ blob: new Blob(['%PDF-'], { type: 'application/pdf' }), filename: 'contrato-XP-ANA-1.pdf' });
+  contractAPI.withdrawCode.mockResolvedValue(CODIGO_DESISTENCIA);
+  // Revisão de 14/11/2026: o CEP busca o endereço no ViaCEP; aqui ele não responde (cada teste que precisa simula).
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, json: async () => ({}) })));
 });
 
 afterEach(() => {
   window.history.replaceState(null, '', '/');
   document.head.innerHTML = '';
+  vi.unstubAllGlobals();
 });
 
 describe('aceite online — chave desligada', () => {
@@ -609,9 +614,11 @@ describe('aceite online — reabrir o link', () => {
     expect(texto()).not.toContain('Esta proposta já foi confirmada.');
     expect(screen.getByRole('button', { name: 'Baixar contrato (PDF)' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Desistir da contratação' }));
-    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Desistir' }));
+    fireEvent.change(await screen.findByLabelText('Código para desistir'), { target: { value: '123456' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirmar desistência' }));
     expect(await screen.findByRole('heading', { name: 'Contratação desistida em 01/12' })).toBeInTheDocument();
-    expect(contractAPI.withdraw).toHaveBeenCalledWith(CODIGO);
+    expect(contractAPI.withdrawCode).toHaveBeenCalledWith(CODIGO);
+    expect(contractAPI.withdraw).toHaveBeenCalledWith(CODIGO, '123456');
   });
 
   it('reserva confirmada sem contrato pelo site: o aviso de sempre', async () => {
@@ -688,49 +695,287 @@ describe('CSP do site (vercel.json, Report-Only) — visualizador do contrato', 
   });
 });
 
-describe('aceite online — desistência pela página da proposta', () => {
+describe('aceite online — desistência pela página da proposta (com código, revisão de 14/11/2026)', () => {
   const aceita = () =>
     proposta({ enabled: true, state: 'ACCEPTED', acceptedAt: ACEITO.acceptedAt, sha256: SHA, withdrawUntil: ACEITO.withdrawUntil, canWithdraw: true });
+  const pedirCodigo = async () => {
+    fireEvent.click(await screen.findByRole('button', { name: 'Desistir da contratação' }));
+    return screen.findByLabelText('Código para desistir');
+  };
 
-  it('"Desistir da contratação" confirma no modal do design system (nunca window.confirm) e mostra a desistência', async () => {
+  it('"Desistir da contratação" manda o código ao e-mail que aceitou; só desiste com ele (nunca window.confirm)', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm');
     contractAPI.withdraw.mockResolvedValue({ withdrawnAt: '2027-12-01T15:00:00.000Z' });
     apiFetch.mockResolvedValue(aceita());
     montar();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Desistir da contratação' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Desistir da contratação?' });
+    const campo = await pedirCodigo();
+    expect(contractAPI.withdrawCode).toHaveBeenCalledWith(CODIGO);
     expect(contractAPI.withdraw).not.toHaveBeenCalled();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Desistir' }));
+    expect(texto()).toContain('Enviamos um código de 6 dígitos para an***@cliente.test. Ele vale até 12:10.');
+    expect(texto()).toContain('confira o spam ou a aba Promoções');
+    expect(texto()).toContain('Se o código não chegar, você também pode desistir pela sua área do cliente ou avisando a equipe');
+    const confirmar = screen.getByRole('button', { name: 'Confirmar desistência' });
+    expect(confirmar).toBeDisabled();
+    fireEvent.change(campo, { target: { value: '12a3456' } });
+    expect(campo).toHaveValue('123456');
+    fireEvent.click(confirmar);
 
     expect(await screen.findByRole('heading', { name: 'Contratação desistida em 01/12' })).toBeInTheDocument();
-    expect(contractAPI.withdraw).toHaveBeenCalledWith(CODIGO);
+    expect(contractAPI.withdraw).toHaveBeenCalledWith(CODIGO, '123456');
     expect(confirmSpy).not.toHaveBeenCalled();
     confirmSpy.mockRestore();
   });
 
-  it('desistência recusada (WITHDRAWAL_CLOSED): a frase do servidor diz por quê (reason) e o botão sai', async () => {
-    contractAPI.withdraw.mockRejectedValue(
+  it('código errado: diz quantas tentativas restam; vencido: pede outro; "Enviar outro código" e "Voltar"', async () => {
+    apiFetch.mockResolvedValue(aceita());
+    montar();
+    const campo = await pedirCodigo();
+
+    contractAPI.withdraw.mockRejectedValueOnce(apiError(400, { code: 'INVALID_CODE', attemptsLeft: 3 }, 'Código errado. Confira e digite de novo.'));
+    fireEvent.change(campo, { target: { value: '000000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar desistência' }));
+    expect(await screen.findByText('Código incorreto. Restam 3 tentativas.')).toBeInTheDocument();
+    expect(campo).toHaveValue('');
+
+    contractAPI.withdraw.mockRejectedValueOnce(apiError(410, { code: 'CODE_EXPIRED' }, 'O código venceu ou foi bloqueado. Peça um novo código.'));
+    fireEvent.change(campo, { target: { value: '111111' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar desistência' }));
+    expect(await screen.findByText('O código venceu ou foi bloqueado. Peça outro código.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar outro código' }));
+    expect(await screen.findByText('Enviamos um novo código para an***@cliente.test.')).toBeInTheDocument();
+    expect(contractAPI.withdrawCode).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+    expect(screen.queryByLabelText('Código para desistir')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Desistir da contratação' })).toBeInTheDocument();
+  });
+
+  it('pedido cedo demais (429, a página foi recarregada): o campo abre mesmo assim, para o código já enviado, e o outro pedido espera', async () => {
+    contractAPI.withdrawCode.mockRejectedValueOnce(apiError(429, { code: 'OTP_RATE_LIMIT', retryAfter: 42 }, 'Aguarde um pouco para pedir outro código.'));
+    contractAPI.withdraw.mockResolvedValue({ withdrawnAt: '2027-12-01T15:00:00.000Z' });
+    apiFetch.mockResolvedValue(aceita());
+    montar();
+
+    const campo = await pedirCodigo();
+    expect(texto()).toContain('Aguarde um pouco para pedir outro código. Se o código já chegou, digite-o abaixo.');
+    expect(screen.getByRole('button', { name: 'Enviar outro código em 42 s' })).toBeDisabled();
+    fireEvent.change(campo, { target: { value: '654321' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar desistência' }));
+    expect(await screen.findByRole('heading', { name: 'Contratação desistida em 01/12' })).toBeInTheDocument();
+    expect(contractAPI.withdraw).toHaveBeenCalledWith(CODIGO, '654321');
+  });
+
+  it('"Voltar" e "Desistir" de novo: reabre com o código que ainda vale, sem pedir outro (um pedido novo trocaria o código)', async () => {
+    apiFetch.mockResolvedValue(aceita());
+    montar();
+    await pedirCodigo();
+    expect(screen.getByRole('button', { name: /^Enviar outro código em \d+ s$/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Desistir da contratação' })).toHaveFocus());
+    fireEvent.click(screen.getByRole('button', { name: 'Desistir da contratação' }));
+    expect(await screen.findByLabelText('Código para desistir')).toHaveFocus();
+    expect(contractAPI.withdrawCode).toHaveBeenCalledTimes(1);
+  });
+
+  it('falha passageira da fila (CODE_NOT_SENT): pede para tentar de novo, sem dizer que o serviço está fora', async () => {
+    contractAPI.withdrawCode.mockRejectedValueOnce(apiError(503, { code: 'CODE_NOT_SENT' }, 'Não foi possível enviar o código agora. Tente de novo em instantes.'));
+    apiFetch.mockResolvedValue(aceita());
+    montar();
+    fireEvent.click(await screen.findByRole('button', { name: 'Desistir da contratação' }));
+    expect(await screen.findByText('Não foi possível enviar o código agora. Tente de novo em instantes.')).toBeInTheDocument();
+    expect(texto()).not.toContain('indisponível agora');
+  });
+
+  it('desistência recusada (WITHDRAWAL_CLOSED) já ao pedir o código: a frase do servidor diz por quê e o botão sai', async () => {
+    contractAPI.withdrawCode.mockRejectedValue(
       apiError(409, { code: 'WITHDRAWAL_CLOSED', reason: 'EVENT' }, 'O evento já começou ou a reserva foi encerrada. Fale com a equipe.'),
     );
     apiFetch.mockResolvedValue(aceita());
     montar();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Desistir da contratação' }));
-    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Desistir' }));
 
     expect(await screen.findByText('O evento já começou ou a reserva foi encerrada. Fale com a equipe.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Desistir da contratação' })).not.toBeInTheDocument();
+    expect(contractAPI.withdraw).not.toHaveBeenCalled();
   });
 
-  it('desistência recusada sem frase do servidor: o motivo padrão (prazo)', async () => {
+  it('desistência recusada na confirmação sem frase do servidor: o motivo padrão (prazo)', async () => {
     contractAPI.withdraw.mockRejectedValue(apiError(409, { code: 'WITHDRAWAL_CLOSED' }, 'HTTP 409: Conflict'));
     apiFetch.mockResolvedValue(aceita());
     montar();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Desistir da contratação' }));
-    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Desistir' }));
+    fireEvent.change(await pedirCodigo(), { target: { value: '123456' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar desistência' }));
 
     expect(await screen.findByText(/O prazo de desistência terminou\./)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Código para desistir')).not.toBeInTheDocument();
+  });
+
+  it('já desistida por outro caminho (CONTRACT_WITHDRAWN ao pedir o código): abre a proposta de novo, no estado desistido', async () => {
+    apiFetch.mockResolvedValueOnce(aceita());
+    montar();
+    contractAPI.withdrawCode.mockRejectedValueOnce(apiError(409, { code: 'CONTRACT_WITHDRAWN' }, 'Esta contratação foi desistida e a reserva foi cancelada.'));
+    apiFetch.mockResolvedValue(proposta({ enabled: true, state: 'WITHDRAWN', contractId: 'ct1', withdrawnAt: '2027-12-01T15:00:00.000Z' }));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Desistir da contratação' }));
+
+    expect(await screen.findByRole('heading', { name: 'Contratação desistida em 01/12' })).toBeInTheDocument();
+    expect(apiFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('serviço do código fora do ar (503): manda para a área do cliente ou para a equipe', async () => {
+    contractAPI.withdrawCode.mockRejectedValue(apiError(503, { code: 'CONTRACT_UNAVAILABLE' }, 'O aceite pelo site está indisponível no momento.'));
+    apiFetch.mockResolvedValue(aceita());
+    montar();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Desistir da contratação' }));
+
+    expect(await screen.findByText(/A desistência pelo site está indisponível agora\. Desista pela sua área do cliente/)).toBeInTheDocument();
+  });
+});
+
+describe('aceite online — passo 1 mais curto (revisão de 14/11/2026, teste de 13/11 na produção)', () => {
+  const abrirPasso1 = async (prefill?: object) => {
+    apiFetch.mockResolvedValue({ ...proposta({ enabled: true, state: 'NONE' }), ...(prefill ? { prefill } : {}) });
+    montar();
+    fireEvent.click(await screen.findByRole('button', { name: 'Aceitar proposta' }));
+  };
+
+  it('telefone do preenchimento automático (+5531975808477): passa, ganha a máscara e vai sem o 55', async () => {
+    await abrirPasso1();
+    preencherPF();
+    digitar('Telefone com DDD', '+5531975808477');
+    fireEvent.blur(screen.getByLabelText('Telefone com DDD'));
+    expect(screen.getByLabelText('Telefone com DDD')).toHaveValue('(31) 97580-8477');
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    await screen.findByRole('heading', { name: 'Passo 2 de 3: resumo, contrato e código' });
+    expect(contractAPI.prepare).toHaveBeenCalledWith(CODIGO, { ...PARTY_PF, phone: '31975808477' });
+  });
+
+  it('com o 0 da ligação interurbana (também depois do +55) passa; sem DDD continua recusado', async () => {
+    await abrirPasso1();
+    preencherPF();
+    digitar('Telefone com DDD', '97580-8477');
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    expect(await screen.findByText('Informe um telefone com DDD.')).toBeInTheDocument();
+    expect(contractAPI.prepare).not.toHaveBeenCalled();
+
+    digitar('Telefone com DDD', '+55 (031) 97580-8477');
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    await screen.findByRole('heading', { name: 'Passo 2 de 3: resumo, contrato e código' });
+    expect(contractAPI.prepare).toHaveBeenCalledWith(CODIGO, { ...PARTY_PF, phone: '31975808477' });
+  });
+
+  it('cidade "0" (preenchimento automático): recusada antes de chamar o servidor', async () => {
+    await abrirPasso1();
+    preencherPF();
+    digitar('Cidade', '0');
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    expect(await screen.findByText('Informe a cidade.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Cidade')).toHaveFocus();
+
+    // Com 2 ou mais caracteres, precisa de letra (o servidor confere igual).
+    digitar('Cidade', '00');
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    expect(await screen.findByText('Informe o nome da cidade.')).toBeInTheDocument();
+    expect(contractAPI.prepare).not.toHaveBeenCalled();
+  });
+
+  it('CEP primeiro: rua, bairro, cidade e estado vêm do ViaCEP; CEP sem resposta pede o endereço à mão', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ logradouro: 'Rua Pernambuco', bairro: 'Funcionários', localidade: 'Belo Horizonte', uf: 'MG' }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    await abrirPasso1();
+    digitar('Número', '45');
+    digitar('CEP', '30130-150');
+
+    await waitFor(() => expect(screen.getByLabelText('Rua')).toHaveValue('Rua Pernambuco'));
+    expect(fetchMock).toHaveBeenCalledWith('https://viacep.com.br/ws/30130150/json/', expect.anything());
+    expect(screen.getByLabelText('Bairro')).toHaveValue('Funcionários');
+    expect(screen.getByLabelText('Cidade')).toHaveValue('Belo Horizonte');
+    expect(screen.getByLabelText('Estado')).toHaveValue('MG');
+    // O que já estava digitado continua (o CEP e o número).
+    expect(screen.getByLabelText('CEP')).toHaveValue('30130-150');
+    expect(screen.getByLabelText('Número')).toHaveValue('45');
+    // Uma busca só por CEP digitado (outras chamadas de fetch da página não contam).
+    expect(fetchMock.mock.calls.filter((call: unknown[]) => String(call[0]).includes('viacep'))).toHaveLength(1);
+
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ erro: true }) } as never);
+    digitar('CEP', '99999-999');
+    expect(await screen.findByText('Não achamos o endereço deste CEP. Preencha à mão.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Rua')).toHaveValue('Rua Pernambuco');
+  });
+
+  it('CEP: a resposta que chega depois não desfaz a rua digitada enquanto ela vinha; voltar do passo 2 não busca de novo', async () => {
+    let responder: (value: unknown) => void = () => undefined;
+    const fetchMock = vi.fn(() => new Promise((resolve) => (responder = resolve)));
+    vi.stubGlobal('fetch', fetchMock);
+    await abrirPasso1();
+    digitar('CEP', '30130-150');
+    expect(await screen.findByText('Buscando o endereço pelo CEP...')).toBeInTheDocument();
+    digitar('Rua', 'Rua digitada à mão');
+    digitar('Número', '45');
+    responder({ ok: true, json: async () => ({ logradouro: 'Rua Pernambuco', bairro: 'Funcionários', localidade: 'Belo Horizonte', uf: 'MG' }) });
+
+    await waitFor(() => expect(screen.getByLabelText('Bairro')).toHaveValue('Funcionários'));
+    expect(screen.getByLabelText('Rua')).toHaveValue('Rua digitada à mão');
+    expect(screen.getByLabelText('Número')).toHaveValue('45');
+    expect(screen.getByLabelText('Cidade')).toHaveValue('Belo Horizonte');
+
+    digitar('Nome completo', 'Ana Souza');
+    digitar('CPF', '529.982.247-25');
+    digitar('E-mail', 'ana@cliente.test');
+    digitar('Telefone com DDD', '(31) 98888-7777');
+    fireEvent.click(screen.getByLabelText(/Para o meu próprio evento/));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    await screen.findByRole('heading', { name: 'Passo 2 de 3: resumo, contrato e código' });
+    fireEvent.click(screen.getByRole('button', { name: 'Corrigir dados' }));
+    await screen.findByRole('heading', { name: 'Passo 1 de 3: seus dados' });
+    expect(screen.getByLabelText('Rua')).toHaveValue('Rua digitada à mão');
+    expect(fetchMock.mock.calls.filter((call: unknown[]) => String(call[0]).includes('viacep'))).toHaveLength(1);
+  });
+
+  it('com o contato da reserva, ao escolher "Empresa": o nome passa para quem aceita e a razão social fica para preencher', async () => {
+    await abrirPasso1({ name: 'Ana Souza', email: 'ana@cliente.test', phone: '31988887777' });
+    fireEvent.click(screen.getByLabelText('Empresa (pessoa jurídica)'));
+    expect(screen.getByLabelText('Razão social')).toHaveValue('');
+    expect(screen.getByLabelText('Nome completo de quem aceita')).toHaveValue('Ana Souza');
+    fireEvent.click(screen.getByLabelText('Pessoa física'));
+    expect(screen.getByLabelText('Nome completo')).toHaveValue('Ana Souza');
+  });
+
+  it('reserva sem título (o "Evento" padrão): a página diz "Seu evento"', async () => {
+    apiFetch.mockResolvedValue({ ...proposta(), eventTitle: 'Evento' });
+    montar();
+    expect(await screen.findByRole('heading', { name: 'Seu evento' })).toBeInTheDocument();
+  });
+
+  it('com o contato da reserva (prefill): nome, e-mail e telefone já vêm preenchidos; o endereço não', async () => {
+    await abrirPasso1({ name: 'Ana Souza', email: 'ana@cliente.test', phone: '+55 31 98888-7777' });
+
+    expect(screen.getByLabelText('Nome completo')).toHaveValue('Ana Souza');
+    expect(screen.getByLabelText('E-mail')).toHaveValue('ana@cliente.test');
+    expect(screen.getByLabelText('Telefone com DDD')).toHaveValue('(31) 98888-7777');
+    expect(screen.getByLabelText('CEP')).toHaveValue('');
+    expect(screen.getByLabelText('Rua')).toHaveValue('');
+
+    // Só falta o CPF, o endereço e a finalidade.
+    digitar('CPF', '529.982.247-25');
+    digitar('CEP', '30140-000');
+    digitar('Número', '10');
+    digitar('Rua', 'Rua A');
+    digitar('Bairro', 'Savassi');
+    digitar('Cidade', 'Belo Horizonte');
+    digitar('Estado', 'MG');
+    fireEvent.click(screen.getByLabelText(/Para o meu próprio evento/));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    await screen.findByRole('heading', { name: 'Passo 2 de 3: resumo, contrato e código' });
+    expect(contractAPI.prepare).toHaveBeenCalledWith(CODIGO, PARTY_PF);
   });
 });

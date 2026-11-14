@@ -1,13 +1,16 @@
-import { useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Info } from 'lucide-react';
 import { Button } from '@/components/ui/StandardComponents';
 import { cn } from '@/utils/cn';
-import { formatDocument, formatCpf, isValidCnpj, isValidCpf } from '@/utils/document';
-import { BRAZIL_STATES, validatePartyForm, type PartyForm, type PartyFormErrors } from './contractHelpers';
+import { formatDocument, formatCpf, isValidCnpj, isValidCpf, onlyDigits } from '@/utils/document';
+import { lookupCep } from '@/utils/briefing';
+import { BRAZIL_STATES, formatPhone, normalizePhone, validatePartyForm, type PartyForm, type PartyFormErrors } from './contractHelpers';
 
 // Aceite online (13/11/2026), passo 1: os dados de quem contrata. Texto de 16 px (também nos campos: abaixo disso o
 // celular aproxima a tela ao tocar no campo). Cada erro fica ligado ao seu campo (aria-describedby) e o foco vai para
 // o primeiro campo com erro, do site ou do servidor (fieldErrors).
+// Revisão de 14/11/2026 (teste de 13/11 na produção): o telefone aceita o +55 do preenchimento automático e ganha a
+// máscara ao sair do campo; o CEP vem primeiro e completa rua, bairro, cidade e estado (ViaCEP, como no briefing).
 
 const inputClass = (hasError: boolean) =>
   cn(
@@ -133,12 +136,25 @@ export interface ContractPartyStepProps {
   submitting: boolean;
   /** Aviso geral (link vencido, proposta já aceita...), mostrado acima do botão. */
   alert?: ReactNode;
+  /** O nome que veio da reserva (prefill): ao escolher "Empresa", ele passa para "quem aceita pela empresa". */
+  prefillName?: string | null;
 }
 
-export function ContractPartyStep({ form, onChange, onSubmit, submitting, alert }: ContractPartyStepProps) {
+export function ContractPartyStep({ form, onChange, onSubmit, submitting, alert, prefillName }: ContractPartyStepProps) {
   const [errors, setErrors] = useState<PartyFormErrors>({});
+  const [cepStatus, setCepStatus] = useState<'idle' | 'loading' | 'notFound'>('idle');
   const formRef = useRef<HTMLFormElement>(null);
+  // O formulário e o onChange de agora, para a resposta do CEP (que chega depois) não desfazer o que foi digitado.
+  const latestForm = useRef(form);
+  const latestOnChange = useRef(onChange);
+  const cepLookup = useRef<AbortController | null>(null);
   const pj = form.personType === 'PJ';
+
+  useEffect(() => {
+    latestForm.current = form;
+    latestOnChange.current = onChange;
+  });
+  useEffect(() => () => cepLookup.current?.abort(), []);
 
   const set = <K extends keyof PartyForm>(key: K, value: PartyForm[K]) => {
     onChange({ ...form, [key]: value });
@@ -161,11 +177,75 @@ export function ContractPartyStep({ form, onChange, onSubmit, submitting, alert 
       return;
     }
     setErrors({});
+    // A busca do CEP ainda no ar não mexe mais no formulário que foi para o servidor.
+    cepLookup.current?.abort();
+    setCepStatus('idle');
     const fromServer = await onSubmit(form);
     if (fromServer && Object.keys(fromServer).length > 0) {
       setErrors(fromServer);
       focusFirst(fromServer);
     }
+  };
+
+  // CEP: com os 8 números, a rua, o bairro, a cidade e o estado vêm do ViaCEP (o que ele não trouxer fica como está); sem
+  // resposta, a pessoa preenche à mão. Só quando o CEP muda: voltar do passo 2 não desfaz o que foi corrigido.
+  const changeZip = (value: string) => {
+    const zip = onlyDigits(value);
+    const changed = zip !== onlyDigits(form.zipCode);
+    const typed = { ...form, zipCode: value };
+    latestForm.current = typed;
+    onChange(typed);
+    if (errors.zipCode) setErrors((current) => ({ ...current, zipCode: undefined }));
+    if (!changed) return;
+    cepLookup.current?.abort();
+    if (zip.length !== 8) {
+      setCepStatus('idle');
+      return;
+    }
+    const controller = new AbortController();
+    cepLookup.current = controller;
+    setCepStatus('loading');
+    // O endereço como estava ao pedir: a resposta só preenche o campo que ninguém mexeu enquanto ela vinha.
+    const before = { street: typed.street, neighborhood: typed.neighborhood, city: typed.city, state: typed.state };
+    // Sem resposta em 8 s: a pessoa preenche à mão.
+    const timer = window.setTimeout(() => {
+      if (cepLookup.current !== controller) return;
+      controller.abort();
+      setCepStatus('notFound');
+    }, 8000);
+    void lookupCep(zip, controller.signal).then((address) => {
+      window.clearTimeout(timer);
+      if (controller.signal.aborted) return;
+      if (!address) {
+        setCepStatus('notFound');
+        return;
+      }
+      setCepStatus('idle');
+      const current = latestForm.current;
+      const keep = (field: keyof typeof before, value: string) => (value && current[field] === before[field] ? value : current[field]);
+      const filled = {
+        ...current,
+        street: keep('street', address.street),
+        neighborhood: keep('neighborhood', address.neighborhood),
+        city: keep('city', address.city),
+        state: keep('state', (BRAZIL_STATES as readonly string[]).includes(address.state) ? address.state : ''),
+      };
+      latestForm.current = filled;
+      latestOnChange.current(filled);
+      setErrors((found) => ({
+        ...found,
+        street: filled.street ? undefined : found.street,
+        neighborhood: filled.neighborhood ? undefined : found.neighborhood,
+        city: filled.city ? undefined : found.city,
+        state: filled.state ? undefined : found.state,
+      }));
+    });
+  };
+
+  // Telefone com a máscara ao sair do campo, quando fecha DDD e número.
+  const tidyPhone = () => {
+    const digits = normalizePhone(form.phone);
+    if (digits.length === 10 || digits.length === 11) set('phone', formatPhone(form.phone));
   };
 
   // CPF/CNPJ com a pontuação ao sair do campo, quando a conta fecha.
@@ -190,7 +270,16 @@ export function ContractPartyStep({ form, onChange, onSubmit, submitting, alert 
         ]}
         error={errors.personType}
         onChange={(value) => {
-          onChange({ ...form, personType: value });
+          // O nome da reserva é o de uma pessoa: em "Empresa" ele passa para "quem aceita pela empresa" (a razão social
+          // fica para preencher); de volta a "Pessoa física", volta.
+          const fromPrefill = prefillName?.trim();
+          if (value === 'PJ' && fromPrefill && form.name.trim() === fromPrefill && !form.representativeName.trim()) {
+            onChange({ ...form, personType: value, name: '', representativeName: form.name });
+          } else if (value === 'PF' && fromPrefill && !form.name.trim() && form.representativeName.trim() === fromPrefill) {
+            onChange({ ...form, personType: value, name: form.representativeName, representativeName: '' });
+          } else {
+            onChange({ ...form, personType: value });
+          }
           setErrors({});
         }}
       />
@@ -284,13 +373,14 @@ export function ContractPartyStep({ form, onChange, onSubmit, submitting, alert 
           value={form.phone}
           error={errors.phone}
           onChange={(v) => set('phone', v)}
+          onBlur={tidyPhone}
         />
       </div>
 
       <fieldset className="space-y-4">
         <legend className="mb-2 text-base font-semibold text-foreground">{pj ? 'Endereço da empresa' : 'Seu endereço'}</legend>
         {/* A ordem na tela é a do Tab e a do foco no primeiro erro (FIELD_ORDER). */}
-        <div className="sm:max-w-[12rem]">
+        <div className="sm:max-w-xs">
           <TextField
             name="zipCode"
             label="CEP"
@@ -298,8 +388,13 @@ export function ContractPartyStep({ form, onChange, onSubmit, submitting, alert 
             autoComplete="postal-code"
             value={form.zipCode}
             error={errors.zipCode}
-            onChange={(v) => set('zipCode', v)}
+            hint="Com o CEP, a rua, o bairro e a cidade vêm sozinhos."
+            onChange={changeZip}
           />
+          {/* Sempre na página (só o texto muda): o leitor de tela anuncia a mudança. */}
+          <p role="status" className="mt-1.5 text-base text-muted-foreground">
+            {cepStatus === 'loading' ? 'Buscando o endereço pelo CEP...' : cepStatus === 'notFound' ? 'Não achamos o endereço deste CEP. Preencha à mão.' : ''}
+          </p>
         </div>
         <TextField
           name="street"

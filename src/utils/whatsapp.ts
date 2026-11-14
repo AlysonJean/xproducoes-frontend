@@ -7,6 +7,7 @@ import { createAndClickAnchor } from './dom';
 import type { QuoteMessageParams } from '@/types/forms';
 import { logger } from './logger';
 import { formatBookingCode } from './bookingCode';
+import { clientEventTitle } from './eventTitle';
 
 export const normalizePhone = (phone: string): string => phone.replace(/\D/g, '');
 
@@ -120,7 +121,8 @@ export const formatBrasiliaDate = (value?: string | Date | null): string => {
 // P15 (aprovada em 02/11/2026): cliente → equipe, na página da proposta. Título e data do evento, nunca o link nem o
 // código dele (a mensagem fica no histórico do WhatsApp do cliente e da empresa).
 export const buildProposalReplyText = (p: { eventTitle?: string | null; eventDate?: string | Date | null }): string => {
-  const title = p.eventTitle?.trim();
+  // Reserva sem título grava "Evento": vale como sem título (utils/eventTitle).
+  const title = clientEventTitle(p.eventTitle);
   const date = formatBrasiliaDate(p.eventDate);
   return (
     'Olá! Vi a proposta ' +

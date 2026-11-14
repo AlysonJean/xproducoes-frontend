@@ -3,15 +3,15 @@ import { FileSignature } from 'lucide-react';
 import { contractAPI, readApiError } from '@/services/api';
 import { Button, Card } from '@/components/ui/StandardComponents';
 import { cn } from '@/utils/cn';
-import type { ContractPrepared, ContractPurpose, ProposalContractStatus } from '@/types/contract';
+import type { ContractPrepared, ContractPurpose, ProposalContractStatus, ProposalPrefill } from '@/types/contract';
 import { ContractPartyStep } from './ContractPartyStep';
 import { ContractReviewStep } from './ContractReviewStep';
 import { ContractConfirmation, type ContractConfirmationData } from './ContractConfirmation';
 import {
-  EMPTY_PARTY_FORM,
   contractDayMonth,
   contractErrorMessage,
   formErrorsFromServer,
+  partyFormFromPrefill,
   partyFromForm,
   reopensProposal,
   type PartyForm,
@@ -44,6 +44,8 @@ export interface ContractAcceptanceProps {
   contract: ProposalContractStatus;
   /** Abre a proposta de novo: já aceita ou desistida (reopensProposal), a página volta na confirmação ou na desistência. */
   onReload: () => void;
+  /** O contato da reserva para começar o passo 1 (revisão de 14/11/2026); sem ele, o passo 1 começa vazio. */
+  prefill?: ProposalPrefill | null;
 }
 
 function initialConfirmation(contract: ProposalContractStatus): ContractConfirmationData {
@@ -60,11 +62,11 @@ function initialConfirmation(contract: ProposalContractStatus): ContractConfirma
   };
 }
 
-export function ContractAcceptance({ token, contract, onReload }: ContractAcceptanceProps) {
+export function ContractAcceptance({ token, contract, onReload, prefill }: ContractAcceptanceProps) {
   const [stage, setStage] = useState<Stage>(
     contract.state === 'ACCEPTED' ? 'accepted' : contract.state === 'WITHDRAWN' ? 'withdrawn' : 'intro',
   );
-  const [form, setForm] = useState<PartyForm>(EMPTY_PARTY_FORM);
+  const [form, setForm] = useState<PartyForm>(() => partyFormFromPrefill(prefill));
   const [purpose, setPurpose] = useState<ContractPurpose | null>(null);
   const [prepared, setPrepared] = useState<ContractPrepared | null>(null);
   const [preparing, setPreparing] = useState(false);
@@ -167,7 +169,14 @@ export function ContractAcceptance({ token, contract, onReload }: ContractAccept
         )}
 
         {stage === 'party' && (
-          <ContractPartyStep form={form} onChange={setForm} onSubmit={(data) => prepare(data)} submitting={preparing} alert={alert} />
+          <ContractPartyStep
+            form={form}
+            onChange={setForm}
+            onSubmit={(data) => prepare(data)}
+            submitting={preparing}
+            alert={alert}
+            prefillName={prefill?.name}
+          />
         )}
 
         {stage === 'review' && prepared && (
@@ -212,6 +221,7 @@ export function ContractAcceptance({ token, contract, onReload }: ContractAccept
           <ContractConfirmation
             token={token}
             data={confirmation}
+            onReopen={onReload}
             onWithdrawn={(at) => {
               setWithdrawnAt(at);
               setStage('withdrawn');

@@ -1,4 +1,5 @@
 import { formatBrasiliaDate } from './whatsapp';
+import { clientEventTitle } from './eventTitle';
 import { formatBookingCode } from './bookingCode';
 import { bookingPricing, formatBRL, type PricedBookingLike } from './bookingPricing';
 
@@ -34,7 +35,7 @@ const greeting = (b: Pick<StageBooking, 'clientName' | 'client'>) => {
   return name ? `Olá, ${name}!` : 'Olá!';
 };
 const quotedTitle = (b: Pick<StageBooking, 'eventTitle'>) => {
-  const title = b.eventTitle?.trim();
+  const title = clientEventTitle(b.eventTitle);
   return title ? ` "${title}"` : '';
 };
 // "20/12/2027, às 22:00" no horário de Brasília; '' sem data válida.
@@ -71,7 +72,7 @@ export const proposalWhatsAppText = (p: {
   validUntil?: string | Date | null;
 }): string => {
   const firstName = p.clientName?.trim().split(/\s+/)[0];
-  const title = p.eventTitle?.trim();
+  const title = clientEventTitle(p.eventTitle);
   const date = formatBrasiliaDate(p.eventDate);
   const validUntil = formatBrasiliaDate(p.validUntil);
   return [

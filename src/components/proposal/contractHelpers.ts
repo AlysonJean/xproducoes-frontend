@@ -9,6 +9,7 @@ import type {
   ContractPersonType,
   ContractPurpose,
   ContractState,
+  ProposalPrefill,
 } from '@/types/contract';
 
 // Aceite online (13/11/2026): o que o fluxo de aceite da página da proposta, o cartão "Contrato" da área do cliente e o
@@ -131,6 +132,10 @@ const EVENT_LABEL: Record<string, string> = {
   EMAIL_SENT: 'E-mail do contrato enviado',
   WITHDRAWN: 'Desistiu',
   SUPERSEDED: 'Substituído por outro',
+  // Revisão de 14/11/2026: o código para desistir pelo link (vai ao e-mail que aceitou o contrato).
+  WITHDRAW_OTP_SENT: 'Código da desistência enviado',
+  WITHDRAW_OTP_REJECTED: 'Código da desistência recusado',
+  WITHDRAW_OTP_VERIFIED: 'Código da desistência conferido',
 };
 export const contractEventLabel = (type: string): string => EVENT_LABEL[type] ?? type;
 
@@ -195,6 +200,24 @@ export interface PartyForm {
   purpose: ContractPurpose | '';
 }
 
+/**
+ * Telefone com DDD só com os dígitos: sem o 55 do país ("+55", "0055") e sem o 0 da ligação interurbana. Teste de
+ * 13/11/2026: o preenchimento automático do celular põe "+5531975808477" (13 dígitos) e o passo 1 recusava com
+ * "Informe um telefone com DDD". A mesma conta do servidor (backend contractSchema.phoneDigits).
+ */
+export function normalizePhone(value: string): string {
+  const digits = onlyDigits(value).replace(/^0+/, '');
+  return (digits.length >= 12 && digits.startsWith('55') ? digits.slice(2) : digits).replace(/^0+/, '');
+}
+
+/** "(31) 97580-8477" ou "(31) 3333-4444"; o que não fecha 10 ou 11 dígitos volta como veio. */
+export function formatPhone(value: string): string {
+  const d = normalizePhone(value);
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return value;
+}
+
 export const EMPTY_PARTY_FORM: PartyForm = {
   personType: 'PF',
   name: '',
@@ -214,6 +237,20 @@ export const EMPTY_PARTY_FORM: PartyForm = {
   powers: false,
   purpose: '',
 };
+
+/**
+ * O passo 1 começa com o contato da reserva (prefill do /proposals/view, revisão de 14/11/2026): nome, e-mail e
+ * telefone; a pessoa confere, troca o que quiser e acrescenta o resto. O endereço fica vazio (o do evento não é o do
+ * contratante): o CEP completa.
+ */
+export function partyFormFromPrefill(prefill?: ProposalPrefill | null): PartyForm {
+  return {
+    ...EMPTY_PARTY_FORM,
+    name: prefill?.name?.trim() ?? '',
+    email: prefill?.email?.trim() ?? '',
+    phone: prefill?.phone ? formatPhone(prefill.phone.trim()) : '',
+  };
+}
 
 /** O campo do formulário de cada chave do fieldErrors do servidor ("party.document"...; também sem o "party."). */
 const FIELD_OF: Record<string, keyof PartyForm> = {
@@ -273,13 +310,15 @@ export function validatePartyForm(form: PartyForm): PartyFormErrors {
     if (!form.powers) errors.powers = 'Confirme que você tem poderes para representar a empresa.';
   }
   if (!EMAIL_RE.test(form.email.trim())) errors.email = 'Informe um e-mail válido.';
-  const phone = onlyDigits(form.phone);
+  const phone = normalizePhone(form.phone);
   if (phone.length < 10 || phone.length > 11) errors.phone = 'Informe um telefone com DDD.';
   if (onlyDigits(form.zipCode).length !== 8) errors.zipCode = 'Informe o CEP (8 números).';
   if (!form.street.trim()) errors.street = 'Informe a rua.';
   if (!form.number.trim()) errors.number = 'Informe o número (ou "s/n").';
   if (!form.neighborhood.trim()) errors.neighborhood = 'Informe o bairro.';
-  if (!form.city.trim()) errors.city = 'Informe a cidade.';
+  // Teste de 13/11/2026: o preenchimento automático pôs "0" na cidade. Precisa ter letra (o servidor confere igual).
+  if (form.city.trim().length < 2) errors.city = 'Informe a cidade.';
+  else if (!/\p{L}/u.test(form.city)) errors.city = 'Informe o nome da cidade.';
   if (!(BRAZIL_STATES as readonly string[]).includes(form.state)) errors.state = 'Escolha o estado.';
   if (!form.purpose) errors.purpose = 'Responda para quem é a contratação.';
   return errors;
@@ -292,7 +331,7 @@ export function partyFromForm(form: PartyForm): ContractParty {
     name: form.name.trim(),
     document: normalizeDocument(form.document),
     email: form.email.trim(),
-    phone: onlyDigits(form.phone),
+    phone: normalizePhone(form.phone),
     address: {
       street: form.street.trim(),
       number: form.number.trim(),

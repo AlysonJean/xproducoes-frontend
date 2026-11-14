@@ -10,6 +10,7 @@ import {
   type StageBooking,
 } from '../whatsappTemplates';
 import * as templates from '../whatsappTemplates';
+import { buildProposalReplyText } from '../whatsapp';
 
 // P14 (aprovada em 02/11/2026), parte 2: utils/whatsappTemplates é a fonte única dos textos de WhatsApp de cada etapa
 // (recebimento, proposta, confirmação, véspera e avaliação). Data e hora no horário de Brasília qualquer que seja o
@@ -94,6 +95,20 @@ describe('P14 parte 2 — textos de WhatsApp de cada etapa', () => {
     ].join('\n'));
     expect(texto).not.toMatch(/R\$|PDF/);
     expect(templates).not.toHaveProperty('proposalPdfWhatsAppText');
+  });
+
+  // Teste do aceite de 13/11/2026: a reserva sem título grava "Evento", e a mensagem dizia 'do seu evento "Evento"'.
+  it('proposta de reserva sem título (o "Evento" padrão): "do seu evento", sem aspas; título de verdade com "Evento" no meio fica', () => {
+    const base = { clientName: 'Ana Souza', eventDate: RESERVA.eventDate, link: 'https://x.test/proposta#token=p1' };
+    for (const eventTitle of ['Evento', ' evento ', 'EVENTO', '', null]) {
+      expect(proposalWhatsAppText({ ...base, eventTitle }).split('\n')[0]).toBe('Olá, Ana! A proposta do seu evento (20/12/2027) está pronta.');
+    }
+    expect(proposalWhatsAppText({ ...base, eventTitle: 'Evento da firma' }).split('\n')[0]).toBe(
+      'Olá, Ana! A proposta do seu evento "Evento da firma" (20/12/2027) está pronta.',
+    );
+    expect(bookingConfirmedWhatsAppText({ ...RESERVA, eventTitle: 'Evento' })).not.toContain('"Evento"');
+    // A resposta do cliente à equipe, pela página da proposta.
+    expect(buildProposalReplyText({ eventTitle: 'Evento', eventDate: RESERVA.eventDate })).toBe('Olá! Vi a proposta do meu evento, de 20/12/2027, e quero falar com a equipe.');
   });
 
   it('o nome da conta vale quando a reserva não traz nome', () => {

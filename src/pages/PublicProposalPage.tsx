@@ -5,10 +5,11 @@ import { BrandLoader } from '@/components/ui/BrandLoader';
 import { Button, Card } from '@/components/ui/StandardComponents';
 import { NoticeCard, PROPOSAL_HELP_TEXT, ProposalShell, WhatsAppLink } from '@/components/proposal/ProposalShell';
 import { ContractAcceptance } from '@/components/proposal/ContractAcceptance';
-import type { ProposalContractStatus } from '@/types/contract';
+import type { ProposalContractStatus, ProposalPrefill } from '@/types/contract';
 import { formatPrice } from '@/utils/formatPrice';
 import { formatPricingLineTotal, toArrangeNote, type ToArrangeKind } from '@/utils/bookingPricing';
 import { buildProposalReplyText } from '@/utils/whatsapp';
+import { clientEventTitle } from '@/utils/eventTitle';
 
 // P15 (aprovada em 02/11/2026), parte 1: página da proposta, sem login, só de leitura. Achado: a página antiga
 // (/proposta/<número da reserva>) chamava GET /bookings/:id, que exige login e ser dono da reserva; o cliente que
@@ -55,6 +56,8 @@ interface OpenProposal {
   pricing: { lines: ProposalLine[]; discount: number | null; adjustment: number; total: number };
   validUntil: string;
   contract?: ProposalContractStatus | null;
+  /** Revisão de 14/11/2026: o contato da reserva para começar o passo 1 do aceite. */
+  prefill?: ProposalPrefill | null;
 }
 
 type ProposalResponse = OpenProposal | { state: 'closed'; contract?: ProposalContractStatus | null };
@@ -139,7 +142,7 @@ function OpenProposalView({ proposal, token }: { proposal: OpenProposal; token: 
     <Card padding className="space-y-6">
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Proposta</p>
-        <h1 className="text-2xl md:text-3xl font-extrabold text-foreground break-words">{proposal.eventTitle || 'Seu evento'}</h1>
+        <h1 className="text-2xl md:text-3xl font-extrabold text-foreground break-words">{clientEventTitle(proposal.eventTitle) || 'Seu evento'}</h1>
       </div>
 
       <dl className="space-y-3 text-sm">
@@ -281,7 +284,7 @@ export default function PublicProposalPage() {
       )}
       {view.kind === 'open' && <OpenProposalView proposal={view.proposal} token={view.token} />}
       {view.kind === 'open' && showsContract(view.proposal.contract) && (
-        <ContractAcceptance token={view.token} contract={view.proposal.contract} onReload={reload} />
+        <ContractAcceptance token={view.token} contract={view.proposal.contract} onReload={reload} prefill={view.proposal.prefill} />
       )}
       {view.kind === 'closed' && view.token && isSigned(view.contract) && (
         <ContractAcceptance token={view.token} contract={view.contract} onReload={reload} />
