@@ -59,6 +59,9 @@ function initialConfirmation(contract: ProposalContractStatus): ContractConfirma
     initialPayment: contract.initialPayment ?? null,
     balance: contract.balance ?? null,
     pixKey: contract.pix?.key,
+    pixCopyPaste: contract.pix?.copyPaste,
+    initialPaymentReceived: contract.initialPaymentReceived,
+    proofs: contract.proofs ?? [],
   };
 }
 
@@ -204,6 +207,9 @@ export function ContractAcceptance({ token, contract, onReload, prefill }: Contr
                   withdrawUntil: accepted.withdrawUntil,
                   canWithdraw: Boolean(accepted.withdrawUntil),
                   pixKey: accepted.pix?.key,
+                  pixCopyPaste: accepted.pix?.copyPaste,
+                  initialPaymentReceived: accepted.initialPaymentReceived,
+                  proofs: [],
                   contractId: prepared.contractId,
                   sentTo,
                 });

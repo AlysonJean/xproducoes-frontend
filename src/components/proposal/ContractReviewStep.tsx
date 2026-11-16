@@ -4,6 +4,7 @@ import { contractAPI, readApiError } from '@/services/api';
 import { Button, buttonVariants } from '@/components/ui/StandardComponents';
 import { formatPrice } from '@/utils/formatPrice';
 import type { ContractAccepted, ContractPrepared, ContractPurpose } from '@/types/contract';
+import { ContractDocumentText } from './ContractDocumentText';
 import {
   cancellationNotes,
   contractDate,
@@ -21,6 +22,8 @@ import {
 // CDC, art. 54, § 4º: as cláusulas que limitam direitos em destaque). No celular o PDF dentro da página costuma não
 // abrir (ou só a 1ª página): lá o contrato abre em tela cheia ou é baixado, e o aviso diz isso. O "Aceito" só fica
 // habilitado com o contrato aberto, a caixa marcada e os 6 dígitos do código: nada de aceite por omissão.
+// Semanas 2 e 3 (16/11/2026): o contrato também em texto, logo abaixo do PDF ("Ler o contrato completo nesta página"),
+// para o celular e os navegadores do WhatsApp e do Instagram; o servidor tira o texto do mesmo modelo do PDF.
 
 const RESEND_WAIT_MS = 60_000;
 
@@ -323,7 +326,9 @@ export function ContractReviewStep({
               className="hidden h-[75vh] w-full rounded-lg border-2 border-border bg-card md:block"
             />
             <p className="rounded-lg bg-muted p-4 md:hidden">
-              No celular, abra o contrato em tela cheia (ou baixe o arquivo) para ler todas as páginas.
+              {prepared.document
+                ? 'No celular, leia o contrato aqui mesmo, logo abaixo, ou abra o PDF em tela cheia (ou baixe o arquivo).'
+                : 'No celular, abra o contrato em tela cheia (ou baixe o arquivo) para ler todas as páginas.'}
             </p>
             <p className="hidden text-muted-foreground md:block">
               Se o contrato não aparecer no quadro acima, abra em tela cheia ou baixe o arquivo.
@@ -349,6 +354,7 @@ export function ContractReviewStep({
             </div>
           </>
         )}
+        {prepared.document && <ContractDocumentText document={prepared.document} />}
         <div className="space-y-1">
           <p className="font-semibold">Impressão digital do contrato (SHA-256)</p>
           <p className="break-all font-mono text-base" data-testid="contrato-sha256">

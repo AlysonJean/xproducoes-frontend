@@ -129,6 +129,24 @@ describe('BookingDetailsPage (cliente) — cartão Contrato', () => {
     expect(screen.getByRole('button', { name: 'Baixar contrato (PDF)' })).toBeInTheDocument();
   });
 
+  it('semanas 2 e 3 (16/11/2026): parcela a pagar mostra o PIX com QR Code e copia e cola; registrada, não', async () => {
+    const COPIA = '00020126360014br.gov.bcb.pix0114553438240001565204000053039865406900.005802BR5921X PRODUCOES E EVENTOS6014BELO HORIZONTE62190515CT20271130ABCD6304ABCD';
+    contractAPI.forClient.mockResolvedValue({ ...CONTRATO, pix: { key: '55343824000156', keyType: 'CNPJ', copyPaste: COPIA }, initialPaymentReceived: false });
+    const aPagar = await renderPage({ ...RESERVA, contractSummary: RESUMO });
+    expect(await screen.findByText('Pagar a parcela inicial por PIX')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'QR Code do PIX, já com o valor' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Código PIX copia e cola')).toHaveValue(COPIA);
+    expect(texto()).toContain('Depois de pagar, envie o comprovante no cartão "Comprovantes" desta página.');
+    aPagar.unmount();
+
+    // A parcela registrada vale mesmo se um código viesse junto (o servidor não manda; o site também não mostra).
+    contractAPI.forClient.mockResolvedValue({ ...CONTRATO, pix: { key: '55343824000156', keyType: 'CNPJ', copyPaste: COPIA }, initialPaymentReceived: true });
+    await renderPage({ ...RESERVA, contractSummary: RESUMO });
+    await screen.findByText(SHA);
+    expect(screen.queryByText('Pagar a parcela inicial por PIX')).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /QR Code/ })).not.toBeInTheDocument();
+  });
+
   it('sem contrato (contractSummary null ou ausente): nenhum cartão e nenhuma chamada; os detalhes falham: estado do resumo e "Tentar de novo"', async () => {
     const semCampo = await renderPage(RESERVA);
     expect(screen.queryByRole('heading', { name: 'Contrato' })).not.toBeInTheDocument();

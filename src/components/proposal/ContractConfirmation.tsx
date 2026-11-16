@@ -1,18 +1,17 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { CheckCircle2, Copy, FileDown } from 'lucide-react';
+import { CheckCircle2, FileDown } from 'lucide-react';
 import { contractAPI, readApiError } from '@/services/api';
 import { Button } from '@/components/ui/StandardComponents';
 import { formatPrice } from '@/utils/formatPrice';
-import { formatCnpj, normalizeDocument } from '@/utils/document';
 import { COMPANY_CNPJ, SUPPORT_EMAIL } from '@/data/site';
-import type { ContractInstallment, ContractOtp } from '@/types/contract';
+import type { ContractInstallment, ContractOtp, ContractProof } from '@/types/contract';
+import { ContractPixPayment } from './ContractPixPayment';
+import { ContractProofUpload } from './ContractProofUpload';
 import {
-  contractDate,
   contractDateTime,
   contractDayMonthTime,
   contractErrorMessage,
   contractTime,
-  copyText,
   currentTime,
   reopensProposal,
   serverMessage,
@@ -27,6 +26,9 @@ import {
 // código ao e-mail que aceitou o contrato, e a desistência só vale com ele (a área do cliente segue pelo login).
 // Ao reabrir o link de um contrato aceito, o /proposals/view traz os mesmos dados (protocolo, parcela inicial, saldo e
 // chave PIX) no contract do ACCEPTED: o que não vier não aparece.
+// Semanas 2 e 3 (16/11/2026): o PIX da parcela inicial com QR Code e "copia e cola" já com o valor (ContractPixPayment);
+// com a parcela já registrada pela equipe, nada de código para pagar de novo; e o comprovante pela própria página, com
+// aviso à equipe (ContractProofUpload), no lugar de "mande o comprovante pelo WhatsApp".
 
 export interface ContractConfirmationData {
   acceptedAt?: string | null;
@@ -37,6 +39,12 @@ export interface ContractConfirmationData {
   withdrawUntil?: string | null;
   canWithdraw?: boolean;
   pixKey?: string;
+  /** Semanas 2 e 3: o "PIX copia e cola" com o valor da parcela inicial (o texto do QR Code). */
+  pixCopyPaste?: string;
+  /** Semanas 2 e 3: a equipe já registrou a parcela inicial. */
+  initialPaymentReceived?: boolean;
+  /** Semanas 2 e 3: os comprovantes já enviados pela página (só a data). */
+  proofs?: ContractProof[];
   contractId?: string;
   /** O e-mail (mascarado) que recebeu o código: o contrato vai para ele. */
   sentTo?: string;
@@ -60,7 +68,6 @@ const waitText = (seconds: number) =>
 export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: ContractConfirmationProps) {
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
-  const [copyStatus, setCopyStatus] = useState<string | null>(null);
   // O último código pedido (para onde foi e até quando vale) e se o campo do código está aberto: "Voltar" fecha o campo
   // sem esquecer o código, e "Desistir" de novo reabre com ele enquanto valer (um pedido novo trocaria o código).
   const [withdrawOtp, setWithdrawOtp] = useState<ContractOtp | null>(null);
@@ -81,6 +88,7 @@ export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: Con
 
   // A chave PIX do CNPJ da empresa (a da resposta do aceite; ao reabrir o link, a do site).
   const pixKey = data.pixKey || COMPANY_CNPJ;
+  const received = Boolean(data.initialPaymentReceived);
   const canWithdraw = !withdrawalClosed && withdrawalOpen(data.withdrawUntil, data.canWithdraw);
 
   const download = async () => {
@@ -94,11 +102,6 @@ export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: Con
     } finally {
       setDownloading(false);
     }
-  };
-
-  const copyPix = async () => {
-    const ok = await copyText(normalizeDocument(pixKey));
-    setCopyStatus(ok ? 'Chave PIX copiada.' : 'Não deu para copiar. Selecione a chave e copie.');
   };
 
   // A contagem do "Enviar outro código" (o servidor pede 60 s entre pedidos).
@@ -239,7 +242,11 @@ export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: Con
         <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-success" aria-hidden="true" />
         <div className="space-y-1">
           <p className="font-semibold text-foreground">Contrato aceito.</p>
-          <p>A data fica reservada depois que a parcela inicial é paga. A equipe confirma a reserva quando receber o PIX.</p>
+          <p>
+            {received
+              ? 'A equipe já registrou a parcela inicial.'
+              : 'A data fica reservada depois que a parcela inicial é paga. A equipe confirma a reserva quando receber o PIX.'}
+          </p>
         </div>
       </div>
 
@@ -266,25 +273,19 @@ export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: Con
 
       <section aria-labelledby="contrato-pagamento" className="space-y-3 rounded-lg border-2 border-primary/40 bg-primary/5 p-4">
         <h3 id="contrato-pagamento" className="text-lg font-bold text-foreground">
-          Parcela inicial por PIX
+          {received ? 'Pagamento por PIX' : 'Parcela inicial por PIX'}
         </h3>
-        {data.initialPayment && (
-          <p>
-            Valor: <strong>{formatPrice(data.initialPayment.amount)}</strong>, até {contractDate(data.initialPayment.dueDate)}.
-          </p>
+        {received ? (
+          <>
+            <p>
+              <strong>Parcela inicial recebida.</strong> A equipe já registrou o pagamento.
+            </p>
+            <ContractPixPayment pixKey={pixKey} />
+          </>
+        ) : (
+          <ContractPixPayment copyPaste={data.pixCopyPaste} pixKey={pixKey} amount={data.initialPayment?.amount} dueDate={data.initialPayment?.dueDate} />
         )}
-        <div className="space-y-2">
-          <p>
-            Chave PIX (CNPJ): <strong className="font-mono">{formatCnpj(pixKey)}</strong>
-          </p>
-          <Button type="button" variant="outline" size="lg" onClick={copyPix} leftIcon={<Copy className="h-5 w-5" aria-hidden="true" />} className="w-full normal-case tracking-normal sm:w-auto">
-            Copiar chave PIX
-          </Button>
-          <p role="status" className="min-h-6 text-muted-foreground">
-            {copyStatus}
-          </p>
-        </div>
-        <p>Pague só na chave PIX do CNPJ da empresa. Depois de pagar, mande o comprovante para a equipe pelo WhatsApp.</p>
+        <p>Pague só na chave PIX do CNPJ da empresa. Depois de pagar, envie o comprovante logo abaixo.</p>
         {data.balance && (
           <p>
             Saldo: <strong>{formatPrice(data.balance.amount)}</strong>, até {contractDateTime(data.balance.dueDate)}.
@@ -294,6 +295,8 @@ export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: Con
           <p className="text-muted-foreground">Os valores e os vencimentos estão no e-mail do contrato.</p>
         )}
       </section>
+
+      <ContractProofUpload token={token} proofs={data.proofs ?? []} received={received} />
 
       <div className="space-y-3">
         <p>

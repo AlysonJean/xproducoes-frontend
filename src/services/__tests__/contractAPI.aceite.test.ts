@@ -90,6 +90,58 @@ describe('contractAPI — página da proposta', () => {
   });
 });
 
+describe('contractAPI — comprovante pela página (semanas 2 e 3, 16/11/2026)', () => {
+  it('proof: POST multipart com o código no campo "token" antes do arquivo; nada no endereço; CSRF; sem Content-Type à mão', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => json(201, { success: true, data: { sentAt: '2027-11-30T14:05:00.000Z', proofs: [{ sentAt: '2027-11-30T14:05:00.000Z' }] } }));
+    const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'comprovante.png', { type: 'image/png' });
+
+    await expect(contractAPI.proof('p1.TESTE', file)).resolves.toEqual({ sentAt: '2027-11-30T14:05:00.000Z', proofs: [{ sentAt: '2027-11-30T14:05:00.000Z' }] });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path(url)).toBe('/proposals/contract/proof');
+    expect(String(url)).not.toContain('p1.TESTE');
+    expect(init).toMatchObject({ method: 'POST', referrerPolicy: 'origin', credentials: 'include' });
+    const headers = init.headers as Record<string, string>;
+    expect(headers['X-CSRF-Token']).toBe('tok');
+    // O navegador põe o multipart com o boundary; um Content-Type à mão quebraria o envio.
+    expect(headers['Content-Type']).toBeUndefined();
+    const body = init.body as FormData;
+    expect([...body.keys()]).toEqual(['token', 'file']);
+    expect(body.get('token')).toBe('p1.TESTE');
+    expect((body.get('file') as File).name).toBe('comprovante.png');
+  });
+
+  it('proof: espera até 2 minutos (foto grande em rede móvel); as outras chamadas seguem com 30 s', async () => {
+    vi.useFakeTimers();
+    try {
+      const signals: Record<string, AbortSignal> = {};
+      vi.spyOn(globalThis, 'fetch').mockImplementation(
+        (url, init) =>
+          new Promise((_resolve, reject) => {
+            const signal = (init as RequestInit).signal as AbortSignal;
+            signals[path(url)] = signal;
+            signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+          }),
+      );
+      const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'comprovante.png', { type: 'image/png' });
+      const upload = contractAPI.proof('p1.TESTE', file).catch((error: unknown) => error);
+      const other = contractAPI.withdrawCode('p1.TESTE').catch((error: unknown) => error);
+      await vi.advanceTimersByTimeAsync(31_000);
+      expect(Object.keys(signals).sort()).toEqual(['/proposals/contract/proof', '/proposals/contract/withdraw/code']);
+      expect(signals['/proposals/contract/withdraw/code'].aborted).toBe(true);
+      expect(signals['/proposals/contract/proof'].aborted).toBe(false);
+      await vi.advanceTimersByTimeAsync(90_000);
+      expect(signals['/proposals/contract/proof'].aborted).toBe(true);
+      await upload;
+      await other;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('contractAPI — área do cliente e ficha', () => {
   it('rotas da reserva: contrato, PDF (nome contrato-<código>.pdf), desistência e reenvio', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) =>

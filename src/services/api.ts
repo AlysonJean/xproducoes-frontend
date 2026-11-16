@@ -11,6 +11,7 @@ import type {
   ContractOtp,
   ContractParty,
   ContractPrepared,
+  ContractProofResult,
 } from '../types/contract';
 
 // ✅ PRODUCTION-SAFE LOGGING
@@ -161,13 +162,21 @@ api.interceptors.response.use(
 
 // ✅ SECURE FETCH UTILITY WITH AUTO REFRESH
 
+/**
+ * RequestInit com o tempo-limite próprio da requisição (o padrão é VITE_API_TIMEOUT ou 30 s). Semanas 2 e 3
+ * (16/11/2026): o comprovante pela página da proposta usa 2 minutos (foto de até 10 MB em rede móvel lenta).
+ */
+export type ApiRequestInit = RequestInit & { timeoutMs?: number };
+
 // Orçamento em PDF (13/11/2026): a requisição (cookies, CSRF, Idempotency-Key, renovação do login, repetição de falha
 // de rede e a mensagem de erro com o status) é a mesma para o JSON (apiFetch) e para o arquivo (downloadPdf); só a
 // leitura da resposta muda.
-async function apiResponse(endpoint: string, options: RequestInit = {}): Promise<Response> {
+async function apiResponse(endpoint: string, requestInit: ApiRequestInit = {}): Promise<Response> {
+  const { timeoutMs, ...options } = requestInit;
   const makeRequest = async (url: string, config: RequestInit): Promise<Response> => {
     // Add timeout handling
-        const timeout = parseInt((import.meta as unknown as { env?: { VITE_API_TIMEOUT?: string } }).env?.VITE_API_TIMEOUT as string) || 30000;
+    const timeout =
+      timeoutMs ?? (parseInt((import.meta as unknown as { env?: { VITE_API_TIMEOUT?: string } }).env?.VITE_API_TIMEOUT as string) || 30000);
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
 
@@ -362,7 +371,7 @@ async function apiResponse(endpoint: string, options: RequestInit = {}): Promise
 
 export const apiFetch = async <T = unknown>(
   endpoint: string,
-  options: RequestInit = {}
+  options: ApiRequestInit = {}
 ): Promise<T> => {
   const response = await apiResponse(endpoint, options);
 
@@ -481,6 +490,8 @@ const proposalPost = (body: Record<string, unknown>): RequestInit => ({
   body: JSON.stringify(body),
   referrerPolicy: 'origin',
 });
+/** Comprovante de até 10 MB em rede móvel lenta (o padrão de 30 s cortaria o envio no meio). */
+const PROOF_UPLOAD_TIMEOUT_MS = 120_000;
 const contractFileName = (bookingId: string) => `contrato-${formatBookingCode(bookingId).replace(/[^A-Za-z0-9-]+/g, '-')}.pdf`;
 const bookingPath = (bookingId: string) => encodeURIComponent(bookingId);
 
@@ -500,6 +511,16 @@ export const contractAPI = {
   withdrawCode: (token: string) => apiFetch<ContractOtp>('/proposals/contract/withdraw/code', proposalPost({ token })),
   /** ...depois a desistência com ele. */
   withdraw: (token: string, code: string) => apiFetch<{ withdrawnAt: string }>('/proposals/contract/withdraw', proposalPost({ token, code })),
+  /**
+   * Semanas 2 e 3 (16/11/2026): o comprovante do PIX pela página, depois do aceite. O código do link vai no campo "token"
+   * do envio, antes do arquivo (nunca no endereço); a regra do arquivo é a dos comprovantes (utils/bookingAttachments).
+   */
+  proof: (token: string, file: File) => {
+    const body = new FormData();
+    body.append('token', token);
+    body.append('file', file);
+    return apiFetch<ContractProofResult>('/proposals/contract/proof', { method: 'POST', body, referrerPolicy: 'origin', timeoutMs: PROOF_UPLOAD_TIMEOUT_MS });
+  },
   // Área do cliente (login do dono da reserva).
   forClient: (bookingId: string) => apiFetch<ClientContract>(`/bookings/${bookingPath(bookingId)}/contract`),
   downloadForClient: (bookingId: string) =>

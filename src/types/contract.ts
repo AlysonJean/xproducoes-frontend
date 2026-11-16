@@ -72,6 +72,43 @@ export interface ContractSummary {
   forum: string;
 }
 
+/** Um bloco de cláusula do texto do contrato (o mesmo modelo do PDF). highlight: cláusula em destaque (CDC, art. 54, § 4º). */
+export type ContractTextBlock =
+  | { kind: 'item'; num: string; text: string; highlight?: boolean }
+  | { kind: 'sub'; letter: string; text: string; highlight?: boolean }
+  | { kind: 'event'; rows: Array<{ label: string; value: string }> }
+  | { kind: 'table'; caption: string; head: [string, string]; rows: Array<[string, string]> };
+
+export interface ContractTextClause {
+  title: string;
+  blocks: ContractTextBlock[];
+}
+
+/**
+ * Semanas 2 e 3 (16/11/2026): o texto do contrato para ler na página (no celular e nos navegadores do WhatsApp e do
+ * Instagram o PDF costuma não abrir). O mesmo modelo que desenha o PDF, sem os dados do contratante (ficam no PDF).
+ */
+export interface ContractDocument {
+  code: string;
+  templateVersion: string;
+  title: string;
+  subtitle: string;
+  /** O parágrafo da CONTRATADA. */
+  contractor: string;
+  intro: string;
+  clauses: ContractTextClause[];
+  closing: string[];
+  annex1: { title: string; groups: Array<{ title: string; items: string[] }>; note: string };
+  annex2: {
+    title: string;
+    rows: Array<{ label: string; detail: string; value: string }>;
+    totals: Array<{ label: string; value: string; tone: 'plain' | 'struck' | 'green' }>;
+    totalLabel: string;
+    total: string;
+    notes: string[];
+  };
+}
+
 /** 200 do POST /proposals/contract/prepare. */
 export interface ContractPrepared {
   contractId: string;
@@ -79,6 +116,30 @@ export interface ContractPrepared {
   sha256: string;
   summary: ContractSummary;
   otp: ContractOtp;
+  /** O texto do contrato (servidor de 16/11/2026 em diante). */
+  document?: ContractDocument;
+}
+
+/**
+ * A chave PIX do contrato (o CNPJ só com os dígitos). Semanas 2 e 3 (16/11/2026): copyPaste é o "PIX copia e cola" com o
+ * valor da parcela inicial (o texto do QR Code); só vem enquanto a equipe não registrou a parcela.
+ */
+export interface ContractPix {
+  key: string;
+  keyType: 'CNPJ';
+  copyPaste?: string;
+}
+
+/** Um comprovante enviado pela página da proposta (só a data). */
+export interface ContractProof {
+  sentAt: string;
+}
+
+/** 201 do POST /proposals/contract/proof. */
+export interface ContractProofResult {
+  sentAt: string;
+  /** Todos os enviados pela página, com este. */
+  proofs: ContractProof[];
 }
 
 /** 200 do POST /proposals/contract/accept. */
@@ -89,7 +150,9 @@ export interface ContractAccepted {
   initialPayment: ContractInstallment;
   balance: ContractInstallment;
   withdrawUntil: string | null;
-  pix: { key: string; keyType: 'CNPJ' };
+  pix: ContractPix;
+  /** A equipe já tinha registrado a parcela inicial (servidor de 16/11/2026 em diante). */
+  initialPaymentReceived?: boolean;
 }
 
 /**
@@ -120,7 +183,11 @@ export interface ProposalContractStatus {
   protocol?: string | null;
   initialPayment?: ContractInstallment | null;
   balance?: ContractInstallment | null;
-  pix?: { key: string; keyType: 'CNPJ' } | null;
+  pix?: ContractPix | null;
+  /** Semanas 2 e 3: a equipe já registrou a parcela inicial (a página tira o QR Code). */
+  initialPaymentReceived?: boolean;
+  /** Semanas 2 e 3: os comprovantes enviados pela página (só a data). */
+  proofs?: ContractProof[];
 }
 
 /** contractSummary do GET /bookings/:id (cliente e admin); null sem contrato. Do contratante, só o nome. */
@@ -145,6 +212,9 @@ export interface ClientContract {
   balance: ContractInstallment | null;
   protocol?: string | null;
   withdrawnAt?: string | null;
+  /** Semanas 2 e 3: só no aceito, o PIX da parcela inicial (com o copia e cola enquanto ela não foi registrada). */
+  pix?: ContractPix | null;
+  initialPaymentReceived?: boolean;
 }
 
 /** Um evento da trilha do aceite (gerado, código enviado, código conferido, aceito, e-mail enviado, desistiu). */

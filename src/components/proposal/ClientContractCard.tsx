@@ -5,6 +5,7 @@ import { Badge, Button, Card, ConfirmModal } from '@/components/ui/StandardCompo
 import { useNotifications } from '@/contexts/NotificationContext';
 import { formatPrice } from '@/utils/formatPrice';
 import type { BookingContractSummary, ClientContract } from '@/types/contract';
+import { ContractPixPayment } from './ContractPixPayment';
 import {
   contractDate,
   contractDateTime,
@@ -20,6 +21,8 @@ import {
 // tem contrato (contractSummary no GET /bookings/:id). Os detalhes vêm de GET /bookings/:id/contract (só o dono da
 // reserva): estado, data do aceite, impressão digital, vencimentos e, para o cliente final dentro dos 7 dias, "Desistir
 // da contratação" (a política de reserva cita este botão e o da página da proposta).
+// Semanas 2 e 3 (16/11/2026): enquanto a parcela inicial não foi registrada, o PIX com QR Code e "copia e cola" já com o
+// valor (o mesmo da página da proposta); o comprovante segue pelo cartão "Comprovantes" desta tela.
 
 type Load = { status: 'loading' } | { status: 'error' } | { status: 'ready'; contract: ClientContract };
 
@@ -157,6 +160,14 @@ export function ClientContractCard({ bookingId, summary, onChanged }: ClientCont
             </div>
           )}
         </dl>
+
+        {state === 'ACCEPTED' && contract?.pix?.copyPaste && !contract.initialPaymentReceived && (
+          <div className="space-y-2 rounded-lg border-2 border-primary/40 bg-primary/5 p-4">
+            <p className="font-semibold text-foreground">Pagar a parcela inicial por PIX</p>
+            <ContractPixPayment copyPaste={contract.pix.copyPaste} pixKey={contract.pix.key} />
+            <p className="text-muted-foreground">Depois de pagar, envie o comprovante no cartão &quot;Comprovantes&quot; desta página.</p>
+          </div>
+        )}
 
         {load.status === 'error' && (
           <div role="alert" className="space-y-2 text-destructive">

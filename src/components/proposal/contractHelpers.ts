@@ -136,6 +136,8 @@ const EVENT_LABEL: Record<string, string> = {
   WITHDRAW_OTP_SENT: 'Código da desistência enviado',
   WITHDRAW_OTP_REJECTED: 'Código da desistência recusado',
   WITHDRAW_OTP_VERIFIED: 'Código da desistência conferido',
+  PROOF_UPLOADED: 'Comprovante enviado pela página da proposta',
+  PAYMENT_REMINDER_SENT: 'Lembrete da parcela inicial enviado',
 };
 export const contractEventLabel = (type: string): string => EVENT_LABEL[type] ?? type;
 
