@@ -164,7 +164,7 @@ export function ClientContractCard({ bookingId, summary, onChanged }: ClientCont
         {state === 'ACCEPTED' && contract?.pix?.copyPaste && !contract.initialPaymentReceived && (
           <div className="space-y-2 rounded-lg border-2 border-primary/40 bg-primary/5 p-4">
             <p className="font-semibold text-foreground">Pagar a parcela inicial por PIX</p>
-            <ContractPixPayment copyPaste={contract.pix.copyPaste} pixKey={contract.pix.key} />
+            <ContractPixPayment copyPaste={contract.pix.copyPaste} pixKey={contract.pix.key} dueDate={contract.initialPayment?.dueDate} />
             <p className="text-muted-foreground">Depois de pagar, envie o comprovante no cartão &quot;Comprovantes&quot; desta página.</p>
           </div>
         )}

@@ -196,7 +196,7 @@ export const RESERVATION_POLICY_SECTIONS: readonly ReservationPolicySection[] = 
     title: 'Desistência em até 7 dias (arrependimento)',
     blocks: [
       paragraph(
-        'Se você contrata para o seu próprio evento (pessoa física, ou empresa que contrata para um evento dela), pode desistir em até 7 dias corridos depois do aceite, sem custo e sem precisar dizer o motivo, mesmo que o evento caia dentro desse prazo. Devolvemos tudo o que você pagou, de imediato (Código de Defesa do Consumidor, art. 49, e Decreto 7.962/2013, art. 5º).'
+        'Se você contrata para o seu próprio evento (pessoa física, ou empresa que contrata para um evento dela), pode desistir em até 7 dias corridos depois do aceite ou até o início do evento, o que vier primeiro, sem custo e sem precisar dizer o motivo. Devolvemos tudo o que você pagou, de imediato (Código de Defesa do Consumidor, art. 49, e Decreto 7.962/2013, art. 5º).'
       ),
       paragraph(
         `Para desistir, avise pelo e-mail ${SUPPORT_EMAIL} ou pelo WhatsApp ${whatsApp}. Se você aceitou pelo site, também pode usar o botão "Desistir da contratação" na página da proposta ou na sua área do cliente. Enviamos a confirmação da desistência logo que a recebemos.`

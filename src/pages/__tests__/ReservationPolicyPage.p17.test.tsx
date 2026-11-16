@@ -79,9 +79,9 @@ afterEach(() => {
 });
 
 describe('P17 — o texto da política (src/data/reservationPolicy*.ts)', () => {
-  it('versão 2026-11-13 (a do modelo do contrato), endereço /politica-de-reserva e ainda não publicada', () => {
-    expect(RESERVATION_POLICY_VERSION).toBe('2026-11-13');
-    expect(RESERVATION_POLICY_UPDATED_AT).toBe('13/11/2026');
+  it('versão 2026-11-16 (a do modelo do contrato), endereço /politica-de-reserva e ainda não publicada', () => {
+    expect(RESERVATION_POLICY_VERSION).toBe('2026-11-16');
+    expect(RESERVATION_POLICY_UPDATED_AT).toBe('16/11/2026');
     expect(RESERVATION_POLICY_PATH).toBe('/politica-de-reserva');
     expect(RESERVATION_POLICY_PUBLISHED).toBe(false);
   });
@@ -145,7 +145,7 @@ describe('P17 — o texto da política (src/data/reservationPolicy*.ts)', () => 
   it('desistência em 7 dias corridos para o cliente final, com devolução integral, o botão "Desistir da contratação", e-mail e WhatsApp', () => {
     const text = sectionText('arrependimento');
     for (const fragment of [
-      'pode desistir em até 7 dias corridos depois do aceite, sem custo e sem precisar dizer o motivo, mesmo que o evento caia dentro desse prazo.',
+      'pode desistir em até 7 dias corridos depois do aceite ou até o início do evento, o que vier primeiro, sem custo e sem precisar dizer o motivo.',
       'Devolvemos tudo o que você pagou, de imediato (Código de Defesa do Consumidor, art. 49, e Decreto 7.962/2013, art. 5º).',
       `Para desistir, avise pelo e-mail suporte@xproducoeseeventos.com.br ou pelo WhatsApp ${formatPhoneDisplay(getWhatsAppPhone())}.`,
       // O botão só existe quando o aceite foi pelo site (o aceite online nasce desligado).

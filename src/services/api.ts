@@ -424,8 +424,13 @@ export async function fetchPdf(endpoint: string, options: RequestInit = {}): Pro
  */
 export async function downloadPdf(endpoint: string, options: RequestInit = {}, fallbackName = 'orcamento.pdf'): Promise<void> {
   const { blob, filename } = await fetchPdf(endpoint, options);
+  saveBlob(blob, filename || fallbackName);
+}
+
+/** Entrega ao navegador, como download, um arquivo que a página já tem (o contrato lido no passo 2, por exemplo). */
+export function saveBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
-  createAndClickAnchor({ href: url, download: filename || fallbackName });
+  createAndClickAnchor({ href: url, download: filename });
   // O endereço do arquivo vale até o download começar; solto depois de um minuto (soltar na hora cancela o download
   // em alguns navegadores).
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
@@ -501,9 +506,14 @@ export const contractAPI = {
     apiFetch<ContractPrepared>('/proposals/contract/prepare', proposalPost({ token, party })),
   /** O PDF exato preparado (o mesmo da impressão digital), para o visualizador e o download. */
   pdf: (token: string, contractId: string) => fetchPdf('/proposals/contract/pdf', proposalPost({ token, contractId })),
-  /** Baixa o contrato direto (passo 3 e reabertura do link aceito). */
-  download: (token: string, contractId: string) =>
-    downloadPdf('/proposals/contract/pdf', proposalPost({ token, contractId }), 'contrato.pdf'),
+  /**
+   * Baixa o contrato pelo link. Decisão de 16/11/2026: o aceito (ou desistido) só com o código de pdfCode, que vai ao
+   * e-mail que aceitou o contrato (o PDF traz os dados do contratante, e o link pode ter sido encaminhado).
+   */
+  download: (token: string, contractId: string, code?: string) =>
+    downloadPdf('/proposals/contract/pdf', proposalPost({ token, contractId, ...(code ? { code } : {}) }), 'contrato.pdf'),
+  /** O código para baixar o contrato aceito pelo link (vale 10 minutos; o e-mail volta mascarado). */
+  pdfCode: (token: string) => apiFetch<ContractOtp>('/proposals/contract/pdf/code', proposalPost({ token })),
   sendCode: (token: string, contractId: string) => apiFetch<ContractOtp>('/proposals/contract/otp', proposalPost({ token, contractId })),
   accept: (token: string, input: { contractId: string; sha256: string; code: string }) =>
     apiFetch<ContractAccepted>('/proposals/contract/accept', proposalPost({ token, ...input, agreed: true })),

@@ -88,6 +88,26 @@ describe('contractAPI — página da proposta', () => {
     });
     expect(clicks).toEqual([{ href: 'blob:http://localhost/contrato', download: 'contrato-XP-ANA-1.pdf' }]);
   });
+
+  it('decisão de 16/11/2026: o código para baixar o contrato aceito (POST com o código do link no corpo) e o download com ele', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) =>
+      path(url) === '/proposals/contract/pdf/code'
+        ? json(200, { success: true, data: { sentTo: 'an***@cliente.test', expiresAt: '2099-01-01T00:00:00.000Z' } })
+        : pdfResponse({ 'Content-Disposition': 'attachment; filename="contrato-XP-ANA-1.pdf"' }),
+    );
+    await expect(contractAPI.pdfCode('p1.TESTE')).resolves.toEqual({ sentTo: 'an***@cliente.test', expiresAt: '2099-01-01T00:00:00.000Z' });
+    await contractAPI.download('p1.TESTE', 'ct1', '123456');
+    const calls = fetchMock.mock.calls.map(([url, init]) => ({ path: path(url), init: init as RequestInit }));
+    expect(calls.map((c) => c.path)).toEqual(['/proposals/contract/pdf/code', '/proposals/contract/pdf']);
+    expect(JSON.parse(calls[0].init.body as string)).toEqual({ token: 'p1.TESTE' });
+    expect(JSON.parse(calls[1].init.body as string)).toEqual({ token: 'p1.TESTE', contractId: 'ct1', code: '123456' });
+    calls.forEach(({ path: p, init }) => {
+      expect(p).not.toContain('p1.TESTE');
+      expect(p).not.toContain('123456');
+      expect(init).toMatchObject({ method: 'POST', referrerPolicy: 'origin' });
+    });
+    expect(clicks).toEqual([{ href: 'blob:http://localhost/contrato', download: 'contrato-XP-ANA-1.pdf' }]);
+  });
 });
 
 describe('contractAPI — comprovante pela página (semanas 2 e 3, 16/11/2026)', () => {

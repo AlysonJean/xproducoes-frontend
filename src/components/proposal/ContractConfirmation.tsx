@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { CheckCircle2, FileDown } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { contractAPI, readApiError } from '@/services/api';
 import { Button } from '@/components/ui/StandardComponents';
 import { formatPrice } from '@/utils/formatPrice';
 import { COMPANY_CNPJ, SUPPORT_EMAIL } from '@/data/site';
-import type { ContractInstallment, ContractOtp, ContractProof } from '@/types/contract';
+import type { ContractInstallment, ContractOtp, ContractPdfFile, ContractProof } from '@/types/contract';
+import { ContractPdfDownload } from './ContractPdfDownload';
 import { ContractPixPayment } from './ContractPixPayment';
 import { ContractProofUpload } from './ContractProofUpload';
 import {
@@ -13,8 +14,10 @@ import {
   contractErrorMessage,
   contractTime,
   currentTime,
+  LINK_CODE_RESEND_WAIT_MS,
   reopensProposal,
   serverMessage,
+  waitText,
   withdrawalOpen,
 } from './contractHelpers';
 
@@ -29,6 +32,9 @@ import {
 // Semanas 2 e 3 (16/11/2026): o PIX da parcela inicial com QR Code e "copia e cola" já com o valor (ContractPixPayment);
 // com a parcela já registrada pela equipe, nada de código para pagar de novo; e o comprovante pela própria página, com
 // aviso à equipe (ContractProofUpload), no lugar de "mande o comprovante pelo WhatsApp".
+// Decisões de 16/11/2026: baixar o contrato aceito ao reabrir o link pede um código ao e-mail que aceitou
+// (ContractPdfDownload; logo depois do aceite baixa direto o PDF lido no passo 2), e o PIX vencido ganha aviso
+// (ContractPixPayment).
 
 export interface ContractConfirmationData {
   acceptedAt?: string | null;
@@ -48,6 +54,8 @@ export interface ContractConfirmationData {
   contractId?: string;
   /** O e-mail (mascarado) que recebeu o código: o contrato vai para ele. */
   sentTo?: string;
+  /** Decisão de 16/11/2026: o PDF lido no passo 2 desta visita (baixa sem código; ao reabrir o link, o código). */
+  pdfFile?: ContractPdfFile;
 }
 
 export interface ContractConfirmationProps {
@@ -60,14 +68,9 @@ export interface ContractConfirmationProps {
 
 const WITHDRAW_UNAVAILABLE = `A desistência pelo site está indisponível agora. Desista pela sua área do cliente ou avise a equipe pelo WhatsApp ou pelo e-mail ${SUPPORT_EMAIL}.`;
 /** O servidor aceita outro código depois de 60 s. */
-const RESEND_WAIT_MS = 60_000;
-/** "42 s" ou, para esperas longas (o limite do dia), "3 h" / "25 min". */
-const waitText = (seconds: number) =>
-  seconds < 90 ? `${seconds} s` : seconds < 90 * 60 ? `${Math.ceil(seconds / 60)} min` : `${Math.ceil(seconds / 3600)} h`;
+const RESEND_WAIT_MS = LINK_CODE_RESEND_WAIT_MS;
 
 export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: ContractConfirmationProps) {
-  const [downloading, setDownloading] = useState(false);
-  const [downloadError, setDownloadError] = useState<string | null>(null);
   // O último código pedido (para onde foi e até quando vale) e se o campo do código está aberto: "Voltar" fecha o campo
   // sem esquecer o código, e "Desistir" de novo reabre com ele enquanto valer (um pedido novo trocaria o código).
   const [withdrawOtp, setWithdrawOtp] = useState<ContractOtp | null>(null);
@@ -81,28 +84,21 @@ export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: Con
   const [withdrawalClosed, setWithdrawalClosed] = useState(false);
   const [resendAt, setResendAt] = useState(0);
   const [now, setNow] = useState(currentTime);
+  // Revisão de 16/11/2026: há um código por vez (desistir ou baixar). Pedir o da desistência zera o de baixar da tela; um
+  // código novo de baixar zera o da desistência guardado aqui. Os comprovantes enviados tiram o aviso do PIX vencido.
+  const [pdfCodeReset, setPdfCodeReset] = useState(0);
+  const [proofCount, setProofCount] = useState(data.proofs?.length ?? 0);
   const codeRef = useRef<HTMLInputElement>(null);
   const desistirRef = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
+  // Já pediu um código de desistir nesta visita (para dizer "um novo código"), mesmo depois de a tela esquecê-lo.
+  const askedWithdraw = useRef(false);
   const waitSeconds = Math.max(0, Math.ceil((resendAt - now) / 1000));
 
   // A chave PIX do CNPJ da empresa (a da resposta do aceite; ao reabrir o link, a do site).
   const pixKey = data.pixKey || COMPANY_CNPJ;
   const received = Boolean(data.initialPaymentReceived);
   const canWithdraw = !withdrawalClosed && withdrawalOpen(data.withdrawUntil, data.canWithdraw);
-
-  const download = async () => {
-    if (!data.contractId) return;
-    setDownloading(true);
-    setDownloadError(null);
-    try {
-      await contractAPI.download(token, data.contractId);
-    } catch (error) {
-      setDownloadError(contractErrorMessage(readApiError(error), 'Não conseguimos baixar o contrato agora. Tente de novo em alguns minutos.'));
-    } finally {
-      setDownloading(false);
-    }
-  };
 
   // A contagem do "Enviar outro código" (o servidor pede 60 s entre pedidos).
   useEffect(() => {
@@ -134,13 +130,15 @@ export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: Con
 
   /** "Enviar outro código" (e o primeiro pedido): o código vai ao e-mail que aceitou o contrato. */
   const requestCode = async () => {
-    const again = withdrawOtp !== null;
+    const again = askedWithdraw.current;
     setRequesting(true);
     setWithdrawError(null);
     setCodeMessage(null);
     try {
       const sent = await contractAPI.withdrawCode(token);
+      askedWithdraw.current = true;
       setWithdrawOtp(sent);
+      setPdfCodeReset((n) => n + 1);
       setFormOpen(true);
       setCode('');
       setCodeError(null);
@@ -204,12 +202,22 @@ export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: Con
               ? 'Código incorreto. Confira e digite de novo.'
               : `Código incorreto. ${left === 1 ? 'Resta 1 tentativa' : `Restam ${left} tentativas`}.`,
         );
-        if (left === 0) setResendAt(0);
+        if (left === 0) {
+          setResendAt(0);
+          setWithdrawOtp(null);
+        }
+        setCode('');
+        codeRef.current?.focus();
+      } else if (info.code === 'CODE_OTHER_PURPOSE') {
+        // O código de baixar digitado aqui: não gasta tentativa; a pessoa pede o da desistência.
+        setCodeError(serverMessage(info) || 'Este é o código para baixar o contrato. Para desistir, peça o código da desistência em "Enviar outro código".');
+        setResendAt(0);
         setCode('');
         codeRef.current?.focus();
       } else if (info.code === 'CODE_EXPIRED') {
         setCodeError('O código venceu ou foi bloqueado. Peça outro código.');
         setResendAt(0);
+        setWithdrawOtp(null);
         setCode('');
         codeRef.current?.focus();
       } else if (reopensProposal(info.code)) {
@@ -283,7 +291,13 @@ export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: Con
             <ContractPixPayment pixKey={pixKey} />
           </>
         ) : (
-          <ContractPixPayment copyPaste={data.pixCopyPaste} pixKey={pixKey} amount={data.initialPayment?.amount} dueDate={data.initialPayment?.dueDate} />
+          <ContractPixPayment
+            copyPaste={data.pixCopyPaste}
+            pixKey={pixKey}
+            amount={data.initialPayment?.amount}
+            dueDate={data.initialPayment?.dueDate}
+            proofSent={proofCount > 0}
+          />
         )}
         <p>Pague só na chave PIX do CNPJ da empresa. Depois de pagar, envie o comprovante logo abaixo.</p>
         {data.balance && (
@@ -296,7 +310,7 @@ export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: Con
         )}
       </section>
 
-      <ContractProofUpload token={token} proofs={data.proofs ?? []} received={received} />
+      <ContractProofUpload token={token} proofs={data.proofs ?? []} received={received} onProofsChange={(list) => setProofCount(list.length)} />
 
       <div className="space-y-3">
         <p>
@@ -304,24 +318,16 @@ export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: Con
           comprovante do aceite.
         </p>
         {data.contractId ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            onClick={download}
-            isLoading={downloading}
-            leftIcon={<FileDown className="h-5 w-5" aria-hidden="true" />}
-            className="w-full normal-case tracking-normal sm:w-auto"
-          >
-            {downloading ? 'Baixando...' : 'Baixar contrato (PDF)'}
-          </Button>
+          <ContractPdfDownload
+            token={token}
+            contractId={data.contractId}
+            pdfFile={data.pdfFile}
+            onReopen={onReopen}
+            codeReset={pdfCodeReset}
+            onCodeIssued={() => setWithdrawOtp(null)}
+          />
         ) : (
           <p className="text-muted-foreground">A cópia do contrato em PDF está nesse e-mail.</p>
-        )}
-        {downloadError && (
-          <p role="alert" className="text-destructive">
-            {downloadError}
-          </p>
         )}
       </div>
 

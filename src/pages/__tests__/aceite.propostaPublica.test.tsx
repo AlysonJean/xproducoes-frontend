@@ -8,14 +8,24 @@ import { HelmetProvider } from 'react-helmet-async';
 // exato preparado, com a impressão digital) e o código do e-mail → confirmação com protocolo, PIX da parcela inicial e
 // "Desistir da contratação". Sem a chave, a página fica como estava. As chamadas seguem o "CONTRATO DA API" do roteiro
 // da leva B (aqui simuladas).
-const { apiFetch, quotePdfAPI, contractAPI } = vi.hoisted(() => ({
+const { apiFetch, quotePdfAPI, contractAPI, saveBlob } = vi.hoisted(() => ({
   apiFetch: vi.fn(),
   quotePdfAPI: { fromProposal: vi.fn() },
-  contractAPI: { prepare: vi.fn(), pdf: vi.fn(), download: vi.fn(), sendCode: vi.fn(), accept: vi.fn(), withdrawCode: vi.fn(), withdraw: vi.fn() },
+  contractAPI: {
+    prepare: vi.fn(),
+    pdf: vi.fn(),
+    download: vi.fn(),
+    pdfCode: vi.fn(),
+    sendCode: vi.fn(),
+    accept: vi.fn(),
+    withdrawCode: vi.fn(),
+    withdraw: vi.fn(),
+  },
+  saveBlob: vi.fn(),
 }));
 vi.mock('@/services/api', async () => {
   const actual = await vi.importActual<typeof import('@/services/api')>('@/services/api');
-  return { apiFetch, quotePdfAPI, contractAPI, readApiError: actual.readApiError };
+  return { apiFetch, quotePdfAPI, contractAPI, saveBlob, readApiError: actual.readApiError };
 });
 vi.mock('react-ga4', () => ({ default: { event: vi.fn(), initialize: vi.fn(), send: vi.fn(), set: vi.fn() } }));
 
@@ -27,6 +37,8 @@ const SHA = '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
 const SHA2 = '60303ae22b998861bce3b28f33eec1be758a213c86c93c076dbe9f558c11c752';
 const CNPJ_PIX = '55.343.824/0001-56';
 const BLOB_URL = 'blob:http://localhost/contrato-1';
+/** O arquivo que o passo 2 recebe do servidor (o mesmo que a confirmação baixa logo depois do aceite). */
+const PDF_BLOB = new Blob(['%PDF-'], { type: 'application/pdf' });
 
 const proposta = (contract?: object | null) => ({
   state: 'open',
@@ -146,7 +158,7 @@ beforeEach(() => {
   writeText = vi.fn().mockResolvedValue(undefined);
   Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
   contractAPI.prepare.mockResolvedValue(preparado());
-  contractAPI.pdf.mockResolvedValue({ blob: new Blob(['%PDF-'], { type: 'application/pdf' }), filename: 'contrato-XP-ANA-1.pdf' });
+  contractAPI.pdf.mockResolvedValue({ blob: PDF_BLOB, filename: 'contrato-XP-ANA-1.pdf' });
   contractAPI.withdrawCode.mockResolvedValue(CODIGO_DESISTENCIA);
   // Revisão de 14/11/2026: o CEP busca o endereço no ViaCEP; aqui ele não responde (cada teste que precisa simula).
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, json: async () => ({}) })));
@@ -217,6 +229,8 @@ describe('aceite online — fluxo completo', () => {
     expect(r).toContain('R$ 900,00, até 18/12/2027 às 22:00');
     expect(r).toContain('Frete incluído no kit até 15 km');
     expect(r).toContain('Você pode desistir em até 7 dias corridos depois do aceite');
+    // Decisão de 16/11/2026: ou até o início do evento, o que vier primeiro.
+    expect(r).toContain('Você pode desistir em até 7 dias corridos depois do aceite ou até o início do evento, o que vier primeiro, sem custo');
     expect(r).toContain('Foro do seu domicílio');
     expect(within(resumoBox).getByRole('row', { name: /61 dias ou mais antes do evento\s*10%/ })).toBeInTheDocument();
     expect(r).toContain('A retenção fica limitada ao valor que você já pagou');
@@ -291,8 +305,13 @@ describe('aceite online — fluxo completo', () => {
     expect(await screen.findByText('Chave PIX copiada.')).toBeInTheDocument();
     expect(writeText).toHaveBeenCalledWith('55343824000156');
 
+    // Decisão de 16/11/2026: logo depois do aceite, baixa o PDF lido no passo 2, sem pedir código.
     fireEvent.click(screen.getByRole('button', { name: 'Baixar contrato (PDF)' }));
-    expect(contractAPI.download).toHaveBeenCalledWith(CODIGO, 'ct1');
+    expect(saveBlob).toHaveBeenCalledTimes(1);
+    expect(saveBlob.mock.calls[0][0]).toBe(PDF_BLOB);
+    expect(saveBlob.mock.calls[0][1]).toBe('contrato-XP-ANA-1.pdf');
+    expect(contractAPI.pdfCode).not.toHaveBeenCalled();
+    expect(contractAPI.download).not.toHaveBeenCalled();
   });
 
   it('pessoa jurídica: razão social, CNPJ, quem aceita (nome, CPF e cargo) e a declaração de poderes; revendedor sem desistência', async () => {
@@ -568,8 +587,14 @@ describe('aceite online — reabrir o link', () => {
     expect(page).toContain('Os valores e os vencimentos estão no e-mail do contrato.');
     expect(screen.queryByRole('button', { name: 'Aceitar proposta' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Desistir da contratação' })).toBeInTheDocument();
+    // Decisão de 16/11/2026: ao reabrir o link, baixar pede o código enviado ao e-mail que aceitou.
+    contractAPI.pdfCode.mockResolvedValue({ sentTo: 'a***@cliente.test', expiresAt: '2099-01-01T00:00:00.000Z' });
     fireEvent.click(screen.getByRole('button', { name: 'Baixar contrato (PDF)' }));
-    expect(contractAPI.download).toHaveBeenCalledWith(CODIGO, 'ct1');
+    expect(contractAPI.pdfCode).toHaveBeenCalledWith(CODIGO);
+    const campo = await screen.findByLabelText('Código para baixar o contrato');
+    fireEvent.change(campo, { target: { value: '123456' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar' }));
+    await waitFor(() => expect(contractAPI.download).toHaveBeenCalledWith(CODIGO, 'ct1', '123456'));
     // Sem a resposta do aceite, a chave é o CNPJ do site; copia só os dígitos.
     fireEvent.click(screen.getByRole('button', { name: 'Copiar chave PIX' }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('55343824000156'));
@@ -637,8 +662,12 @@ describe('aceite online — reabrir o link', () => {
 
     await screen.findByRole('heading', { name: 'Passo 3 de 3: contrato aceito' });
     expect(screen.queryByRole('button', { name: 'Desistir da contratação' })).not.toBeInTheDocument();
+    contractAPI.pdfCode.mockResolvedValue({ sentTo: 'a***@cliente.test', expiresAt: '2099-01-01T00:00:00.000Z' });
     fireEvent.click(screen.getByRole('button', { name: 'Baixar contrato (PDF)' }));
-    expect(contractAPI.download).toHaveBeenCalledWith(CODIGO, 'ct9');
+    expect(contractAPI.pdfCode).toHaveBeenCalledWith(CODIGO);
+    fireEvent.change(await screen.findByLabelText('Código para baixar o contrato'), { target: { value: '654321' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar' }));
+    await waitFor(() => expect(contractAPI.download).toHaveBeenCalledWith(CODIGO, 'ct9', '654321'));
   });
 
   it('contratação desistida (200 com a proposta): "Contratação desistida em DD/MM", sem validade nem orçamento em PDF', async () => {

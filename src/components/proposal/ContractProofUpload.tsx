@@ -17,6 +17,8 @@ export interface ContractProofUploadProps {
   proofs: ContractProof[];
   /** A equipe já registrou a parcela inicial: o comprovante agora é o do saldo. */
   received: boolean;
+  /** Depois de cada envio, a lista nova (a confirmação tira o aviso do PIX vencido de quem já mandou o comprovante). */
+  onProofsChange?: (proofs: ContractProof[]) => void;
 }
 
 const FALLBACK = `Não conseguimos enviar o comprovante agora. Tente de novo ou mande pelo WhatsApp ou pelo e-mail ${SUPPORT_EMAIL}.`;
@@ -28,7 +30,7 @@ function proofErrorMessage(info: ReturnType<typeof readApiError>): string {
   return contractErrorMessage(info, FALLBACK);
 }
 
-export function ContractProofUpload({ token, proofs: initialProofs, received }: ContractProofUploadProps) {
+export function ContractProofUpload({ token, proofs: initialProofs, received, onProofsChange }: ContractProofUploadProps) {
   const [proofs, setProofs] = useState<ContractProof[]>(initialProofs);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +61,7 @@ export function ContractProofUpload({ token, proofs: initialProofs, received }: 
     try {
       const result = await contractAPI.proof(token, file);
       setProofs(result.proofs);
+      onProofsChange?.(result.proofs);
       setFile(null);
       if (inputRef.current) inputRef.current.value = '';
       setMessage(`Comprovante enviado em ${contractDayMonthTime(result.sentAt)}. A equipe recebeu o aviso, confere o PIX e confirma a reserva.`);

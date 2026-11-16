@@ -3,7 +3,7 @@ import { AlertTriangle, ExternalLink, FileDown } from 'lucide-react';
 import { contractAPI, readApiError } from '@/services/api';
 import { Button, buttonVariants } from '@/components/ui/StandardComponents';
 import { formatPrice } from '@/utils/formatPrice';
-import type { ContractAccepted, ContractPrepared, ContractPurpose } from '@/types/contract';
+import type { ContractAccepted, ContractPdfFile, ContractPrepared, ContractPurpose } from '@/types/contract';
 import { ContractDocumentText } from './ContractDocumentText';
 import {
   cancellationNotes,
@@ -27,7 +27,7 @@ import {
 
 const RESEND_WAIT_MS = 60_000;
 
-type PdfState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; url: string; filename: string };
+type PdfState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; url: string; filename: string; blob: Blob };
 
 function SummaryRow({ label, children, strong }: { label: string; children: ReactNode; strong?: boolean }) {
   return (
@@ -47,7 +47,11 @@ export interface ContractReviewStepProps {
   /** O contrato está sendo preparado de novo (CONTRACT_CHANGED): nada de aceitar o anterior enquanto isso. */
   busy?: boolean;
   onCorrect: () => void;
-  onAccepted: (accepted: ContractAccepted, sentTo: string) => void;
+  /**
+   * Aceito. Decisão de 16/11/2026: junto vai o PDF que a pessoa acabou de ler (os mesmos bytes do contrato aceito), para
+   * a confirmação baixar sem pedir o código que o link exige depois.
+   */
+  onAccepted: (accepted: ContractAccepted, sentTo: string, file?: ContractPdfFile) => void;
   /** 409 CONTRACT_CHANGED: a reserva mudou; quem chama prepara o contrato de novo. */
   onContractChanged: () => void;
   /** 409 ALREADY_ACCEPTED ou CONTRACT_WITHDRAWN: quem chama abre a proposta de novo. */
@@ -98,7 +102,7 @@ export function ContractReviewStep({
       .then(({ blob, filename }) => {
         if (!active) return;
         url = URL.createObjectURL(blob);
-        setPdf({ status: 'ready', url, filename: filename || 'contrato.pdf' });
+        setPdf({ status: 'ready', url, filename: filename || 'contrato.pdf', blob });
       })
       .catch((error: unknown) => {
         if (!active) return;
@@ -175,7 +179,7 @@ export function ContractReviewStep({
     setSubmitting(true);
     try {
       const accepted = await contractAPI.accept(token, { contractId: prepared.contractId, sha256: prepared.sha256, code });
-      onAccepted(accepted, otp.sentTo);
+      onAccepted(accepted, otp.sentTo, pdf.status === 'ready' ? { blob: pdf.blob, filename: pdf.filename } : undefined);
     } catch (error) {
       const info = readApiError(error);
       if (info.code === 'CONTRACT_CHANGED') {
@@ -251,7 +255,7 @@ export function ContractReviewStep({
           <SummaryRow label="Frete">{summary.freight}</SummaryRow>
           <SummaryRow label="Desistência">
             {summary.withdrawalDays
-              ? `Você pode desistir em até ${summary.withdrawalDays} dias corridos depois do aceite, sem custo, com a devolução de tudo o que pagou.`
+              ? `Você pode desistir em até ${summary.withdrawalDays} dias corridos depois do aceite ou até o início do evento, o que vier primeiro, sem custo, com a devolução de tudo o que pagou.`
               : 'Na contratação para revender ou produzir o evento de outra pessoa não há prazo de desistência: vale a tabela de cancelamento.'}
           </SummaryRow>
           <SummaryRow label="Foro">{summary.forum}</SummaryRow>

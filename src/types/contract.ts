@@ -50,6 +50,17 @@ export interface ContractOtp {
   /** O e-mail do código, mascarado pelo servidor. */
   sentTo: string;
   expiresAt: string;
+  /**
+   * Só no código para baixar o contrato (16/11/2026): "withdraw" quando o servidor não mandou outro porque o código da
+   * desistência ainda vale (ele também baixa); expiresAt é o dele.
+   */
+  reused?: 'withdraw';
+}
+
+/** Decisão de 16/11/2026: o PDF do contrato que a página já tem (o lido no passo 2), para baixar sem pedir código. */
+export interface ContractPdfFile {
+  blob: Blob;
+  filename: string;
 }
 
 export interface ContractCancellationRule {

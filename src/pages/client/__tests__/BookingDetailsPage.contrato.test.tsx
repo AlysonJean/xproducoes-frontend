@@ -147,6 +147,29 @@ describe('BookingDetailsPage (cliente) — cartão Contrato', () => {
     expect(screen.queryByRole('img', { name: /QR Code/ })).not.toBeInTheDocument();
   });
 
+  it('decisão de 16/11/2026: prazo da parcela vencido e o código na tela: o QR fica, com o aviso e o WhatsApp; no prazo, sem aviso', async () => {
+    const COPIA = '00020126360014br.gov.bcb.pix0114553438240001565204000053039865406900.005802BR5921X PRODUCOES E EVENTOS6014BELO HORIZONTE62190515CT20271130ABCD6304ABCD';
+    contractAPI.forClient.mockResolvedValue({
+      ...CONTRATO,
+      initialPayment: { amount: 900, dueDate: '2020-01-10T02:59:59.999Z' },
+      pix: { key: '55343824000156', keyType: 'CNPJ', copyPaste: COPIA },
+      initialPaymentReceived: false,
+    });
+    const vencida = await renderPage({ ...RESERVA, contractSummary: RESUMO });
+    expect(await screen.findByText('O prazo da parcela inicial venceu em 09/01/2020.')).toBeInTheDocument();
+    expect(texto()).toContain('Antes de pagar, confirme com a equipe se a data do evento continua reservada.');
+    expect(screen.getByRole('img', { name: 'QR Code do PIX, já com o valor' })).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: 'Falar com a equipe no WhatsApp' });
+    expect(link.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/\d+\?text=/);
+    expect(decodeURIComponent(link.getAttribute('href') ?? '')).toContain('venceu em 09/01/2020');
+    vencida.unmount();
+
+    contractAPI.forClient.mockResolvedValue({ ...CONTRATO, pix: { key: '55343824000156', keyType: 'CNPJ', copyPaste: COPIA }, initialPaymentReceived: false });
+    await renderPage({ ...RESERVA, contractSummary: RESUMO });
+    await screen.findByText('Pagar a parcela inicial por PIX');
+    expect(screen.queryByText(/O prazo da parcela inicial venceu/)).not.toBeInTheDocument();
+  });
+
   it('sem contrato (contractSummary null ou ausente): nenhum cartão e nenhuma chamada; os detalhes falham: estado do resumo e "Tentar de novo"', async () => {
     const semCampo = await renderPage(RESERVA);
     expect(screen.queryByRole('heading', { name: 'Contrato' })).not.toBeInTheDocument();

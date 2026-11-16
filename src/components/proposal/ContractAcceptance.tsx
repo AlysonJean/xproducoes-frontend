@@ -197,7 +197,7 @@ export function ContractAcceptance({ token, contract, onReload, prefill }: Contr
                 setError(null);
                 setStage('party');
               }}
-              onAccepted={(accepted, sentTo) => {
+              onAccepted={(accepted, sentTo, file) => {
                 setConfirmation({
                   acceptedAt: accepted.acceptedAt,
                   protocol: accepted.protocol,
@@ -212,6 +212,7 @@ export function ContractAcceptance({ token, contract, onReload, prefill }: Contr
                   proofs: [],
                   contractId: prepared.contractId,
                   sentTo,
+                  pdfFile: file,
                 });
                 setStage('accepted');
               }}

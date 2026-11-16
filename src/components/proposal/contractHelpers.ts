@@ -57,6 +57,13 @@ export const contractTime = (value?: string | null): string => {
 /** A hora de agora (fora do corpo do componente, que não chama Date.now direto). */
 export const currentTime = (): number => Date.now();
 
+/** Os códigos do link depois do aceite (desistir, baixar o contrato): o servidor aceita outro pedido depois de 60 s. */
+export const LINK_CODE_RESEND_WAIT_MS = 60_000;
+
+/** "42 s" ou, para esperas longas (o limite do dia), "3 h" / "25 min". */
+export const waitText = (seconds: number): string =>
+  seconds < 90 ? `${seconds} s` : seconds < 90 * 60 ? `${Math.ceil(seconds / 60)} min` : `${Math.ceil(seconds / 3600)} h`;
+
 const LINK_INVALID = 'Este link não é válido. Peça um novo link à equipe.';
 const LINK_GONE = 'Este link venceu ou foi trocado. Peça um novo link à equipe.';
 
@@ -138,12 +145,16 @@ const EVENT_LABEL: Record<string, string> = {
   WITHDRAW_OTP_VERIFIED: 'Código da desistência conferido',
   PROOF_UPLOADED: 'Comprovante enviado pela página da proposta',
   PAYMENT_REMINDER_SENT: 'Lembrete da parcela inicial enviado',
+  // Decisão de 16/11/2026: o código para baixar pelo link o contrato aceito, e cada download feito com ele.
+  PDF_OTP_SENT: 'Código para baixar o contrato enviado',
+  PDF_OTP_REJECTED: 'Código para baixar o contrato recusado',
+  PDF_DOWNLOADED: 'Contrato baixado pela página da proposta',
 };
 export const contractEventLabel = (type: string): string => EVENT_LABEL[type] ?? type;
 
 // ── Cláusulas em destaque ─────────────────────────────────────────────────────
 // O resumo antes do "Aceito" mostra em destaque as cláusulas que limitam direitos (Código de Defesa do Consumidor,
-// art. 54, § 4º). O texto vem da política de reserva (data/reservationPolicyContent.ts, versão 2026-11-13, as mesmas
+// art. 54, § 4º). O texto vem da política de reserva (data/reservationPolicyContent.ts, versão 2026-11-16, as mesmas
 // regras do contrato): os parágrafos que ela já marca em destaque. O contrato completo (o PDF) vale sobre o resumo.
 
 type PolicyParagraph = { kind: 'paragraph'; text: string; highlight?: boolean };

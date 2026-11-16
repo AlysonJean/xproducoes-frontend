@@ -8,12 +8,13 @@
 
 /**
  * Versão do texto: muda a cada revisão, para o aceite da P15 guardar qual texto o cliente leu. Textos legais
- * (13/11/2026): a versão passa a ser a data da revisão, a mesma do modelo do contrato do servidor ("2026-11-13").
+ * (13/11/2026): a versão passa a ser a data da revisão, a mesma do modelo do contrato do servidor ("2026-11-16": a desistência vale em
+ * até 7 dias do aceite ou até o início do evento, o que vier primeiro, decisão de 16/11/2026).
  */
-export const RESERVATION_POLICY_VERSION = '2026-11-13';
+export const RESERVATION_POLICY_VERSION = '2026-11-16';
 
 /** Data da última revisão do texto (como LAST_UPDATED dos Termos). Atualize junto com a versão. */
-export const RESERVATION_POLICY_UPDATED_AT = '13/11/2026';
+export const RESERVATION_POLICY_UPDATED_AT = '16/11/2026';
 
 /**
  * Só vira true quando o dono e o advogado aprovarem o texto e nenhuma seção estiver marcada "Texto proposto, a
