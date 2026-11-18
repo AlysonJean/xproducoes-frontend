@@ -90,6 +90,26 @@ describe('página pública da proposta', () => {
 
     expect(await screen.findByText('Este link venceu ou foi trocado. Peça um novo link à equipe.')).toBeInTheDocument();
   });
+
+  it.each([
+    ['o /view (código em "error")', { success: false, error: 'PROPOSAL_CANCELLED', message: 'x' }],
+    ['as rotas do aceite (código em "code")', { success: false, error: 'PROPOSAL_CANCELLED', code: 'PROPOSAL_CANCELLED', message: 'x' }],
+  ])('teste de 17/11/2026: reserva cancelada pela equipe (410 PROPOSAL_CANCELLED, %s): "Esta reserva foi cancelada", sem "link venceu"', async (_caso, body) => {
+    abrirProposta(Promise.reject(Object.assign(new Error('falhou'), { status: 410, body })));
+
+    expect(await screen.findByText('Esta reserva foi cancelada. Se tiver alguma dúvida, fale com a equipe pelo WhatsApp.')).toBeInTheDocument();
+    expect(texto()).not.toContain('Este link venceu');
+    expect(texto()).not.toContain('novo link');
+    const whatsapp = screen.getByRole('link', { name: /WhatsApp/ });
+    expect(decodeURIComponent(whatsapp.getAttribute('href') ?? '')).toContain('vi que a reserva foi cancelada');
+  });
+
+  it('teste de 17/11/2026: 410 com outro código (link trocado ou vencido) continua "Este link venceu ou foi trocado"', async () => {
+    abrirProposta(Promise.reject(Object.assign(new Error('falhou'), { status: 410, body: { success: false, error: 'PROPOSAL_GONE', message: 'x' } })));
+
+    expect(await screen.findByText('Este link venceu ou foi trocado. Peça um novo link à equipe.')).toBeInTheDocument();
+    expect(texto()).not.toContain('foi cancelada');
+  });
 });
 
 describe('área do cliente (página da reserva)', () => {

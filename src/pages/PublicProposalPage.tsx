@@ -5,6 +5,7 @@ import { BrandLoader } from '@/components/ui/BrandLoader';
 import { Button, Card } from '@/components/ui/StandardComponents';
 import { NoticeCard, PROPOSAL_HELP_TEXT, ProposalShell, WhatsAppLink } from '@/components/proposal/ProposalShell';
 import { ContractAcceptance } from '@/components/proposal/ContractAcceptance';
+import { BOOKING_CANCELLED_CODE, BOOKING_CANCELLED_MESSAGE } from '@/components/proposal/contractHelpers';
 import type { ProposalContractStatus, ProposalPrefill } from '@/types/contract';
 import { formatPrice } from '@/utils/formatPrice';
 import { formatPricingLineTotal, toArrangeNote, type ToArrangeKind } from '@/utils/bookingPricing';
@@ -38,6 +39,9 @@ import { clientEventTitle } from '@/utils/eventTitle';
 // aceito ou desistido aparece sempre, também com a chave desligada depois e na resposta { state: "closed" } (reserva
 // confirmada, ou validade vencida depois do aceite): o link é o caminho permanente para baixar o contrato e desistir no
 // prazo de 7 dias (CDC, art. 49).
+// Teste de 17/11/2026: a reserva cancelada pela equipe (com ou sem contrato aceito) responde 410 PROPOSAL_CANCELLED, e a
+// página diz "Esta reserva foi cancelada..." com o WhatsApp, em vez de "Este link venceu ou foi trocado. Peça um novo
+// link à equipe." (um link novo não abriria nada). A desistida continua com "Contratação desistida".
 
 interface ProposalLine {
   description: string;
@@ -66,6 +70,7 @@ type ViewState =
   | { kind: 'loading' }
   | { kind: 'invalid' }
   | { kind: 'gone' }
+  | { kind: 'cancelled' }
   | { kind: 'closed'; contract?: ProposalContractStatus | null; token?: string }
   | { kind: 'unavailable' }
   | { kind: 'error' }
@@ -81,6 +86,7 @@ const showsContract = (contract?: ProposalContractStatus | null): contract is Pr
 const MESSAGES: Record<Exclude<ViewState['kind'], 'loading' | 'open'>, string> = {
   invalid: 'Este link não é válido. Peça um novo link à equipe.',
   gone: 'Este link venceu ou foi trocado. Peça um novo link à equipe.',
+  cancelled: BOOKING_CANCELLED_MESSAGE,
   closed: 'Esta proposta já foi confirmada.',
   unavailable: 'Link de proposta indisponível no momento.',
   error: 'Não conseguimos abrir a proposta agora. Tente de novo em alguns minutos ou fale com a equipe.',
@@ -97,10 +103,19 @@ function readTokenFromHash(): string | null {
   return token && token.trim() ? token.trim() : null;
 }
 
+/** O código do erro no corpo: o /proposals/view manda em "error" (as rotas do aceite mandam também em "code"). */
+function errorCode(error: unknown): string | null {
+  const body = (error as { body?: { code?: unknown; error?: unknown } } | null)?.body;
+  const code = body?.code ?? body?.error;
+  return typeof code === 'string' ? code : null;
+}
+
+const bookingCancelled = (error: unknown) => errorCode(error) === BOOKING_CANCELLED_CODE;
+
 function stateForError(error: unknown): ViewState {
   const status = (error as { status?: number } | null)?.status;
   if (status === 404 || status === 400) return { kind: 'invalid' };
-  if (status === 410) return { kind: 'gone' };
+  if (status === 410) return bookingCancelled(error) ? { kind: 'cancelled' } : { kind: 'gone' };
   if (status === 503) return { kind: 'unavailable' };
   return { kind: 'error' };
 }
@@ -110,7 +125,7 @@ function stateForError(error: unknown): ViewState {
 function pdfErrorMessage(error: unknown): string {
   const status = (error as { status?: number } | null)?.status;
   if (status === 404 || status === 400) return MESSAGES.invalid;
-  if (status === 410) return MESSAGES.gone;
+  if (status === 410) return bookingCancelled(error) ? MESSAGES.cancelled : MESSAGES.gone;
   if (status === 409) return MESSAGES.closed;
   if (status === 503) return MESSAGES.unavailable;
   if (status === 429 && error instanceof Error && error.message) return error.message;
@@ -292,7 +307,13 @@ export default function PublicProposalPage() {
       {view.kind !== 'loading' && view.kind !== 'open' && !(view.kind === 'closed' && isSigned(view.contract)) && (
         <NoticeCard
           message={MESSAGES[view.kind]}
-          whatsappText={view.kind === 'closed' ? 'Olá! Quero falar sobre a minha reserva já confirmada.' : PROPOSAL_HELP_TEXT}
+          whatsappText={
+            view.kind === 'closed'
+              ? 'Olá! Quero falar sobre a minha reserva já confirmada.'
+              : view.kind === 'cancelled'
+                ? 'Olá! Abri o link da proposta e vi que a reserva foi cancelada. Quero falar sobre ela.'
+                : PROPOSAL_HELP_TEXT
+          }
         />
       )}
     </ProposalShell>

@@ -332,20 +332,50 @@ export interface CepAddress {
   state: string;
 }
 
-/** Endereço pelo CEP (ViaCEP, grátis). Qualquer falha devolve null: a pessoa preenche à mão. */
+/** A espera antes da segunda tentativa do ViaCEP. */
+export const CEP_RETRY_DELAY_MS = 700;
+
+/** Espera ms, ou menos se a busca for cancelada (outro CEP digitado, tela fechada). */
+const pause = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      { once: true },
+    );
+  });
+
+/**
+ * Endereço pelo CEP (ViaCEP, grátis). Sem endereço devolve null: a pessoa preenche à mão.
+ * Teste de 17/11/2026: um CEP que existe (30810-310) deu "Não achamos o endereço deste CEP" e na segunda vez completou.
+ * A falha do serviço (rede, tempo esgotado, 5xx, 429 ou resposta que não é JSON) tem uma segunda tentativa depois de
+ * CEP_RETRY_DELAY_MS; o CEP que não existe ({ erro: true }) e o 400 (CEP malformado) não repetem, e a busca cancelada
+ * para na hora.
+ */
 export async function lookupCep(cep: string, signal?: AbortSignal): Promise<CepAddress | null> {
-  try {
-    const response = await fetch(`https://viacep.com.br/ws/${digitsOf(cep)}/json/`, { signal });
-    if (!response.ok) return null;
-    const data = await response.json();
-    if (!data || data.erro) return null;
-    return {
-      street: data.logradouro || '',
-      neighborhood: data.bairro || '',
-      city: data.localidade || '',
-      state: data.uf || '',
-    };
-  } catch {
-    return null;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    if (attempt > 1) await pause(CEP_RETRY_DELAY_MS, signal);
+    if (signal?.aborted) return null;
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${digitsOf(cep)}/json/`, { signal });
+      if (response.ok) {
+        const data = await response.json();
+        if (!data || data.erro) return null;
+        return {
+          street: data.logradouro || '',
+          neighborhood: data.bairro || '',
+          city: data.localidade || '',
+          state: data.uf || '',
+        };
+      }
+      if (!(response.status >= 500 || response.status === 429)) return null;
+    } catch {
+      // Rede, tempo esgotado, busca cancelada ou corpo que não é JSON: a volta seguinte decide.
+    }
   }
+  return null;
 }

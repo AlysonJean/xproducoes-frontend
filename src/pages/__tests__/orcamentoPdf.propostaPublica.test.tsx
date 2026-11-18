@@ -82,6 +82,17 @@ describe('orçamento em PDF — página da proposta', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(mensagem);
   });
 
+  it('teste de 17/11/2026: reserva cancelada com a página aberta (410 PROPOSAL_CANCELLED): "Esta reserva foi cancelada"', async () => {
+    apiFetch.mockResolvedValue(aberta);
+    quotePdfAPI.fromProposal.mockRejectedValue(Object.assign(httpError(410), { body: { success: false, error: 'PROPOSAL_CANCELLED', message: 'x' } }));
+    montar();
+    await screen.findByRole('heading', { name: 'Formatura da Ana' });
+
+    fireEvent.click(botao());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Esta reserva foi cancelada. Se tiver alguma dúvida, fale com a equipe pelo WhatsApp.');
+  });
+
   it('muitos downloads (429): a mensagem do servidor', async () => {
     apiFetch.mockResolvedValue(aberta);
     quotePdfAPI.fromProposal.mockRejectedValue(httpError(429, 'Muitos downloads do orçamento. Aguarde alguns minutos e tente de novo.'));

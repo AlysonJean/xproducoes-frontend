@@ -66,6 +66,12 @@ export const waitText = (seconds: number): string =>
 
 const LINK_INVALID = 'Este link não é válido. Peça um novo link à equipe.';
 const LINK_GONE = 'Este link venceu ou foi trocado. Peça um novo link à equipe.';
+/**
+ * Teste de 17/11/2026: a reserva cancelada pela equipe (410 PROPOSAL_CANCELLED) dizia "Este link venceu ou foi trocado.
+ * Peça um novo link à equipe.", e um link novo não abriria nada.
+ */
+export const BOOKING_CANCELLED_CODE = 'PROPOSAL_CANCELLED';
+export const BOOKING_CANCELLED_MESSAGE = 'Esta reserva foi cancelada. Se tiver alguma dúvida, fale com a equipe pelo WhatsApp.';
 
 /** A frase do servidor (já escrita para o cliente), ou vazio quando o erro não trouxe uma ("HTTP 409: ..."). */
 export const serverMessage = (info: { message: string }): string =>
@@ -81,10 +87,10 @@ export const reopensProposal = (code: string | null): boolean => code === 'ALREA
  * A mensagem dos erros comuns às rotas do aceite: link inválido ou vencido, limitador, serviço fora do ar e, nos
  * 400/409/422 (proposta encerrada, sem valor, desistida...), a frase do servidor, que já é para o cliente.
  */
-export function contractErrorMessage(info: { status: number | null; message: string }, fallback: string): string {
+export function contractErrorMessage(info: { status: number | null; message: string; code?: string | null }, fallback: string): string {
   const fromServer = serverMessage(info);
   if (info.status === 404) return LINK_INVALID;
-  if (info.status === 410) return LINK_GONE;
+  if (info.status === 410) return info.code === BOOKING_CANCELLED_CODE ? BOOKING_CANCELLED_MESSAGE : LINK_GONE;
   if (info.status === 429) return fromServer || 'Muitas tentativas seguidas. Aguarde alguns minutos e tente de novo.';
   if (info.status === 503) return 'O aceite pelo site está indisponível no momento. Tente de novo em alguns minutos ou fale com a equipe.';
   if ((info.status === 400 || info.status === 409 || info.status === 422) && fromServer) return fromServer;
