@@ -66,6 +66,7 @@ import {
 import { notifyClientPayload } from '../../utils/notifyClient';
 import { NotifyClientCheckbox } from '../../components/bookings/NotifyClientCheckbox';
 import { SendProposalPanel } from '../../components/bookings/SendProposalPanel';
+import { itemsLockedReason, proposalForBookingPath } from '../../utils/proposalFromBooking';
 import { refreshAdminSummary } from '../../stores/adminSummary';
 import { ProposalHistory } from '../../components/bookings/ProposalHistory';
 import { StageWhatsAppPanel } from '../../components/bookings/StageWhatsAppPanel';
@@ -652,6 +653,12 @@ export const BookingDetailPage = () => {
   const venue = venueAnswers(booking);
   const kitEntries = booking.kits && booking.kits.length > 0 ? booking.kits : (booking.kit ? [booking.kit] : []);
   const equipmentEntries = booking.equipments || [];
+  // 18/11/2026: o pedido do briefing chega sem itens do catálogo, e a edição mostra os itens só para leitura: não havia
+  // como pôr kit e equipamentos nele. "Montar orçamento" abre a Proposta Rápida com esta reserva, e salvar troca os itens
+  // dela. Só com a proposta em aberto, fora do histórico e sem contrato aceito (a mesma regra do servidor).
+  const canBuildQuote = !itemsLockedReason(booking);
+  const hasItems = (booking.items?.length ?? 0) > 0;
+  const openQuoteBuilder = () => navigate(proposalForBookingPath(booking.id));
 
   return (
     <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
@@ -890,10 +897,22 @@ export const BookingDetailPage = () => {
 
             {/* Itens */}
             <Card className="p-6 sm:p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <Layers className="text-primary h-6 w-6" />
-                <h3 className="text-lg font-bold text-foreground">Itens da reserva</h3>
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                <div className="flex items-center gap-3">
+                  <Layers className="text-primary h-6 w-6" />
+                  <h3 className="text-lg font-bold text-foreground">Itens da reserva</h3>
+                </div>
+                {canBuildQuote && (
+                  <Button size="sm" variant={hasItems ? 'outline' : 'primary'} onClick={openQuoteBuilder} leftIcon={<Plus className="h-4 w-4" />}>
+                    {hasItems ? 'Refazer orçamento' : 'Montar orçamento'}
+                  </Button>
+                )}
               </div>
+              {canBuildQuote && !hasItems && (
+                <p className="-mt-3 mb-6 text-sm text-muted-foreground">
+                  Esta reserva ainda não tem itens. Use "Montar orçamento" para pôr kit, equipamentos, serviços e frete; depois envie a proposta.
+                </p>
+              )}
 
               {/* Auditoria do orçamento (12/11/2026), O14/C4: a reserva só de equipamentos dizia "Nenhum kit" e "Nenhum
                   serviço", como se estivesse vazia: os equipamentos não apareciam. */}
@@ -1159,6 +1178,11 @@ export const BookingDetailPage = () => {
                   <p className="text-sm text-foreground mt-3 leading-relaxed whitespace-pre-line break-words">
                     {booking.specialRequests}
                   </p>
+                  {canBuildQuote && !hasItems && (
+                    <Button size="sm" className="mt-4" onClick={openQuoteBuilder} leftIcon={<Plus className="h-4 w-4" />}>
+                      Montar orçamento a partir do briefing
+                    </Button>
+                  )}
                 </div>
               )}
 

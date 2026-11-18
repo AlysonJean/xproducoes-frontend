@@ -22,7 +22,8 @@ import {
   Send,
   Zap,
   ArrowRight,
-  AlertCircle
+  AlertCircle,
+  FileText
 } from 'lucide-react';
 import type { Client, Equipment, Kit, Service } from '@/types/types';
 import { apiFetch } from '@/services/api';
@@ -34,6 +35,8 @@ import { equipmentUnits, equipmentUnitSuffix, equipmentUnitText, hoursBetween, k
 import { isWholeEventService } from '@/utils/wholeEventService';
 import { KIT_FULFILLMENT_LABEL, kitFulfillment } from '@/utils/kitInfo';
 import { findSetupService } from '@/utils/cartCatalog';
+import { proposalBaseFromBooking, type ProposalBaseBooking } from '@/utils/proposalFromBooking';
+import type { BookingDetails } from '@/types/types';
 
 const ITEM_TYPE_LABELS: Record<string, string> = {
   EQUIPMENT: 'Equipamento',
@@ -214,6 +217,15 @@ export const AdminQuickProposalPage = () => {
   const [fromContact] = useState<ContactProposalPrefill | null>(
     () => (routerLocation.state as { fromContact?: ContactProposalPrefill } | null)?.fromContact ?? null,
   );
+  // 18/11/2026: "Montar orçamento" da ficha abre esta página com ?reserva=<código> (pedido do briefing, sem itens do
+  // catálogo). A tela vem com a reserva (cliente, datas, endereço e o briefing à vista) e salvar troca os itens dela, sem
+  // criar outra reserva (ver utils/proposalFromBooking). Fica no endereço: recarregar a página abre a mesma reserva.
+  const bookingId = useMemo(
+    () => new URLSearchParams(routerLocation.search).get('reserva')?.trim() || null,
+    [routerLocation.search],
+  );
+  const [baseBooking, setBaseBooking] = useState<ProposalBaseBooking | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   // Form State - Cliente
   const [clientType, setClientType] = useState<'registered' | 'manual'>('manual');
@@ -259,11 +271,40 @@ export const AdminQuickProposalPage = () => {
   // se o formulário mudou, é outro envio e ganha chave nova.
   const lastSubmissionRef = useRef<{ body: string; key: string } | null>(null);
 
+  // A reserva do "Montar orçamento" preenche a tela uma vez: o "Tentar de novo" do catálogo não desfaz o que foi digitado.
+  const prefilledRef = useRef(false);
+  const loadBaseBooking = async (id: string) => {
+    try {
+      setBookingError(null);
+      const raw = await apiFetch<BookingDetails>(`/bookings/${encodeURIComponent(id)}`);
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !raw.id) throw new Error('Reserva não encontrada.');
+      const base = proposalBaseFromBooking(raw);
+      setBaseBooking(base);
+      if (!prefilledRef.current) {
+        prefilledRef.current = true;
+        setEventTitle(base.eventTitle);
+        setLocation(base.location);
+        setEventDate(base.eventDate);
+        setEventEndDate(base.eventEndDate);
+        setStreet(base.street);
+        setAddressNumber(base.addressNumber);
+        setNeighborhood(base.neighborhood);
+        setCity(base.city);
+        setState(base.state);
+        setZipCode(base.zipCode);
+      }
+    } catch (error: unknown) {
+      setBaseBooking(null);
+      setBookingError(error instanceof Error && error.message ? error.message : 'Não foi possível abrir a reserva.');
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setCatalogError(null);
+        if (bookingId) await loadBaseBooking(bookingId);
         const [clientsRes, equipsRes, kitsRes, servicesRes] = await Promise.all([
           apiFetch<Client[]>('/admin/clients'),
           apiFetch<Equipment[]>('/equipments'),
@@ -282,7 +323,7 @@ export const AdminQuickProposalPage = () => {
       }
     };
     fetchData();
-  }, [reloadKey]);
+  }, [reloadKey, bookingId]);
 
   const pricedItems = useMemo(
     () => priceItems(items, eventDate, eventEndDate),
@@ -559,6 +600,9 @@ export const AdminQuickProposalPage = () => {
   };
 
   const validate = (): string | null => {
+    // Orçamento de uma reserva: só com ela aberta e com os itens liberados (a mesma regra do servidor).
+    if (bookingId && !baseBooking) return bookingError || 'A reserva ainda não foi carregada.';
+    if (baseBooking?.lockedReason) return baseBooking.lockedReason;
     if (items.length === 0) return 'Adicione pelo menos um item ao orçamento.';
     if (items.some((i) => !i.description.trim())) return 'Dê um nome a cada item do orçamento.';
     // Auditoria do orçamento (12/11/2026), O31/C12 e O18/A4/C11.
@@ -574,10 +618,11 @@ export const AdminQuickProposalPage = () => {
     if (!city.trim()) return 'Informe a cidade.';
     if (!state.trim()) return 'Informe o estado (UF).';
     if (!zipCode.trim()) return 'Informe o CEP.';
-    if (clientType === 'manual') {
+    // No orçamento de uma reserva, o cliente é o dela e não muda por aqui.
+    if (!bookingId && clientType === 'manual') {
       if (!clientName.trim()) return 'Informe o nome do cliente.';
       if (!clientContact.trim()) return 'Informe o contato (WhatsApp) do cliente.';
-    } else if (clientType === 'registered' && !selectedClientId) {
+    } else if (!bookingId && clientType === 'registered' && !selectedClientId) {
       return 'Selecione um cliente cadastrado.';
     }
     // Garantir que há pelo menos um item de catálogo (schema exige kitId ou equipmentIds ou serviceIds)
@@ -630,6 +675,32 @@ export const AdminQuickProposalPage = () => {
         ...(i.type === 'KIT' && i.sourceId ? { kitId: i.sourceId } : {}),
       }));
 
+      // 18/11/2026: orçamento de uma reserva ("Montar orçamento" da ficha). As linhas trocam as da reserva, e o servidor
+      // liga o kit, os equipamentos e os serviços delas e refaz o total (itens + frete + pedágio). Vão também o título,
+      // o local, as datas e o endereço, que podem ter sido corrigidos aqui; o cliente, o status e as observações
+      // internas ficam como estão. Nada vai ao cliente: o link sai do "Enviar proposta" da ficha, para onde a tela volta.
+      if (bookingId) {
+        await apiFetch(`/bookings/${encodeURIComponent(bookingId)}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            ...(eventTitle.trim() ? { eventTitle: eventTitle.trim() } : {}),
+            location,
+            street,
+            addressNumber,
+            neighborhood,
+            city,
+            state,
+            zipCode,
+            eventDate: new Date(eventDate).toISOString(),
+            eventEndDate: new Date(eventEndDate).toISOString(),
+            items: proposalItems,
+          }),
+        });
+        addNotification({ type: 'success', title: 'Orçamento salvo na reserva', message: 'Confira a reserva e use "Enviar proposta": o link vai pelo WhatsApp e por e-mail, se a reserva tiver e-mail.' });
+        navigate(`/admin/reservas/${encodeURIComponent(bookingId)}`, { state: { sendProposal: true } });
+        return;
+      }
+
       // Achado (auditoria ponta a ponta): ia também `userId: user?.id`, o id do admin logado. Com
       // cliente manual, o backend pendurava a reserva no perfil de cliente do próprio admin (telefone
       // da primeira proposta manual) e a confirmação ia ao admin por e-mail e a outro cliente por
@@ -675,8 +746,8 @@ export const AdminQuickProposalPage = () => {
         headers: { 'Idempotency-Key': idempotencyKey }
       });
 
-      const bookingId = booking?.id;
-      if (!bookingId) throw new Error('Reserva criada mas ID não retornado.');
+      const createdId = booking?.id;
+      if (!createdId) throw new Error('Reserva criada mas ID não retornado.');
 
       // D11 (aprovada em 02/11/2026): salvar não manda nada ao cliente. O link seguro, o e-mail e o WhatsApp saem do
       // "Enviar proposta" da página da reserva, para onde a tela vai agora. Antes o aviso prometia um link que a
@@ -684,7 +755,7 @@ export const AdminQuickProposalPage = () => {
       // "PDF + WhatsApp" desta tela saiu); o estado sendProposal pede à ficha que leve ao "Enviar proposta", sem enviar
       // sozinha (o envio manda e-mail ao cliente).
       addNotification({ type: 'success', title: 'Proposta salva', message: 'Confira a reserva e use "Enviar proposta": o link vai pelo WhatsApp e por e-mail, se a reserva tiver e-mail.' });
-      navigate(`/admin/reservas/${bookingId}`, { state: { sendProposal: true } });
+      navigate(`/admin/reservas/${createdId}`, { state: { sendProposal: true } });
     } catch (error: unknown) {
       const err = error as { message?: string } | null;
       const msg = err?.message || 'Falha ao salvar. Verifique os campos e tente novamente.';
@@ -698,10 +769,14 @@ export const AdminQuickProposalPage = () => {
   // navegador (jsPDF), com outro visual e a sua própria conta; depois de salvar, a ficha da reserva baixa o orçamento
   // oficial, que o servidor gera a partir da reserva (o mesmo do link da proposta e da área do cliente).
 
+  // 18/11/2026: o orçamento de uma reserva tem o próprio caminho no topo.
+  const breadcrumbs = bookingId ? [...BREADCRUMBS.slice(0, 2), { name: 'Orçamento da reserva' }] : BREADCRUMBS;
+  const saveBlocked = Boolean(bookingId) && (!baseBooking || Boolean(baseBooking.lockedReason));
+
   // Carregando dentro do layout (antes: BrandLoader em tela cheia, sem menu nem título).
   if (loading) {
     return (
-      <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
+      <AdminLayout title={PAGE_TITLE} breadcrumbs={breadcrumbs}>
         <div className="flex items-center justify-center min-h-[60vh]">
           <BrandLoader size="xl" label="Carregando catálogo…" />
         </div>
@@ -710,7 +785,7 @@ export const AdminQuickProposalPage = () => {
   }
 
   return (
-    <AdminLayout title={PAGE_TITLE} breadcrumbs={BREADCRUMBS}>
+    <AdminLayout title={PAGE_TITLE} breadcrumbs={breadcrumbs}>
       <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
         <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -719,17 +794,21 @@ export const AdminQuickProposalPage = () => {
               <Zap className="h-6 w-6 text-primary" aria-hidden="true" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground">Nova proposta comercial</h2>
+              <h2 className="text-xl font-bold text-foreground">{bookingId ? `Orçamento da reserva ${baseBooking?.code ?? ''}`.trim() : 'Nova proposta comercial'}</h2>
               {/* E8 (auditoria do orçamento, 12/11/2026): o link é o caminho da proposta. Orçamento em PDF (13/11/2026): o PDF
                   sai da ficha, depois de salvar. */}
-              <p className="text-sm text-muted-foreground">Monte o orçamento e salve: o cliente recebe o link da proposta pelo "Enviar proposta" da ficha da reserva, onde também se baixa o orçamento em PDF.</p>
+              <p className="text-sm text-muted-foreground">
+                {bookingId
+                  ? 'Monte os itens e salve: eles entram nesta reserva. O cliente recebe o link da proposta pelo "Enviar proposta" da ficha, onde também se baixa o orçamento em PDF.'
+                  : 'Monte o orçamento e salve: o cliente recebe o link da proposta pelo "Enviar proposta" da ficha da reserva, onde também se baixa o orçamento em PDF.'}
+              </p>
             </div>
           </div>
           {/* flex-wrap: os botões em linha estouravam a tela de 375px. */}
           <div className="flex flex-wrap gap-2">
              <Button variant="outline" size="sm" onClick={() => navigate(-1)}>Cancelar</Button>
-             <Button size="sm" onClick={() => handleSave('PENDING')} isLoading={saving} leftIcon={<Send className="h-4 w-4" />}>
-                Salvar proposta
+             <Button size="sm" onClick={() => handleSave('PENDING')} isLoading={saving} disabled={saveBlocked} leftIcon={<Send className="h-4 w-4" />}>
+                {bookingId ? 'Salvar na reserva' : 'Salvar proposta'}
              </Button>
           </div>
         </header>
@@ -743,6 +822,25 @@ export const AdminQuickProposalPage = () => {
           />
         )}
 
+        {bookingError && (
+          <Alert
+            variant="error"
+            title="Não foi possível abrir a reserva"
+            description={bookingError}
+            action={<Button variant="outline" size="sm" onClick={() => bookingId && void loadBaseBooking(bookingId)}>Tentar de novo</Button>}
+          />
+        )}
+        {baseBooking?.lockedReason && (
+          <Alert variant="warning" title="Os itens desta reserva não mudam" description={baseBooking.lockedReason} />
+        )}
+        {baseBooking && !baseBooking.lockedReason && baseBooking.itemCount > 0 && (
+          <Alert
+            variant="info"
+            title="A reserva já tem itens"
+            description={`Hoje ela tem ${baseBooking.itemCount === 1 ? '1 item' : `${baseBooking.itemCount} itens`}. Salvar troca todos pelos itens desta tela, e o total é refeito por eles (com o frete e o pedágio).`}
+          />
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Form Area */}
           <div className="lg:col-span-2 space-y-6">
@@ -753,6 +851,15 @@ export const AdminQuickProposalPage = () => {
                  <Package className="h-4 w-4" aria-hidden="true" /> Dados do cliente
                </h3>
                
+               {bookingId ? (
+                 baseBooking && (
+                   <div className="space-y-1 text-sm">
+                     <p className="font-semibold text-foreground break-words">{baseBooking.clientName}</p>
+                     <p className="text-muted-foreground break-all">{[baseBooking.clientPhone, baseBooking.clientEmail].filter(Boolean).join(' · ') || 'Sem telefone nem e-mail'}</p>
+                     <p className="text-xs text-muted-foreground">O cliente da reserva não muda por aqui.</p>
+                   </div>
+                 )
+               ) : (
                <div className="space-y-4">
                   <Select 
                     label="Origem do Cliente"
@@ -779,7 +886,18 @@ export const AdminQuickProposalPage = () => {
                     </div>
                   )}
                </div>
+               )}
             </Card>
+
+            {/* 18/11/2026: no orçamento de uma reserva do briefing, as respostas do cliente ficam à vista enquanto se montam os itens. */}
+            {baseBooking?.briefing && (
+              <Card className="p-6 border-primary/20 bg-primary/5">
+                <h3 className="flex items-center gap-2 mb-3 text-primary font-semibold uppercase text-xs tracking-wider">
+                  <FileText className="h-4 w-4" aria-hidden="true" /> Briefing do cliente
+                </h3>
+                <p className="text-sm text-foreground leading-relaxed whitespace-pre-line break-words">{baseBooking.briefing}</p>
+              </Card>
+            )}
 
             {/* Items Card */}
             <Card className="p-6 border-2 border-primary/10 overflow-hidden">
@@ -963,9 +1081,12 @@ export const AdminQuickProposalPage = () => {
                    <Input label="UF *" value={state} onChange={e => setState(e.target.value)} placeholder="Ex: MG" maxLength={2} error={fieldErrors.state} />
                  </div>
                </div>
-               <div className="mt-4">
-                 <Textarea label="Observações Internas (Não aparecem na proposta)" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Ex.: cliente pediu desconto; negociar o frete se fechar hoje." />
-               </div>
+               {/* No orçamento de uma reserva, as observações internas dela mudam pelo Editar da ficha (não vão daqui). */}
+               {!bookingId && (
+                 <div className="mt-4">
+                   <Textarea label="Observações Internas (Não aparecem na proposta)" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Ex.: cliente pediu desconto; negociar o frete se fechar hoje." />
+                 </div>
+               )}
             </Card>
           </div>
 

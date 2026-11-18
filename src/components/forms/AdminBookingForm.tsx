@@ -637,9 +637,9 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
 
         {isEditing ? (
           // Achado (auditoria ponta a ponta): a edição deixava trocar kit e equipamentos, e o servidor
-          // não gravava a troca. Gravar exige recalcular o valor da reserva (regra de preço ainda em
-          // decisão); até lá, na edição eles aparecem só para leitura.
-          <FormSection title="Itens" description="Kit, equipamentos e serviços não mudam na edição: trocar exigiria recalcular o valor da reserva.">
+          // não gravava a troca. Aqui eles aparecem só para leitura; 18/11/2026: pôr ou trocar os itens (o
+          // pedido do briefing chega sem nenhum) é pelo "Montar orçamento" da ficha, com o preço de cada linha.
+          <FormSection title="Itens" description='Kit, equipamentos e serviços não mudam aqui. Para pôr ou trocar os itens (como no pedido do briefing), feche e use "Montar orçamento" na ficha da reserva.'>
             {editItemNames.length > 0 ? (
               <ul className="list-disc pl-5 space-y-1 text-sm text-foreground">
                 {editItemNames.map((name, index) => <li key={index}>{name}</li>)}

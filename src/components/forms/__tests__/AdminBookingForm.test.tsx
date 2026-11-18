@@ -285,7 +285,7 @@ describe('AdminBookingForm — a edição grava o que mostra', () => {
   it('reserva só com serviços (sem kit nem equipamentos): mostra os itens e salva', async () => {
     const onSuccess = await editar(reservaDigitada({ services: [{ id: 'srv1', name: 'Operador de som' }] }));
     expect(screen.getByText('Operador de som')).toBeInTheDocument();
-    expect(screen.getByText(/Kit, equipamentos e serviços não mudam na edição/)).toBeInTheDocument();
+    expect(screen.getByText(/Kit, equipamentos e serviços não mudam aqui\. Para pôr ou trocar os itens .*"Montar orçamento" na ficha/)).toBeInTheDocument();
 
     await salvar(onSuccess);
   });
