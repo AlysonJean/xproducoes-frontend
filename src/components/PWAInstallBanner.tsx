@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Smartphone, X } from 'lucide-react';
 import { Button } from './ui/Button';
 import { usePWAInstall } from '../hooks/useServiceWorker';
+import { useEspacoFaixaFixa } from '../hooks/useEspacoFaixaFixa';
 import { useCookieConsent } from '../contexts/CookieConsentContext';
 
 const DISMISS_KEY = 'xp-pwa-install-dismissed-at';
@@ -27,11 +28,15 @@ const PWAInstallBanner: React.FC = () => {
   const { isInstallable, promptInstall } = usePWAInstall();
   const { consent } = useCookieConsent();
   const [dismissed, setDismissed] = useState(() => isStandalone() || wasRecentlyDismissed());
+  const faixaRef = useRef<HTMLDivElement>(null);
 
   // Adia a exibição enquanto o banner de cookies ainda não foi respondido — os dois são
   // banners fixos de rodapé (mesma posição/z-index) e mostrar os dois ao mesmo tempo faz um
   // cobrir o outro por completo.
-  if (!isInstallable || dismissed || consent === 'unset') return null;
+  const visivel = isInstallable && !dismissed && consent !== 'unset';
+  // Enquanto aparece, a página ganha embaixo o espaço da faixa, para ela não cobrir o rodapé (useEspacoFaixaFixa.ts).
+  useEspacoFaixaFixa(faixaRef, visivel);
+  if (!visivel) return null;
 
   const handleDismiss = () => {
     localStorage.setItem(DISMISS_KEY, String(Date.now()));
@@ -45,6 +50,7 @@ const PWAInstallBanner: React.FC = () => {
 
   return (
     <div
+      ref={faixaRef}
       role="dialog"
       aria-live="polite"
       aria-label="Instalar aplicativo"

@@ -1,16 +1,22 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from './ui/Button';
 import { useCookieConsent } from '../contexts/CookieConsentContext';
+import { useEspacoFaixaFixa } from '../hooks/useEspacoFaixaFixa';
 import { GOOGLE_ANALYTICS_TRANSFER_NOTICE } from '../data/cookiePolicy';
 
 const CookieConsentBanner: React.FC = () => {
   const { consent, accept, decline } = useCookieConsent();
+  const faixaRef = useRef<HTMLDivElement>(null);
+  const visivel = consent === 'unset';
+  // Enquanto aparece, a página ganha embaixo o espaço da faixa, para ela não cobrir o rodapé (useEspacoFaixaFixa.ts).
+  useEspacoFaixaFixa(faixaRef, visivel);
 
-  if (consent !== 'unset') return null;
+  if (!visivel) return null;
 
   return (
     <div
+      ref={faixaRef}
       role="dialog"
       aria-live="polite"
       aria-label="Consentimento de cookies"
