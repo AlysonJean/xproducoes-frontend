@@ -707,10 +707,8 @@ export const recommendationAPI = {
   // Novos produtos
   getNew: (limit: number = 8, category?: string) =>
     api.get(`/recommendations/new?limit=${limit}${category ? `&category=${category}` : ''}`),
-
-  // Recomendações sazonais
-  getSeasonal: (limit: number = 8) =>
-    api.get(`/recommendations/seasonal?limit=${limit}`),
+  // Limpeza de 20/11/2026: saiu getSeasonal; o servidor não tem mais GET /recommendations/seasonal e nenhuma página
+  // pedia recomendações sazonais.
 };
 
 // ✅ API DE MENSAGENS PARA COLABORADORES

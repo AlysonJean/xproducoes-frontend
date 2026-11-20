@@ -111,10 +111,6 @@ export const useRecommendations = ({
                     response = await recommendationAPI.getNew(limit, category);
                     break;
 
-                case 'seasonal':
-                    response = await recommendationAPI.getSeasonal(limit);
-                    break;
-
                 default:
                     // Fallback para personalized
                     response = await recommendationAPI.getPersonalized(limit);

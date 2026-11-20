@@ -17,7 +17,6 @@ import {
   Sparkles,
   Users,
   Zap,
-  Award,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -29,8 +28,7 @@ export type RecommendationType =
   | 'similar' // Produtos similares ao que está vendo
   | 'frequently-bought' // Frequentemente comprados juntos
   | 'trending' // Tendências/populares
-  | 'new' // Novos produtos
-  | 'seasonal'; // Sazonais/relevantes para a época
+  | 'new'; // Novos produtos
 
 export interface RecommendationItem {
   id: string;
@@ -106,13 +104,6 @@ const getRecommendationConfig = (type: RecommendationType) => {
       subtitle: 'Recém-adicionados ao catálogo',
       color: 'text-success',
       bgColor: 'bg-success/10'
-    },
-    seasonal: {
-      icon: Award,
-      title: 'Destaque da Temporada',
-      subtitle: 'Perfeitos para esta época do ano',
-      color: 'text-primary',
-      bgColor: 'bg-primary/10'
     }
   };
 
