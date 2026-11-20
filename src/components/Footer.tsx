@@ -1,5 +1,6 @@
 // src/components/Footer.tsx
 
+import { useEffect } from 'react';
 import { MapPinIcon, PhoneIcon, EnvelopeIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { useSettings } from '../contexts/SettingsContext';
 import { Link, useLocation } from 'react-router-dom';
@@ -18,6 +19,7 @@ import {
 } from '../data/site';
 import { GoogleReviewLink } from './ui/GoogleReviewLink';
 import { RESERVATION_POLICY_PATH, RESERVATION_POLICY_PUBLISHED } from '../data/reservationPolicy';
+import { carregarSeloAssinatura } from '../utils/seloAssinatura';
 
 // P5 (aprovada em 02/11/2026): o ano do "©" é o de Brasília. Era new Date().getFullYear(), no fuso de quem desenha: o
 // servidor do site (Vercel, em UTC) virava o ano às 21:00 de 31/12 e o navegador à meia-noite local. Das 21:00 à
@@ -116,7 +118,15 @@ export const Footer = () => {
   const isAdminPage = pathname.startsWith('/admin');
   // O portal do colaborador vive em /colaborador/*; /collaborator/* são redirects legados.
   const isCollaboratorPage = pathname.startsWith('/colaborador') || pathname.startsWith('/collaborator');
-  if (isAdminPage || isCollaboratorPage) return null;
+  const hidden = isAdminPage || isCollaboratorPage;
+
+  // Selo de assinatura (20/11/2026): o script do <x-selo> é pedido só quando o rodapé aparece, com a hora no endereço
+  // para a versão nova chegar sozinha (utils/seloAssinatura.ts). Fica antes do return abaixo (regra dos hooks).
+  useEffect(() => {
+    if (!hidden) carregarSeloAssinatura();
+  }, [hidden]);
+
+  if (hidden) return null;
 
   const whatsAppPhone = getWhatsAppPhone();
 
@@ -217,9 +227,18 @@ export const Footer = () => {
               {/* Achado (Lighthouse/axe-core contra produção real): a opacidade /70 aqui
                   reduzia o contraste de text-muted-foreground — removida. */}
               {/* Textos legais (13/11/2026), revisão: o crédito fica, sem o telefone do desenvolvedor, que podia ser
-                  confundido com o da empresa. O único telefone do rodapé é o do WhatsApp do site. */}
+                  confundido com o da empresa. O único telefone do rodapé é o do WhatsApp do site.
+                  Decisão de Alyson (20/11/2026), selo de assinatura: o crédito "Desenvolvido com ❤️ por Alyson Jean"
+                  virou o selo da X Soluções Digitais (o mesmo autor, com a marca nova), no mesmo lugar. A regra acima
+                  continua: nenhum telefone do desenvolvedor aparece no rodapé. O selo e o link de dentro dele mostram só
+                  "Desenvolvido por X Soluções Digitais" e abrem uma conversa no WhatsApp com a X Soluções Digitais,
+                  separada do WhatsApp da empresa. O <x-selo> vem do script que o useEffect acima pede ao jsDelivr
+                  (utils/seloAssinatura.ts, liberado no script-src da CSP do vercel.json); sem o script (fora do ar ou
+                  bloqueado), aparece o link de dentro da tag, na cor do texto ao redor. */}
               <p className="text-xs text-muted-foreground mt-1">
-                Desenvolvido com ❤️ por Alyson Jean
+                <x-selo site="xproducoeseeventos.com.br">
+                  <a href="https://wa.me/5531975808477" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>Desenvolvido por X Soluções Digitais</a>
+                </x-selo>
               </p>
             </div>
 

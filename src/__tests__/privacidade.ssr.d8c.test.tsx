@@ -47,8 +47,14 @@ describe('D8c — /privacidade e /cookies no HTML do servidor', () => {
 
     expect(page.notFound).toBe(false);
     expect(page.head).toMatch(/<title[^>]*>Política de Privacidade \| X Produções<\/title>/);
-    expect(page.head).toMatch(/<meta[^>]* name="description" content="Como a X Produções e Eventos trata seus dados[^"]*Atualizada em 13\/11\/2026\."/);
+    expect(page.head).toMatch(/<meta[^>]* name="description" content="Como a X Produções e Eventos trata seus dados[^"]*Atualizada em 20\/11\/2026\."/);
     expect(page.body).toMatch(/<h1[^>]*>Política de Privacidade<\/h1>/);
+    // Selo de assinatura (20/11/2026): a linha do jsDelivr vem no HTML do servidor, e o script do selo não vai no
+    // <head> (quem pede é o rodapé, no navegador, com a hora no endereço: utils/seloAssinatura.ts).
+    expect(page.body).toContain('jsDelivr');
+    expect(page.head).not.toContain('x-solucoes-digitais');
+    // No HTML do servidor o rodapé já traz a tag com o link de dentro, que aparece até o script chegar (ou se não chegar).
+    expect(page.body).toMatch(/<x-selo site="xproducoeseeventos\.com\.br"><a href="https:\/\/wa\.me\/\d+"[^>]*>Desenvolvido por X Soluções Digitais<\/a><\/x-selo>/);
     expect(page.body).toContain('Dados tratados, finalidade, base legal e prazo');
     expect(page.body).toContain('Serviços usados pelo site e onde ficam');
     expect(page.body).toContain('LGPD, art. 33, IX');

@@ -155,6 +155,12 @@ describe('D8c — Política de Privacidade (src/data/privacyPolicy.ts)', () => {
     expect(countryOf('Cloudflare')).toBe('Estados Unidos e outros países');
     expect(countryOf('ViaCEP')).toBe('Brasil');
     expect(countryOf('Meta (WhatsApp)')).toBe('Estados Unidos');
+    // Selo de assinatura (20/11/2026): o script do selo do rodapé vem do jsDelivr, que recebe o IP do visitante.
+    expect(countryOf('jsDelivr')).toBe('Estados Unidos e outros países');
+    const jsdelivr = norm(within(table).getByRole('rowheader', { name: 'jsDelivr' }).closest('tr')?.textContent ?? '');
+    expect(jsdelivr).toContain('Entrega o selo "Desenvolvido por X Soluções Digitais" do rodapé');
+    expect(jsdelivr).toContain('recebe o endereço IP de quem abre as páginas com rodapé, sem cookies');
+    expect(jsdelivr).toContain('abre uma conversa no WhatsApp com a X Soluções Digitais, que desenvolveu o site');
 
     const google = norm(within(table).getByRole('rowheader', { name: 'Google' }).closest('tr')?.textContent ?? '');
     expect(google).toContain('Google Analytics, só com o seu aceite.');
@@ -284,15 +290,16 @@ describe('D8c — Política de Privacidade (src/data/privacyPolicy.ts)', () => {
     expect(text).toContain('continua no registro guardado da reserva, mesmo depois da exclusão da conta');
   });
 
-  it('versão de 13/11/2026 e SEO: título da aba e descrição com a data', async () => {
-    expect(PRIVACY_POLICY_UPDATED_AT).toBe('13/11/2026');
+  // Selo de assinatura (20/11/2026): a linha do jsDelivr mudou o texto, e a data mudou junto.
+  it('versão de 20/11/2026 e SEO: título da aba e descrição com a data', async () => {
+    expect(PRIVACY_POLICY_UPDATED_AT).toBe('20/11/2026');
     renderPage();
-    expect(norm(document.getElementById('versao')?.textContent ?? '')).toContain('Versão de 13/11/2026.');
+    expect(norm(document.getElementById('versao')?.textContent ?? '')).toContain('Versão de 20/11/2026.');
     expect(screen.getByRole('heading', { level: 1, name: 'Política de Privacidade' })).toBeInTheDocument();
     await waitFor(() => expect(document.title).toBe('Política de Privacidade | X Produções'));
     await waitFor(() =>
       expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBe(
-        'Como a X Produções e Eventos trata seus dados: o que guarda, para quê, com quem e por quanto tempo. Atualizada em 13/11/2026.'
+        'Como a X Produções e Eventos trata seus dados: o que guarda, para quê, com quem e por quanto tempo. Atualizada em 20/11/2026.'
       )
     );
   });

@@ -15,9 +15,11 @@ import { GOOGLE_ANALYTICS_TRANSFER_NOTICE, INSTAGRAM_PLAYER_NOTICE } from './coo
 // transferência pelo art. 33, IX, guarda do contrato por 10 anos e dos orçamentos não aceitos por até 12 meses,
 // direitos e canal), o nome empresarial completo do CNPJ em "Quem cuida dos seus dados" e o armazenamento temporário
 // no Render (D19, trocado em 12/11/2026; o Redis Cloud saiu da lista).
+// Selo de assinatura (decisão de Alyson, 20/11/2026): entra a linha do jsDelivr, que entrega o script do selo do rodapé
+// (utils/seloAssinatura.ts) e recebe o IP de quem abre as páginas com rodapé. Versão de 20/11/2026.
 
 /** Data da última revisão do texto (como LAST_UPDATED dos Termos). */
-export const PRIVACY_POLICY_UPDATED_AT = '13/11/2026';
+export const PRIVACY_POLICY_UPDATED_AT = '20/11/2026';
 
 export const PRIVACY_POLICY_TITLE = 'Política de Privacidade';
 
@@ -247,6 +249,12 @@ export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
             'Estados Unidos e outros países',
           ],
           ['ViaCEP', 'No formulário de orçamento, recebe o CEP digitado para preencher o endereço.', 'Brasil'],
+          // Selo de assinatura (20/11/2026): o script vai sem referrer, então o jsDelivr não recebe o endereço da página.
+          [
+            'jsDelivr',
+            'Entrega o selo "Desenvolvido por X Soluções Digitais" do rodapé e recebe o endereço IP de quem abre as páginas com rodapé, sem cookies. Clicar no selo abre uma conversa no WhatsApp com a X Soluções Digitais, que desenvolveu o site.',
+            'Estados Unidos e outros países',
+          ],
           [
             'Meta (WhatsApp)',
             'Quando você clica para conversar pelo WhatsApp e quando a equipe manda mensagens sobre o seu pedido ou a sua reserva pelo WhatsApp (vão o seu número e o texto da mensagem). O que é escrito lá segue as regras do WhatsApp.',
