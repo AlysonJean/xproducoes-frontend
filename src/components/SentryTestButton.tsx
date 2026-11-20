@@ -144,25 +144,4 @@ export const SentryTestButton: React.FC<SentryTestButtonProps> = ({
   );
 };
 
-/**
- * Componente simples - apenas botão de erro
- */
-export const SentryErrorButton: React.FC = () => {
-  // Apenas mostrar em desenvolvimento
-  if (import.meta.env.VITE_NODE_ENV === 'production') {
-    return null;
-  }
-
-  return (
-    <button
-      onClick={() => {
-        throw new Error('🧪 This is your first error!');
-      }}
-      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-medium transition-colors"
-    >
-      Break the world
-    </button>
-  );
-};
-
 export default SentryTestButton;

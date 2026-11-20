@@ -440,5 +440,3 @@ export const PortfolioListPage = () => {
     </AdminLayout>
   );
 };
-
-export default PortfolioListPage;

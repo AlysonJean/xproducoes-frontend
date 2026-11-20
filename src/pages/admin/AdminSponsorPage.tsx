@@ -35,7 +35,7 @@ const BREADCRUMBS = [
   { name: 'Patrocinadores' },
 ];
 
-export const AdminSponsorPage = () => {
+const AdminSponsorPage = () => {
     const { addNotification } = useNotifications();
     const [sponsors, setSponsors] = useState<SponsorLogo[]>([]);
     const [loading, setLoading] = useState(true);

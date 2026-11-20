@@ -23,7 +23,7 @@ export { Checkbox, type CheckboxProps } from './Checkbox';
 export { Grid } from './Grid';
 export { Card, GlassCard, SimpleCard, StatsCard } from './Cards';
 export { Badge } from './Badge';
-export { Skeleton, CardSkeleton, ListSkeleton } from './Skeleton';
+export { Skeleton } from './Skeleton';
 export { BrandLoader } from './BrandLoader';
 export { Pagination } from './Pagination';
 export { Breadcrumbs } from './Breadcrumbs';

@@ -89,9 +89,6 @@ export interface Equipment {
   slug?: string;
   description?: string;
   imageUrl?: string;
-  dailyPrice?: number;
-  weeklyPrice?: number;
-  monthlyPrice?: number;
   price?: number;
   pricePerHour?: number;
   /** Diária (lote 13): unidade do preço de pricePerHour, que o servidor põe nas respostas públicas (EQUIPMENT_PRICE_UNIT). */
@@ -148,7 +145,7 @@ export interface Service {
   updatedAt?: Date | string;
 }
 
-export interface KitItem {
+interface KitItem {
   id: string;
   kitId: string;
   equipmentId?: string;
@@ -164,7 +161,7 @@ export interface KitItem {
 
 
 
-export interface KitExperienceLevel {
+interface KitExperienceLevel {
   id: string;
   level: ExperienceLevel;
   price: number;
@@ -255,10 +252,6 @@ export interface Booking {
 // INTERFACES PARA COLABORADORES
 // ================================
 
-// Aliases para compatibilidade
-export type Collaborator = ICollaborator;
-export type EventCollaborator = ICollaborator;
-
 export interface CollaboratorFunction {
   id: string;
   name: string;
@@ -266,24 +259,6 @@ export interface CollaboratorFunction {
   active: boolean;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface CollaboratorAvailability {
-  id: string;
-  collaboratorId: string;
-  date: string;
-  isAvailable: boolean;
-  timeSlots?: string[];
-}
-
-export interface CollaboratorPayment {
-  id: string;
-  collaboratorId: string;
-  eventId: string;
-  amount: number;
-  status: PaymentStatus;
-  dueDate: string;
-  paidAt?: string;
 }
 
 export interface ICollaborator {
@@ -341,7 +316,7 @@ export interface CollaboratorDashboard {
 // INTERFACES PARA DASHBOARD (MOVIDAS PARA domains/dashboard.ts)
 // ================================
 
-// DashboardStats, AdminDashboardStats, Event, DashboardEvent, Project, Activity,
+// DashboardStats, AdminDashboardStats, Event, DashboardEvent, Activity,
 // QuickAction, CalendarDay, WorkStats movidos para domains/dashboard.ts
 
 // ================================
@@ -369,100 +344,6 @@ export interface ConfirmModalProps extends BaseModalProps {
   isLoading?: boolean;
 }
 
-export interface AlertModalProps extends BaseModalProps {
-  onConfirm?: () => void;
-  message?: string;
-  type?: 'info' | 'success' | 'warning' | 'error';
-  confirmText?: string;
-}
-
-// ================================
-// INTERFACES PARA DADOS DE FORMULÁRIOS
-// ================================
-
-export interface EquipmentData {
-  name?: string;
-  description?: string;
-  price?: number | string;
-  pricePerHour?: number | string;
-  category?: string;
-  status?: string;
-  specifications?: string;
-  availability?: boolean | string;
-  images?: File[];
-}
-
-export interface KitData {
-  name?: string;
-  description?: string;
-  price?: number | string;
-  category?: string;
-  status?: string;
-  equipmentIds?: string[];
-  discountPercentage?: number | string;
-  availability?: boolean | string;
-  images?: File[];
-}
-
-export interface BookingData {
-  eventDate?: string;
-  eventTime?: string;
-  eventType?: string;
-  duration?: string;
-  deliveryAddress?: string;
-  clientName?: string;
-  clientPhone?: string;
-  clientEmail?: string;
-  additionalRequests?: string;
-  [key: string]: unknown;
-}
-
-export interface FilterData {
-  category?: string;
-  priceRange?: { min: number; max: number };
-  location?: string;
-  availability?: boolean;
-  dateRange?: { start: string; end: string };
-  status?: string;
-  features?: string[];
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  [key: string]: unknown;
-}
-
-export interface ProfileData {
-  [key: string]: unknown;
-}
-
-export interface PaymentData {
-  amount: number;
-  method: string;
-  installments?: number;
-  dueDate: string;
-  description?: string;
-  bookingId?: string;
-  cardDetails?: {
-    cardNumber: string;
-    expiryDate: string;
-    cvv: string;
-    cardholderName: string;
-  };
-  mbWayPhone?: string;
-}
-
-export type ContactType = 'general' | 'quote' | 'complaint' | 'partnership' | 'support' | 'other';
-
-export interface ContactData {
-  name: string;
-  email: string;
-  phone?: string;
-  subject: string;
-  message: string;
-  urgent: boolean;
-  type: ContactType;
-  attachments: File[];
-}
-
 // ================================
 // INTERFACES PARA PROPS DE MODAIS
 // ================================
@@ -474,7 +355,7 @@ export interface WhatsAppModalProps extends BaseModalProps {
   isLoading?: boolean;
 }
 
-export interface GalleryImage {
+interface GalleryImage {
   id?: string;
   url: string;
   title?: string;
@@ -489,43 +370,6 @@ export interface ImageGalleryModalProps extends BaseModalProps {
   showThumbnails?: boolean;
   allowDownload?: boolean;
   allowShare?: boolean;
-}
-
-// ================================
-// INTERFACES PARA COMPONENTES UI
-// ================================
-// NOTA: Tipos de UI foram movidos para src/types/ui/index.ts
-// Importar de lá: import { IButtonProps, LoadingSpinnerProps } from '@/types/ui'
-
-// ================================
-// INTERFACES PARA LAYOUT
-// ================================
-
-export interface SidebarItem {
-  id: string;
-  label: string;
-  icon: string;
-  path: string;
-  permission?: string;
-  badge?: string | number;
-  children?: SidebarItem[];
-}
-
-export interface SidebarItemComponentProps {
-  item: SidebarItem;
-  level?: number;
-  isActive?: boolean;
-  setActiveItem: (id: string) => void;
-  activeItem: string;
-  sidebarOpen: boolean;
-  setSidebarOpen: (open: boolean) => void;
-}
-
-export interface DashboardLayoutProps {
-  children: React.ReactNode;
-  title?: string;
-  subtitle?: string;
-  headerActions?: React.ReactNode;
 }
 
 // ================================
@@ -744,28 +588,6 @@ export interface ContactSubmission {
   createdAt: string;
 }
 
-export interface QuoteRequest {
-  eventType: string;
-  eventDate: string;
-  location: string;
-  guestCount: number;
-  clientName: string;
-  clientEmail: string;
-  clientPhone: string;
-  description?: string;
-  budget?: string;
-  equipmentIds?: string[];
-  kitIds?: string[];
-}
-
-export interface AdditionalCost {
-  id: string;
-  name: string;
-  cost: number;
-  description?: string;
-  category?: string;
-}
-
 export interface FaqItem {
   id: string;
   question: string;
@@ -785,9 +607,9 @@ export interface Review {
   };
 }
 
-export type MediaType = 'IMAGE' | 'VIDEO';
+type MediaType = 'IMAGE' | 'VIDEO';
 
-export interface PortfolioMedia {
+interface PortfolioMedia {
   id: string;
   portfolioId: string;
   url: string;
@@ -822,122 +644,8 @@ export interface PortfolioItem {
 
 // TestimonialCardProps removido
 
-export interface SearchFiltersProps {
-  categories: Category[];
-  onFiltersChange: (filters: {
-    searchTerm: string;
-    categoryId: string;
-    minPrice: string;
-    maxPrice: string;
-    sortBy: string;
-  }) => void;
-}
-
 export interface PortfolioCardProps {
   item: PortfolioItem;
-}
-
-export interface KitCardProps {
-  kit: Kit;
-  showCompare?: boolean;
-  showFavorite?: boolean;
-  className?: string;
-}
-
-// ================================
-// TIPOS PARA PAGINAÇÃO
-// ================================
-
-export interface PaginationMeta {
-  totalItems: number;
-  itemCount: number;
-  itemsPerPage: number;
-  totalPages: number;
-  currentPage: number;
-}
-
-export interface ClientResponse {
-  data: User[];
-  meta: PaginationMeta;
-}
-
-// ================================
-// TIPOS PARA HTTP CLIENT
-// ================================
-
-export interface HttpRequestConfig {
-  params?: Record<string, unknown>;
-  headers?: Record<string, string>;
-  timeout?: number;
-}
-
-export interface HttpResponse<T = unknown> {
-  data: T;
-  status: number;
-  statusText: string;
-  headers: Record<string, string>;
-}
-
-export interface HttpClient {
-  get<T>(url: string, config?: HttpRequestConfig): Promise<HttpResponse<T>>;
-  post<T>(url: string, data?: unknown, config?: HttpRequestConfig): Promise<HttpResponse<T>>;
-  put<T>(url: string, data?: unknown, config?: HttpRequestConfig): Promise<HttpResponse<T>>;
-  patch<T>(url: string, data?: unknown, config?: HttpRequestConfig): Promise<HttpResponse<T>>;
-  delete<T>(url: string, config?: HttpRequestConfig): Promise<HttpResponse<T>>;
-}
-
-// ================================
-// TIPOS PARA SERVICE WORKER E PWA
-// ================================
-
-export interface ServiceWorkerState {
-  isSupported: boolean;
-  isRegistered: boolean;
-  isOnline: boolean;
-  updateAvailable: boolean;
-  registration: ServiceWorkerRegistration | null;
-}
-
-export interface ServiceWorkerActions {
-  register: () => Promise<void>;
-  unregister: () => Promise<void>;
-  update: () => Promise<void>;
-  sendMessage: (message: unknown) => void;
-}
-export interface PerformanceMetrics {
-  type: 'PERFORMANCE_METRICS';
-  metrics: {
-    dns: number;
-    tcp: number;
-    request: number;
-    response: number;
-    dom: number;
-    load: number;
-    total: number;
-  };
-  timestamp: number;
-}
-
-export interface PWAInstallHook {
-  isInstallable: boolean;
-  promptInstall: () => Promise<void>;
-}
-
-// ================================
-// TIPOS PARA LOADING E CONTEXTOS
-// ================================
-
-export type LoadingSize = 'sm' | 'md' | 'lg' | 'xl';
-export type LoadingVariant = 'spinner' | 'dots' | 'bars';
-
-export interface LoadingState {
-  isLoading: boolean;
-  variant: LoadingVariant;
-}
-
-export interface LoadingContextType {
-  globalLoading: LoadingState;
-  setGlobalLoading: (state: Partial<LoadingState>) => void;
 }
 
 // ================================
@@ -947,15 +655,11 @@ export interface LoadingContextType {
 export type ModalNames =
   | 'whatsapp'
   | 'imageGallery'
-  | 'confirm'
-  | 'alert'
   | 'invite';
 
 export type ModalPropsMap = {
   whatsapp: WhatsAppModalProps;
   imageGallery: ImageGalleryModalProps;
-  confirm: ConfirmModalProps;
-  alert: AlertModalProps;
   invite: {
   isOpen?: boolean;
     onClose?: () => void;
@@ -968,68 +672,8 @@ export type ModalPropsMap = {
 };
 
 // ================================
-// TIPOS AUXILIARES
-// ================================
-
-export type FavoriteItem = {
-  id: string | number;
-  type: 'equipment' | 'kit';
-};
-
-export interface DiagnosticResult {
-  status: string;
-  timestamp: string;
-  services: {
-    database: { status: string; message: string };
-    auth: { status: string; message: string };
-    system: { status: string; message: string };
-  };
-}
-
-// ================================
-// TIPOS PARA VALIDATORS (ZOD SCHEMAS)
-// ================================
-
-export interface KitFormData {
-  name: string;
-  description: string;
-  price: number;
-  equipmentIds: string[];
-  image?: File | null;
-}
-
-export interface KitCreateData {
-  name: string;
-  description: string;
-  price: number;
-  equipmentIds: string[];
-}
-
-// ================================
 // TIPOS PARA UTILS
 // ================================
-
-export interface FormatOptions {
-  showCurrency?: boolean;
-  decimals?: number;
-}
-
-export interface Address {
-  street: string;
-  city: string;
-  postalCode: string;
-  country: string;
-}
-
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-
-export interface LogEntry {
-  level: LogLevel;
-  message: string;
-  context?: string;
-  data?: unknown;
-  timestamp: string;
-}
 
 export type AnchorOptions = {
   href: string;
@@ -1045,31 +689,6 @@ export type ScriptOptions = {
   async?: boolean;
   defer?: boolean;
   crossOrigin?: string | null;
-};
-
-export type QuoteMessageParams = {
-  bookingId?: string;
-  user?: { name?: string; phone?: string } | null;
-  venue: string;
-  eventDate: Date;
-  durationHours: number;
-  address: {
-    street?: string;
-    number?: string;
-    neighborhood?: string;
-    city?: string;
-    state?: string;
-    zipCode?: string;
-    complement?: string;
-  };
-  items: Array<{ name?: string } | { equipment?: { name?: string } }>;
-  notes?: string;
-  logistics: {
-    requiresStairs?: boolean;
-    isCovered?: boolean;
-    hasParking?: boolean;
-  };
-  locale?: string;
 };
 
 // ================================
@@ -1142,18 +761,10 @@ export interface ProfilePasswordForm {
   confirmPassword: string;
 }
 
+// Só as chaves que a aba Notificações mostra e o servidor consulta (services/notificationPreferences.ts).
 export interface ProfileNotificationPreferences {
   bookingUpdatesEmail: boolean;
   bookingUpdatesPush: boolean;
-  logisticsUpdatesEmail: boolean;
-  logisticsUpdatesPush: boolean;
-  technicalUpdatesEmail: boolean;
-  inventoryAlertsEmail: boolean;
-  inventoryAlertsPush: boolean;
-  remindersEmail: boolean;
-  remindersPush: boolean;
-  promotionsEmail: boolean;
-  promotionsPush: boolean;
 }
 
 export interface ProfileGeneralPreferences {
@@ -1180,16 +791,6 @@ export interface SecuritySettings {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
-  twoFactorEnabled: boolean;
-  loginNotifications: boolean;
-}
-
-export interface PrivacySettings {
-  profileVisibility: 'public' | 'private' | 'clients_only';
-  showEmail: boolean;
-  showPhone: boolean;
-  allowReviews: boolean;
-  allowMessages: boolean;
 }
 
 export interface PaymentSettings {
@@ -1201,41 +802,6 @@ export interface PaymentSettings {
     accountType: 'corrente' | 'poupanca';
   };
   preferredMethod: 'pix' | 'bank_transfer' | 'both';
-}
-
-// ================================
-// TIPOS PARA DASHBOARD E FORMULÁRIOS
-// ================================
-
-export interface QuickAction {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  href: string;
-  color: 'primary' | 'success' | 'warning' | 'info';
-  badge?: string;
-}
-
-export interface CustomQuoteFormData {
-  venue: string;
-  eventDate: string;
-  startTime?: string;
-  duration: number | string;
-  zipCode: string;
-  street: string;
-  addressNumber: string;
-  addressComplement?: string;
-  neighborhood: string;
-  city: string;
-  state: string;
-  requiresStairs: 'yes' | 'no';
-  isCovered: 'yes' | 'no';
-  hasParking: 'yes' | 'no';
-  notes?: string;
-  name?: string;
-  phone?: string;
-  email?: string;
 }
 
 // ================================
@@ -1260,28 +826,6 @@ export interface WorkStats {
 }
 
 // ================================
-// TIPOS PARA NOTIFICAÇÕES
-// ================================
-
-export interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
-  read: boolean;
-  createdAt: string;
-  actionUrl?: string;
-}
-
-export interface NotificationSettings {
-  emailNotifications: boolean;
-  pushNotifications: boolean;
-  bookingReminders: boolean;
-  paymentNotifications: boolean;
-  marketingEmails: boolean;
-}
-
-// ================================
 // TIPOS PARA RELATÓRIOS
 // ================================
 
@@ -1303,91 +847,4 @@ export interface ReportData {
     averageEventDuration: string;
     workingDaysPerMonth: number;
   };
-}
-
-// ================================
-// TIPOS PARA DISPONIBILIDADE
-// ================================
-
-export interface TimeSlot {
-  id: string;
-  startTime: string;
-  endTime: string;
-  isAvailable: boolean;
-  bookingId?: string;
-}
-
-export interface SpecialDate {
-  id: string;
-  date: string;
-  type: 'holiday' | 'vacation' | 'unavailable' | 'special';
-  title: string;
-  description?: string;
-}
-
-export interface AvailabilityData {
-  collaboratorId: string;
-  weeklySchedule: {
-    monday: TimeSlot[];
-    tuesday: TimeSlot[];
-    wednesday: TimeSlot[];
-    thursday: TimeSlot[];
-    friday: TimeSlot[];
-    saturday: TimeSlot[];
-    sunday: TimeSlot[];
-  };
-  specialDates: SpecialDate[];
-  timezone: string;
-}
-
-// ================================
-// TIPOS PARA GANHOS
-// ================================
-
-export interface EarningsData {
-  totalEarnings: number;
-  monthlyEarnings: Array<{
-    month: string;
-    earnings: number;
-    events: number;
-  }>;
-  pendingPayments: number;
-  averageHourlyRate: number;
-  totalHoursWorked: number;
-  paymentHistory: Array<{
-    id: string;
-    amount: number;
-    date: string;
-    eventTitle: string;
-    status: 'paid' | 'pending' | 'cancelled';
-  }>;
-}
-
-// ================================
-// TIPOS DIVERSOS
-// ================================
-
-export interface AdminReview {
-  id: string;
-  bookingId: string;
-  clientId: string;
-  clientName: string;
-  rating: number;
-  comment: string;
-  createdAt: string;
-  reported: boolean;
-  reportReason?: string;
-}
-
-export interface CalendarEvent extends Event {
-  bookingId?: string;
-  clientName?: string;
-  equipmentCount?: number;
-  totalValue?: number;
-}
-
-export interface ProtectedRouteProps {
-  children: React.ReactNode;
-  requiredRole?: UserRole[];
-  redirectTo?: string;
 }

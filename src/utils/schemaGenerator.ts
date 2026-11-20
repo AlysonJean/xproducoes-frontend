@@ -9,9 +9,6 @@ import {
   SITE_NAME,
 } from '../data/site';
 
-export type SchemaType = 'Organization' | 'LocalBusiness' | 'Product' | 'BreadcrumbList' | 'Event' | 'WebSite';
-
-
 export const COMPANY_INFO = {
   // O nome do Perfil da Empresa no Google e do rodapé (o Perfil dizia "X produçõe e Eventos"; o dono corrige lá); a
   // marca curta vai em alternateName. Era "X-Produções", com hífen, que não aparece em lugar nenhum do site.

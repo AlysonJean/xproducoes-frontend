@@ -126,14 +126,11 @@ const SponsorImage: React.FC<{ sponsor: SponsorLogo; className?: string }> = ({ 
                 ? `${cloudinary(sponsor.imageUrl, 'w_300,c_limit,q_auto')} 300w, ${cloudinary(sponsor.imageUrl, 'w_600,c_limit,q_auto')} 600w`
                 : undefined}
             alt={sponsor.name || 'Patrocinador'}
-            className={`object-contain sponsor-debug-img ${className}`}
+            className={`object-contain ${className}`}
             loading="eager"
             onLoad={() => {
                 try {
-                    if (typeof window !== 'undefined') {
-                        window.__sponsorsLoaded = (window.__sponsorsLoaded || 0) + 1;
-                        if (window.__TV_DEBUG) console.debug('Sponsor loaded:', sponsor.imageUrl);
-                    }
+                    if (typeof window !== 'undefined' && window.__TV_DEBUG) console.debug('Sponsor loaded:', sponsor.imageUrl);
                 } catch { /* ignore */ }
             }}
             onError={() => {
@@ -181,10 +178,9 @@ const SlideComponent = memo(({ post, active, isLandscapeMode, sponsors, hashtag,
         ? post.mediaUrl.replace('/upload/', '/upload/w_1920,h_1080,c_fit,q_auto/')
         : post.mediaUrl;
 
-    // Assume conteúdo vertical: em TV horizontal, mostra as barras laterais (hashtag/QR e patrocínio).
-    const isVerticalContent = true;
+    // O conteúdo é tratado sempre como vertical: em TV horizontal, mostra as barras laterais (hashtag/QR e patrocínio).
     const hasSponsors = !!sponsors && sponsors.length > 0;
-    const showSidebars = isLandscapeMode && isVerticalContent && (hasSponsors || !!showQrCode);
+    const showSidebars = isLandscapeMode && (hasSponsors || !!showQrCode);
 
     if (typeof window !== 'undefined' && window.__TV_DEBUG) {
         console.debug('SlideComponent - sponsors', sponsors?.map(s => ({ id: s.id, url: s.imageUrl })), 'showSidebars', showSidebars);
@@ -682,8 +678,8 @@ const TVPage: React.FC = () => {
         );
     }
 
-    const isVerticalContent = true; // Mesma regra do SlideComponent
-    const showSidebarsAtMain = config.layoutMode === 'LANDSCAPE' && isVerticalContent && ((config.sponsors && config.sponsors.length > 0) || config.enableQrCode);
+    // Mesma regra do SlideComponent (conteúdo tratado sempre como vertical).
+    const showSidebarsAtMain = config.layoutMode === 'LANDSCAPE' && ((config.sponsors && config.sponsors.length > 0) || config.enableQrCode);
 
     // Sem posts ainda: tela própria de convite (antes, um "post" falso com a imagem de um
     // patrocinador ou um placeholder externo em inglês "No posts yet").

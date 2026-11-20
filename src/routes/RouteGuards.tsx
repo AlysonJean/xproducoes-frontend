@@ -36,8 +36,6 @@ export const ProtectedRoute: React.FC<{
         return <Navigate to="/admin/painel" replace />;
       case 'COLLABORATOR':
         return <Navigate to="/colaborador/painel" replace />;
-      case 'FREELANCER':
-        return <Navigate to="/freelancer/painel" replace />;
       case 'CLIENT':
         return <Navigate to="/cliente/painel" replace />;
       default:

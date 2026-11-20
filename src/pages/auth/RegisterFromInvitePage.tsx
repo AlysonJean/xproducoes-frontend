@@ -136,5 +136,3 @@ export const RegisterFromInvitePage: React.FC = () => {
     </>
   );
 };
-
-export default RegisterFromInvitePage;

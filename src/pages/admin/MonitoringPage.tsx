@@ -67,7 +67,7 @@ const ALERT_TYPE_INFO: Record<MonitoringAlert['type'], { label: string; variant:
 
 const formatLatency = (ms: number) => (ms > 0 ? `${ms} ms` : '—');
 
-export const MonitoringPage: React.FC = () => {
+const MonitoringPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [integrations, setIntegrations] = useState<IntegrationHealth[]>([]);

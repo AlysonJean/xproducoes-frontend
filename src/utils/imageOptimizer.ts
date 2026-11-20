@@ -66,17 +66,6 @@ export function getOptimizedImageUrl(
 }
 
 /**
- * Generates key breakpoints for responsive images
- */
-export const DEVICE_SIZES = {
-  mobile: 640,
-  tablet: 768,
-  laptop: 1024,
-  desktop: 1280,
-  wide: 1536
-};
-
-/**
  * Generates a srcSet string for responsive images
  */
 export function generateSrcSet(url: string, sizes: number[] = [640, 768, 1024, 1280]): string {

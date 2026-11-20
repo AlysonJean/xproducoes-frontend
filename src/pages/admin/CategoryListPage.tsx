@@ -313,5 +313,3 @@ export const CategoryListPage = () => {
     </AdminLayout>
   );
 };
-
-export default CategoryListPage;

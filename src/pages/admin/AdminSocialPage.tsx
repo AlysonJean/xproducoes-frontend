@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { socialService, SocialPost } from '../../services/socialService';
 import { ModerationGrid } from '../../components/social/ModerationGrid';
 import {
@@ -69,14 +69,12 @@ const TABS: { id: ModerationTab; label: string; icon: typeof Check; color: strin
 
 const AdminSocialPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const location = useLocation();
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
 
-  // Distinguish context based on URL
-  const isBookingContext = location.pathname.includes('/reservas/');
-  const eventId = isBookingContext ? id : undefined;
-  const settingId = !isBookingContext ? id : undefined;
+  // A tela só abre em /admin/social/:id, e o id é o do mural. O ramo da reserva (/reservas/:id, com eventId) não
+  // tinha rota no painel e saiu na limpeza de 20/11/2026.
+  const settingId = id;
 
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +96,6 @@ const AdminSocialPage: React.FC = () => {
         if (!id) return;
         setLoading(true);
         const response = await socialService.getPosts({
-            eventId: eventId,
             settingId: settingId,
             status: tab,
             limit: 100
@@ -120,7 +117,7 @@ const AdminSocialPage: React.FC = () => {
     } finally {
         setLoading(false);
     }
-  }, [id, eventId, settingId, tab]);
+  }, [id, settingId, tab]);
 
   useEffect(() => {
     fetchPosts();
@@ -175,18 +172,17 @@ const AdminSocialPage: React.FC = () => {
         socket.disconnect();
         setSocketConnected(false);
     };
-  }, [id, eventId, settingId, tab, addNotification]);
+  }, [id, settingId, tab, addNotification]);
 
   const handlePair = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pairingCode || (!settingId && !eventId)) return;
+    if (!pairingCode || !settingId) return;
 
     try {
         setPairingLoading(true);
         await socialService.pairDevice({
             pairingCode: String(pairingCode),
-            settingId: settingId ? String(settingId) : undefined,
-            eventId: eventId ? String(eventId) : undefined,
+            settingId: String(settingId),
             deviceName: 'TV do evento'
         });
 
@@ -224,7 +220,7 @@ const AdminSocialPage: React.FC = () => {
   const handleManualSync = async () => {
     if (!id) return;
     try {
-        await socialService.syncNow(id, settingId ? 'setting' : 'event');
+        await socialService.syncNow(id, 'setting');
         addNotification({ type: 'info', title: 'Sincronização iniciada', message: 'Buscando novas publicações. Aguarde.' });
     } catch {
         addNotification({ type: 'error', title: 'Erro na sincronização', message: 'Não foi possível atualizar o feed.' });

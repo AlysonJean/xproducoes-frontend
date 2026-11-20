@@ -194,7 +194,7 @@ const lineDescription = (item: ProposalItem, start: string, end: string): string
   return unit && n ? `${item.description} (${equipmentUnitText(n, unit)})` : item.description;
 };
 
-export const AdminQuickProposalPage = () => {
+const AdminQuickProposalPage = () => {
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(true);
@@ -233,9 +233,6 @@ export const AdminQuickProposalPage = () => {
   const [clientName, setClientName] = useState(fromContact?.name ?? '');
   const [clientEmail, setClientEmail] = useState(fromContact?.email ?? '');
   const [clientContact, setClientContact] = useState(fromContact?.phone ?? '');
-  // Erros de campos (escopo global)
-  const [fieldErrors] = useState<Record<string, string>>({});
-
   // Form State - Evento
   const [eventTitle, setEventTitle] = useState(fromContact ? contactEventTitle(fromContact) : '');
   const [location, setLocation] = useState('');
@@ -638,7 +635,7 @@ export const AdminQuickProposalPage = () => {
     return null;
   };
 
-  const handleSave = async (status: 'DRAFT' | 'PENDING', pendingFreightConfirmed = false) => {
+  const handleSave = async (status: 'PENDING', pendingFreightConfirmed = false) => {
     const validationError = validate();
     if (validationError) {
       addNotification({ type: 'error', title: 'Campo obrigatório', message: validationError });
@@ -1071,14 +1068,14 @@ export const AdminQuickProposalPage = () => {
                    <AlertCircle className="h-3 w-3" aria-hidden="true" /> Endereço do evento (obrigatório)
                  </h4>
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                   <Input label="CEP *" value={zipCode} onChange={e => setZipCode(e.target.value)} placeholder="00000-000" className="md:col-span-1" error={fieldErrors.zipCode} />
-                   <Input label="Rua *" value={street} onChange={e => setStreet(e.target.value)} placeholder="Ex: Av. Brasil" className="md:col-span-2" error={fieldErrors.street} />
+                   <Input label="CEP *" value={zipCode} onChange={e => setZipCode(e.target.value)} placeholder="00000-000" className="md:col-span-1" />
+                   <Input label="Rua *" value={street} onChange={e => setStreet(e.target.value)} placeholder="Ex: Av. Brasil" className="md:col-span-2" />
                  </div>
                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                   <Input label="Número *" value={addressNumber} onChange={e => setAddressNumber(e.target.value)} placeholder="Ex: 123" error={fieldErrors.addressNumber} />
-                   <Input label="Bairro *" value={neighborhood} onChange={e => setNeighborhood(e.target.value)} placeholder="Ex: Centro" error={fieldErrors.neighborhood} />
-                   <Input label="Cidade *" value={city} onChange={e => setCity(e.target.value)} placeholder="Ex: Belo Horizonte" error={fieldErrors.city} />
-                   <Input label="UF *" value={state} onChange={e => setState(e.target.value)} placeholder="Ex: MG" maxLength={2} error={fieldErrors.state} />
+                   <Input label="Número *" value={addressNumber} onChange={e => setAddressNumber(e.target.value)} placeholder="Ex: 123" />
+                   <Input label="Bairro *" value={neighborhood} onChange={e => setNeighborhood(e.target.value)} placeholder="Ex: Centro" />
+                   <Input label="Cidade *" value={city} onChange={e => setCity(e.target.value)} placeholder="Ex: Belo Horizonte" />
+                   <Input label="UF *" value={state} onChange={e => setState(e.target.value)} placeholder="Ex: MG" maxLength={2} />
                  </div>
                </div>
                {/* No orçamento de uma reserva, as observações internas dela mudam pelo Editar da ficha (não vão daqui). */}

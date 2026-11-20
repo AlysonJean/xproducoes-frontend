@@ -15,7 +15,6 @@ import { logger } from '../utils/logger';
 interface ServiceFilters {
   searchQuery?: string;
   priceRange?: [number, number];
-  status?: string;
 }
 
 const PAGE_TITLE = 'Serviços Especializados';
@@ -28,9 +27,7 @@ export const ServiceListPage: React.FC = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<ServiceFilters>({
-    status: 'ACTIVE'
-  });
+  const [filters, setFilters] = useState<ServiceFilters>({});
   const [priceMinInput, setPriceMinInput] = useState('');
   const [priceMaxInput, setPriceMaxInput] = useState('');
 
@@ -57,7 +54,8 @@ export const ServiceListPage: React.FC = () => {
   }, [fetchData]);
 
   const filteredServices = useMemo(() => {
-    let result = services;
+    // A lista pública mostra só os serviços ativos (a tela não tem controle de status; o Service não tem isActive).
+    let result = services.filter((s) => s.status === 'ACTIVE');
 
     if (filters.searchQuery) {
       const query = normalizeString(filters.searchQuery);
@@ -65,14 +63,6 @@ export const ServiceListPage: React.FC = () => {
         normalizeString(service.name).includes(query) ||
         normalizeString(service.description).includes(query)
       );
-    }
-
-    if (filters.status && filters.status !== 'ALL') {
-       if (filters.status === 'ACTIVE') {
-         result = result.filter(s => s.status === 'ACTIVE' || s.isActive === true);
-       } else {
-         result = result.filter(s => s.status === filters.status);
-       }
     }
 
     if (filters.priceRange) {
@@ -101,7 +91,7 @@ export const ServiceListPage: React.FC = () => {
   };
 
   const clearFilters = () => {
-    setFilters({ status: 'ACTIVE' });
+    setFilters({});
     setPriceMinInput('');
     setPriceMaxInput('');
   };

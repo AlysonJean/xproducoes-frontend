@@ -84,7 +84,6 @@ describe('D7 e D8c — Política de Cookies', () => {
       'briefing-draft',
       'xp-pwa-install-dismissed-at',
       'companyName',
-      'lastPerformanceMetrics',
       'xp_session_restore_tried',
       'xp-chunk-reload-attempted',
     ]) {
@@ -132,7 +131,6 @@ describe('D7 e D8c — Política de Cookies', () => {
       ['src/components/PWAInstallBanner.tsx', /const DISMISS_KEY = '([^']+)'/],
       ['src/utils/sessionHint.ts', /const TRIED_KEY = '([^']+)'/],
       ['src/components/ui/ErrorBoundary.tsx', /const RELOAD_GUARD_KEY = '([^']+)'/],
-      ['src/hooks/usePerformanceMonitoring.ts', /localStorage\.setItem\('([^']+)'/],
     ] as const) {
       expect(names).toContain(constantIn(file, pattern));
     }

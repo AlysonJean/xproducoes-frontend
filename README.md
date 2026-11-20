@@ -85,11 +85,9 @@ VITE_SENTRY_ENVIRONMENT=development
 
 # App Info
 VITE_APP_VERSION=1.0.0
-VITE_BUILD_NUMBER=1
 
 # OAuth (Opcional)
 VITE_GOOGLE_CLIENT_ID=
-VITE_FACEBOOK_APP_ID=
 
 # Environment
 VITE_NODE_ENV=development

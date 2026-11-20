@@ -29,9 +29,9 @@ export function transformEquipment(equipment: Equipment): Equipment {
     ...equipment,
     name: equipment.name ?? 'Equipamento sem nome',
     price: toNumber(equipment.price),
-    // Usa dailyPrice como fallback se pricePerHour for 0 ou indefinido
-    pricePerHour: toNumber(equipment.pricePerHour) || toNumber(equipment.dailyPrice) || 0,
-    dailyPrice: toNumber(equipment.dailyPrice),
+    // O preço do equipamento vem só em pricePerHour (com EQUIPMENT_PRICE_UNIT=day, guarda a diária); o servidor
+    // não tem dailyPrice, então o antigo fallback para ele não fazia nada.
+    pricePerHour: toNumber(equipment.pricePerHour) || 0,
     // Se isAvailable não vier do backend, inferir baseado no status
     isAvailable: typeof equipment.isAvailable === 'boolean' 
       ? equipment.isAvailable 

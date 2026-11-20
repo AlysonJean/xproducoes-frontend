@@ -67,7 +67,7 @@ const apiErrorMessage = (err: unknown, fallback: string) => {
   return data?.message || data?.error || fallback;
 };
 
-export const ClientListPage: React.FC = () => {
+const ClientListPage: React.FC = () => {
   const { addNotification } = useNotifications();
   const { clients: rawClients, isLoading: loading, error, fetchClients, deleteClient } = useClients();
 

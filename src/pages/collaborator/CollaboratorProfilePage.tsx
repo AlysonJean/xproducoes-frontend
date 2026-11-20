@@ -18,7 +18,6 @@ import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { collaboratorProfileAPI } from '../../services/api';
 import { useNotifications } from '@/contexts/NotificationContext';
-import { GoogleCalendarIntegration } from '../../components/GoogleCalendarIntegration';
 import { formatPrice } from '@/utils/formatPrice';
 import { collaboratorRoleLabel } from '@/utils/collaboratorRoles';
 import { logger } from '../../utils/logger';
@@ -31,7 +30,6 @@ interface CollaboratorProfileData {
     email?: string;
     website?: string;
     avatarUrl?: string;
-    googleCalendarEmail?: string;
   };
   collaboratorRole?: string;
   averageRating?: number;
@@ -425,12 +423,7 @@ const CollaboratorProfilePage: React.FC = () => {
             {activeTab === 'professional' && (
               <CollaboratorTabPanel idBase="perfil" id="professional">
                 <div className="space-y-6">
-                  {!editMode && (
-                    <div className="bg-card rounded-lg border border-border overflow-hidden">
-                      <GoogleCalendarIntegration googleCalendarEmail={profile.user.googleCalendarEmail} />
-                    </div>
-                  )}
-
+                  {/* D9: a Google Agenda é só do admin (/google/connect exige requireAdmin); o cartão saiu do perfil. */}
                   <div className="bg-muted/40 rounded-lg p-4 sm:p-6">
                     <h3 className="text-lg font-semibold text-foreground mb-6">Dados profissionais</h3>
 

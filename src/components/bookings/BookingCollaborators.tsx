@@ -51,7 +51,6 @@ interface CollaboratorOption {
 interface BookingCollaboratorsProps {
   bookingId: string;
   eventDate: string; // ISO string
-  eventDuration?: number; // minutes
   requiredServices?: string[]; // List of service names required (e.g., "DJ", "Fotógrafo")
 }
 
@@ -71,7 +70,6 @@ type AssignmentFormData = z.infer<typeof assignmentSchema>;
 export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({ 
   bookingId, 
   eventDate, // Descomentado
-  // eventDuration = 240,
   requiredServices = []
 }) => {
   const { addNotification } = useNotifications();

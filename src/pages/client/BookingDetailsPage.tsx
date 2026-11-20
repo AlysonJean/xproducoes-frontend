@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import ReactGA from 'react-ga4';
 import { ArrowLeft, FileDown, FileText, Mail, MessageCircle, Plus, Trash2, Upload } from 'lucide-react';
@@ -55,21 +54,8 @@ export const BookingDetailsPage = () => {
       setBooking(response as BookingDetails);
       setError(null); // Limpar erro anterior
     } catch (err: unknown) {
-      // ✅ Mensagens de erro contextuais baseadas no status HTTP
-      if (axios.isAxiosError(err)) {
-        const status = err.response?.status;
-        if (status === 404) {
-          setError('Reserva não encontrada. Ela pode ter sido cancelada ou excluída.');
-        } else if (status === 403) {
-          setError('Você não tem permissão para visualizar esta reserva.');
-        } else if (status === 401) {
-          setError('Sessão expirada. Faça login novamente.');
-        } else if (status !== undefined && status >= 500) {
-          setError('Erro no servidor. Tente novamente em alguns instantes.');
-        } else {
-          setError(err.response?.data?.message || 'Erro ao carregar detalhes da reserva.');
-        }
-      } else if (err instanceof Error) {
+      // O apiFetch lança Error (com .status), nunca AxiosError: o ramo axios.isAxiosError que ficava aqui não rodava.
+      if (err instanceof Error) {
         setError(err.message);
       } else {
         setError('Não foi possível carregar os detalhes da reserva.');

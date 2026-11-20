@@ -6,8 +6,6 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import type {
   WhatsAppModalProps,
   ImageGalleryModalProps,
-  ConfirmModalProps,
-  AlertModalProps,
   ModalNames,
   ModalPropsMap,
 } from '../../types/types';
@@ -15,7 +13,6 @@ import type {
 type ModalContextType = {
   openModal: <T extends ModalNames>(modalName: T, props?: ModalPropsMap[T]) => void;
   closeModal: (modalName: ModalNames) => void;
-  closeAllModals: () => void;
   isModalOpen: (modalName: ModalNames) => boolean;
   getModalProps: <T extends ModalNames>(modalName: T) => ModalPropsMap[T] | undefined;
 };
@@ -67,22 +64,6 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
     }));
   };
 
-  const closeAllModals = () => {
-    setModals((prev) => {
-      const newState = { ...prev };
-      (Object.keys(newState) as ModalNames[]).forEach((key) => {
-        if (newState[key]) {
-          newState[key] = {
-            ...newState[key]!,
-            isOpen: false,
-            props: undefined,
-          };
-        }
-      });
-      return newState;
-    });
-  };
-
   const isModalOpen = (modalName: ModalNames): boolean => {
     return modals[modalName]?.isOpen || false;
   };
@@ -94,7 +75,6 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
   const value: ModalContextType = {
     openModal,
     closeModal,
-    closeAllModals,
     isModalOpen,
     getModalProps,
   };
@@ -120,25 +100,5 @@ export const useImageGalleryModal = () => {
     closeImageGalleryModal: () => closeModal('imageGallery'),
     isImageGalleryModalOpen: isModalOpen('imageGallery'),
     imageGalleryModalProps: getModalProps('imageGallery'),
-  };
-};
-
-export const useConfirmModal = () => {
-  const { openModal, closeModal, isModalOpen, getModalProps } = useModal();
-  return {
-    openConfirmModal: (props?: ConfirmModalProps) => openModal('confirm', props),
-    closeConfirmModal: () => closeModal('confirm'),
-    isConfirmModalOpen: isModalOpen('confirm'),
-    confirmModalProps: getModalProps('confirm'),
-  };
-};
-
-export const useAlertModal = () => {
-  const { openModal, closeModal, isModalOpen, getModalProps } = useModal();
-  return {
-    openAlertModal: (props?: AlertModalProps) => openModal('alert', props),
-    closeAlertModal: () => closeModal('alert'),
-    isAlertModalOpen: isModalOpen('alert'),
-    alertModalProps: getModalProps('alert'),
   };
 };

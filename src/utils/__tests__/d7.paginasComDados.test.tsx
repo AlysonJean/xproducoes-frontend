@@ -40,7 +40,6 @@ const PERSONAL: Array<[string, string, string]> = [
   [`/reserva-sucesso/${CODE}`, '/reserva-sucesso/:id', 'Pedido de orçamento enviado | X Produções'],
   ['/participate/casamento-bruno-e-ana', '/participate/:slug', 'Mural do evento | X Produções'],
   ['/upload/casamento-bruno-e-ana', '/upload/:slug', 'Envio de fotos para o mural | X Produções'],
-  ['/depoimentos/bruno-souza', '/depoimentos/:slug', 'Depoimento de cliente | X Produções'],
   // O React Router abre a mesma página com maiúsculas.
   [`/Cliente/Reservas/${CODE}`, '/cliente/reservas/:id', 'Detalhes da reserva | X Produções'],
 ];

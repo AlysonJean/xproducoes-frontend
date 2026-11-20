@@ -130,20 +130,6 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
-    proxy: {
-      // Proxy apenas para rotas específicas de API Social Wall e TV
-      '/api/tv/config': {
-        target: 'http://localhost:3001', // Porta do backend
-        changeOrigin: true,
-        secure: false,
-        // Não reescreve path, só redireciona
-      },
-      '/api/admin/social': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        secure: false,
-      }
-    }
   },
   build: {
     outDir: 'dist',
@@ -187,7 +173,6 @@ export default defineConfig({
             // Confirmado sem createContext no topo do módulo (seguro isolar do React).
             if (
               id.includes('@heroicons/react') ||
-              id.includes('@headlessui/react') ||
               id.includes('lucide-react') ||
               id.includes('/clsx/')
             ) return 'vendor-ui';
@@ -195,8 +180,6 @@ export default defineConfig({
             // Data & state management. Sem dependência de React nesses pacotes.
             if (
               id.includes('axios') ||
-              id.includes('zustand') ||
-              id.includes('@tanstack/react-query') ||
               id.includes('date-fns')
             ) return 'vendor-data';
 
@@ -214,9 +197,6 @@ export default defineConfig({
             // PDF/gráficos; isolado principalmente para não compartilhar chunk com eles.
             // Sem dependência de React (zero deps), seguro isolar sozinho.
             if (id.includes('zod')) return 'vendor-forms';
-
-            // Animation library
-            if (id.includes('framer-motion')) return 'vendor-animation';
 
             // Let Rollup decide for uncategorized dependencies to avoid circular manual chunks.
             return null;
@@ -268,10 +248,6 @@ export default defineConfig({
   ssr: {
     noExternal: [
       'react-helmet-async',
-      '@mui/material',
-      '@mui/system',
-      '@mui/base',
-      '@mui/utils',
       '@lottiefiles/dotlottie-react',
       // Bundle date-fns inline to avoid opening hundreds of individual files in
       // Vercel serverless (EMFILE: too many open files)

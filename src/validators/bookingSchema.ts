@@ -71,6 +71,3 @@ export function buildQuoteRequestSchema({ guest, now }: { guest: boolean; now?: 
     { when: () => true },
   );
 }
-
-/** O formulário de quem já entrou na conta (o tipo dos campos é o mesmo para os dois casos). */
-export const quoteRequestSchema = buildQuoteRequestSchema({ guest: false });

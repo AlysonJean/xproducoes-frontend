@@ -10,7 +10,6 @@ interface UseCollaboratorsReturn {
   isLoading: boolean;
   error: string | null;
   fetchCollaborators: () => Promise<void>;
-  getCollaboratorEvents: (id: string) => unknown[];
 }
 
 export const useCollaborators = (): UseCollaboratorsReturn => {
@@ -60,10 +59,6 @@ export const useCollaborators = (): UseCollaboratorsReturn => {
   // Decisão de Alyson (12/11/2026): saiu daqui deleteCollaborator (DELETE /collaborators/:id, a exclusão definitiva, que
   // o servidor não faz mais). "Desativar acesso" e "Reativar" ficam na tela da equipe (AdminCollaboratorsPage).
 
-  const getCollaboratorEvents = useCallback((_id: string) => {
-    return [];
-  }, []);
-
   // Remover auto-fetch para evitar loop infinito e erro 401
   // useEffect(() => {
   //   fetchCollaborators();
@@ -74,6 +69,5 @@ export const useCollaborators = (): UseCollaboratorsReturn => {
     isLoading,
     error,
     fetchCollaborators,
-    getCollaboratorEvents,
   };
 };

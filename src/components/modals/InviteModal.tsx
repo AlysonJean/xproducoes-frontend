@@ -77,5 +77,3 @@ export const InviteModal: React.FC<{
     </Modal>
   );
 };
-
-export default InviteModal;

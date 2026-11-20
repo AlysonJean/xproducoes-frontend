@@ -11,7 +11,6 @@ import { getDashboardRoute } from '../utils/authUtils';
 import {
   Button,
   Input,
-  Checkbox,
   Form,
   Alert
 } from '../components/ui/StandardComponents';
@@ -24,7 +23,6 @@ import { consumeSessionExpiredNotice, SESSION_EXPIRED_MESSAGE } from '../service
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(1, 'Senha é obrigatória'),
-  rememberMe: z.boolean().optional(),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -54,7 +52,6 @@ export const LoginPage = () => {
     defaultValues: {
       email: '',
       password: '',
-      rememberMe: false,
     },
   });
 
@@ -155,19 +152,6 @@ export const LoginPage = () => {
     }
   };
 
-  const handleSocialError = (error: unknown) => {
-    let message = 'Erro desconhecido no login social.';
-    if (typeof error === 'string') message = error;
-    else if (error && typeof error === 'object' && 'message' in error)
-      message = String((error as { message?: unknown }).message);
-    setError(message);
-    addNotification({
-      type: 'error',
-      title: 'Erro no login social',
-      message: message
-    });
-  };
-
   const userTypes = [
     { id: 'client' as const, label: 'Cliente', icon: UserIcon },
     { id: 'collaborator' as const, label: 'Colaborador', icon: Users },
@@ -222,7 +206,7 @@ export const LoginPage = () => {
 
       {userType === 'client' && (
         <div className="space-y-3">
-          <GoogleAuthButton onSuccess={handleSocialSuccess} onFailure={handleSocialError} />
+          <GoogleAuthButton onSuccess={handleSocialSuccess} />
         </div>
       )}
 
@@ -270,12 +254,7 @@ export const LoginPage = () => {
           placeholder="Sua senha"
         />
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Checkbox
-            label="Lembrar de mim"
-            {...register('rememberMe')}
-          />
-
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <Link
             to="/recuperar-senha"
             className="text-sm font-medium text-primary transition-colors hover:text-primary/80"

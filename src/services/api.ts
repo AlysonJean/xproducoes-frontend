@@ -548,63 +548,23 @@ export const contractAPI = {
 
 // ===== 🔗 API ENDPOINTS =====
 
-export const equipmentAPI = {
-  getAll: () => api.get('/equipment'),
-  getById: (id: string) => api.get(`/equipment/${id}`),
-  create: (data: Record<string, unknown>) => api.post('/equipment', data),
-  update: (id: string, data: Record<string, unknown>) => api.put(`/equipment/${id}`, data),
-  delete: (id: string) => api.delete(`/equipment/${id}`),
-  search: (query: string) => api.get(`/equipment/search?q=${encodeURIComponent(query)}`),
-  getByCategory: (categoryId: string) => api.get(`/equipment/category/${categoryId}`),
-};
-
 export const kitAPI = {
-  getAll: () => api.get('/kits'),
-  getById: (id: string) => api.get(`/kits/${id}`),
-  create: (data: Record<string, unknown>) => api.post('/kits', data),
-  update: (id: string, data: Record<string, unknown>) => api.put(`/kits/${id}`, data),
-  delete: (id: string) => api.delete(`/kits/${id}`),
   getRecommended: () => api.get('/kits/recommended'),
-  getPopular: () => api.get('/kits/popular'),
-};
-
-export const categoryAPI = {
-  getAll: () => api.get('/categories'),
-  getById: (id: string) => api.get(`/categories/${id}`),
-  create: (data: Record<string, unknown>) => api.post('/categories', data),
-  update: (id: string, data: Record<string, unknown>) => api.put(`/categories/${id}`, data),
-  delete: (id: string) => api.delete(`/categories/${id}`),
-  getWithEquipmentCount: () => api.get('/categories/with-counts'),
-  getFeatured: () => api.get('/categories/featured'),
 };
 
 export const bookingAPI = {
-  getAll: (filters?: Record<string, unknown>) => api.get('/bookings', { params: filters }),
   getById: (id: string) => api.get(`/bookings/${id}`),
-  getRoadmap: (id: string) => api.get(`/bookings/roadmap/${id}`),
-  create: (data: Record<string, unknown>) => api.post('/bookings', data),
-  update: (id: string, data: Record<string, unknown>) => api.put(`/bookings/${id}`, data),
   delete: (id: string) => api.delete(`/bookings/${id}`),
-  createTask: (id: string, data: { title: string; description?: string }) =>
-    api.post(`/bookings/${id}/tasks`, data),
-  toggleTask: (taskId: string, isCompleted: boolean) =>
-    api.put(`/bookings/tasks/${taskId}/toggle`, { isCompleted }),
   // PUT: o backend só expõe PUT /bookings/:id/status — o PATCH dava 404 (o PATCH existe só em /admin/bookings).
   // D11: extra leva o notifyClient: false da caixa "Avisar o cliente por e-mail" (ver utils/notifyClient).
   updateStatus: (id: string, status: string, extra?: { notifyClient?: false }) =>
     api.put(`/bookings/${id}/status`, { status, ...extra }),
   updateDeliveryStatus: (id: string, status: string) => api.put(`/bookings/${id}/delivery-status`, { status }),
-  confirm: (id: string) => api.post(`/bookings/${id}/confirm`),
   // Confirma a reserva com preço e colaboradores (admin)
   confirmWithDetails: (id: string, data: Record<string, unknown>) =>
     api.put(`/bookings/${id}/confirm-details`, data),
-  cancel: (id: string, reason?: string) => api.post(`/bookings/${id}/cancel`, { reason }),
   getMyBookings: () => api.get('/bookings/user'),
   getUpcoming: () => api.get('/bookings/upcoming'),
-  getHistory: () => api.get('/bookings/history'),
-  getDashboardStats: () => api.get('/bookings/stats'),
-  getCalendar: (month: string, year: string) =>
-    api.get(`/bookings/calendar?month=${month}&year=${year}`),
   // P15 e D11 (aprovadas em 02/11/2026): "Enviar proposta" da ficha (rotate: o "Gerar novo link") e o cartão
   // Histórico. Só admin.
   sendProposal: (id: string, options?: { rotate?: boolean }) =>
@@ -617,30 +577,10 @@ export const bookingAPI = {
 
 export const clientAPI = {
   getAll: (filters?: Record<string, unknown>) => api.get('/admin/clients', { params: filters }),
-  getById: (id: string) => api.get(`/admin/clients/${id}`),
-  create: (data: Record<string, unknown> | FormData) => {
-    if (data instanceof FormData) {
-      return api.post('/admin/clients', data, { headers: { 'Content-Type': 'multipart/form-data' } });
-    }
-    return api.post('/admin/clients', data);
-  },
-  update: (id: string, data: Record<string, unknown> | FormData) => {
-    if (data instanceof FormData) {
-      return api.put(`/admin/clients/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
-    }
-    return api.put(`/admin/clients/${id}`, data);
-  },
   delete: (id: string) => api.delete(`/admin/clients/${id}`),
 };
 
 export const collaboratorsAPI = {
-  // Achado (revisão antes do deploy): apontava para /admin/collaborators, rota que o backend nunca
-  // teve (404). As rotas reais são /collaborators — todas só de admin, exceto GET /:id.
-  getAll: () => api.get('/collaborators'),
-  getById: (id: string) => api.get(`/collaborators/${id}`),
-  create: (data: Record<string, unknown>) => api.post('/collaborators', data),
-  update: (id: string, data: Record<string, unknown>) => api.put(`/collaborators/${id}`, data),
-  delete: (id: string) => api.delete(`/collaborators/${id}`),
   // Enviar convite por e-mail (admin)
   invite: (email: string) => api.post('/collaborators/invite', { email }),
   // Dashboard pessoal do colaborador
@@ -655,20 +595,17 @@ export const collaboratorsAPI = {
 
 export const collaboratorFunctionsAPI = {
   getAll: () => api.get('/collaborator-functions'),
-  getById: (id: string) => api.get(`/collaborator-functions/${id}`),
   create: (data: { name: string; description?: string }) => api.post('/collaborator-functions', data),
   update: (id: string, data: { name?: string; description?: string; active?: boolean }) => api.put(`/collaborator-functions/${id}`, data),
   delete: (id: string) => api.delete(`/collaborator-functions/${id}`),
 };
 
 export const authAPI = {
-  login: (email: string, password: string) => api.post('/auth/login', { email, password }),
   register: (userData: Record<string, unknown>) => api.post('/auth/register', userData),
   // Registro público a partir de um convite (token)
   registerFromInvite: (data: { token: string; email: string; name: string; password: string }) =>
     api.post('/auth/register-from-invite', data),
   logout: () => api.post('/auth/logout'),
-  refresh: (refreshToken: string) => api.post('/auth/refresh', { refreshToken }),
   getProfile: () => api.get('/auth/profile'),
   getStats: () => api.get('/user/stats'),
   getFavorites: () => api.get('/user/favorites'),
@@ -678,51 +615,6 @@ export const authAPI = {
   // painel do colaborador falhava sempre. A rota real é POST /users/change-password.
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post('/users/change-password', { currentPassword, newPassword }),
-  requestPasswordReset: (email: string) => api.post('/auth/request-reset', { email }),
-  resetPassword: (token: string, newPassword: string) =>
-    api.post('/auth/reset-password', { token, newPassword }),
-  googleLogin: (token: string) => api.post('/auth/google', { token }),
-};
-
-export const reviewAPI = {
-  getAll: (filters?: Record<string, unknown>) => api.get('/reviews', { params: filters }),
-  getByEquipment: (equipmentId: string) => api.get(`/reviews/equipment/${equipmentId}`),
-  getByUser: (userId?: string) => api.get(`/reviews/user/${userId || 'me'}`),
-  create: (data: Record<string, unknown>) => api.post('/reviews', data),
-  update: (id: string, data: Record<string, unknown>) => api.put(`/reviews/${id}`, data),
-  delete: (id: string) => api.delete(`/reviews/${id}`),
-  approve: (id: string) => api.post(`/reviews/${id}/approve`),
-  reject: (id: string) => api.post(`/reviews/${id}/reject`),
-  getStats: () => api.get('/reviews/stats'),
-  getRecent: (limit: number = 5) => api.get(`/reviews/recent?limit=${limit}`),
-};
-
-export const portfolioAPI = {
-  getAll: () => api.get('/portfolio'),
-  getById: (id: string) => api.get(`/portfolio/${id}`),
-  create: (data: Record<string, unknown>) => api.post('/portfolio', data),
-  update: (id: string, data: Record<string, unknown>) => api.put(`/portfolio/${id}`, data),
-  delete: (id: string) => api.delete(`/portfolio/${id}`),
-  uploadImages: (id: string, formData: FormData) =>
-    api.post(`/portfolio/${id}/images`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
-  deleteImage: (id: string, imageId: string) => api.delete(`/portfolio/${id}/images/${imageId}`),
-  setFeatured: (id: string, featured: boolean) =>
-    api.patch(`/portfolio/${id}/featured`, { featured }),
-  updateVisibility: (id: string, isPublic: boolean) =>
-    api.patch(`/portfolio/${id}/visibility`, { isPublic }),
-};
-
-export const dashboardAPI = {
-  getStats: () => api.get('/dashboard/stats'),
-  getRecentActivity: () => api.get('/dashboard/recent-activity'),
-  getRevenue: (period: string) => api.get(`/dashboard/revenue?period=${period}`),
-  getBookingTrends: () => api.get('/dashboard/booking-trends'),
-  getTopEquipment: () => api.get('/dashboard/top-equipment'),
-  getTopClients: () => api.get('/dashboard/top-clients'),
-  getLiveStats: () => api.get('/dashboard/live-stats'),
-  getNotifications: () => api.get('/dashboard/notifications'),
 };
 
 export const paymentAPI = {
@@ -735,12 +627,6 @@ export const paymentAPI = {
   getAllPayments: (filters?: Record<string, unknown>) =>
     api.get('/payments/all', { params: filters }),
   getPaymentStats: () => api.get('/payments/stats'),
-};
-
-// ✅ HEALTH CHECK
-export const healthAPI = {
-  check: () => api.get('/health'),
-  detailed: () => api.get('/health/detailed'),
 };
 
 // Auditoria do orçamento (12/11/2026), O41: saiu o quoteAPI. Nada o usava, e o /quotes do servidor (que também saiu)
@@ -760,25 +646,6 @@ export const collaboratorProfileAPI = {
   uploadAvatar: (formData: FormData) => api.post('/upload/avatar', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
-
-  // Obter portfólio do colaborador
-  getPortfolio: () => api.get('/collaborators/me/portfolio'),
-
-  // Adicionar item ao portfólio
-  addPortfolioItem: (data: Record<string, unknown>) => api.post('/collaborators/me/portfolio', data),
-
-  // Atualizar item do portfólio
-  updatePortfolioItem: (id: string, data: Record<string, unknown>) =>
-    api.put(`/collaborators/me/portfolio/${id}`, data),
-
-  // Remover item do portfólio
-  deletePortfolioItem: (id: string) => api.delete(`/collaborators/me/portfolio/${id}`),
-
-  // Upload de imagem do portfólio
-  uploadPortfolioImage: (id: string, formData: FormData) =>
-    api.post(`/collaborators/me/portfolio/${id}/images`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
 
   // Obter configurações do colaborador
   getSettings: () => api.get('/collaborators/me/settings'),
@@ -806,14 +673,6 @@ export const collaboratorProfileAPI = {
 
   // Atualizar disponibilidade
   updateAvailability: (data: Record<string, unknown>) => api.put('/collaborators/me/availability', data),
-
-  // Obter avaliações recebidas
-  getReviews: (page?: number, limit?: number) =>
-    api.get(`/collaborators/me/reviews?page=${page || 1}&limit=${limit || 10}`),
-
-  // Responder a uma avaliação
-  respondToReview: (reviewId: string, response: string) =>
-    api.post(`/collaborators/me/reviews/${reviewId}/respond`, { response }),
 
   // Alternar status de tarefa (Checklist)
   toggleTask: (taskId: string, isCompleted: boolean) =>
@@ -852,22 +711,6 @@ export const recommendationAPI = {
   // Recomendações sazonais
   getSeasonal: (limit: number = 8) =>
     api.get(`/recommendations/seasonal?limit=${limit}`),
-
-  // Baseado em favoritos do usuário
-  getBasedOnFavorites: (limit: number = 8) =>
-    api.get(`/recommendations/based-on-favorites?limit=${limit}`),
-
-  // Completar o setup (kits complementares)
-  getComplementary: (items: string[], limit: number = 4) =>
-    api.post('/recommendations/complementary', { items, limit }),
-
-  // Recomendações para categoria específica
-  getByCategory: (categoryId: string, limit: number = 8) =>
-    api.get(`/recommendations/category/${categoryId}?limit=${limit}`),
-
-  // Recomendações baseadas em orçamento
-  getByBudget: (minPrice: number, maxPrice: number, limit: number = 8) =>
-    api.get(`/recommendations/budget?min=${minPrice}&max=${maxPrice}&limit=${limit}`),
 };
 
 // ✅ API DE MENSAGENS PARA COLABORADORES

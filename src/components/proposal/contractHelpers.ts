@@ -103,7 +103,7 @@ export function withdrawalOpen(withdrawUntil?: string | null, canWithdraw?: bool
   return Boolean(until) && canWithdraw !== false && (until as Date).getTime() > now;
 }
 
-export const CONTRACT_STATE_LABEL: Record<ContractState, string> = {
+const CONTRACT_STATE_LABEL: Record<ContractState, string> = {
   NONE: 'Sem contrato',
   PREPARED: 'Aguardando aceite',
   ACCEPTED: 'Aceito',
@@ -111,7 +111,7 @@ export const CONTRACT_STATE_LABEL: Record<ContractState, string> = {
   SUPERSEDED: 'Substituído por outro',
 };
 
-export const CONTRACT_STATE_VARIANT: Record<ContractState, StandardVariant> = {
+const CONTRACT_STATE_VARIANT: Record<ContractState, StandardVariant> = {
   NONE: 'ghost',
   PREPARED: 'warning',
   ACCEPTED: 'success',
@@ -240,7 +240,7 @@ export function formatPhone(value: string): string {
   return value;
 }
 
-export const EMPTY_PARTY_FORM: PartyForm = {
+const EMPTY_PARTY_FORM: PartyForm = {
   personType: 'PF',
   name: '',
   document: '',

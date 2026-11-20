@@ -67,7 +67,6 @@ describe('código morto do orçamento fora do site (O41)', () => {
   it('typeSafeFormatters sem calculateKitTotal, calculateEquipmentTotal e calculatePeriodDiscount', () => {
     for (const nome of ['calculateKitTotal', 'calculateEquipmentTotal', 'calculatePeriodDiscount']) {
       expect(formatters).not.toHaveProperty(nome);
-      expect(formatters.default).not.toHaveProperty(nome);
     }
     // O que fica e é usado (a economia da página do kit).
     expect(formatters.calculateSavingsAmount(400, 300)).toBe(100);

@@ -356,5 +356,3 @@ export const CouponManagementPage = () => {
     </AdminLayout>
   );
 };
-
-export default CouponManagementPage;

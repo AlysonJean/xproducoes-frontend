@@ -694,5 +694,3 @@ export const ClientCalendarPage = () => {
     </ClientPage>
   );
 };
-
-export default ClientCalendarPage;

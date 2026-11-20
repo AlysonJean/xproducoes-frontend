@@ -65,21 +65,6 @@ export const useServiceWorker = () => {
     }
   }, [state.isSupported]);
 
-  // Desregistrar Service Worker
-  const unregister = useCallback(async (): Promise<void> => {
-    if (state.registration) {
-      const unregistered = await state.registration.unregister();
-      if (unregistered) {
-        logger.info('Service Worker unregistered', 'ServiceWorker');
-        setState((prev) => ({
-          ...prev,
-          isRegistered: false,
-          registration: null,
-        }));
-      }
-    }
-  }, [state.registration]);
-
   // Atualizar Service Worker
   const update = useCallback(async (): Promise<void> => {
     if (state.registration) {
@@ -89,13 +74,6 @@ export const useServiceWorker = () => {
       } catch (error) {
         logger.error('Service Worker update failed', 'ServiceWorker', error);
       }
-    }
-  }, [state.registration]);
-
-  // Enviar mensagem para Service Worker
-  const sendMessage = useCallback((message: unknown): void => {
-    if (state.registration && state.registration.active) {
-      state.registration.active.postMessage(message);
     }
   }, [state.registration]);
 
@@ -125,42 +103,10 @@ export const useServiceWorker = () => {
     return () => clearTimeout(timer);
   }, [state.isSupported, state.isRegistered, register]);
 
-  // Enviar métricas de performance para Service Worker
-  useEffect(() => {
-    const sendPerformanceMetrics = () => {
-      if (window.performance && state.isRegistered) {
-        const navigation = performance.getEntriesByType(
-          'navigation'
-        )[0] as PerformanceNavigationTiming;
-
-        const metrics = {
-          type: 'PERFORMANCE_METRICS',
-          metrics: {
-            dns: navigation.domainLookupEnd - navigation.domainLookupStart,
-            tcp: navigation.connectEnd - navigation.connectStart,
-            request: navigation.responseStart - navigation.requestStart,
-            response: navigation.responseEnd - navigation.responseStart,
-            dom: navigation.domContentLoadedEventEnd - navigation.responseEnd,
-            load: navigation.loadEventEnd - navigation.loadEventStart,
-            total: navigation.loadEventEnd - navigation.fetchStart,
-          },
-          timestamp: Date.now(),
-        };
-
-        sendMessage(metrics);
-      }
-    };
-
-    const timer = setTimeout(sendPerformanceMetrics, 2000);
-    return () => clearTimeout(timer);
-  }, [state.isRegistered, sendMessage]);
-
   return {
     ...state,
     register,
-    unregister,
     update,
-    sendMessage,
   };
 }
 

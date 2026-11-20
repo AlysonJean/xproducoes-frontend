@@ -4,15 +4,10 @@ import {
   toNumber,
   formatPrice,
   formatDate,
-  formatDateTime,
   formatBookingStatus,
-  sanitizeEmail,
   calculateSavingsAmount,
-  safeTransformEquipment,
-  validateKit,
-  daysDifference,
 } from '../typeSafeFormatters';
-import { BookingStatus, EquipmentStatus, type Equipment, type Kit } from '@/types';
+import { BookingStatus } from '@/types';
 
 describe('typeSafeFormatters utilities', () => {
   describe('toNumber', () => {
@@ -36,20 +31,16 @@ describe('typeSafeFormatters utilities', () => {
     });
   });
 
-  describe('formatDate and formatDateTime', () => {
+  describe('formatDate', () => {
     it('returns empty string for null/undefined/invalid dates', () => {
             expect(formatDate(null as unknown as Date)).toBe('');
-            expect(formatDateTime(undefined as unknown as Date)).toBe('');
+            expect(formatDate(undefined as unknown as Date)).toBe('');
       expect(formatDate('invalid-date')).toBe('');
     });
 
     it('formats valid Date objects consistently (local timezone)', () => {
       const d = new Date(2024, 0, 5, 10, 20, 0); // Jan 5, 2024 10:20 local
-      const ds = formatDate(d);
-      const dts = formatDateTime(d);
-      expect(ds).toMatch(/05\/01\/2024/);
-      expect(dts).toMatch(/\d{2}\/\d{2}\/\d{4}/);
-      expect(dts).toMatch(/\d{2}:\d{2}/);
+      expect(formatDate(d)).toMatch(/05\/01\/2024/);
     });
   });
 
@@ -60,63 +51,11 @@ describe('typeSafeFormatters utilities', () => {
     });
   });
 
-  describe('sanitizeEmail', () => {
-    it('trims and lowercases email safely', () => {
-      const input = '  João.Silva@Email.COM  ';
-      const result = sanitizeEmail(input);
-      expect(result).toBe('joão.silva@email.com');
-    });
-  });
-
   describe('calculateSavingsAmount', () => {
     it('returns difference when original is greater than current, otherwise 0', () => {
       expect(calculateSavingsAmount('1.000,00', '750,00')).toBeCloseTo(250, 5);
       expect(calculateSavingsAmount(500, 500)).toBe(0);
       expect(calculateSavingsAmount(400, 500)).toBe(0);
-    });
-  });
-
-  describe('safeTransformEquipment', () => {
-    it('safely applies defaults and parses numeric fields', () => {
-      const input: Partial<Equipment> = {
-        id: 'eq1',
-                name: undefined,
-                dailyPrice: '199,90' as unknown as number,
-        status: undefined,
-      };
-      const eq = safeTransformEquipment(input);
-      expect(eq.id).toBe('eq1');
-      expect(eq.name).toBe('');
-      expect(eq.dailyPrice).toBeCloseTo(199.90, 2);
-      expect(eq.status).toBe(EquipmentStatus.AVAILABLE);
-      expect(Array.isArray(eq.images)).toBe(true);
-    });
-  });
-
-  describe('validateKit', () => {
-    it('validates required fields: name, positive price, non-empty equipments', () => {
-            const invalid1: Partial<Kit> = { name: 'Kit', price: 0, equipments: [] as unknown as Equipment[] };
-            const invalid2: Partial<Kit> = { name: 'Kit', price: 'abc' as unknown as number, equipments: [] as unknown as Equipment[] };
-            const invalid3: Partial<Kit> = { name: '', price: 100, equipments: [{ id: 'e1', name: 'E', equipments: [] } as unknown as Equipment] };
-
-      expect(validateKit(invalid1)).toBe(false);
-      expect(validateKit(invalid2)).toBe(false);
-      expect(validateKit(invalid3)).toBe(false);
-
-      const valid: Partial<Kit> = {
-        name: 'Bundle',
-                price: '1.000,00' as unknown as number,
-                equipments: [{ id: 'e1', name: 'E1' } as unknown as Equipment],
-      };
-      expect(validateKit(valid)).toBe(true);
-    });
-  });
-
-  describe('daysDifference', () => {
-    it('computes absolute day difference', () => {
-      expect(daysDifference('2024-01-01', '2024-01-10')).toBe(9);
-      // reversed should still yield positive difference
-      expect(daysDifference('2024-01-10', '2024-01-01')).toBe(9);
     });
   });
 });

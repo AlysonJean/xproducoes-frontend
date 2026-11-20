@@ -347,5 +347,3 @@ export const AdminCollaboratorFunctionsPage: React.FC = () => {
     </AdminLayout>
   );
 };
-
-export default AdminCollaboratorFunctionsPage;

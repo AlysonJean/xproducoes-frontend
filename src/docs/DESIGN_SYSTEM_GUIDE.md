@@ -29,7 +29,7 @@ Regras:
 - **Nunca** `text-{status}-foreground` sobre um fundo `/10`, porque essa cor foi feita para ir sobre o fundo **sólido** do status.
 - **Não existem**, não use: `bg-surface`, `text-danger`, `text-tertiary` e a escala `primary-50…950`.
 - **Não use** como cor da marca ou do painel: índigo, roxo, rosa ou teal. Use `primary`.
-- **Gráficos:** `hsl(var(--primary))`, `hsl(var(--success))` etc., ou os tokens `chart-1…5`. Nunca hex fixo.
+- **Gráficos:** `hsl(var(--primary))`, `hsl(var(--success))` etc. Nunca hex fixo.
 
 ### Mapa de substituição
 
@@ -76,7 +76,7 @@ Importe de `src/components/ui/StandardComponents.tsx`:
 | card | `<Card>`, `<SimpleCard title>`, `<StatsCard>` | div `bg-white rounded-xl shadow` |
 | carregando (página/seção) | `<BrandLoader label="Carregando reservas…">` | texto solto "Carregando…" |
 | carregando (botão/inline) | `isLoading` do Button, ou `<Loader2 className="animate-spin">` | spinner `border-b-2` à mão |
-| esqueleto | `<Skeleton>`, `<CardSkeleton>`, `<ListSkeleton>` | `animate-pulse` à mão |
+| esqueleto | `<Skeleton>` | `animate-pulse` à mão |
 | paginação | `<Pagination>` | botões "Anterior/Próxima" de enfeite |
 
 - **Variantes de Button:** primary, secondary, outline, ghost, destructive, success, warning, info.

@@ -23,28 +23,10 @@
   --radius-3xl: 1.5rem;     /* 24px */
   --radius-full: 9999px;
   
-  /* Z-index scale */
-  --z-dropdown: 1000;
-  --z-sticky: 1020;
-  --z-modal-backdrop: 1040;
-  --z-modal: 1050;
-  --z-popover: 1060;
-  --z-tooltip: 1070;
-  --z-toast: 1080;
-  
-  /* Animation timing */
-  --duration-150: 150ms;
-  --duration-200: 200ms;
-  --duration-300: 300ms;
-  --duration-500: 500ms;
-  --duration-700: 700ms;
-  
-  /* Easing curves */
-  --ease-linear: linear;
+  /* Easing curves (o Tailwind v4 lê --ease-in, --ease-out e --ease-in-out) */
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 /* Light Theme Colors - Azul Petróleo como brand */
@@ -93,7 +75,6 @@
   
   /* Background colors */
   --background: 0 0% 100%;          /* #ffffff - Pure white */
-  --primary-rgb: 0, 48, 73;         /* Azul petróleo brand */
   --foreground: 217 33% 17%;        /* #222222 - Deep slate */
   
   /* Card colors */
@@ -103,20 +84,6 @@
   /* Popover colors */
   --popover: 0 0% 100%;             /* #ffffff - White */
   --popover-foreground: 217 33% 17%; /* #222222 - Deep slate */
-  
-  /* Airbnb-specific colors for legacy support */
-  --coral: 352 100% 50%;            /* #ff385c - Airbnb coral */
-  --coral-light: 352 100% 96%;      /* #ffebef - Light coral */
-  --coral-dark: 352 100% 30%;       /* #cc1538 - Dark coral */
-  --warm-gray: 210 20% 96%;         /* #f7f7f7 - Warm gray */
-  --cool-gray: 215 16% 47%;         /* #717171 - Cool gray */
-  
-  /* Chart colors - Airbnb palette */
-  --chart-1: 352 100% 50%;          /* #ff385c - Airbnb coral */
-  --chart-2: 25 95% 53%;            /* #ff7849 - Warm orange */
-  --chart-3: 142 72% 29%;           /* #00a651 - Deep green */
-  --chart-4: 38 95% 56%;            /* #ffb000 - Warm yellow */
-  --chart-5: 199 89% 48%;           /* #0ea5e9 - Sky blue */
 }
 
   /* Dark Theme Colors - Elegante e Tecnológico (Sleek Precision) */
@@ -165,7 +132,6 @@
   /* Background colors - Deep Space */
   --background: 222 47% 4%;         /* #020617 - O preto mais profundo */
   --foreground: 210 20% 98%;        /* #f8fafc - Branco nítido */
-  --primary-rgb: 209, 217, 224;
 
   /* Card colors - Glassmorphism Sutil com bordas sólidas */
   --card: 222 47% 6%;               /* Um tom acima do background */
@@ -174,11 +140,4 @@
   /* Popover colors */
   --popover: 222 47% 7%;
   --popover-foreground: 210 20% 98%;
-
-  /* Chart colors - Paleta Monocromática Prata + Signal Orange */
-  --chart-1: 210 20% 85%;           /* Prata Principal */
-  --chart-2: 25 95% 53%;            /* Signal Orange */
-  --chart-3: 215 15% 60%;           /* Cinza Muted */
-  --chart-4: 210 10% 40%;           /* Carvão */
-  --chart-5: 220 25% 20%;           /* Grafite Profundo */
 }

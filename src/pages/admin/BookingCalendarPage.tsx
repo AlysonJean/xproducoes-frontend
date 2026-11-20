@@ -60,16 +60,11 @@ interface CalendarEvent extends Event {
 }
 
 type FilterStatus = 'ALL' | BookingStatus;
-type FilterBinary = 'ALL' | 'YES' | 'NO';
-type FilterDateRange = 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH';
 
 interface CalendarFilters {
   status: FilterStatus;
   search: string;
   collaboratorId: string;
-  hasCollaborators: FilterBinary;
-  hasItems: FilterBinary;
-  dateRange: FilterDateRange;
 }
 
 const BookingDetailsModal = ({
@@ -323,9 +318,6 @@ export const BookingCalendarPage = () => {
     status: 'ALL',
     search: '',
     collaboratorId: '',
-    hasCollaborators: 'ALL',
-    hasItems: 'ALL',
-    dateRange: 'ALL',
   });
   // Achado (revisão antes do deploy): a agenda buscava GET /collaborators cru e lia `c.name`, mas a
   // API manda o nome dentro de `user` — "Filtrar por colaborador" e "Colaborador responsável"
@@ -446,11 +438,6 @@ export const BookingCalendarPage = () => {
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
       const booking = e.resource;
-      const eventDate = e.start || new Date();
-      const today = new Date();
-      const weekStart = new Date(today);
-      weekStart.setDate(today.getDate() - today.getDay());
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
       if (filters.status !== 'ALL' && (booking.status as string) !== filters.status) return false;
       if (filters.search) {
@@ -467,43 +454,9 @@ export const BookingCalendarPage = () => {
         const colls = booking.collaborators || [];
         if (!colls.some((c) => c.collaborator?.id === filters.collaboratorId || c.collaboratorId === filters.collaboratorId)) return false;
       }
-      if (filters.hasCollaborators !== 'ALL') {
-        const hasCollabs = (booking.collaborators?.length || 0) > 0;
-        if (filters.hasCollaborators === 'YES' && !hasCollabs) return false;
-        if (filters.hasCollaborators === 'NO' && hasCollabs) return false;
-      }
-      if (filters.hasItems !== 'ALL') {
-        const hasItems = (booking.equipments?.length || 0) + (booking.kits?.length || 0) > 0;
-        if (filters.hasItems === 'YES' && !hasItems) return false;
-        if (filters.hasItems === 'NO' && hasItems) return false;
-      }
-      if (filters.dateRange !== 'ALL') {
-        if (filters.dateRange === 'TODAY' && eventDate.toDateString() !== today.toDateString()) return false;
-        if (filters.dateRange === 'THIS_WEEK' && (eventDate < weekStart || eventDate >= new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000))) return false;
-        if (filters.dateRange === 'THIS_MONTH' && (eventDate < monthStart || eventDate >= new Date(today.getFullYear(), today.getMonth() + 1, 1))) return false;
-      }
       return true;
     });
   }, [events, filters]);
-
-  // TODO: Re-enable when applyStatus is used in the calendar UI
-  // const applyStatus = async (id: string, status: BookingStatus) => {
-  //   try {
-  //     setActionLoading(id + status);
-  //     await apiFetch(`/bookings/${id}/status`, {
-  //       method: 'PUT',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({ status })
-  //     });
-  //     setEvents((prev) => prev.map((e) => (e.resource.id === id ? { ...e, resource: { ...e.resource, status: status } } : e)));
-  //     addNotification({ type: 'success', title: 'Status Sincronizado', message: `Reserva atualizada para ${status.toLowerCase()}.` });
-  //   } catch (err: unknown) {
-  //     addNotification({ type: 'error', title: 'Falha Critical', message: 'Erro ao persistir mudança de status.' });
-  //   } finally {
-  //     setActionLoading(null);
-  //     setHovered(null);
-  //   }
-  // };
 
   const confirmWithDetails = async () => {
     if (!confirmBookingId) return;
@@ -701,7 +654,7 @@ export const BookingCalendarPage = () => {
                      />
                   </div>
                   <Button variant="outline" size="icon" className="h-9 w-9 text-muted-foreground" aria-label="Limpar filtros" title="Limpar filtros" onClick={() => setFilters({
-                    status: 'ALL', search: '', collaboratorId: '', hasCollaborators: 'ALL', hasItems: 'ALL', dateRange: 'ALL'
+                    status: 'ALL', search: '', collaboratorId: ''
                   })}>
                      <XCircle className="h-4 w-4" />
                   </Button>

@@ -254,11 +254,12 @@ export const AdminCollaboratorsPage: React.FC = () => {
     setInviteLoading(true);
     try {
       const resp = await api.post('/collaborators/invite', { email: inviteEmail });
+      // O servidor (inviteController.sendInvite) devolve inviteId, inviteUrl e emailSent.
       const data = resp.data || {};
-      const inviteUrl = data.inviteUrl || data.registrationLink || '';
+      const inviteUrl = data.inviteUrl || '';
 
       if (inviteUrl) {
-        openModal('invite', { inviteUrl, tempPassword: data.tempPassword });
+        openModal('invite', { inviteUrl });
       } else {
         addNotification({
           type: 'success',

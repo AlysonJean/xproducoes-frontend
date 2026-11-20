@@ -129,10 +129,6 @@ No pedido de orçamento, marque **${NEED_LED}** e conte o tamanho do local. A eq
   }
 ];
 
-export function getCityBySlug(slug: string) {
-  return TARGET_CITIES.find(c => c.slug === slug);
-}
-
 export function getServiceBySlug(slug: string) {
   return TARGET_SERVICES.find(s => s.slug === slug);
 }

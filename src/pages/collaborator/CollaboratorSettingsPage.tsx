@@ -75,8 +75,6 @@ const CollaboratorSettingsPage: React.FC = () => {
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
-    twoFactorEnabled: false,
-    loginNotifications: true
   });
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
@@ -120,17 +118,11 @@ const CollaboratorSettingsPage: React.FC = () => {
           certifications: data.certifications || [],
         });
 
-        // Configurações salvas em User.profileSettings (JSON) — vindas da rota de settings — ou padrões
+        // Configurações salvas em User.profileSettings (JSON) — vindas da rota de settings — ou padrões.
+        // (security.twoFactorEnabled/loginNotifications não são lidos: os interruptores ficam desligados, "Em breve".)
         const userSettings = (settingsResponse?.data ?? {}) as {
-          security?: { twoFactorEnabled?: boolean; loginNotifications?: boolean };
           payment?: Partial<PaymentSettings>;
         };
-
-        setSecuritySettings((prev) => ({
-          ...prev,
-          twoFactorEnabled: userSettings.security?.twoFactorEnabled ?? false,
-          loginNotifications: userSettings.security?.loginNotifications ?? true
-        }));
 
         setPaymentSettings({
             pixKey: userSettings.payment?.pixKey || '',

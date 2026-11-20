@@ -806,5 +806,3 @@ export const AdminInstagramPage = () => {
     </AdminLayout>
   );
 };
-
-export default AdminInstagramPage;

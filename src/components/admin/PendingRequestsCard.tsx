@@ -56,5 +56,3 @@ export const PendingRequestsCard: React.FC<PendingRequestsCardProps> = ({ summar
     </section>
   );
 };
-
-export default PendingRequestsCard;

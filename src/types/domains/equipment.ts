@@ -9,9 +9,6 @@ export interface Equipment {
   id: string;
   name: string;
   description?: string;
-  dailyPrice?: number;
-  weeklyPrice?: number;
-  monthlyPrice?: number;
   price?: number;
   pricePerHour?: number;
   hourlyRate?: number;

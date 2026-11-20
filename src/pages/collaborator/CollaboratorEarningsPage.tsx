@@ -20,7 +20,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { collaboratorsAPI, collaboratorProfileAPI } from '../../services/api';
 import { logger } from '../../utils/logger';
 
-type PaymentStatus = 'PAID' | 'PENDING' | 'PROCESSING' | 'OVERDUE' | 'CANCELLED' | 'DISPUTED' | 'ABERTO' | 'ATRASADO' | 'CANCELADO';
+type PaymentStatus = 'PAID' | 'PENDING' | 'OVERDUE' | 'CANCELLED' | 'DISPUTED';
 
 interface EarningsData {
   totalEarnings: number;
@@ -29,7 +29,6 @@ interface EarningsData {
   pendingPayments: number;
   averagePerEvent: number;
   eventsCompleted: number;
-  earningsGrowth: number;
   monthlyData: Array<{
     month: string;
     earnings: number;
@@ -69,18 +68,15 @@ const PERIOD_OPTIONS = [
   { value: '12', label: 'Últimos 12 meses' },
 ];
 
-// Achado (auditoria): só PAID/PENDING/PROCESSING tinham rótulo — ATRASADO, ABERTO, CANCELADO (e os
-// valores do enum do backend OVERDUE/CANCELLED/DISPUTED) apareciam como "Desconhecido".
+// Achado (auditoria): os valores do enum do backend OVERDUE/CANCELLED/DISPUTED apareciam como "Desconhecido".
+// Ficam só os cinco do enum CollaboratorPaymentStatus do servidor (PROCESSING, ABERTO, ATRASADO e CANCELADO
+// nunca chegavam da API e saíram na limpeza de 20/11/2026).
 const PAYMENT_STATUS: Record<string, { label: string; variant: StandardVariant }> = {
   PAID: { label: 'Pago', variant: 'success' },
   PENDING: { label: 'Pendente', variant: 'warning' },
-  ABERTO: { label: 'Em aberto', variant: 'warning' },
-  PROCESSING: { label: 'Processando', variant: 'info' },
   OVERDUE: { label: 'Atrasado', variant: 'destructive' },
-  ATRASADO: { label: 'Atrasado', variant: 'destructive' },
   DISPUTED: { label: 'Em contestação', variant: 'warning' },
   CANCELLED: { label: 'Cancelado', variant: 'ghost' },
-  CANCELADO: { label: 'Cancelado', variant: 'ghost' },
 };
 
 // "AAAA-MM" de N meses atrás (inclusive o mês atual), para filtrar o período do gráfico.
@@ -186,7 +182,6 @@ const CollaboratorEarningsPage: React.FC = () => {
         pendingPayments: pendingTotal,
         averagePerEvent: stats && stats.totalEvents && stats.totalEvents > 0 ? Number(stats.totalEarnings) / Number(stats.totalEvents) : 0,
         eventsCompleted: Number(stats?.totalEvents || 0),
-        earningsGrowth: 0, // Backend não fornece ainda comparativo com mês anterior
         monthlyData,
         recentPayments
       });
@@ -228,10 +223,6 @@ const CollaboratorEarningsPage: React.FC = () => {
               value={formatPrice(earnings.totalEarnings || 0)}
               description="Ganhos acumulados"
               icon={<DollarSign className="h-5 w-5" />}
-              trend={earnings.earningsGrowth ? {
-                value: earnings.earningsGrowth,
-                type: earnings.earningsGrowth > 0 ? 'positive' : 'negative'
-              } : undefined}
             />
 
             <StatsCard

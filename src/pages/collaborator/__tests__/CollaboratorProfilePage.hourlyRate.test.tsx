@@ -16,7 +16,6 @@ vi.mock('../../../components/collaborator/CollaboratorStates', () => ({
   CollaboratorLoading: () => <p>Carregando perfil…</p>,
   CollaboratorError: ({ message }: { message: string }) => <p>{message}</p>,
 }));
-vi.mock('../../../components/GoogleCalendarIntegration', () => ({ GoogleCalendarIntegration: () => null }));
 
 import CollaboratorProfilePage from '../CollaboratorProfilePage';
 

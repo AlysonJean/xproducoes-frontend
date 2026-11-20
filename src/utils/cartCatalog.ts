@@ -7,11 +7,6 @@ import { transformKit } from './transformKit';
 // O carrinho de visitante guarda no navegador a cópia inteira de cada item, do dia em que entrou: preço, tipo do kit,
 // horas incluídas e status antigos apareciam no carrinho e no "Total estimado", e o servidor cobrava o atual.
 
-/** Marca da cópia que o catálogo não devolve mais (item excluído): continua no carrinho, com o nome, marcada. */
-export interface CatalogMark {
-  catalogMissing?: boolean;
-}
-
 type AvailabilityLike = { status?: string | null; catalogMissing?: boolean } | null | undefined;
 
 /**

@@ -320,5 +320,3 @@ export const FaqListPage = () => {
     </AdminLayout>
   );
 };
-
-export default FaqListPage;

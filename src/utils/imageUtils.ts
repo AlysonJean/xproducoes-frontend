@@ -73,19 +73,3 @@ export function getPlaceholderUrl(text: string, width = 600, height = 400): stri
   const encodedText = encodeURIComponent(text.replace(/\s/g, '+'));
   return `https://placehold.co/${width}x${height}/1a202c/ffffff?text=${encodedText}`;
 }
-
-/**
- * Verifica se uma URL de imagem é válida (não é placeholder)
- */
-export function isValidImageUrl(url: string | undefined | null): boolean {
-  if (!url) return false;
-  
-  // Placeholder URLs não são consideradas válidas
-  if (url.includes('placehold.co')) return false;
-  if (url.includes('placeholder')) return false;
-  
-  // Cloudinary demo URLs não são válidas
-  if (url.includes('res.cloudinary.com/demo/')) return false;
-  
-  return true;
-}

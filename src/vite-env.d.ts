@@ -14,7 +14,6 @@ interface Window {
     gtag: (...args: unknown[]) => void;
     dataLayer: unknown[];
     __TV_DEBUG?: boolean;
-    __sponsorsLoaded?: number;
 }
 
 // Campo que renderer/+onRenderHtml.tsx acrescenta ao pageContext do Vike

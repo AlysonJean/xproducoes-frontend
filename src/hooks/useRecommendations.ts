@@ -24,7 +24,6 @@ interface RawRecommendationItem {
     image?: string;
     thumbnailUrl?: string;
     price?: number | string;
-    dailyPrice?: number | string;
     // Equipamento: o preço vem em pricePerHour (o Decimal chega como texto) e a unidade em priceUnit (hour ou day).
     pricePerHour?: number | string;
     priceUnit?: string;
@@ -137,7 +136,7 @@ export const useRecommendations = ({
                     name: item.name || item.title || 'Sem título',
                     description: item.description || item.shortDescription,
                     imageUrl: item.imageUrl || item.image || item.thumbnailUrl,
-                    price: toNumber(isKit ? item.price : (item.pricePerHour ?? item.price ?? item.dailyPrice)),
+                    price: toNumber(isKit ? item.price : (item.pricePerHour ?? item.price)),
                     priceSuffix: isKit ? 'por evento' : unit ? equipmentUnitSuffix(unit) : undefined,
                     rating: item.rating || item.averageRating,
                     reviewCount: item.reviewCount || item.totalReviews,

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import ReactGA from 'react-ga4';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -26,8 +26,6 @@ export const RegisterPage = () => {
   const [error, setError] = useState<string | null>(null);
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const bookingId = searchParams.get('bookingId');
 
   const {
     register,
@@ -47,7 +45,7 @@ export const RegisterPage = () => {
     setError(null);
     setLoading(true);
     try {
-      const resposta = await authAPI.register({ ...data, bookingId: bookingId || undefined });
+      const resposta = await authAPI.register({ ...data });
       // N1 (02/11/2026): o servidor diz se o login vai esperar a confirmação do e-mail
       // (loginRequiresVerification, quando REQUIRE_EMAIL_VERIFICATION estiver ligado).
       const exigeConfirmacao = Boolean((resposta as { data?: { loginRequiresVerification?: boolean } } | undefined)?.data?.loginRequiresVerification);

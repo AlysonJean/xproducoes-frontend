@@ -1,8 +1,9 @@
 import { buildPageTitle } from '../data/site';
 
 // D7 (aprovada em 02/11/2026): "troco títulos e ids por textos genéricos nas páginas com dados". Estes endereços levam
-// o código da reserva (que tem 5 letras do nome do cliente, ex.: XP-BRUNO-20270110-1200-ABC) ou o nome do mural ou do
-// depoimento (que pode ter o nome de alguém, ex.: /upload/casamento-ana). O Google Analytics (hooks/useGoogleAnalytics)
+// o código da reserva (que tem 5 letras do nome do cliente, ex.: XP-BRUNO-20270110-1200-ABC) ou o nome do mural (que
+// pode ter o nome de alguém, ex.: /upload/casamento-ana). A página /depoimentos/:slug saiu na limpeza de 20/11/2026
+// (o servidor nunca gravou o slug da avaliação, então nenhum link para ela existia). O Google Analytics (hooks/useGoogleAnalytics)
 // e o Vercel Analytics (Providers.tsx) recebem só o modelo do endereço (ex.: /cliente/reservas/:id) e, no GA, um título
 // genérico. Os endereços do catálogo (/kits, /equipamentos, /servicos, /guias, /portfolio e as páginas por cidade)
 // seguem como estão: são públicos e não falam de ninguém. O painel, a área do colaborador e a proposta nem chegam aqui
@@ -15,7 +16,6 @@ const PERSONAL_PAGES: ReadonlyArray<{ pattern: RegExp; path: string; title: stri
   { pattern: /^\/proposta\/[^/]/i, path: '/proposta/:id', title: 'Proposta' },
   { pattern: /^\/participate\/[^/]/i, path: '/participate/:slug', title: 'Mural do evento' },
   { pattern: /^\/upload\/[^/]/i, path: '/upload/:slug', title: 'Envio de fotos para o mural' },
-  { pattern: /^\/depoimentos\/[^/]/i, path: '/depoimentos/:slug', title: 'Depoimento de cliente' },
 ];
 
 export interface AnalyticsPath {

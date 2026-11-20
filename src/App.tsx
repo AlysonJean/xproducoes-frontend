@@ -13,7 +13,6 @@ import { ModalManager } from './components/modals/ModalManager';
 import FloatingWhatsApp from './components/FloatingWhatsApp';
 import CookieConsentBanner from './components/CookieConsentBanner';
 import PWAInstallBanner from './components/PWAInstallBanner';
-import RoutePrefetch from './components/RoutePrefetch';
 import { PageLoadingSpinner } from './components/ui/PageLoadingSpinner';
 
 // Auth & Route Protection
@@ -25,9 +24,7 @@ const AdminRoutes = lazy(() => import('./routes/AdminRoutes'));
 const CollaboratorRoutes = lazy(() => import('./routes/CollaboratorRoutes'));
 const ClientRoutes = lazy(() => import('./routes/ClientRoutes'));
 
-// Performance Monitoring
-import { usePerformanceMonitoring } from './hooks/usePerformanceMonitoring';
-import { useBundleAnalytics } from './hooks/useBundleAnalytics';
+// Analytics
 import { useGoogleAnalytics } from './hooks/useGoogleAnalytics';
 
 // ===== CORE PAGES (Carregamento imediato) =====
@@ -57,9 +54,6 @@ const EquipmentDetailPage = lazy(() =>
 );
 const PortfolioPage = lazy(() =>
   import('./pages/PortfolioPage').then((m) => ({ default: m.PortfolioPage }))
-);
-const ReviewDetailPage = lazy(() =>
-  import('./pages/ReviewDetailPage').then((m) => ({ default: m.ReviewDetailPage }))
 );
 const ServiceListPage = lazy(() =>
   import('./pages/ServiceListPage').then((m) => ({ default: m.ServiceListPage }))
@@ -122,9 +116,6 @@ const GuideDetailPage = lazy(() => import('./pages/GuideDetailPage').then((m) =>
 
 // Protected User Pages - Lazy Loading (as que não migraram para routes/*Routes.tsx: sem
 // dependências pesadas, sem prefixo de URL limpo o suficiente para valer o isolamento).
-const FreelancerDashboardPage = lazy(() =>
-  import('./pages/freelancer/FreelancerDashboardPage').then((m) => ({ default: m.FreelancerDashboardPage }))
-);
 const MyBookingsPage = lazy(() =>
   import('./pages/client/MyBookingsPage').then((m) => ({ default: m.MyBookingsPage }))
 );
@@ -260,7 +251,6 @@ const AppRoutes: React.FC = () => {
       <Route path="/portfolio/:slug" element={<PortfolioPage />} />
       <Route path="/servicos" element={<ServiceListPage />} />
       <Route path="/servicos/:slug" element={<ServiceDetailPage />} />
-      <Route path="/depoimentos/:slug" element={<ReviewDetailPage />} />
       <Route path="/contato" element={<ContactPage />} />
       <Route path="/faq" element={<FaqPage />} />
       <Route path="/comparar" element={<ComparePage />} />
@@ -376,14 +366,6 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/dashboard" element={<Navigate to="/admin/painel" replace />} />
       <Route path="/collaborator/event/:id/roadmap" element={<CollaboratorEventRoadmapRedirect />} />
       <Route
-        path="/freelancer/painel"
-        element={
-          <ProtectedRoute role="FREELANCER">
-            <FreelancerDashboardPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/minhas-reservas"
         element={
           <ProtectedRoute>
@@ -417,11 +399,8 @@ const AppRoutes: React.FC = () => {
   );
 };
 
-// Main App Component with Performance Monitoring
+// Main App Component
 const AppWithMonitoring: React.FC = () => {
-  // Initialize performance monitoring
-  usePerformanceMonitoring();
-  useBundleAnalytics();
   useGoogleAnalytics();
 
   // Service Worker and PWA features
@@ -445,8 +424,6 @@ const AppWithMonitoring: React.FC = () => {
       {/* PWA Install prompt */}
       <PWAInstallBanner />
 
-      {/* ⚡ ROUTE PREFETCH - ETAPA 3 Performance */}
-      <RoutePrefetch />
       {/* ⚡ SUSPENSE WRAPPER - ETAPA 3 Performance */}
       <Suspense fallback={<PageLoadingSpinner />}>
         <AppRoutes />

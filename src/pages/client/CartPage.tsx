@@ -390,4 +390,3 @@ export const CartPage = () => {
     </ClientPage>
   );
 };
-export default CartPage;

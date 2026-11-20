@@ -78,8 +78,8 @@ const UNTIL_TAB_CLOSED = 'Até você fechar a aba';
 // numa frase à parte na página). Cada nome vem de uma constante do código: CookieConsentContext.tsx (STORAGE_KEY),
 // ThemeContext.tsx ('theme'), CartContext.tsx (GUEST_CART_KEY), FavoritesContext.tsx (STORAGE_KEY),
 // CompareContext.tsx (COMPARE_STORAGE_KEY), pages/client/BriefingPage.tsx (DRAFT_KEY, via hooks/useFormDraft.ts),
-// PWAInstallBanner.tsx (DISMISS_KEY), hooks/useAppSettings.ts ('companyName'), hooks/usePerformanceMonitoring.ts
-// ('lastPerformanceMetrics'), utils/sessionHint.ts (TRIED_KEY) e components/ui/ErrorBoundary.tsx (RELOAD_GUARD_KEY).
+// PWAInstallBanner.tsx (DISMISS_KEY), hooks/useAppSettings.ts ('companyName'), utils/sessionHint.ts (TRIED_KEY) e
+// components/ui/ErrorBoundary.tsx (RELOAD_GUARD_KEY).
 // O teste da página confere as que não dependem de outro item do lote.
 export const BROWSER_STORAGE: readonly BrowserDataEntry[] = [
   {
@@ -106,11 +106,6 @@ export const BROWSER_STORAGE: readonly BrowserDataEntry[] = [
     duration: UNTIL_CLEARED,
   },
   { name: 'companyName', purpose: 'Nome da empresa mostrado no site.', duration: UNTIL_CLEARED },
-  {
-    name: 'lastPerformanceMetrics',
-    purpose: 'Tempo de carregamento da última página aberta. Fica só no seu aparelho.',
-    duration: UNTIL_CLEARED,
-  },
   {
     name: 'xp_session_restore_tried',
     purpose: 'Evita tentar reabrir a sessão mais de uma vez.',

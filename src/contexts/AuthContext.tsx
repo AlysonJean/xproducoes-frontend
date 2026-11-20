@@ -26,21 +26,12 @@ export interface AuthUser {
   googleCalendarNeedsReconnect?: boolean;
 }
 
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number;
-}
-
 export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   user: AuthUser | null;
   logout: () => Promise<void>;
   loginWithCredentials?: (data: { email: string; password: string }) => Promise<string>;
-  handleOAuthToken?: (token: string) => Promise<string>;
-  refreshToken: () => Promise<boolean>;
-  isTokenExpired: () => boolean;
   /**
    * Atualiza o usuário autenticado sem chamar /auth/login — para fluxos onde o backend
    * já autenticou (setou os cookies httpOnly) como efeito colateral de outra ação, ex.:
@@ -60,21 +51,6 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // ✅ NEW: Token validation via cookie (not localStorage)
-  // Cookies are httpOnly and managed by browser - NO JS access needed
-  const isTokenExpired = useCallback(() => {
-    // Note: We cannot check cookie expiry from JS (httpOnly cookies)
-    // Instead, we'll let the backend validate via API response
-    // If 401 received, token is expired and interceptor will refresh
-    return false; // Browser handles cookie lifecycle
-  }, []);
-
-  // Refresh token using centralized service
-  const refreshToken = useCallback(async (): Promise<boolean> => {
-    const newToken = await authService.refreshToken();
-    return !!newToken;
-  }, []);
 
   // Achado: o logout só limpava o estado e recarregava em /login — os cookies de sessão são
   // httpOnly (só o servidor apaga) e continuavam válidos, então a página recarregada logava a
@@ -122,9 +98,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (isMounted) setIsLoading(false);
         return;
       }
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
-
       try {
         // ✅ NEW: No token checks - just try to fetch profile
         // If cookie is valid, backend will recognize it
@@ -148,7 +121,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
         logger.error('Auth initialization failed', 'AuthContext', error);
       } finally {
-        clearTimeout(timeout);
         if (isMounted) {
           setIsLoading(false);
         }
@@ -157,39 +129,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initializeAuth();
     return () => { isMounted = false; };
-  }, []);
-
-  const handleOAuthToken = useCallback(async (token: string): Promise<string> => {
-    setIsLoading(true);
-    try {
-      const API_BASE_URL = getApiBaseUrl();
-      // ✅ Backend handles cookie setup automatically
-      // Just send token for validation, backend returns user data
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        method: 'GET',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        credentials: 'include', // Include cookies in request
-      });
-
-      if (!response.ok) throw new Error('Invalid OAuth token');
-      const rawData = await response.json();
-      const userData = rawData.data || rawData;
-
-      // Tokens já chegaram como cookies httpOnly (Set-Cookie na resposta).
-      setUser(userData);
-
-      switch (userData.role) {
-        case 'ADMIN': return '/admin/painel';
-        case 'COLLABORATOR': return '/collaborator/dashboard';
-        case 'CLIENT': return '/client/dashboard';
-        default: return '/dashboard';
-      }
-    } catch (err) {
-      authService.logout();
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
   }, []);
 
   const loginWithCredentials = useCallback(async (data: { email: string; password: string }): Promise<string> => {
@@ -240,11 +179,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     logout,
     loginWithCredentials,
-    handleOAuthToken,
-    refreshToken,
-    isTokenExpired,
     setAuthenticatedUser,
-  }), [user, isLoading, logout, loginWithCredentials, handleOAuthToken, refreshToken, isTokenExpired, setAuthenticatedUser]);
+  }), [user, isLoading, logout, loginWithCredentials, setAuthenticatedUser]);
 
   return (
     <AuthContext.Provider value={value}>

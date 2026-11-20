@@ -32,8 +32,6 @@ function makeAuthContext(overrides: Partial<AuthContextType>): AuthContextType {
     isLoading: false,
     user: { id: 'u1', role: 'CLIENT', name: 'Fulano', email: 'fulano@example.com' },
     logout: vi.fn(),
-    refreshToken: vi.fn(),
-    isTokenExpired: vi.fn(),
     setAuthenticatedUser: vi.fn(),
     ...overrides,
   };

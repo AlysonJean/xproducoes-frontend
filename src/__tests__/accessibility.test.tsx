@@ -28,7 +28,6 @@ import { HelmetProvider } from 'react-helmet-async';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Alert } from '../components/ui/Alert';
-import { SafeImage } from '../components/ui/SafeImage';
 import { Breadcrumbs } from '../components/ui/Breadcrumbs';
 import { PageLayout } from '../components/layouts/PageLayout';
 import { Modal } from '../components/ui/Modal';
@@ -86,17 +85,6 @@ describe('Acessibilidade - Componentes Core (componentes reais do projeto)', () 
     const { container } = render(
       <MockProviders>
         <Breadcrumbs items={[{ label: 'Equipamentos', path: '/equipamentos' }, { label: 'Câmera Sony' }]} />
-      </MockProviders>
-    );
-
-    const results = await axe(container);
-    expect(results).toHaveNoViolations();
-  });
-
-  it('SafeImage (usado para toda imagem de equipamento/kit) não tem violações de acessibilidade', async () => {
-    const { container } = render(
-      <MockProviders>
-        <SafeImage src="/xproducoes-logo.png" alt="Logo X Produções" width={200} height={100} />
       </MockProviders>
     );
 

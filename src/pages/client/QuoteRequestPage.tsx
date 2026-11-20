@@ -1100,5 +1100,3 @@ export const QuoteRequestPage: React.FC = () => {
     </ClientPage>
   );
 };
-
-export default QuoteRequestPage;

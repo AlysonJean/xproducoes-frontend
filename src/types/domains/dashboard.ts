@@ -62,16 +62,6 @@ export interface Event {
 
 export type DashboardEvent = Event;
 
-export interface Project {
-  id?: string;
-  title?: string;
-  deadline: string | Date;
-  payment?: number;
-  status?: 'IN_PROGRESS' | 'COMPLETED' | 'PENDING' | 'CANCELLED';
-  description?: string;
-  clientName?: string;
-}
-
 export interface Activity {
   id: string;
   type: string;
@@ -119,14 +109,4 @@ export interface ReferralStats {
   discountPercent: number;
   timesUsed: number;
   rewardsEarned: number;
-}
-
-export interface AdminNotification {
-  id: string;
-  title: string;
-  message: string;
-  type: 'info' | 'warning' | 'error' | 'success';
-  read: boolean;
-  createdAt: string;
-  link?: string;
 }

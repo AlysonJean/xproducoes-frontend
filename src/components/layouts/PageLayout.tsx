@@ -2,7 +2,6 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { StructuredData } from '../seo/StructuredData';
 import { generateLocalBusinessSchema, generateOrganizationSchema } from '../../utils/schemaGenerator';
-import { BrandLoader } from '../ui/BrandLoader';
 import { Breadcrumbs } from '../ui/Breadcrumbs';
 import { Alert } from '../ui/Alert';
 import { Button } from '../ui/Button';
@@ -105,15 +104,6 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
     </div>
   );
 };
-
-// Loading State Component
-export const PageLoading: React.FC<{ message?: string }> = ({
-  message = "Carregando..."
-}) => (
-  <div className="min-h-screen bg-background flex items-center justify-center">
-    <BrandLoader size={140} label={message} />
-  </div>
-);
 
 // Error State Component
 // Achado: era um bloco `min-h-screen` com botão feito à mão — renderizado dentro do PageLayout

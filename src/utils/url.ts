@@ -52,8 +52,3 @@ export const openWebsite = (url?: string | null) => {
     return;
   }
 };
-
-export default {
-  isSafeWebsite,
-  openWebsite
-};

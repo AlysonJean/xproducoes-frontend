@@ -4,8 +4,6 @@ import { useModal } from './ModalContext';
 import {
   WhatsAppModal,
   ImageGalleryModal,
-  ConfirmModal,
-  AlertModal,
 } from './index';
 import { InviteModal } from './InviteModal';
 
@@ -22,11 +20,6 @@ export const ModalManager: React.FC = () => {
         <ImageGalleryModal isOpen={true} {...getModalProps('imageGallery')} />
       )}
 
-      {/* Confirm Modal */}
-      {isModalOpen('confirm') && <ConfirmModal isOpen={true} {...getModalProps('confirm')} />}
-
-      {/* Alert Modal */}
-      {isModalOpen('alert') && <AlertModal isOpen={true} {...getModalProps('alert')} />}
   {isModalOpen('invite') && <InviteModal isOpen={true} {...getModalProps('invite')} />}
     </>
   );

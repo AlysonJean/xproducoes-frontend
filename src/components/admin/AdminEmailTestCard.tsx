@@ -57,5 +57,3 @@ export const AdminEmailTestCard: React.FC = () => {
     </Card>
   );
 };
-
-export default AdminEmailTestCard;

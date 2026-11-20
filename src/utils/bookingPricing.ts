@@ -65,14 +65,6 @@ export interface PricedBookingLike {
   pricing?: BookingPricing | null;
 }
 
-// Rótulo do tipo de linha nos PDFs.
-export const PRICING_LINE_TYPE_LABEL: Record<string, string> = {
-  KIT: 'Kit',
-  EQUIPMENT: 'Equipamento',
-  SERVICE: 'Serviço',
-  CUSTOM: 'Adicional',
-};
-
 const toCents = (value: Money): number => {
   const n = Number(value ?? 0);
   return Number.isFinite(n) ? Math.round(n * 100) : 0;

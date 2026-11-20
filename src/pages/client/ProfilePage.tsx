@@ -82,16 +82,7 @@ export const ProfilePage = () => {
   // Estados para Preferências de Produção
   const [notificationPreferences, setNotificationPreferences] = useState<ProfileNotificationPreferences>({
     bookingUpdatesEmail: true,
-    bookingUpdatesPush: true,
-    logisticsUpdatesEmail: true,
-    logisticsUpdatesPush: true,
-    technicalUpdatesEmail: true,
-    inventoryAlertsEmail: false,
-    inventoryAlertsPush: true,
-    remindersEmail: true,
-    remindersPush: true,
-    promotionsEmail: false,
-    promotionsPush: false
+    bookingUpdatesPush: true
   });
 
   const [generalPreferences, setGeneralPreferences] = useState<ProfileGeneralPreferences>({

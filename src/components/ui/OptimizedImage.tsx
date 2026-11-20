@@ -11,14 +11,7 @@ interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> 
   className?: string;
   sizes?: string; // Standard HTML sizes attribute
   fill?: boolean; // If true, make image fill container (absolute positioned)
-  aspectRatio?: string; // CSS aspect-ratio
   objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
-}
-
-import './OptimizedImage.css';
-
-interface CustomCSS extends React.CSSProperties {
-  '--img-aspect-ratio'?: string;
 }
 
 export const OptimizedImage: React.FC<OptimizedImageProps> = ({
@@ -30,7 +23,6 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   className,
   sizes = '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw',
   fill = false,
-  aspectRatio,
   objectFit = 'cover',
   style,
   ...props
@@ -55,11 +47,6 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     'scale-down': 'object-scale-down',
   }[objectFit];
 
-  // Use CSS variable for aspect ratio to comply with "no inline styles" rule
-  // We still pass 'style' if it contains other things from props, but aspect ratio is handled via class
-  const variableStyle: CustomCSS = aspectRatio ? { '--img-aspect-ratio': aspectRatio } : {};
-  const combinedStyle = style ? { ...variableStyle, ...style } : variableStyle;
-
   return (
     <img
       src={imageSrc}
@@ -75,10 +62,9 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
         'transition-opacity duration-300',
         objectFitClass,
         fill && 'absolute inset-0 h-full w-full',
-        aspectRatio && 'optimized-image-with-ratio',
         className
       )}
-      style={Object.keys(combinedStyle).length > 0 ? combinedStyle as React.CSSProperties : undefined}
+      style={style && Object.keys(style).length > 0 ? style : undefined}
       {...props}
     />
   );

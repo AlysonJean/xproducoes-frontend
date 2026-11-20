@@ -456,5 +456,3 @@ export const AdminServiceListPage = () => {
     </AdminLayout>
   );
 };
-
-export default AdminServiceListPage;

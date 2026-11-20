@@ -128,5 +128,3 @@ export const CompleteProfilePage: React.FC = () => {
     </AuthLayout>
   );
 };
-
-export default CompleteProfilePage;

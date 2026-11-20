@@ -98,11 +98,6 @@ export const socialService = {
     return response.data;
   },
 
-  getWallConfig: async (id: string) => {
-        const response = await api.get<Record<string, unknown>>(`/tv/config?settingId=${id}`);
-    return response.data;
-  },
-
   getAdminWall: async (id: string) => {
         const response = await api.get<{ data: Record<string, unknown> }>(`/admin/social/walls/${id}`);
     return response.data;

@@ -329,5 +329,3 @@ export const BannerManagementPage = () => {
     </AdminLayout>
   );
 };
-
-export default BannerManagementPage;

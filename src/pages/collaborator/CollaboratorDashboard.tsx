@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Navigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
 import { CollaboratorLoading, CollaboratorError } from '../../components/collaborator/CollaboratorStates';
 import type { DashboardEvent } from '../../types/domains/dashboard';
@@ -32,9 +32,7 @@ interface CollaboratorActivity {
 
 interface DashboardMetrics {
   totalEarnings?: number;
-  earningsGrowth?: number;
   totalEvents?: number;
-  eventsGrowth?: number;
   completionRate?: number;
   averageRating?: number;
   upcomingEvents?: DashboardEvent[];
@@ -57,10 +55,6 @@ const ProfessionalMetrics: React.FC<{ data: DashboardMetrics | null }> = ({ data
         value={formatPrice(data.totalEarnings || 0)}
         description="Ganhos acumulados"
         icon={<DollarSign className="h-5 w-5" />}
-        trend={data.earningsGrowth ? {
-          value: data.earningsGrowth,
-          type: data.earningsGrowth > 0 ? 'positive' : data.earningsGrowth < 0 ? 'negative' : 'neutral'
-        } : undefined}
       />
 
       <StatsCard
@@ -68,10 +62,6 @@ const ProfessionalMetrics: React.FC<{ data: DashboardMetrics | null }> = ({ data
         value={data.totalEvents || 0}
         description="Total de eventos concluídos"
         icon={<Calendar className="h-5 w-5" />}
-        trend={data.eventsGrowth ? {
-          value: data.eventsGrowth,
-          type: data.eventsGrowth > 0 ? 'positive' : data.eventsGrowth < 0 ? 'negative' : 'neutral'
-        } : undefined}
       />
 
       <StatsCard
@@ -235,10 +225,6 @@ const CollaboratorDashboard: React.FC = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
-
-  if (user?.role !== 'COLLABORATOR') {
-    return <Navigate to="/painel" replace />;
-  }
 
   const firstName = user?.name?.split(' ')[0] || 'Colaborador';
 

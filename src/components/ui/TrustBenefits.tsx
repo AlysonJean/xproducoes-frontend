@@ -2,11 +2,8 @@ import type { LucideIcon } from 'lucide-react';
 
 export interface TrustBenefitItem {
   icon: LucideIcon;
-  /**
-   * Cor do ícone (token). `'blue-500'` é o nome antigo de `'info'` — mantido só para compatibilidade
-   * com as páginas que ainda o usam; prefira `'info'`.
-   */
-  iconColor: 'success' | 'info' | 'primary' | 'blue-500';
+  /** Cor do ícone (token). */
+  iconColor: 'success' | 'info' | 'primary';
   title: string;
   description: string;
 }
@@ -18,7 +15,6 @@ const INFO_CLASSES = 'bg-info/10 border-info/20 shadow-info/5 text-info -rotate-
 const iconWrapperClasses: Record<TrustBenefitItem['iconColor'], string> = {
   success: 'bg-success/10 border-success/20 shadow-success/5 text-success rotate-3',
   info: INFO_CLASSES,
-  'blue-500': INFO_CLASSES,
   primary: 'bg-primary/10 border-primary/20 shadow-primary/5 text-primary rotate-1',
 };
 

@@ -62,8 +62,6 @@ const authValue = ({ user = null, isLoading = false }: AuthState): AuthContextTy
   isLoading,
   user: user ? ({ id: 'u1', name: 'Pessoa', email: 'pessoa@teste.com', role: 'CLIENT', ...user } as AuthUser) : null,
   logout: vi.fn(),
-  refreshToken: vi.fn(),
-  isTokenExpired: () => false,
   setAuthenticatedUser: vi.fn(),
 });
 

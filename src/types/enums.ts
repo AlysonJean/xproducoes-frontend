@@ -5,8 +5,7 @@
 export enum UserRole {
   CLIENT = 'CLIENT',
   ADMIN = 'ADMIN',
-  COLLABORATOR = 'COLLABORATOR',
-  FREELANCER = 'FREELANCER'
+  COLLABORATOR = 'COLLABORATOR'
 }
 
 export enum BookingStatus {
