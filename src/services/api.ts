@@ -288,8 +288,10 @@ async function apiResponse(endpoint: string, requestInit: ApiRequestInit = {}): 
       break;
     } catch (err: unknown) {
       lastError = err;
-      // Só retry em erros de rede (ex.: TypeError: Failed to fetch)
-      if (err instanceof TypeError || (err && /failed to fetch|network error/i.test(String((err as Error).message || err)))) {
+      // Só retry em erros de rede (ex.: TypeError: Failed to fetch), e só em GET/HEAD. Auditoria completa (19/11/2026):
+      // o POST também repetia aqui, contra o comentário acima. A queda de rede pode vir depois de o servidor gravar, e o
+      // pedido de orçamento, o cadastro e o código por e-mail saíam em dobro.
+      if (isIdempotent && attempt < MAX_RETRIES - 1 && (err instanceof TypeError || (err && /failed to fetch|network error/i.test(String((err as Error).message || err))))) {
         attempt++;
         const delay = RETRY_DELAY_MS * Math.pow(2, attempt - 1);
         await new Promise((r) => setTimeout(r, delay));

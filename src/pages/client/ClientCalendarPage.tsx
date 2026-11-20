@@ -9,6 +9,7 @@ import { toNumber } from '@/utils/typeSafeFormatters';
 import { formatBookingTotal } from '@/utils/formatPrice';
 import { formatBookingCode } from '@/utils/bookingCode';
 import { bookingStatusVariant, clientBookingStatusLabel } from '@/utils/bookingStatus';
+import { bookingAddressText, bookingEquipmentNames, bookingItemCount, bookingKitNames } from '@/utils/clientBookingItems';
 import type { SafeBooking } from '@/types/types';
 import {
   Card,
@@ -66,16 +67,13 @@ function generateGoogleCalendarUrl(booking: SafeBooking): string {
     d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 
   const title = booking.eventTitle || 'Minha Reserva';
-  const location = booking.venue
-    ? [booking.venue.street, booking.venue.city].filter(Boolean).join(', ')
-    : '';
+  const location = bookingAddressText(booking);
 
-  const equipNames = (booking.equipments || [])
-    .map((e) => e.equipment?.name || '')
-    .filter(Boolean)
-    .join(', ');
+  const kitNames = bookingKitNames(booking).join(', ');
+  const equipNames = bookingEquipmentNames(booking).join(', ');
 
   const details = [
+    kitNames ? `Kit: ${kitNames}` : '',
     equipNames ? `Equipamentos: ${equipNames}` : '',
     `Status: ${clientBookingStatusLabel(booking)}`,
     `Valor: ${formatBookingTotal(toNumber(booking.totalPrice))}`,
@@ -114,7 +112,9 @@ export const BookingDetailsModal = ({
   const booking = event.resource;
   const navigate = useNavigate();
   const status = getStatus(booking);
-  const equipmentCount = (booking.equipments?.length || 0) + (booking.kits?.length || 0);
+  const equipmentCount = bookingItemCount(booking);
+  const address = bookingAddressText(booking);
+  const itemNames = [...bookingKitNames(booking), ...bookingEquipmentNames(booking)];
   const totalValue = booking.totalPrice || 0;
   const googleUrl = generateGoogleCalendarUrl(booking);
 
@@ -168,32 +168,28 @@ export const BookingDetailsModal = ({
               {formatBookingTotal(totalValue)}
             </span>
           </div>
-          {booking.venue && (
+          {address && (
             <div className="flex items-center gap-2 text-sm sm:col-span-2">
               <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span>
-                {[booking.venue.street, booking.venue.city]
-                  .filter(Boolean)
-                  .join(', ')}
-              </span>
+              <span>{address}</span>
             </div>
           )}
         </div>
 
         {/* Equipment List */}
-        {(booking.equipments?.length || 0) > 0 && (
+        {itemNames.length > 0 && (
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
-              Equipamentos
+              Itens
             </h4>
             <div className="space-y-1">
-              {booking.equipments?.map((eq) => (
+              {itemNames.map((name, idx) => (
                 <div
-                  key={eq.equipmentId}
+                  key={`${booking.id}-item-${idx}`}
                   className="text-sm flex items-center gap-2 py-1 px-2 rounded bg-muted/50"
                 >
                   <Package className="h-3 w-3 text-primary" />
-                  {eq.equipment?.name || 'Equipamento'}
+                  {name}
                 </div>
               ))}
             </div>
@@ -277,7 +273,7 @@ const DayEventsModal = ({
                   {safeDate(booking.eventDate)
                     ? format(safeDate(booking.eventDate)!, 'HH:mm')
                     : '--:--'}{' '}
-                  · {booking.equipments?.length || 0} itens
+                  · {bookingItemCount(booking)} itens
                 </p>
               </div>
             </div>
@@ -558,8 +554,7 @@ export const ClientCalendarPage = () => {
               components={{
                 event: ({ event }: { event: ClientCalendarEvent }) => {
                   const booking = event.resource;
-                  const count =
-                    (booking.equipments?.length || 0) + (booking.kits?.length || 0);
+                  const count = bookingItemCount(booking);
                   const status = (booking.status || 'PENDING').toLowerCase();
 
                   return (
@@ -636,20 +631,16 @@ export const ClientCalendarPage = () => {
                   <div className="p-3 space-y-1.5">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Package className="h-3 w-3" aria-hidden="true" />
-                      {(hovered.resource.equipments?.length || 0) +
-                        (hovered.resource.kits?.length || 0)}{' '}
-                      itens
+                      {bookingItemCount(hovered.resource)} itens
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <DollarSign className="h-3 w-3" aria-hidden="true" />
                       {formatBookingTotal(toNumber(hovered.resource.totalPrice))}
                     </div>
-                    {hovered.resource.venue && (
+                    {bookingAddressText(hovered.resource) && (
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <MapPin className="h-3 w-3" aria-hidden="true" />
-                        {[hovered.resource.venue.street, hovered.resource.venue.city]
-                          .filter(Boolean)
-                          .join(', ')}
+                        {bookingAddressText(hovered.resource)}
                       </div>
                     )}
                   </div>

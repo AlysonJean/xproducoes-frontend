@@ -291,6 +291,10 @@ export const BookingDetailPage = () => {
   
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isConfirmModalOpen, setConfirmModalOpen] = useState(false);
+  // Auditoria completa (19/11/2026): "Marcar como concluída" gravava com um clique, em qualquer status. A conclusão manda
+  // ao cliente o pedido de avaliação e cria a recompensa da indicação, e voltar o status não desfaz isso: agora pergunta
+  // antes e só aparece com a reserva confirmada ou em andamento (o servidor recusa os outros status com 409).
+  const [isCompleteModalOpen, setCompleteModalOpen] = useState(false);
   const [isEventModalOpen, setEventModalOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [isEditDirty, setEditDirty] = useState(false);
@@ -638,6 +642,11 @@ export const BookingDetailPage = () => {
   const bookingCode = booking.id?.startsWith('XP-') ? booking.id : `#${formatBookingCode(booking.id)}`;
   const status = booking.status || 'PENDING';
   const canConfirm = status === 'DRAFT' || status === 'PENDING';
+  // Auditoria completa (19/11/2026): o aceite não muda o status, e o "Reenviar"/"Gerar novo link" seguiam na ficha da
+  // reserva aceita; o link novo derrubava o link do contrato. O servidor recusa (409 PROPOSAL_CONTRACT_ACCEPTED) e a ficha
+  // tira o envio da proposta quando o cliente já respondeu o contrato.
+  const contractAnswered = booking.contractSummary?.state === 'ACCEPTED' || booking.contractSummary?.state === 'WITHDRAWN';
+  const canSendProposal = canConfirm && !contractAnswered;
   const isClosed = status === 'CANCELLED' || status === 'REFUNDED';
   const deliveryIndex = DELIVERY_STATUS_OPTIONS.findIndex((o) => o.value === (booking.deliveryStatus || 'PENDING'));
   const eventDate = booking.eventDate ? new Date(booking.eventDate) : null;
@@ -719,7 +728,7 @@ export const BookingDetailPage = () => {
             </Button>
             {/* E8: no lugar do "PDF + WhatsApp". Só com a proposta em aberto (rascunho ou pendente): é quando o servidor
                 aceita o envio e o link abre. Sem telefone válido, desligado (o "Enviar proposta" do cartão manda o e-mail). */}
-            {canConfirm && (
+            {canSendProposal && (
               <Button variant="outline" size="sm" onClick={triggerProposalSend} disabled={!toWhatsAppNumber(clientPhone)} leftIcon={<MessageSquare className="h-4 w-4" />} title="O mesmo envio do botão Enviar proposta: registra o envio, manda o e-mail (se a reserva tiver e-mail) e abre a janela com o WhatsApp.">
                 Enviar link pelo WhatsApp
               </Button>
@@ -749,16 +758,22 @@ export const BookingDetailPage = () => {
                     painel já mostra o último envio (valor e validade) e o aviso "A reserva mudou depois do último envio"
                     (proposal.changedSinceSent): a ficha não repete o aviso. E8: o "Enviar link pelo WhatsApp" do
                     cabeçalho e a vinda da Proposta Rápida usam o botão de envio dele (sendButtonRef). */}
-                <SendProposalPanel
-                  booking={booking}
-                  sendButtonRef={proposalSendButtonRef}
-                  onSent={() => {
-                    setProposalHistoryKey((key) => key + 1);
-                    void fetchBooking();
-                    // P3: com a proposta enviada, o pedido do cliente já foi respondido e sai do número do menu.
-                    void refreshAdminSummary({ force: true });
-                  }}
-                />
+                {canSendProposal ? (
+                  <SendProposalPanel
+                    booking={booking}
+                    sendButtonRef={proposalSendButtonRef}
+                    onSent={() => {
+                      setProposalHistoryKey((key) => key + 1);
+                      void fetchBooking();
+                      // P3: com a proposta enviada, o pedido do cliente já foi respondido e sai do número do menu.
+                      void refreshAdminSummary({ force: true });
+                    }}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    O cliente já respondeu o contrato: a proposta não é reenviada, e o link do contrato continua o mesmo (veja o cartão do contrato).
+                  </p>
+                )}
                 <Button
                   fullWidth
                   size="sm"
@@ -793,9 +808,11 @@ export const BookingDetailPage = () => {
               <Button variant="outline" size="sm" fullWidth className="justify-start" onClick={() => prepareWhatsAppMessage('on_the_way')} leftIcon={<Truck className="h-4 w-4 text-info" />}>
                 Avisar: equipe a caminho
               </Button>
-              <Button variant="outline" size="sm" fullWidth className="justify-start" onClick={() => handleStatusChange(booking.id!, 'COMPLETED')} leftIcon={<CheckCircle2 className="h-4 w-4 text-success" />}>
-                Marcar como concluída
-              </Button>
+              {(status === 'CONFIRMED' || status === 'IN_PROGRESS') && (
+                <Button variant="outline" size="sm" fullWidth className="justify-start" onClick={() => setCompleteModalOpen(true)} leftIcon={<CheckCircle2 className="h-4 w-4 text-success" />}>
+                  Marcar como concluída
+                </Button>
+              )}
               <Button variant="outline" size="sm" fullWidth className="justify-start text-destructive border-destructive/30 hover:bg-destructive/5" onClick={() => prepareWhatsAppMessage('cancel')} leftIcon={<XCircle className="h-4 w-4" />}>
                 Cancelar reserva
               </Button>
@@ -1359,6 +1376,21 @@ export const BookingDetailPage = () => {
         isLoading={actionLoading}
         confirmText="Excluir"
         cancelText="Cancelar"
+      />
+
+      <ConfirmModal
+        isOpen={isCompleteModalOpen}
+        onClose={() => setCompleteModalOpen(false)}
+        onConfirm={async () => {
+          setCompleteModalOpen(false);
+          if (booking.id) await handleStatusChange(booking.id, 'COMPLETED');
+        }}
+        title="Marcar como concluída?"
+        message="O evento fica como concluído. O cliente recebe o pedido de avaliação e, se a reserva usou um código de indicação, quem indicou ganha o cupom de recompensa. Voltar o status depois não desfaz isso."
+        variant="success"
+        isLoading={actionLoading}
+        confirmText="Concluir"
+        cancelText="Voltar"
       />
 
       <ConfirmModal

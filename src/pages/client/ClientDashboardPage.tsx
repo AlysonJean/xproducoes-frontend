@@ -7,6 +7,7 @@ import { bookingAPI, authAPI, kitAPI } from '../../services/api';
 import { asArray } from '../../utils/normalize';
 import { formatBookingTotal, formatPrice } from '../../utils/formatPrice';
 import { bookingStatusVariant, clientBookingStatusLabel } from '../../utils/bookingStatus';
+import { bookingItemCount } from '../../utils/clientBookingItems';
 import { clsx } from 'clsx';
 import {
   Button,
@@ -360,7 +361,7 @@ export const ClientDashboardPage = () => {
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
-                              {booking.equipments.length} equipamento(s) - {formatBookingTotal(booking.totalPrice)}
+                              {bookingItemCount(booking)} item(ns) - {formatBookingTotal(booking.totalPrice)}
                             </p>
                           </div>
                           <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" aria-hidden="true" />

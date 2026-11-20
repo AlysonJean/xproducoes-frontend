@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { couponService, Coupon } from '../../services/couponService';
+import { couponService, couponDay, Coupon } from '../../services/couponService';
 import { useNotifications } from '../../contexts/NotificationContext';
 import {
   Form,
@@ -18,13 +18,21 @@ import { logger } from '../../utils/logger';
 import { useFormDraft } from '../../hooks/useFormDraft';
 import { DraftRestoreBanner } from '../ui/DraftRestoreBanner';
 
+const MIN_ORDER_ERROR = 'Use um valor maior que zero, ou deixe em branco para não ter pedido mínimo.';
+const MAX_DISCOUNT_ERROR = 'Use um valor maior que zero, ou deixe em branco para não ter teto.';
+
 const couponSchema = z.object({
   code: z.string().min(1, 'Código é obrigatório'),
   description: z.string().optional(),
   discountType: z.enum(['PERCENTAGE', 'FIXED']),
   discountValue: z.coerce.number().positive('O valor do desconto deve ser positivo'),
-  minOrderValue: z.coerce.number().nonnegative().optional().or(z.literal('')),
-  maxDiscountAmount: z.coerce.number().nonnegative().optional().or(z.literal('')),
+  // Auditoria completa (19/11/2026): com o coerce na frente, o campo em branco virava 0 ('' -> Number('') = 0) e ia ao
+  // servidor como teto R$ 0, o que zerava o desconto. O branco é testado primeiro e quer dizer "sem valor".
+  // A mensagem vai também no positive(): com 0 ou negativo, o zod devolve o erro do próprio número (o '' falha de vez e
+  // o número é a única opção que "quase" passou), e não o da união; sem ela, aparecia "Too small: expected number to be >0".
+  // O erro da união fica para o que nem é número.
+  minOrderValue: z.union([z.literal(''), z.coerce.number().positive(MIN_ORDER_ERROR)], { error: MIN_ORDER_ERROR }),
+  maxDiscountAmount: z.union([z.literal(''), z.coerce.number().positive(MAX_DISCOUNT_ERROR)], { error: MAX_DISCOUNT_ERROR }),
   maxUses: z.coerce.number().int().positive().optional().or(z.literal('')),
   maxUsesPerClient: z.coerce.number().int().positive().optional().or(z.literal('')),
   validFrom: z.string().optional(),
@@ -42,11 +50,6 @@ interface CouponFormProps {
   /** Notifica o formulário pai sobre alterações não salvas, para a trava de fechamento
    * acidental (ver useUnsavedChangesGuard, usado em CouponManagementPage). */
   onDirtyChange?: (dirty: boolean) => void;
-}
-
-function toDateInputValue(value?: string | null): string {
-  if (!value) return '';
-  return value.slice(0, 10);
 }
 
 export const CouponForm: React.FC<CouponFormProps> = ({ initialData, onSuccess, onCancel, onDirtyChange }) => {
@@ -87,8 +90,8 @@ export const CouponForm: React.FC<CouponFormProps> = ({ initialData, onSuccess, 
         maxDiscountAmount: initialData.maxDiscountAmount ?? '',
         maxUses: initialData.maxUses ?? '',
         maxUsesPerClient: initialData.maxUsesPerClient ?? '',
-        validFrom: toDateInputValue(initialData.validFrom),
-        validUntil: toDateInputValue(initialData.validUntil),
+        validFrom: couponDay(initialData.validFrom),
+        validUntil: couponDay(initialData.validUntil),
         active: initialData.active,
       });
     } else {
@@ -129,14 +132,18 @@ export const CouponForm: React.FC<CouponFormProps> = ({ initialData, onSuccess, 
   const onSubmit = async (data: CouponFormData) => {
     try {
       setLoading(true);
+      // Auditoria completa (19/11/2026): na edição, o campo apagado vai como null e o servidor apaga o valor gravado
+      // (antes ia undefined, e não havia como tirar a validade, o pedido mínimo ou o limite de usos).
+      const empty = isEditing ? null : undefined;
+      const amount = (value: number | '' | undefined) => (value === '' || value === undefined ? empty : Number(value));
       const payload = {
         ...data,
-        minOrderValue: data.minOrderValue === '' ? undefined : Number(data.minOrderValue),
-        maxDiscountAmount: data.maxDiscountAmount === '' ? undefined : Number(data.maxDiscountAmount),
-        maxUses: data.maxUses === '' ? undefined : Number(data.maxUses),
-        maxUsesPerClient: data.maxUsesPerClient === '' ? undefined : Number(data.maxUsesPerClient),
-        validFrom: data.validFrom || undefined,
-        validUntil: data.validUntil || undefined,
+        minOrderValue: amount(data.minOrderValue),
+        maxDiscountAmount: amount(data.maxDiscountAmount),
+        maxUses: amount(data.maxUses),
+        maxUsesPerClient: amount(data.maxUsesPerClient),
+        validFrom: data.validFrom || empty,
+        validUntil: data.validUntil || empty,
       };
 
       if (isEditing && initialData?.id) {

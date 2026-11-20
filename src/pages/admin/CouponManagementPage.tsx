@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { couponService, Coupon } from '../../services/couponService';
+import { couponService, couponDayBR, Coupon } from '../../services/couponService';
 import {
   Trash2,
   Edit2,
@@ -263,7 +263,7 @@ export const CouponManagementPage = () => {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Expira em</span>
                     <span className="font-medium text-foreground">
-                      {new Date(coupon.validUntil).toLocaleDateString('pt-BR')}
+                      {couponDayBR(coupon.validUntil)}
                     </span>
                   </div>
                 )}

@@ -1,6 +1,7 @@
 import type { BookingDetails } from '../types/types';
 import { bookingEmail, bookingPhone } from './bookingContact';
 import { formatBookingCode } from './bookingCode';
+import { NOT_DEFINED } from './briefing';
 
 // 18/11/2026: o pedido do briefing chega sem itens do catálogo, e o painel não tinha como pôr kit e equipamentos nele
 // para montar o orçamento (a edição mostra os itens só para leitura). O "Montar orçamento" da ficha abre a Proposta
@@ -65,8 +66,13 @@ export interface ProposalBaseBooking {
 export function proposalBaseFromBooking(booking: BookingSource): ProposalBaseBooking {
   const id = booking.id ?? '';
   const venue = (booking as { venue?: Partial<Record<'street' | 'addressNumber' | 'neighborhood' | 'city' | 'state' | 'zipCode', string>> }).venue;
-  const field = (key: 'street' | 'addressNumber' | 'neighborhood' | 'city' | 'state' | 'zipCode'): string =>
-    (booking[key] || venue?.[key] || '').trim();
+  // Auditoria completa (19/11/2026): o briefing sem local grava "A definir" na rua, no bairro e no CEP (NOT_DEFINED). Copiado
+  // para a Proposta Rápida, esse texto ia ao servidor como endereço, e o frete podia sair calculado para um lugar errado.
+  // "A definir" vira campo vazio: a equipe preenche o endereço de verdade ou deixa o frete a combinar.
+  const field = (key: 'street' | 'addressNumber' | 'neighborhood' | 'city' | 'state' | 'zipCode'): string => {
+    const value = (booking[key] || venue?.[key] || '').trim();
+    return value.toLocaleLowerCase('pt-BR') === NOT_DEFINED.toLocaleLowerCase('pt-BR') ? '' : value;
+  };
   return {
     id,
     code: id.startsWith('XP-') ? id : `#${formatBookingCode(id)}`,

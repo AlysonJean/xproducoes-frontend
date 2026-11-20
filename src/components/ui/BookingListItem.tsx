@@ -1,6 +1,7 @@
 import type { SafeBooking } from '../../types/types';
 import { formatBookingTotal } from '../../utils/formatPrice';
 import { clientBookingStatusLabel } from '../../utils/bookingStatus';
+import { bookingAddressText, bookingEquipmentNames, bookingKitNames } from '../../utils/clientBookingItems';
 
 interface BookingListItemProps {
   booking: SafeBooking;
@@ -33,6 +34,9 @@ const StatusChip = ({ booking }: { booking: SafeBooking }) => (
 );
 
 export const BookingListItem = ({ booking, onReviewClick, onViewDetails }: BookingListItemProps) => {
+  const equipmentNames = bookingEquipmentNames(booking);
+  const kitNames = bookingKitNames(booking);
+  const address = bookingAddressText(booking);
   return (
     <div className="bg-card border border-border p-4 rounded-lg shadow-md hover:bg-card/80 transition-colors duration-200">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
@@ -57,39 +61,33 @@ export const BookingListItem = ({ booking, onReviewClick, onViewDetails }: Booki
         </div>
       </div>
       <div className="mt-4 border-t border-border pt-4">
-        <h4 className="font-semibold mb-2 text-foreground">Equipamentos Reservados:</h4>
-        <ul className="list-disc list-inside text-muted-foreground text-sm space-y-1">
-          {Array.isArray(booking.equipments) && booking.equipments.length > 0 ? (
-            booking.equipments.map((eq, idx) => (
-              <li key={eq.equipmentId || `${booking.id}-equipment-${idx}`}>
-                {eq.equipment?.name || 'Equipamento'}
-              </li>
-            ))
-          ) : (
-            <li>— Nenhum equipamento listado</li>
-          )}
-        </ul>
-        {Array.isArray(booking.kits) && booking.kits.length > 0 && (
+        {kitNames.length > 0 && (
           <>
-            <h4 className="font-semibold mb-2 mt-4 text-foreground">Kits Reservados:</h4>
-            <ul className="list-disc list-inside text-muted-foreground text-sm space-y-1">
-              {booking.kits.map((kit, idx) => (
-                <li key={kit.kitId || `${booking.id}-kit-${idx}`}>
-                  {kit.kit?.name || 'Kit'}
-                </li>
+            <h4 className="font-semibold mb-2 text-foreground">Kit Reservado:</h4>
+            <ul className="list-disc list-inside text-muted-foreground text-sm space-y-1 mb-4">
+              {kitNames.map((name) => (
+                <li key={`${booking.id}-kit-${name}`}>{name}</li>
               ))}
             </ul>
           </>
         )}
+        {(equipmentNames.length > 0 || kitNames.length === 0) && (
+          <>
+            <h4 className="font-semibold mb-2 text-foreground">Equipamentos Reservados:</h4>
+            <ul className="list-disc list-inside text-muted-foreground text-sm space-y-1">
+              {equipmentNames.length > 0 ? (
+                equipmentNames.map((name, idx) => <li key={`${booking.id}-equipment-${idx}`}>{name}</li>)
+              ) : (
+                <li>— Nenhum equipamento listado</li>
+              )}
+            </ul>
+          </>
+        )}
       </div>
-      {booking.venue && typeof booking.venue === 'object' && (
+      {address && (
         <div className="mt-4 pt-4 border-t border-border">
           <h4 className="font-semibold mb-2 text-foreground">Local do Evento:</h4>
-          <p className="text-muted-foreground text-sm">
-            {booking.venue.street}
-            {booking.venue.city && booking.venue.state && `, ${booking.venue.city} - ${booking.venue.state}`}
-            {booking.venue.zipCode && ` - CEP: ${booking.venue.zipCode}`}
-          </p>
+          <p className="text-muted-foreground text-sm">{address}</p>
         </div>
       )}
       <div className="mt-4 pt-4 border-t border-border flex justify-between items-center">

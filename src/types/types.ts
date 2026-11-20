@@ -538,14 +538,26 @@ export interface SafeBooking {
   eventTitle?: string;
   status: BookingStatus;
   totalPrice: number;
+  // Auditoria completa (19/11/2026): o GET /bookings/user manda os equipamentos já como objetos do catálogo (com name),
+  // o kit em `kit` e o endereço nos campos da reserva; a forma antiga (equipment, kits, venue) segue aceita. As telas
+  // leem pelos utilitários de utils/clientBookingItems.
   equipments: Array<{
-    equipmentId: string;
-    equipment: Equipment;
+    id?: string;
+    name?: string | null;
+    equipmentId?: string;
+    equipment?: Equipment;
   }>;
+  kit?: { id?: string; name?: string | null } | null;
   kits?: Array<{
     kitId: string;
     kit: Kit;
   }>;
+  street?: string | null;
+  addressNumber?: string | null;
+  neighborhood?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
   venue?: {
     street: string;
     city?: string;

@@ -61,7 +61,9 @@ const assignmentSchema = z.object({
   role: z.string().min(1, 'Selecione uma função'),
   startTime: z.string().min(1, 'Horário de início obrigatório'),
   endTime: z.string().min(1, 'Horário de fim obrigatório'),
-  fixedRate: z.number().optional(),
+  // Auditoria completa (19/11/2026): com valueAsNumber, o "Cachê Fixo (Opcional)" em branco virava NaN e o zod recusava
+  // ("Expected number, received nan"): não dava para escalar sem cachê. O branco vira "sem cachê" (undefined).
+  fixedRate: z.number({ error: 'Informe o cachê em reais, ou deixe em branco.' }).nonnegative('O cachê não pode ser negativo.').optional(),
 });
 
 type AssignmentFormData = z.infer<typeof assignmentSchema>;
@@ -416,7 +418,7 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
                 label="Cachê Fixo (Opcional)" 
                 placeholder="0.00"
                 step="0.01"
-                {...register('fixedRate', { valueAsNumber: true })}
+                {...register('fixedRate', { setValueAs: (value) => (value === '' || value == null ? undefined : Number(value)) })}
                 error={errors.fixedRate?.message}
             />
 

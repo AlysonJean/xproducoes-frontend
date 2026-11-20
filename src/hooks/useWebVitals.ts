@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { captureMessage, addBreadcrumb } from '@sentry/react';
+import { addBreadcrumb } from '@sentry/react';
 import { logger } from '../utils/logger';
 
 /**
@@ -11,7 +11,7 @@ import { logger } from '../utils/logger';
  * - CLS (Cumulative Layout Shift): < 0.1
  * - TTFB (Time to First Byte): < 800ms
  * 
- * Auto-reports to Sentry with performance context
+ * Guarda as medições como breadcrumb do Sentry (contexto dos erros), sem criar eventos.
  */
 
 interface WebVitalMetric {
@@ -48,10 +48,9 @@ function getRating(metric: string, value: number): 'good' | 'needs-improvement' 
 
 function reportToSentry(metric: WebVitalMetric) {
   try {
-    // Send to Sentry
-    captureMessage(`Web Vital: ${metric.name} = ${metric.value}ms`, 'info');
-
-    // Add breadcrumb for context
+    // Auditoria completa (19/11/2026): cada medição (LCP, CLS, TTFB e cada interação acima de 40 ms) virava um evento
+    // no Sentry, de 5 a 20 por visita. Isso gasta a cota grátis de eventos, e os erros de verdade deixam de chegar quando
+    // ela acaba. A medição fica só como breadcrumb: vai junto, como contexto, quando um erro de verdade é registrado.
     addBreadcrumb({
       category: 'web-vital',
       message: `${metric.name}: ${metric.value}ms (${metric.rating})`,
