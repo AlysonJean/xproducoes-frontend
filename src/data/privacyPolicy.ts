@@ -19,7 +19,8 @@ import { GOOGLE_ANALYTICS_TRANSFER_NOTICE, INSTAGRAM_PLAYER_NOTICE } from './coo
 // (utils/seloAssinatura.ts) e recebe o IP de quem abre as páginas com rodapé. Versão de 20/11/2026.
 // "Conte seu evento" (decisão de Alyson, 20/11/2026, mesmo dia): a linha da Cloudflare ganha a leitura do texto da
 // página inicial pelo Workers AI (sem guardar o texto nem treinar modelos com ele, pela página "Data usage" da
-// Cloudflare), e a linha dos pedidos ganha esse texto, que vai para o campo de detalhes do briefing.
+// Cloudflare), e a linha dos pedidos ganha esse texto, que vai para o campo de detalhes do briefing. No mesmo dia, o
+// "Sugerir itens" da Proposta Rápida: a mesma IA lê as respostas do briefing e a cidade (sem nome, contato nem endereço).
 
 /** Data da última revisão do texto (como LAST_UPDATED dos Termos). */
 export const PRIVACY_POLICY_UPDATED_AT = '20/11/2026';
@@ -248,7 +249,7 @@ export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
           ['Resend', 'Envia os e-mails do site.', 'Estados Unidos (os e-mails saem pela região de São Paulo)'],
           [
             'Cloudflare',
-            'Cuida do endereço do site na internet (DNS) e recebe os e-mails enviados para o domínio da empresa e os repassa para a caixa de e-mail da equipe. No "Conte seu evento" da página inicial, lê com inteligência artificial (Workers AI) o texto que você escreve, só para marcar as respostas do pedido de orçamento; a Cloudflare não guarda esse texto depois da leitura nem o usa para treinar modelos.',
+            'Cuida do endereço do site na internet (DNS) e recebe os e-mails enviados para o domínio da empresa e os repassa para a caixa de e-mail da equipe. No "Conte seu evento" da página inicial, lê com inteligência artificial (Workers AI) o texto que você escreve, só para marcar as respostas do pedido de orçamento; a Cloudflare não guarda esse texto depois da leitura nem o usa para treinar modelos. Quando a equipe pede uma sugestão de itens para o orçamento de um pedido, lê do mesmo jeito as respostas do briefing e a cidade do evento, sem nome, telefone, e-mail nem endereço.',
             'Estados Unidos e outros países',
           ],
           ['ViaCEP', 'No formulário de orçamento, recebe o CEP digitado para preencher o endereço.', 'Brasil'],

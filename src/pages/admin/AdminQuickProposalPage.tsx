@@ -23,7 +23,8 @@ import {
   Zap,
   ArrowRight,
   AlertCircle,
-  FileText
+  FileText,
+  Sparkles
 } from 'lucide-react';
 import type { Client, Equipment, Kit, Service } from '@/types/types';
 import { apiFetch } from '@/services/api';
@@ -94,6 +95,29 @@ interface ProposalItem {
   includedServiceIds?: string[];
   // Linha posta pelo botão Frete (frete, pedágio ou "Frete a combinar"): o próximo clique a troca.
   freight?: boolean;
+}
+
+// "Sugerir itens" (ideia aprovada por Alyson em 20/11/2026): no orçamento de um pedido do briefing, a IA da Cloudflare
+// lê as respostas do cliente e propõe kit, serviços e equipamentos do catálogo (POST /admin/bookings/:id/suggest-items).
+// As linhas entram como as da busca (preço do catálogo, mesmas regras: um kit só, serviço que o kit traz não entra de
+// novo), a equipe confere e muda o que quiser, e nada é gravado sem Salvar.
+const BRIEFING_MARK = '— Briefing preenchido pelo cliente —';
+interface AiSuggestedLine {
+  id: string;
+  name: string;
+  quantity: number;
+  reason: string;
+}
+interface AiSuggestion {
+  kit: { id: string; name: string; reason: string } | null;
+  services: AiSuggestedLine[];
+  equipment: AiSuggestedLine[];
+  observations: string[];
+}
+interface AppliedSuggestion {
+  added: Array<{ name: string; reason: string }>;
+  skipped: string[];
+  observations: string[];
 }
 
 // Auditoria do orçamento (12/11/2026), E4: a regra do frete da proposta, como a do servidor (freightMode): com kit de
@@ -206,6 +230,9 @@ const AdminQuickProposalPage = () => {
   const [confirmPendingFreight, setConfirmPendingFreight] = useState(false);
   // O17/C9: o endereço e a regra do último cálculo do frete (freightKey); null antes do primeiro.
   const [freightQuotedKey, setFreightQuotedKey] = useState<string | null>(null);
+  // "Sugerir itens" (20/11/2026): esperando a IA, e o que a última sugestão pôs, deixou de fora e pediu para conferir.
+  const [suggesting, setSuggesting] = useState(false);
+  const [appliedSuggestion, setAppliedSuggestion] = useState<AppliedSuggestion | null>(null);
   // Id da linha que cada atalho pôs da última vez (chave: o id do serviço do Técnico, "manual" no item à mão, ou
   // "montagem").
   const shortcutLineIds = useRef<Record<string, string>>({});
@@ -485,6 +512,91 @@ const AdminQuickProposalPage = () => {
       return;
     }
     addShortcutService('montagem', assemblyService);
+  };
+
+  // "Sugerir itens" (20/11/2026): só no orçamento de um pedido do briefing, com os itens livres para mudar.
+  const canSuggest = Boolean(baseBooking && !baseBooking.lockedReason && baseBooking.briefing.includes(BRIEFING_MARK));
+
+  const withQuantity = (line: ProposalItem, quantity: number): ProposalItem => {
+    const units = Number.isInteger(quantity) && quantity >= 1 ? Math.min(quantity, 99) : 1;
+    return { ...line, quantity: units, totalPrice: Math.max(0, line.unitPrice * units - line.discount) };
+  };
+
+  // As linhas sugeridas entram pelas mesmas regras da busca do catálogo (addItemToProposal), de uma vez: o que não
+  // está mais no catálogo, um 2º kit, serviço que o kit traz e item repetido ficam de fora, com o motivo.
+  const applySuggestion = (suggestion: AiSuggestion | null | undefined): AppliedSuggestion => {
+    const next = [...items];
+    const added: AppliedSuggestion['added'] = [];
+    const skipped: string[] = [];
+    const observations = [...(suggestion?.observations ?? [])];
+
+    if (suggestion?.kit) {
+      const kit = kits.find((k) => k.id === suggestion.kit?.id);
+      const currentKit = next.find((i) => i.type === 'KIT');
+      if (!kit) skipped.push(`${suggestion.kit.name}: não está mais no catálogo.`);
+      else if (currentKit) skipped.push(`${kit.name}: a proposta já tem o kit "${currentKit.description}" (um kit por reserva).`);
+      else {
+        const kitLine = catalogLine('KIT', kit);
+        next.push(kitLine);
+        added.push({ name: kit.name, reason: suggestion.kit.reason });
+        const repeated = next.find((i) => i.type === 'SERVICE' && i.sourceId && kitLine.includedServiceIds?.includes(i.sourceId));
+        if (repeated) observations.push(`${kitIncludesText(kitLine, repeated.description)} Tire a linha desse serviço.`);
+      }
+    }
+    for (const line of suggestion?.services ?? []) {
+      const service = services.find((s) => s.id === line.id && isActiveService(s));
+      if (!service) {
+        skipped.push(`${line.name}: não está à venda no catálogo.`);
+        continue;
+      }
+      const includedBy = kitIncluding(service.id, next);
+      if (includedBy) {
+        skipped.push(kitIncludesText(includedBy, service.name));
+        continue;
+      }
+      if (next.some((i) => i.type === 'SERVICE' && i.sourceId === service.id)) {
+        skipped.push(`${service.name}: já está na proposta.`);
+        continue;
+      }
+      next.push(withQuantity(catalogLine('SERVICE', service), line.quantity));
+      added.push({ name: line.quantity > 1 ? `${service.name} (${line.quantity})` : service.name, reason: line.reason });
+    }
+    for (const line of suggestion?.equipment ?? []) {
+      const equipment = equipments.find((e) => e.id === line.id);
+      if (!equipment) {
+        skipped.push(`${line.name}: não está mais no catálogo.`);
+        continue;
+      }
+      if (next.some((i) => i.type === 'EQUIPMENT' && i.sourceId === equipment.id)) {
+        skipped.push(`${equipment.name}: já está na proposta.`);
+        continue;
+      }
+      next.push(withQuantity(catalogLine('EQUIPMENT', equipment), line.quantity));
+      added.push({ name: line.quantity > 1 ? `${equipment.name} (${line.quantity})` : equipment.name, reason: line.reason });
+    }
+    setItems(next);
+    return { added, skipped, observations };
+  };
+
+  const suggestItems = async () => {
+    if (!baseBooking || suggesting) return;
+    setSuggesting(true);
+    try {
+      const suggestion = await apiFetch<AiSuggestion>(`/admin/bookings/${encodeURIComponent(baseBooking.id)}/suggest-items`, {
+        method: 'POST',
+        body: '{}',
+        timeoutMs: 30_000,
+      });
+      setAppliedSuggestion(applySuggestion(suggestion));
+    } catch (error: unknown) {
+      addNotification({
+        type: 'warning',
+        title: 'Sem sugestão agora',
+        message: error instanceof Error && error.message ? error.message : 'A IA não respondeu. Monte à mão.',
+      });
+    } finally {
+      setSuggesting(false);
+    }
   };
 
   const updateItem = (id: string, field: keyof ProposalItem, value: string | number) => {
@@ -903,6 +1015,11 @@ const AdminQuickProposalPage = () => {
                    <Calculator className="h-4 w-4" aria-hidden="true" /> Itens do orçamento
                  </h3>
                  <div className="flex flex-wrap gap-2">
+                   {canSuggest && (
+                     <Button variant="outline" size="xs" onClick={suggestItems} isLoading={suggesting} leftIcon={<Sparkles className="h-3 w-3" />}>
+                       Sugerir itens (IA)
+                     </Button>
+                   )}
                    {/* Lote 13, técnico durante o evento (decisão do dono de 06/11/2026): com serviço marcado "Pode acompanhar
                        o evento todo", o botão põe esse serviço, cobrado pelas horas do evento (um botão por serviço quando
                        há mais de um); sem nenhum, o item à mão de antes. Auditoria do orçamento (12/11/2026): o técnico que
@@ -940,6 +1057,43 @@ const AdminQuickProposalPage = () => {
                  </div>
                </div>
                <p className="-mt-4 mb-6 text-xs text-muted-foreground">Técnico, montagem, frete e hora extra entram como itens (a hora extra do kit com valor cadastrado já entra na linha do kit, e serviço que o kit já traz não entra de novo). O botão Frete calcula pela distância até o endereço do evento (preencha o endereço antes), pela regra do servidor: equipamento avulso e kit de entrega têm contas diferentes, e só serviços ou só kit de retirada não têm frete. Pedágio estimado à parte. A reserva leva um kit só; para somar, use equipamentos e serviços avulsos.</p>
+               {appliedSuggestion && (
+                 <div role="note" aria-label="Sugestão da IA" className="-mt-2 mb-6 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+                   <div className="flex items-start justify-between gap-3">
+                     <p className="font-semibold">
+                       {appliedSuggestion.added.length > 0
+                         ? `A IA pôs ${appliedSuggestion.added.length === 1 ? '1 item' : `${appliedSuggestion.added.length} itens`} a partir do briefing. Confira cada linha antes de salvar: a IA pode errar.`
+                         : 'A IA não achou itens novos para pôr. Monte à mão.'}
+                     </p>
+                     <Button variant="ghost" size="xs" onClick={() => setAppliedSuggestion(null)} aria-label="Fechar a sugestão da IA">
+                       Fechar
+                     </Button>
+                   </div>
+                   {appliedSuggestion.added.length > 0 && (
+                     <ul className="mt-2 list-disc space-y-1 pl-5">
+                       {appliedSuggestion.added.map((line) => (
+                         <li key={line.name}>{line.reason ? `${line.name}: ${line.reason}` : line.name}</li>
+                       ))}
+                     </ul>
+                   )}
+                   {appliedSuggestion.skipped.length > 0 && (
+                     <>
+                       <p className="mt-3 font-medium">Ficaram de fora:</p>
+                       <ul className="mt-1 list-disc space-y-1 pl-5">
+                         {appliedSuggestion.skipped.map((text) => <li key={text}>{text}</li>)}
+                       </ul>
+                     </>
+                   )}
+                   {appliedSuggestion.observations.length > 0 && (
+                     <>
+                       <p className="mt-3 font-medium">Para conferir com o cliente:</p>
+                       <ul className="mt-1 list-disc space-y-1 pl-5">
+                         {appliedSuggestion.observations.map((text) => <li key={text}>{text}</li>)}
+                       </ul>
+                     </>
+                   )}
+                 </div>
+               )}
                {pickupKit && (
                  <p id="frete-kit-retirada" role="note" className="-mt-4 mb-6 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-foreground">
                    O kit "{pickupKit.description}" é de retirada: o cliente busca e devolve na X Produções. O frete só entra se a proposta tiver equipamento avulso para entregar.

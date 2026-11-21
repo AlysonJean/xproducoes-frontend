@@ -166,6 +166,8 @@ describe('D8c — Política de Privacidade (src/data/privacyPolicy.ts)', () => {
     expect(cloudflare).toContain('Cuida do endereço do site na internet (DNS)');
     expect(cloudflare).toContain('No "Conte seu evento" da página inicial, lê com inteligência artificial (Workers AI) o texto que você escreve');
     expect(cloudflare).toContain('não guarda esse texto depois da leitura nem o usa para treinar modelos');
+    // "Sugerir itens" (20/11/2026): a equipe pede a sugestão, e a IA lê o briefing sem os dados de contato nem o endereço.
+    expect(cloudflare).toContain('Quando a equipe pede uma sugestão de itens para o orçamento de um pedido, lê do mesmo jeito as respostas do briefing e a cidade do evento, sem nome, telefone, e-mail nem endereço.');
     expect(countryOf('Cloudflare')).toBe('Estados Unidos e outros países');
 
     const google = norm(within(table).getByRole('rowheader', { name: 'Google' }).closest('tr')?.textContent ?? '');
