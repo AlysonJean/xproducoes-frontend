@@ -17,6 +17,9 @@ import { GOOGLE_ANALYTICS_TRANSFER_NOTICE, INSTAGRAM_PLAYER_NOTICE } from './coo
 // no Render (D19, trocado em 12/11/2026; o Redis Cloud saiu da lista).
 // Selo de assinatura (decisão de Alyson, 20/11/2026): entra a linha do jsDelivr, que entrega o script do selo do rodapé
 // (utils/seloAssinatura.ts) e recebe o IP de quem abre as páginas com rodapé. Versão de 20/11/2026.
+// "Conte seu evento" (decisão de Alyson, 20/11/2026, mesmo dia): a linha da Cloudflare ganha a leitura do texto da
+// página inicial pelo Workers AI (sem guardar o texto nem treinar modelos com ele, pela página "Data usage" da
+// Cloudflare), e a linha dos pedidos ganha esse texto, que vai para o campo de detalhes do briefing.
 
 /** Data da última revisão do texto (como LAST_UPDATED dos Termos). */
 export const PRIVACY_POLICY_UPDATED_AT = '20/11/2026';
@@ -103,7 +106,7 @@ export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
             'Enquanto a conta existir. Na exclusão, veja "Exclusão da conta" abaixo.',
           ],
           [
-            'Pedidos de orçamento e reservas: data e horário, endereço e informações do local do evento, contato no local, seu nome, e-mail e telefone, itens, valores, frete, cupom, observações, respostas do briefing e arquivos enviados.',
+            'Pedidos de orçamento e reservas: data e horário, endereço e informações do local do evento, contato no local, seu nome, e-mail e telefone, itens, valores, frete, cupom, observações, respostas do briefing (inclusive o texto escrito em "Conte seu evento", na página inicial) e arquivos enviados.',
             'Fazer a proposta, calcular o frete, montar a equipe, realizar o evento, cobrar e cumprir o contrato.',
             'Execução de contrato e dos passos antes dele (inciso V). Depois do evento, cumprimento de obrigação legal, como guardar os documentos da contabilidade (inciso II), e defesa de direitos (inciso VI).',
             `Pedidos que não viraram contrato: 12 meses depois do pedido. Reservas contratadas ou pagas: ${ACCOUNTING_TERM}.`,
@@ -245,7 +248,7 @@ export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
           ['Resend', 'Envia os e-mails do site.', 'Estados Unidos (os e-mails saem pela região de São Paulo)'],
           [
             'Cloudflare',
-            'Cuida do endereço do site na internet (DNS) e recebe os e-mails enviados para o domínio da empresa e os repassa para a caixa de e-mail da equipe.',
+            'Cuida do endereço do site na internet (DNS) e recebe os e-mails enviados para o domínio da empresa e os repassa para a caixa de e-mail da equipe. No "Conte seu evento" da página inicial, lê com inteligência artificial (Workers AI) o texto que você escreve, só para marcar as respostas do pedido de orçamento; a Cloudflare não guarda esse texto depois da leitura nem o usa para treinar modelos.',
             'Estados Unidos e outros países',
           ],
           ['ViaCEP', 'No formulário de orçamento, recebe o CEP digitado para preencher o endereço.', 'Brasil'],

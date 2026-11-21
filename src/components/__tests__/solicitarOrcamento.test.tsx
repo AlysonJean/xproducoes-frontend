@@ -15,7 +15,7 @@ vi.mock('../../contexts/SettingsContext', () => ({ useSettings: () => ({ company
 vi.mock('../ui/ThemeToggle', () => ({ ThemeToggle: () => null }));
 vi.mock('../ui/ThemedLogo', () => ({ default: () => null }));
 vi.mock('../ui/BannerCarousel', () => ({ BannerCarousel: () => null }));
-vi.mock('../ui/InteractiveQuiz', () => ({ InteractiveQuiz: () => null }));
+vi.mock('../ui/ConteSeuEvento', () => ({ ConteSeuEvento: () => null }));
 vi.mock('../ui/BrandLoader', () => ({ BrandLoader: () => null }));
 vi.mock('../../hooks/useRecommendations', () => ({
   useRecommendations: () => ({ recommendations: [], loading: false, error: null }),

@@ -9,7 +9,7 @@ const { apiFetch } = vi.hoisted(() => ({ apiFetch: vi.fn() }));
 vi.mock('../../services/api', () => ({ apiFetch }));
 vi.mock('../../contexts/SettingsContext', () => ({ useSettings: () => ({ companyName: 'X Produções', googleReviewUrl: null }) }));
 vi.mock('../../components/ui/BannerCarousel', () => ({ BannerCarousel: () => null }));
-vi.mock('../../components/ui/InteractiveQuiz', () => ({ InteractiveQuiz: () => null }));
+vi.mock('../../components/ui/ConteSeuEvento', () => ({ ConteSeuEvento: () => null }));
 vi.mock('../../components/ui/BrandLoader', () => ({ BrandLoader: () => null }));
 
 import { HomePage } from '../HomePage';

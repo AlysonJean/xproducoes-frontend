@@ -9,7 +9,7 @@ import { apiFetch } from '../services/api';
 import type { Category, Kit, PortfolioItem } from '../types/types';
 import { transformKit } from '../utils/transformKit';
 import { BrandLoader } from '@/components/ui/BrandLoader';
-import { InteractiveQuiz } from '../components/ui/InteractiveQuiz';
+import { ConteSeuEvento } from '../components/ui/ConteSeuEvento';
 
 import { Grid, buttonVariants } from '../components/ui/StandardComponents';
 import { TestimonialCard } from '../components/ui/TestimonialCard';
@@ -335,22 +335,20 @@ export const HomePage = () => {
           </section>
         )}
 
-        {/* Interactive Event Quiz */}
+        {/* "Conte seu evento" (20/11/2026): no lugar do teste rápido, que repetia as 3 primeiras perguntas do briefing. */}
         <section className="relative pb-32">
           <div className="absolute inset-0 -z-10 flex items-center justify-center pointer-events-none opacity-40" aria-hidden="true">
             <div className="w-[1000px] h-[600px] bg-primary/10 blur-[180px] rounded-full" />
           </div>
           <div className="text-center mb-12">
-            {/* Auditoria do orçamento (12/11/2026), O27: o teste não abre mais o WhatsApp; leva ao pedido já preenchido. */}
-            <SectionEyebrow>Teste rápido</SectionEyebrow>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Mapeamento de Necessidades</h2>
+            <SectionEyebrow>Pedido de orçamento</SectionEyebrow>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Conte seu evento do seu jeito</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-              Responda a 3 perguntas rápidas e continue o pedido de orçamento com as respostas já preenchidas.
+              Escreva como contaria numa mensagem. A gente marca as respostas do pedido de orçamento, e você só confere e
+              completa.
             </p>
           </div>
-          <div className="max-w-4xl mx-auto">
-            <InteractiveQuiz />
-          </div>
+          <ConteSeuEvento />
         </section>
       </div>
     </div>

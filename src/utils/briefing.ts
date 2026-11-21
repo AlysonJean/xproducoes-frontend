@@ -325,6 +325,78 @@ export function briefingPrefill(search: string): BriefingPrefill {
   return prefill;
 }
 
+// "Conte seu evento" (pedido de Alyson em 20/11/2026, no lugar do teste rápido da Home, que repetia as 3 primeiras
+// perguntas daqui): a pessoa escreve o evento do jeito dela, o servidor lê com a IA da Cloudflare
+// (POST /briefing/interpret) e o briefing abre com as respostas marcadas, para conferir. Elas vêm no estado da
+// navegação, e não no endereço: o texto da pessoa não vai para o histórico, o Google Analytics nem os registros da
+// Vercel. Aqui cada resposta é conferida de novo contra as opções da página (se a lista do servidor se desencontrar
+// desta, a resposta só deixa de ser marcada). O texto vai para "Quer contar mais alguma coisa?", lido ou não.
+export const BRIEFING_TEXT_MIN = 10;
+export const BRIEFING_TEXT_MAX = 800;
+const TEXT_STATE_KEY = 'contado';
+
+/** O estado da navegação para o briefing, com o texto e as respostas lidas (vazio quando a leitura falhou). */
+export function briefingTextState(text: string, prefill: unknown): Record<string, unknown> {
+  return { [TEXT_STATE_KEY]: { text, prefill } };
+}
+
+export interface BriefingTextAnswers {
+  text: string;
+  answers: Partial<BriefingAnswers>;
+  /** Quantas respostas o texto marcou (as necessidades contam como uma). */
+  filled: number;
+}
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** As respostas do "Conte seu evento" que vieram no estado da navegação, só as que são opções válidas da página. */
+export function briefingFromText(state: unknown): BriefingTextAnswers | null {
+  const value = state && typeof state === 'object' ? (state as Record<string, unknown>)[TEXT_STATE_KEY] : undefined;
+  if (!value || typeof value !== 'object') return null;
+  const { text, prefill } = value as { text?: unknown; prefill?: unknown };
+  if (typeof text !== 'string' || !text.trim()) return null;
+
+  const raw = prefill && typeof prefill === 'object' && !Array.isArray(prefill) ? (prefill as Record<string, unknown>) : {};
+  const option = (key: string, options: readonly string[]) => {
+    const item = raw[key];
+    return typeof item === 'string' && options.includes(item) ? item : undefined;
+  };
+  const matching = (key: string, pattern: RegExp) => {
+    const item = raw[key];
+    return typeof item === 'string' && pattern.test(item) ? item : undefined;
+  };
+  const shortText = (key: string, max: number) => {
+    const item = raw[key];
+    return typeof item === 'string' && item.trim() && item.trim().length <= max ? item.trim() : undefined;
+  };
+
+  const found: Partial<BriefingAnswers> = {
+    eventType: option('eventType', EVENT_TYPES),
+    eventDate: matching('eventDate', DATE_PATTERN),
+    startTime: matching('startTime', TIME_PATTERN),
+    endTime: matching('endTime', TIME_PATTERN),
+    guests: option('guests', GUEST_RANGES),
+    venue: shortText('venue', 80),
+    city: shortText('city', 60),
+    state: matching('state', /^[A-Z]{2}$/),
+    environment: option('environment', ENVIRONMENTS),
+    bandSize: matching('bandSize', /^\d{1,2}$/),
+    djOption: option('djOption', DJ_OPTIONS),
+    voltage: option('voltage', VOLTAGES),
+  };
+  const needs = Array.isArray(raw.needs) ? [...new Set(raw.needs.filter((need): need is string => typeof need === 'string' && NEEDS.includes(need)))] : [];
+  if (needs.length > 0) found.needs = needs;
+
+  const answers = Object.fromEntries(Object.entries(found).filter(([, item]) => item !== undefined)) as Partial<BriefingAnswers>;
+  const filled = Object.keys(answers).length;
+  // Com o nome do local, "Já sei o local"; só com a cidade, "Ainda não sei" (o lugar exato), que mostra a cidade.
+  if (answers.venue) answers.venueKnown = 'yes';
+  else if (answers.city) answers.venueKnown = 'no';
+  if (answers.startTime || answers.endTime) answers.timeUnknown = false;
+  return { text: text.trim().slice(0, BRIEFING_TEXT_MAX), answers, filled };
+}
+
 export interface CepAddress {
   street: string;
   neighborhood: string;

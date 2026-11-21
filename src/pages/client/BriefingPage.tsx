@@ -27,6 +27,7 @@ import {
   NEEDS,
   VOLTAGES,
   YES_NO_UNKNOWN,
+  briefingFromText,
   briefingPrefill,
   buildBriefingPayload,
   formatCep,
@@ -102,7 +103,7 @@ const Choice = ({ legend, options, selected, onSelect, error, columns = 'grid-co
 
 export const BriefingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { pathname, search } = useLocation();
+  const { pathname, search, state: navigationState } = useLocation();
   const { user, setAuthenticatedUser } = useAuth();
   const { addNotification } = useNotifications();
   const { save: saveDraft, load: loadDraft, clear: clearDraft } = useFormDraft<{ step: number; answers: Partial<BriefingAnswers> }>(DRAFT_KEY);
@@ -117,6 +118,8 @@ export const BriefingPage: React.FC = () => {
   const [cepStatus, setCepStatus] = useState<'idle' | 'loading' | 'notFound'>('idle');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  // "Conte seu evento" (20/11/2026): quantas respostas vieram do texto da página inicial (0 = a leitura falhou).
+  const [fromText, setFromText] = useState<{ filled: number } | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const firstRender = useRef(true);
   // A mesma resposta enviada de novo (internet caiu no meio) repete a chave: o servidor não duplica.
@@ -158,6 +161,27 @@ export const BriefingPage: React.FC = () => {
     setStep(0);
     navigate(pathname, { replace: true });
   }, [draftChecked, search, pathname, navigate]);
+
+  // "Conte seu evento" (20/11/2026): as respostas lidas do texto da página inicial chegam no estado da navegação e
+  // entram como as do endereço (por cima do rascunho, no primeiro passo). O texto vai para "Quer contar mais alguma
+  // coisa?", também quando a leitura falhou. Depois o estado é limpo: recarregar não volta a trocar o que a pessoa mudou.
+  useEffect(() => {
+    if (!draftChecked) return;
+    const contado = briefingFromText(navigationState);
+    if (!contado) return;
+    const { needs, ...answersFromText } = contado.answers;
+    setAnswers((current) => ({
+      ...current,
+      ...answersFromText,
+      needs: needs ? [...new Set([...current.needs, ...needs])] : current.needs,
+      moreInfo: current.moreInfo.includes(contado.text) ? current.moreInfo : [current.moreInfo.trim(), contado.text].filter(Boolean).join('\n\n'),
+    }));
+    // Com o local e a cidade, o endereço aparece aberto, com a cidade já escrita.
+    if (answersFromText.venueKnown === 'yes' && answersFromText.city) setManualAddress(true);
+    setFromText({ filled: contado.filled });
+    setStep(0);
+    navigate(pathname, { replace: true, state: null });
+  }, [draftChecked, navigationState, pathname, navigate]);
 
   // Nome, telefone e e-mail ficam fora do rascunho: o aparelho pode ser compartilhado.
   useEffect(() => {
@@ -309,8 +333,16 @@ export const BriefingPage: React.FC = () => {
           </div>
         </div>
 
-        {restored && step > 0 && (
+        {restored && step > 0 && !fromText && (
           <p role="status" className="mb-4 text-sm text-muted-foreground">Guardamos suas respostas: pode continuar de onde parou.</p>
+        )}
+
+        {fromText && (
+          <p role="status" className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm text-foreground">
+            {fromText.filled > 0
+              ? `Marcamos ${fromText.filled === 1 ? '1 resposta' : `${fromText.filled} respostas`} com o que você contou. Confira cada passo e complete o que faltou. O seu texto está no passo 3, em "Quer contar mais alguma coisa?".`
+              : 'Não deu para marcar as respostas pelo seu texto agora. Ele está no passo 3, em "Quer contar mais alguma coisa?". Responda as perguntas abaixo.'}
+          </p>
         )}
 
         <h2 ref={headingRef} tabIndex={-1} className="text-xl font-bold text-foreground outline-none">

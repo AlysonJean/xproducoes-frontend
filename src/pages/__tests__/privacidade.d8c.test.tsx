@@ -161,6 +161,12 @@ describe('D8c — Política de Privacidade (src/data/privacyPolicy.ts)', () => {
     expect(jsdelivr).toContain('Entrega o selo "Desenvolvido por X Soluções Digitais" do rodapé');
     expect(jsdelivr).toContain('recebe o endereço IP de quem abre as páginas com rodapé, sem cookies');
     expect(jsdelivr).toContain('abre uma conversa no WhatsApp com a X Soluções Digitais, que desenvolveu o site');
+    // "Conte seu evento" (20/11/2026): a Cloudflare lê o texto da página inicial com IA, sem guardar nem treinar.
+    const cloudflare = norm(within(table).getByRole('rowheader', { name: 'Cloudflare' }).closest('tr')?.textContent ?? '');
+    expect(cloudflare).toContain('Cuida do endereço do site na internet (DNS)');
+    expect(cloudflare).toContain('No "Conte seu evento" da página inicial, lê com inteligência artificial (Workers AI) o texto que você escreve');
+    expect(cloudflare).toContain('não guarda esse texto depois da leitura nem o usa para treinar modelos');
+    expect(countryOf('Cloudflare')).toBe('Estados Unidos e outros países');
 
     const google = norm(within(table).getByRole('rowheader', { name: 'Google' }).closest('tr')?.textContent ?? '');
     expect(google).toContain('Google Analytics, só com o seu aceite.');
