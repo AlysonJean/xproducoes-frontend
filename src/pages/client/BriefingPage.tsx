@@ -170,29 +170,44 @@ export const BriefingPage: React.FC = () => {
     const contado = briefingFromText(navigationState);
     if (!contado) return;
     const { needs, ...answersFromText } = contado.answers;
+    // Teste de ponta a ponta (20/11/2026): o texto conta um evento novo. Antes as respostas entravam por cima do
+    // rascunho, e as velhas (data, necessidades) ficavam misturadas com as do texto. Agora o briefing recomeça só com o
+    // que o texto diz (nome, telefone e e-mail ficam); o resto fica em branco, inclusive o horário: o padrão de 19:00 às
+    // 23:00 passava como se a pessoa tivesse dito.
+    clearDraft();
     setAnswers((current) => ({
-      ...current,
+      ...EMPTY_BRIEFING,
+      name: current.name,
+      phone: current.phone,
+      email: current.email,
+      startTime: '',
+      endTime: '',
       ...answersFromText,
-      needs: needs ? [...new Set([...current.needs, ...needs])] : current.needs,
-      moreInfo: current.moreInfo.includes(contado.text) ? current.moreInfo : [current.moreInfo.trim(), contado.text].filter(Boolean).join('\n\n'),
+      needs: needs ?? [],
+      moreInfo: contado.text,
     }));
     // Com o local e a cidade, o endereço aparece aberto, com a cidade já escrita.
-    if (answersFromText.venueKnown === 'yes' && answersFromText.city) setManualAddress(true);
+    setManualAddress(answersFromText.venueKnown === 'yes' && Boolean(answersFromText.city));
+    setRestored(false);
+    setErrors({});
     setFromText({ filled: contado.filled });
     setStep(0);
     navigate(pathname, { replace: true, state: null });
-  }, [draftChecked, navigationState, pathname, navigate]);
+  }, [draftChecked, navigationState, pathname, navigate, clearDraft]);
 
   // Nome, telefone e e-mail ficam fora do rascunho: o aparelho pode ser compartilhado.
+  // "Conte seu evento" (teste de 20/11/2026): com respostas do texto ainda para entrar, não guarda. Na mesma rodada
+  // este efeito vinha depois do que apaga o rascunho, ainda com as respostas velhas, e gravava o rascunho velho de novo
+  // (recarregar a página trazia o evento antigo de volta).
   useEffect(() => {
-    if (!draftChecked || (!answers.eventType && !answers.eventDate)) return;
+    if (!draftChecked || briefingFromText(navigationState) || (!answers.eventType && !answers.eventDate)) return;
     const draftAnswers: Partial<BriefingAnswers> = { ...answers };
     delete draftAnswers.name;
     delete draftAnswers.phone;
     delete draftAnswers.email;
     delete draftAnswers.accepted;
     saveDraft({ step, answers: draftAnswers });
-  }, [answers, step, draftChecked, saveDraft]);
+  }, [answers, step, draftChecked, saveDraft, navigationState]);
 
   useEffect(() => {
     if (!user) return;
@@ -241,6 +256,7 @@ export const BriefingPage: React.FC = () => {
     setErrors({});
     setRestored(false);
     setManualAddress(false);
+    setFromText(null);
   };
 
   const validateStep = () => {
@@ -315,7 +331,8 @@ export const BriefingPage: React.FC = () => {
         <div className="mb-6">
           <div className="mb-2 flex items-center justify-between gap-3 text-sm text-muted-foreground">
             <span>Passo {step + 1} de {BRIEFING_STEPS.length}</span>
-            {restored && (
+            {/* "Conte seu evento": o Recomeçar também aparece logo depois da leitura do texto (antes, só depois de recarregar). */}
+            {(restored || fromText) && (
               <button type="button" onClick={startOver} className="font-medium text-primary underline underline-offset-2">
                 Recomeçar
               </button>

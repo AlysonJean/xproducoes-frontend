@@ -94,6 +94,7 @@ describe('BriefingPage — respostas do "Conte seu evento"', () => {
     renderWith(briefingTextState(TEXTO, { eventType: 'Formatura', eventDate: '2030-03-14', guests: '200 a 500', venue: 'Espaço Kalahari', city: 'Belo Horizonte' }));
 
     await waitFor(() => expect(pressed('Formatura')).toBe('true'));
+    fireEvent.click(screen.getByLabelText('Ainda não sei o horário'));
     continuar();
     expect(pressed('Já sei o local')).toBe('true');
     expect(value('Nome do local (opcional)')).toBe('Espaço Kalahari');
@@ -101,21 +102,49 @@ describe('BriefingPage — respostas do "Conte seu evento"', () => {
     expect(screen.getByLabelText('Rua')).toBeInTheDocument();
   });
 
-  it('leitura falhou (sem respostas): o texto vai para os detalhes e o aviso diz para responder as perguntas', async () => {
+  it('leitura falhou (sem respostas): o texto vai para os detalhes e o aviso diz para responder as perguntas; o rascunho velho some', async () => {
+    localStorage.setItem('briefing-draft', JSON.stringify({ values: { step: 1, answers: { eventType: 'Corporativo', eventDate: '2030-05-01' } }, savedAt: Date.now() }));
     renderWith(briefingTextState(TEXTO, {}));
 
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Não deu para marcar as respostas pelo seu texto agora.'));
     expect(pressed('Casamento')).toBe('false');
+    expect(pressed('Corporativo')).toBe('false');
     await waitFor(() => expect(screen.getByTestId('estado')).toHaveTextContent('null'));
+    // Sem tipo nem data, nada novo é guardado: recarregar não traria o rascunho velho de volta.
+    expect(localStorage.getItem('briefing-draft')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Outro' }));
     fireEvent.change(screen.getByLabelText('Qual é a data?'), { target: { value: '2030-03-20' } });
+    fireEvent.click(screen.getByLabelText('Ainda não sei o horário'));
     fireEvent.click(screen.getByRole('button', { name: 'Até 50' }));
     continuar();
     fireEvent.click(screen.getByRole('button', { name: 'Ainda não sei' }));
     fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Betim' } });
     continuar();
     expect(value('Quer contar mais alguma coisa? (opcional)')).toBe(TEXTO);
+  });
+
+  it('texto sem horário: o horário fica em branco (não o padrão 19:00 às 23:00) e o briefing pede para preencher ou marcar "Ainda não sei"', async () => {
+    renderWith(briefingTextState(TEXTO, { eventType: 'Casamento', eventDate: '2030-03-20', guests: '100 a 200' }));
+
+    await waitFor(() => expect(pressed('Casamento')).toBe('true'));
+    expect(value('Começa às')).toBe('');
+    expect(value('Termina às')).toBe('');
+    continuar();
+    expect(screen.getByText('Informe o início e o término, ou marque que ainda não sabe.')).toBeInTheDocument();
+    expect(screen.getByText('Passo 1 de 5')).toBeInTheDocument();
+  });
+
+  it('"Recomeçar" aparece logo depois da leitura e limpa tudo, inclusive o aviso', async () => {
+    renderWith(briefingTextState(TEXTO, { eventType: 'Casamento', guests: '100 a 200' }));
+
+    await waitFor(() => expect(pressed('Casamento')).toBe('true'));
+    fireEvent.click(screen.getByRole('button', { name: 'Recomeçar' }));
+
+    expect(pressed('Casamento')).toBe('false');
+    expect(pressed('100 a 200')).toBe('false');
+    expect(screen.queryByText(/Marcamos/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Recomeçar' })).not.toBeInTheDocument();
   });
 
   it('o que não é opção da página não marca nada (e não conta como resposta)', async () => {
@@ -126,10 +155,10 @@ describe('BriefingPage — respostas do "Conte seu evento"', () => {
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Não deu para marcar as respostas'));
     for (const opcao of ['Casamento', 'Outro', 'Até 50', 'Mais de 500 (sob consulta)']) expect(pressed(opcao)).toBe('false');
     expect(value('Qual é a data?')).toBe('');
-    expect(value('Começa às')).toBe('19:00');
+    expect(value('Começa às')).toBe('');
   });
 
-  it('com rascunho guardado: as respostas do texto entram por cima, as necessidades se somam e o texto vai depois do que já estava escrito', async () => {
+  it('com rascunho velho guardado: o briefing recomeça só com o texto novo (nada do rascunho fica misturado)', async () => {
     localStorage.setItem(
       'briefing-draft',
       JSON.stringify({ values: { step: 2, answers: { eventType: 'Corporativo', eventDate: '2030-05-01', needs: ['Microfones'], moreInfo: 'Palestra de manhã.' } }, savedAt: Date.now() }),
@@ -138,14 +167,18 @@ describe('BriefingPage — respostas do "Conte seu evento"', () => {
 
     await waitFor(() => expect(pressed('Casamento')).toBe('true'));
     expect(screen.getByText('Passo 1 de 5')).toBeInTheDocument();
-    expect(value('Qual é a data?')).toBe('2030-05-01');
+    expect(pressed('Corporativo')).toBe('false');
+    expect(value('Qual é a data?')).toBe('');
+    expect(screen.getByRole('button', { name: 'Recomeçar' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Qual é a data?'), { target: { value: '2030-05-02' } });
+    fireEvent.click(screen.getByLabelText('Ainda não sei o horário'));
     continuar();
     fireEvent.click(screen.getByRole('button', { name: 'Ainda não sei' }));
     fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Betim' } });
     continuar();
-    expect(pressed('Microfones')).toBe('true');
+    expect(pressed('Microfones')).toBe('false');
     expect(pressed('Som')).toBe('true');
-    expect(value('Quer contar mais alguma coisa? (opcional)')).toBe(`Palestra de manhã.\n\n${TEXTO}`);
+    expect(value('Quer contar mais alguma coisa? (opcional)')).toBe(TEXTO);
   });
 
   it('sem o estado do "Conte seu evento": nenhum aviso e nada marcado', () => {
