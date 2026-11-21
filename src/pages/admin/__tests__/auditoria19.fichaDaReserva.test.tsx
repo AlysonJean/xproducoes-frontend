@@ -94,7 +94,14 @@ describe('Ficha da reserva — auditoria completa (19/11/2026)', () => {
   it.each(['DRAFT', 'PENDING', 'COMPLETED', 'CANCELLED', 'REFUNDED'])('status %s: sem "Marcar como concluída"', async (status) => {
     await renderFicha({ ...RESERVA, status, contractSummary: null });
 
-    expect(screen.getByRole('button', { name: 'Avisar: equipe a caminho' })).toBeInTheDocument();
+    // O cartão Logística está na tela: com as ações na reserva aberta; fechada (cancelada, estornada ou concluída), sem
+    // ações (teste de ponta a ponta de 21/11/2026: a cancelada seguia com "Cancelar reserva" e "Avisar: equipe a caminho").
+    if (status === 'DRAFT' || status === 'PENDING') {
+      expect(screen.getByRole('button', { name: 'Avisar: equipe a caminho' })).toBeInTheDocument();
+    } else {
+      expect(screen.getByText(/: sem ações de logística\.$/)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Avisar: equipe a caminho' })).not.toBeInTheDocument();
+    }
     expect(screen.queryByRole('button', { name: 'Marcar como concluída' })).not.toBeInTheDocument();
   });
 

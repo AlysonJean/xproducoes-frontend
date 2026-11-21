@@ -70,7 +70,9 @@ const OpenWhatsAppConfirmation = ({
           disabled={!hasPhone}
           onChange={(e) => setSendWhatsApp(e.target.checked)}
         />
-        {hasPhone && (
+        {/* Teste de ponta a ponta (21/11/2026): a prévia ficava na tela depois de desmarcar a caixa, como se a mensagem
+            fosse sair. Agora ela aparece só com a caixa marcada. */}
+        {hasPhone && sendWhatsApp && (
           // tabIndex: texto longo rola — quem usa teclado precisa conseguir rolar a prévia.
           <blockquote
             tabIndex={0}

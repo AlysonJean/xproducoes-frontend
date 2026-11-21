@@ -17,7 +17,15 @@ import { BriefingPage } from '../BriefingPage';
 
 const Sucesso = () => {
   const { pathname, state } = useLocation();
-  return <p>{`Tela de sucesso ${pathname} ${(state as { briefingAccount?: string })?.briefingAccount}`}</p>;
+  const formData = (state as { formData?: { notes?: string; specialRequests?: string } } | null)?.formData;
+  return (
+    <>
+      <p>{`Tela de sucesso ${pathname} ${(state as { briefingAccount?: string })?.briefingAccount}`}</p>
+      {/* O que a tela de sucesso usa na mensagem do WhatsApp (teste de ponta a ponta, 21/11/2026). */}
+      <pre data-testid="observacoes">{formData?.notes ?? ''}</pre>
+      <pre data-testid="texto-do-pedido">{formData?.specialRequests ?? ''}</pre>
+    </>
+  );
 };
 
 const renderPage = () =>
@@ -69,6 +77,23 @@ describe('BriefingPage', () => {
     vi.stubGlobal('fetch', vi.fn());
   });
   afterEach(() => vi.unstubAllGlobals());
+
+  // Teste de ponta a ponta (21/11/2026): a mensagem do WhatsApp saía com "Observações: -" mesmo com o texto do cliente.
+  it('a tela de sucesso recebe o texto do cliente e o texto do pedido, para a mensagem do WhatsApp', async () => {
+    renderPage();
+    fillEvent();
+    fillVenueUnknown();
+    tap('Som');
+    type('Quer contar mais alguma coisa? (opcional)', '  Festa surpresa, chegar pelos fundos  ');
+    tap('Continuar');
+    tap('Pular esta etapa');
+    fillContactAndSend();
+
+    await screen.findByText('Tela de sucesso /orcamento-sucesso/XP-ANA-1 created');
+    expect(screen.getByTestId('observacoes').textContent).toBe('Festa surpresa, chegar pelos fundos');
+    expect(screen.getByTestId('texto-do-pedido').textContent).toBe(post.mock.calls[0][1].specialRequests);
+    expect(screen.getByTestId('texto-do-pedido').textContent).toContain('— Briefing preenchido pelo cliente —');
+  });
 
   it('não avança sem as respostas e diz o que falta', () => {
     renderPage();

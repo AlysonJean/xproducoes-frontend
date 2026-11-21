@@ -198,6 +198,43 @@ describe('Ficha da reserva — auditoria do orçamento (onda 2)', () => {
     expect(valor('Montagem a partir de')).toBe('14:00');
     expect(valor('Ambiente')).toBe('Ao ar livre');
     expect(bloco.queryByText('Local coberto')).not.toBeInTheDocument();
+    // Teste de ponta a ponta (21/11/2026): o estacionamento não foi respondido no briefing. Antes aparecia o "Sim" do
+    // cadastro (o caso comum), como se o cliente tivesse dito.
+    expect(valor('Estacionamento ou carga e descarga')).toBe('Não informado');
+    expect(bloco.queryByText(/Valores do cadastro da reserva/)).not.toBeInTheDocument();
+  });
+
+  it('briefing sem as perguntas de acesso respondidas: "Não informado" em cada uma, nunca o sim/não do cadastro', async () => {
+    await renderFicha({
+      ...RESERVA, setupTime: null, requiresStairs: false, isCovered: true, hasParking: true,
+      specialRequests: '— Briefing preenchido pelo cliente —\nEvento: Aniversário ou 15 anos\nConvidados: 100 a 200\n\n— Ciência marcada em 21/11/2026 —',
+    });
+    const bloco = within(screen.getByRole('heading', { name: 'Montagem e acesso' }).parentElement!);
+    const valor = (rotulo: string) => bloco.getByText(rotulo).nextElementSibling?.textContent;
+    expect(valor('Escadas no acesso')).toBe('Não informado');
+    expect(valor('Ambiente')).toBe('Não informado');
+    expect(valor('Estacionamento ou carga e descarga')).toBe('Não informado');
+    expect(bloco.queryByText('Local coberto')).not.toBeInTheDocument();
+    expect(bloco.queryByText(/Valores do cadastro da reserva/)).not.toBeInTheDocument();
+  });
+
+  // Teste de ponta a ponta (21/11/2026): a reserva cancelada seguia com "Cancelar reserva" e "Avisar: equipe a caminho".
+  it.each([
+    ['CANCELLED', 'cancelada'],
+    ['COMPLETED', 'concluída'],
+  ])('reserva %s: o cartão Logística fica sem ações', async (status, rotulo) => {
+    await renderFicha({ ...RESERVA, status });
+    const cartao = within(screen.getByRole('heading', { name: 'Logística' }).parentElement!);
+    expect(cartao.getByText(`Reserva ${rotulo}: sem ações de logística.`)).toBeInTheDocument();
+    expect(cartao.queryByRole('button', { name: 'Cancelar reserva' })).toBeNull();
+    expect(cartao.queryByRole('button', { name: 'Avisar: equipe a caminho' })).toBeNull();
+  });
+
+  it('reserva pendente: o cartão Logística tem "Avisar: equipe a caminho" e "Cancelar reserva"', async () => {
+    await renderFicha();
+    const cartao = within(screen.getByRole('heading', { name: 'Logística' }).parentElement!);
+    expect(cartao.getByRole('button', { name: 'Avisar: equipe a caminho' })).toBeInTheDocument();
+    expect(cartao.getByRole('button', { name: 'Cancelar reserva' })).toBeInTheDocument();
   });
 
   // O25: o texto do pedido pode trazer o que o cliente escreveu à vontade (o "O cliente também disse" do briefing), quebra
@@ -219,9 +256,10 @@ describe('Ficha da reserva — auditoria do orçamento (onda 2)', () => {
     expect(valor('Ambiente')).toBe('Salão fechado');
     expect(valor('Montagem a partir de')).toBe('<img src=x onerror=alert(1)>');
     expect(bloco.queryByRole('img')).not.toBeInTheDocument();
-    // A escada e o estacionamento não foram respondidos no briefing: vale o cadastro, não o que veio no texto livre.
-    expect(valor('Escadas no acesso')).toBe('Sim');
-    expect(valor('Estacionamento ou carga e descarga')).toBe('Sim');
+    // A escada e o estacionamento não foram respondidos no briefing: "Não informado" (teste de ponta a ponta de
+    // 21/11/2026; antes, o sim/não do cadastro), nunca o que veio no texto livre.
+    expect(valor('Escadas no acesso')).toBe('Não informado');
+    expect(valor('Estacionamento ou carga e descarga')).toBe('Não informado');
     view.unmount();
 
     // Pedido antigo, só com o texto do cliente: o sim/não do cadastro, dito como tal.

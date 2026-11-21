@@ -55,11 +55,14 @@ describe('Confirmação de envio por WhatsApp', () => {
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
-  it('caixa desmarcada: só muda o status', () => {
+  it('caixa desmarcada: a prévia sai da tela e só muda o status', () => {
     const onConfirm = vi.fn();
     render(<WhatsAppConfirmationModal {...props} onConfirm={onConfirm} contactNumber="5531999999999" />);
 
+    expect(screen.getByLabelText('Prévia da mensagem do WhatsApp')).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText('Avisar o cliente pelo WhatsApp'));
+    // Teste de ponta a ponta (21/11/2026): a prévia ficava na tela depois de desmarcar.
+    expect(screen.queryByLabelText('Prévia da mensagem do WhatsApp')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
 
     expect(open).not.toHaveBeenCalled();

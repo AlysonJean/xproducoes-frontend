@@ -58,6 +58,7 @@ import {
 import { formatBookingCode } from '../../utils/bookingCode';
 import { bookingEmail, bookingPhone, toWhatsAppNumber } from '../../utils/bookingContact';
 import { formatBrasiliaDate } from '../../utils/whatsapp';
+import { accessAnswers, answerInRequest, type AccessAnswer } from '../../utils/requestAnswers';
 import {
   bookingCancelledWhatsAppText,
   bookingConfirmedWhatsAppText,
@@ -177,19 +178,9 @@ type BookingDetails = BaseBookingDetails & {
 
 // ── Auditoria do orçamento (12/11/2026) ─────────────────────────────────────────
 
-// O25 (exibição): escada, local coberto, estacionamento e a hora da montagem. O /orcamento e o briefing escrevem as
-// respostas como a pessoa marcou (com "Não sei") no texto do pedido (specialRequests) e gravam o sim/não do cadastro
-// (o que a equipe vê na escala). A ficha mostra a resposta escrita quando ela existe; sem ela, o sim/não do cadastro.
-// O texto livre do briefing ("O cliente também disse", sempre a última resposta) não conta: uma linha "Escadas no
-// acesso: ..." digitada ali não passa pela resposta marcada.
-const answerInRequest = (text: string | null | undefined, label: string): string | null => {
-  if (!text) return null;
-  const answers = text.split(/^O cliente também disse:/m)[0];
-  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = answers.match(new RegExp(`^${escaped}:[ \\t]*(.+)$`, 'm'));
-  return match ? match[1].trim() || null : null;
-};
-const yesNo = (value: boolean | null | undefined): string | null => (value === true ? 'Sim' : value === false ? 'Não' : null);
+// O25 (exibição): escada, local coberto, estacionamento e a hora da montagem, como o cliente respondeu (ver
+// utils/requestAnswers: a resposta escrita no texto do pedido; no briefing, "Não informado" para a pergunta sem
+// resposta; sem texto, o sim/não do cadastro).
 
 const brasiliaTime = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 const validDate = (value?: string | null): Date | null => {
@@ -224,13 +215,6 @@ function eventDurationText(start?: string | null, end?: string | null): string {
   return minutes > 0 ? serviceMinutesText(minutes) : '-';
 }
 
-interface VenueAnswer {
-  label: string;
-  value: string;
-  /** Veio da resposta escrita do cliente (e não do sim/não do cadastro). */
-  answered: boolean;
-}
-
 function venueAnswers(b: {
   specialRequests?: string | null;
   requiresStairs?: boolean | null;
@@ -238,29 +222,15 @@ function venueAnswers(b: {
   hasParking?: boolean | null;
   setupTime?: string | null;
   eventDate?: string | null;
-}): { setup: string | null; rows: VenueAnswer[] } {
-  const text = b.specialRequests;
+}): { setup: string | null; rows: AccessAnswer[] } {
   const setupAt = validDate(b.setupTime);
   const eventAt = validDate(b.eventDate);
   const setup = setupAt
     ? (eventAt && formatBrasiliaDate(eventAt) === formatBrasiliaDate(setupAt)
         ? brasiliaTime.format(setupAt)
         : `${formatBrasiliaDate(setupAt)}, às ${brasiliaTime.format(setupAt)}`)
-    : answerInRequest(text, 'Liberado para montar a partir de');
-  const row = (label: string, written: string | null, recorded: boolean | null | undefined): VenueAnswer | null => {
-    if (written) return { label, value: written, answered: true };
-    const value = yesNo(recorded);
-    return value ? { label, value, answered: false } : null;
-  };
-  const covered = answerInRequest(text, 'Local coberto');
-  // O briefing pergunta o ambiente (fechado, ao ar livre...), não "local coberto": mostra a resposta dele.
-  const environment = covered ? null : answerInRequest(text, 'Ambiente');
-  const rows = [
-    row('Escadas no acesso', answerInRequest(text, 'Escadas no acesso'), b.requiresStairs),
-    environment ? { label: 'Ambiente', value: environment, answered: true } : row('Local coberto', covered, b.isCovered),
-    row('Estacionamento ou carga e descarga', answerInRequest(text, 'Estacionamento ou carga e descarga'), b.hasParking),
-  ].filter((r): r is VenueAnswer => r !== null);
-  return { setup, rows };
+    : answerInRequest(b.specialRequests, 'Liberado para montar a partir de');
+  return { setup, rows: accessAnswers(b) };
 }
 
 // P14 (aprovada em 02/11/2026), parte 2: as trocas de status da ficha que podem levar um aviso pelo WhatsApp. O
@@ -804,19 +774,27 @@ export const BookingDetailPage = () => {
 
           <Card className="p-6">
             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">Logística</h3>
-            <div className="space-y-2">
-              <Button variant="outline" size="sm" fullWidth className="justify-start" onClick={() => prepareWhatsAppMessage('on_the_way')} leftIcon={<Truck className="h-4 w-4 text-info" />}>
-                Avisar: equipe a caminho
-              </Button>
-              {(status === 'CONFIRMED' || status === 'IN_PROGRESS') && (
-                <Button variant="outline" size="sm" fullWidth className="justify-start" onClick={() => setCompleteModalOpen(true)} leftIcon={<CheckCircle2 className="h-4 w-4 text-success" />}>
-                  Marcar como concluída
+            {/* Teste de ponta a ponta (21/11/2026): a reserva cancelada seguia com "Cancelar reserva" e "Avisar: equipe a
+                caminho". Cancelada, estornada ou concluída, não há entrega nem cancelamento a fazer por aqui. */}
+            {isClosed || status === 'COMPLETED' ? (
+              <p className="text-sm text-muted-foreground">
+                Reserva {bookingStatusLabel(status).toLowerCase()}: sem ações de logística.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <Button variant="outline" size="sm" fullWidth className="justify-start" onClick={() => prepareWhatsAppMessage('on_the_way')} leftIcon={<Truck className="h-4 w-4 text-info" />}>
+                  Avisar: equipe a caminho
                 </Button>
-              )}
-              <Button variant="outline" size="sm" fullWidth className="justify-start text-destructive border-destructive/30 hover:bg-destructive/5" onClick={() => prepareWhatsAppMessage('cancel')} leftIcon={<XCircle className="h-4 w-4" />}>
-                Cancelar reserva
-              </Button>
-            </div>
+                {(status === 'CONFIRMED' || status === 'IN_PROGRESS') && (
+                  <Button variant="outline" size="sm" fullWidth className="justify-start" onClick={() => setCompleteModalOpen(true)} leftIcon={<CheckCircle2 className="h-4 w-4 text-success" />}>
+                    Marcar como concluída
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" fullWidth className="justify-start text-destructive border-destructive/30 hover:bg-destructive/5" onClick={() => prepareWhatsAppMessage('cancel')} leftIcon={<XCircle className="h-4 w-4" />}>
+                  Cancelar reserva
+                </Button>
+              </div>
+            )}
           </Card>
 
           {/* P14 parte 2: botões de WhatsApp da etapa (pedido do cliente, confirmada, concluída), com texto pronto; o

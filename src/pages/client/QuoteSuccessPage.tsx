@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../services/api';
 import { buildQuoteMessage, getWhatsAppPhone, openWhatsApp } from '../../utils/whatsapp';
+import { accessAnswers } from '../../utils/requestAnswers';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { logger } from '../../utils/logger';
@@ -39,6 +40,7 @@ interface QuoteBooking {
   addressComplement?: string;
   location?: string;
   notes?: string;
+  specialRequests?: string | null;
   requiresStairs?: boolean;
   isCovered?: boolean;
   hasParking?: boolean;
@@ -59,6 +61,8 @@ interface QuoteFormValues {
   addressComplement?: string;
   venue?: string;
   notes?: string;
+  /** O texto do pedido com as respostas como a pessoa marcou (o resumo do pedido de convidado não traz). */
+  specialRequests?: string;
   requiresStairs?: string;
   isCovered?: string;
   hasParking?: string;
@@ -79,6 +83,12 @@ const buildMessage = (bookingId: string | undefined, booking: QuoteBooking | nul
   const f = form ?? {};
   const items = cartItems?.length ? cartItems : (b.kit ? [b.kit] : b.equipments || []);
   const eventDate = b.eventDate || f.eventDate;
+  const text = b.specialRequests || f.specialRequests;
+  const logistics = {
+    requiresStairs: b.requiresStairs ?? (f.requiresStairs === 'yes'),
+    isCovered: b.isCovered ?? (f.isCovered === 'yes'),
+    hasParking: b.hasParking ?? (f.hasParking === 'yes'),
+  };
   return buildQuoteMessage({
     bookingId: b.id || bookingId,
     user: {
@@ -99,11 +109,11 @@ const buildMessage = (bookingId: string | undefined, booking: QuoteBooking | nul
     },
     items,
     notes: b.notes || f.notes || '',
-    logistics: {
-      requiresStairs: b.requiresStairs ?? (f.requiresStairs === 'yes'),
-      isCovered: b.isCovered ?? (f.isCovered === 'yes'),
-      hasParking: b.hasParking ?? (f.hasParking === 'yes'),
-    },
+    logistics,
+    // Teste de ponta a ponta (21/11/2026): a mensagem dizia "Tem escadas? Não · Tem estacionamento? Sim" (o caso comum
+    // do cadastro) para quem não respondeu ou marcou "Não sei". Com o texto do pedido, vão as respostas como a pessoa
+    // marcou (utils/requestAnswers).
+    access: text ? accessAnswers({ specialRequests: text, ...logistics }) : undefined,
     locale: 'pt-BR',
   });
 };

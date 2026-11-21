@@ -38,6 +38,8 @@ import { KIT_FULFILLMENT_LABEL, kitFulfillment } from '@/utils/kitInfo';
 import { findSetupService } from '@/utils/cartCatalog';
 import { proposalBaseFromBooking, type ProposalBaseBooking } from '@/utils/proposalFromBooking';
 import type { BookingDetails } from '@/types/types';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
+import { useLeaveGuard } from '@/hooks/useLeaveGuard';
 
 const ITEM_TYPE_LABELS: Record<string, string> = {
   EQUIPMENT: 'Equipamento',
@@ -277,6 +279,11 @@ const AdminQuickProposalPage = () => {
 
   // Items State
   const [items, setItems] = useState<ProposalItem[]>([]);
+  // Teste de ponta a ponta (21/11/2026): sair sem salvar (Cancelar, menu, recarregar) perdia as linhas sem aviso. Com
+  // linhas na proposta, pergunta antes; salvar navega pelo código e não passa pelo aviso (ver hooks/useLeaveGuard).
+  const hasUnsavedLines = items.length > 0;
+  const { guardClose, isConfirmOpen: leaveConfirmOpen, confirmDiscard: confirmLeave, cancelDiscard: cancelLeave } = useUnsavedChangesGuard(hasUnsavedLines);
+  useLeaveGuard(hasUnsavedLines, (to) => guardClose(() => navigate(to)));
   const [clients, setClients] = useState<Client[]>([]);
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [kits, setKits] = useState<Kit[]>([]);
@@ -915,7 +922,7 @@ const AdminQuickProposalPage = () => {
           </div>
           {/* flex-wrap: os botões em linha estouravam a tela de 375px. */}
           <div className="flex flex-wrap gap-2">
-             <Button variant="outline" size="sm" onClick={() => navigate(-1)}>Cancelar</Button>
+             <Button variant="outline" size="sm" onClick={() => guardClose(() => navigate(-1))}>Cancelar</Button>
              <Button size="sm" onClick={() => handleSave('PENDING')} isLoading={saving} disabled={saveBlocked} leftIcon={<Send className="h-4 w-4" />}>
                 {bookingId ? 'Salvar na reserva' : 'Salvar proposta'}
              </Button>
@@ -1317,6 +1324,21 @@ const AdminQuickProposalPage = () => {
         isLoading={saving}
         confirmText="Salvar assim"
         cancelText="Voltar"
+      />
+
+      <ConfirmModal
+        isOpen={leaveConfirmOpen}
+        onClose={cancelLeave}
+        onConfirm={confirmLeave}
+        title="Sair sem salvar?"
+        message={
+          items.length === 1
+            ? 'A linha da proposta ainda não foi salva. Se sair agora, ela se perde.'
+            : `As ${items.length} linhas da proposta ainda não foram salvas. Se sair agora, elas se perdem.`
+        }
+        variant="warning"
+        confirmText="Sair sem salvar"
+        cancelText="Continuar editando"
       />
     </AdminLayout>
   );

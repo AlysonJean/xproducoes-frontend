@@ -24,5 +24,7 @@ export type QuoteMessageParams = {
     isCovered?: boolean;
     hasParking?: boolean;
   };
+  /** As respostas de acesso como o cliente marcou (utils/requestAnswers); quando vêm, valem no lugar de logistics. */
+  access?: Array<{ label: string; value: string }>;
   locale?: string;
 };

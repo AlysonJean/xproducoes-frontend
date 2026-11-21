@@ -160,8 +160,16 @@ export const buildQuoteMessage = (p: QuoteMessageParams): string => {
     .filter(Boolean)
     .join('\n');
 
-  const locale = p.locale || 'pt-BR';
-  const when = p.eventDate.toLocaleString(locale);
+  // Teste de ponta a ponta (21/11/2026): a data saía no fuso do aparelho e com os segundos ("12/06/2027, 21:00:00").
+  // Agora é a de Brasília, como nos outros textos daqui. p.locale ficou só por compatibilidade.
+  const date = validDate(p.eventDate);
+  const when = date ? `${brasiliaDate.format(date)} às ${brasiliaTime.format(date)}` : '-';
+  // As respostas de acesso como o cliente marcou ("Não sei", "Não informado"); sem elas, o sim/não do cadastro.
+  const logistics = p.access?.length
+    ? p.access.map((answer) => `- ${answer.label}: ${answer.value}`).join('\n')
+    : `- Tem escadas? ${p.logistics.requiresStairs ? 'Sim' : 'Não'}\n` +
+      `- Local coberto? ${p.logistics.isCovered ? 'Sim' : 'Não'}\n` +
+      `- Tem estacionamento? ${p.logistics.hasParking ? 'Sim' : 'Não'}`;
 
   return (
     `\n*Pedido de Orçamento*` +
@@ -175,9 +183,7 @@ export const buildQuoteMessage = (p: QuoteMessageParams): string => {
     `*Itens Solicitados:*\n${equipamentos}\n\n` +
     `*Observações:* ${p.notes || '-'}\n\n` +
     `*Detalhes Logísticos:*\n` +
-    `- Tem escadas? ${p.logistics.requiresStairs ? 'Sim' : 'Não'}\n` +
-    `- Local coberto? ${p.logistics.isCovered ? 'Sim' : 'Não'}\n` +
-    `- Tem estacionamento? ${p.logistics.hasParking ? 'Sim' : 'Não'}`
+    logistics
   )
     .trim()
     .replace(/\n\s*\n/g, '\n\n');

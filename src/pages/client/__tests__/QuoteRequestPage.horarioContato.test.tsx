@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 
 const { post, apiFetch, useCart, useAuth, addNotification, refreshCart } = vi.hoisted(() => ({
   post: vi.fn(),
@@ -26,6 +26,12 @@ const TECNICO = { id: 'sv-tec', name: 'Técnico de Som e Operação Profissional
 const KIT = { id: 'kit-1', name: 'Kit Festa', price: 1200, minimumRentalDuration: 4, extraHourPrice: 50, fulfillment: 'DELIVERY_SETUP', status: 'ACTIVE', items: [] };
 const USUARIO = { id: 'u-ana', name: 'Ana Souza', phone: '31988887777', email: 'ana@cliente.test' };
 
+// A tela de sucesso recebe o texto do pedido no state, para a mensagem do WhatsApp (teste de ponta a ponta, 21/11/2026).
+const PedidoEnviado = () => {
+  const state = useLocation().state as { formData?: { specialRequests?: string } } | null;
+  return <><p>Pedido enviado</p><pre data-testid="texto-para-o-whatsapp">{state?.formData?.specialRequests ?? ''}</pre></>;
+};
+
 const abrir = async (carrinho: Record<string, unknown> = { kit: KIT }, usuario: object | null = USUARIO) => {
   useAuth.mockReturnValue({ user: usuario, setAuthenticatedUser: vi.fn(), isLoading: false });
   useCart.mockReturnValue({ cart: { kit: null, equipments: [], services: [], ...carrinho }, isLoading: false, clearCart: vi.fn().mockResolvedValue(undefined), refreshCart });
@@ -33,7 +39,7 @@ const abrir = async (carrinho: Record<string, unknown> = { kit: KIT }, usuario: 
     <MemoryRouter initialEntries={['/orcamento']}>
       <Routes>
         <Route path="/orcamento" element={<QuoteRequestPage />} />
-        <Route path="/orcamento-sucesso/:id" element={<p>Pedido enviado</p>} />
+        <Route path="/orcamento-sucesso/:id" element={<PedidoEnviado />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -191,6 +197,9 @@ describe('QuoteRequestPage — início e término do evento, montagem à parte, 
       'Local coberto: Não sei',
       'Estacionamento ou carga e descarga: Não',
     ].join('\n'));
+    // A tela de sucesso recebe o mesmo texto, para a mensagem do WhatsApp levar o "Não sei" (e não o sim/não do cadastro).
+    await screen.findByText('Pedido enviado');
+    expect(screen.getByTestId('texto-para-o-whatsapp').textContent).toBe(corpo.specialRequests);
   });
 
   it('O26: WhatsApp é obrigatório e com DDD; quem tem conta já vem com o número do cadastro', async () => {

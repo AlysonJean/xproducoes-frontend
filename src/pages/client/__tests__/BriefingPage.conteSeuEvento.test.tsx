@@ -110,8 +110,12 @@ describe('BriefingPage — respostas do "Conte seu evento"', () => {
     expect(pressed('Casamento')).toBe('false');
     expect(pressed('Corporativo')).toBe('false');
     await waitFor(() => expect(screen.getByTestId('estado')).toHaveTextContent('null'));
-    // Sem tipo nem data, nada novo é guardado: recarregar não traria o rascunho velho de volta.
-    expect(localStorage.getItem('briefing-draft')).toBeNull();
+    // O rascunho guardado é o novo, só com o texto: nada do velho (teste de 20/11/2026), e o texto não se perde ao
+    // recarregar (teste de 21/11/2026: sem tipo nem data, nada era guardado).
+    await waitFor(() => expect(localStorage.getItem('briefing-draft')).not.toBeNull());
+    const guardado = JSON.parse(localStorage.getItem('briefing-draft')!).values;
+    expect(guardado.step).toBe(0);
+    expect(guardado.answers).toMatchObject({ moreInfo: TEXTO, eventType: '', eventDate: '' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Outro' }));
     fireEvent.change(screen.getByLabelText('Qual é a data?'), { target: { value: '2030-03-20' } });
@@ -122,6 +126,33 @@ describe('BriefingPage — respostas do "Conte seu evento"', () => {
     fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Betim' } });
     continuar();
     expect(value('Quer contar mais alguma coisa? (opcional)')).toBe(TEXTO);
+  });
+
+  it('leitura falhou e a pessoa recarregou a página: o texto volta do rascunho, no passo 3', async () => {
+    const antes = renderWith(briefingTextState(TEXTO, {}));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Não deu para marcar as respostas pelo seu texto agora.'));
+    await waitFor(() => expect(localStorage.getItem('briefing-draft')).toContain('meia-noite'));
+    antes.unmount();
+
+    renderWith(null);
+    expect(await screen.findByText('Guardamos suas respostas: pode continuar de onde parou.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Outro' }));
+    fireEvent.change(screen.getByLabelText('Qual é a data?'), { target: { value: '2030-03-20' } });
+    fireEvent.click(screen.getByLabelText('Ainda não sei o horário'));
+    fireEvent.click(screen.getByRole('button', { name: 'Até 50' }));
+    continuar();
+    fireEvent.click(screen.getByRole('button', { name: 'Ainda não sei' }));
+    fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Betim' } });
+    continuar();
+    expect(value('Quer contar mais alguma coisa? (opcional)')).toBe(TEXTO);
+  });
+
+  it('sem texto nem tipo nem data: nada é guardado', async () => {
+    renderWith(null);
+    await screen.findByText('Passo 1 de 5');
+    fireEvent.click(screen.getByRole('button', { name: 'Até 50' }));
+    await waitFor(() => expect(pressed('Até 50')).toBe('true'));
+    expect(localStorage.getItem('briefing-draft')).toBeNull();
   });
 
   it('texto sem horário: o horário fica em branco (não o padrão 19:00 às 23:00) e o briefing pede para preencher ou marcar "Ainda não sei"', async () => {

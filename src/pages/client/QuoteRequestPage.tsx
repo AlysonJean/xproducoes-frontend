@@ -539,7 +539,8 @@ export const QuoteRequestPage: React.FC = () => {
 
       const statePayload = {
         booking: createdBooking,
-        formData: { ...data, duration: eventDuration },
+        // O texto do pedido leva as respostas de acesso como a pessoa marcou ("Não sei"), para a mensagem do WhatsApp.
+        formData: { ...data, duration: eventDuration, specialRequests: bookingData.specialRequests },
         cartItems: [
           ...(kit?.id ? [{ name: kit?.name ? `Kit: ${kit.name}` : 'Kit Selecionado' }] : []),
           ...equipments.map((it) => ({ name: equipmentOf(it).name })),

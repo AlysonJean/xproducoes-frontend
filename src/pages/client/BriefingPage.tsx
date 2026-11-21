@@ -199,8 +199,10 @@ export const BriefingPage: React.FC = () => {
   // "Conte seu evento" (teste de 20/11/2026): com respostas do texto ainda para entrar, não guarda. Na mesma rodada
   // este efeito vinha depois do que apaga o rascunho, ainda com as respostas velhas, e gravava o rascunho velho de novo
   // (recarregar a página trazia o evento antigo de volta).
+  // Teste de ponta a ponta (21/11/2026): quando a leitura do texto falha, só o texto vem preenchido, e o rascunho não era
+  // guardado (pedia tipo ou data): recarregar a página perdia o texto que o aviso diz estar no passo 3. O texto conta.
   useEffect(() => {
-    if (!draftChecked || briefingFromText(navigationState) || (!answers.eventType && !answers.eventDate)) return;
+    if (!draftChecked || briefingFromText(navigationState) || (!answers.eventType && !answers.eventDate && !answers.moreInfo.trim())) return;
     const draftAnswers: Partial<BriefingAnswers> = { ...answers };
     delete draftAnswers.name;
     delete draftAnswers.phone;
@@ -286,7 +288,18 @@ export const BriefingPage: React.FC = () => {
       navigate(booking?.id ? `/orcamento-sucesso/${booking.id}` : '/orcamento-sucesso', {
         state: {
           booking,
-          formData: { name: answers.name, phone: answers.phone, venue: payload.location, city: payload.city, state: payload.state },
+          // Teste de ponta a ponta (21/11/2026): a mensagem do WhatsApp saía com "Observações: -" mesmo com o texto do
+          // cliente, e com o sim/não do cadastro nas perguntas de acesso. O texto do pedido leva as respostas como foram
+          // marcadas (o resumo do pedido de convidado não traz).
+          formData: {
+            name: answers.name,
+            phone: answers.phone,
+            venue: payload.location,
+            city: payload.city,
+            state: payload.state,
+            notes: answers.moreInfo.trim(),
+            specialRequests: payload.specialRequests,
+          },
           cartItems: answers.needs.map((name) => ({ name })),
           briefingAccount: user?.id ? undefined : data?.existingAccount ? 'existing' : 'created',
         },
@@ -350,7 +363,9 @@ export const BriefingPage: React.FC = () => {
           </div>
         </div>
 
-        {restored && step > 0 && !fromText && (
+        {/* No primeiro passo, só quando o rascunho traz o texto da pessoa (a leitura do "Conte seu evento" falhou e ela
+            recarregou a página, teste de 21/11/2026): sem o aviso, ela não saberia que o texto ficou no passo 3. */}
+        {restored && (step > 0 || answers.moreInfo.trim() !== '') && !fromText && (
           <p role="status" className="mb-4 text-sm text-muted-foreground">Guardamos suas respostas: pode continuar de onde parou.</p>
         )}
 

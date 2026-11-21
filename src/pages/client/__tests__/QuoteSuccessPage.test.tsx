@@ -95,6 +95,48 @@ describe('QuoteSuccessPage', () => {
     expect(screen.getByRole('link', { name: 'Ver meus pedidos' })).toHaveAttribute('href', '/minhas-reservas');
   });
 
+  // Teste de ponta a ponta (21/11/2026): a mensagem do briefing saía com "Observações: -", a hora com os segundos e
+  // "Tem escadas? Não · Tem estacionamento? Sim" (o caso comum do cadastro) para o que o cliente não respondeu.
+  it('vindo do briefing: o texto do cliente nas observações, a hora de Brasília e as respostas de acesso como foram dadas', async () => {
+    renderAt({
+      pathname: '/orcamento-sucesso/XP-TESTE-1',
+      state: {
+        // Como o resumo do pedido de convidado (POST /bookings/guest): sem o texto do pedido.
+        booking: { id: 'XP-TESTE-1', eventDate: '2027-06-13T00:00:00.000Z', eventDuration: 5, notes: null, requiresStairs: false, isCovered: true, hasParking: true },
+        formData: {
+          name: 'Teste', phone: '31999990000', venue: 'A definir', city: 'Contagem', state: 'MG',
+          notes: 'Festa de 15 anos com DJ',
+          specialRequests: '— Briefing preenchido pelo cliente —\nEvento: Aniversário ou 15 anos\nAmbiente: Fechado\nO cliente também disse: Festa de 15 anos com DJ\n\n— Ciência —',
+        },
+        cartItems: [{ name: 'Som' }],
+      },
+    });
+
+    await waitFor(() => expect(openWhatsApp).toHaveBeenCalledTimes(1));
+    const message = openWhatsApp.mock.calls[0][1] as string;
+    expect(message).toContain('*Observações:* Festa de 15 anos com DJ');
+    expect(message).toContain('*Data:* 12/06/2027 às 21:00');
+    expect(message).toContain('- Escadas no acesso: Não informado\n- Ambiente: Fechado\n- Estacionamento ou carga e descarga: Não informado');
+    expect(message).not.toMatch(/Tem escadas\?|21:00:00/);
+  });
+
+  it('vindo do /orcamento: o "Não sei" do cliente vai na mensagem, não o sim/não do cadastro', async () => {
+    renderAt({
+      pathname: '/orcamento-sucesso/XP-ANA-20261120-1900-H04',
+      state: {
+        ...FORM_STATE,
+        booking: { ...FORM_STATE.booking, requiresStairs: false, isCovered: true, hasParking: true },
+        formData: {
+          ...FORM_STATE.formData,
+          specialRequests: '— Pedido de orçamento pelo site —\nEscadas no acesso: Não sei\nLocal coberto: Sim\nEstacionamento ou carga e descarga: Não sei',
+        },
+      },
+    });
+
+    await waitFor(() => expect(openWhatsApp).toHaveBeenCalledTimes(1));
+    expect(openWhatsApp.mock.calls[0][1]).toContain('- Escadas no acesso: Não sei\n- Local coberto: Sim\n- Estacionamento ou carga e descarga: Não sei');
+  });
+
   it('vindo do briefing: conta que o acesso foi criado ou que o e-mail já tinha cadastro', async () => {
     const first = renderAt({ pathname: '/orcamento-sucesso/XP-1', state: { ...FORM_STATE, briefingAccount: 'created' } });
     expect(await screen.findByText(/Criamos seu acesso com o e-mail informado/)).toBeInTheDocument();
