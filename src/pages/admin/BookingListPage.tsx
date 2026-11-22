@@ -4,7 +4,8 @@ import { apiFetch } from '../../services/api';
 import { fetchAllAdminBookings } from '../../services/adminBookings';
 import { isWithinLocalDateRange } from '../../utils/dateRange';
 import { downloadBookingsSpreadsheet } from '../../utils/bookingExport';
-import { BOOKING_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, bookingStatusOptionsFrom, deliveryOptionsFor } from '../../utils/bookingStatus';
+import { BOOKING_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, acceptedContractBadge, bookingStatusOptionsFrom, deliveryOptionsFor } from '../../utils/bookingStatus';
+import { MarkPaymentCheckbox } from '../../components/bookings/CancelChoices';
 import { logger } from '../../utils/logger';
 import { formatBookingTotal, hasBookingTotal } from '../../utils/formatPrice';
 import { normalizeString } from '../../utils/string';
@@ -55,6 +56,11 @@ import {
 // Seletores da tabela: todos os valores que o backend aceita (fonte única em utils/bookingStatus). Com
 // uma lista parcial, a reserva cujo valor não estava nela (rascunho, em andamento, entrega concluída —
 // inclusive todo o histórico importado) aparecia como a primeira opção, "Pendente".
+// Onda 2 da auditoria do status (D6): reserva com contrato aceito e sem pagamento registrado: confirmar pergunta
+// "registrar o sinal como recebido".
+const needsPaymentQuestion = (b: BookingListItem) =>
+  Boolean(b.acceptedContract) && b.paymentStatus !== 'PARTIAL' && b.paymentStatus !== 'PAID';
+
 // Filtro de status: só status da RESERVA (antes misturava "Em trânsito"/"No local", que são de entrega,
 // e não tinha Rascunho, Em andamento nem Reembolsada).
 const STATUS_FILTER_OPTIONS = [
@@ -65,13 +71,16 @@ const STATUS_FILTER_OPTIONS = [
 // P3 (aprovada em 02/11/2026): filtros que o cartão do painel manda pelo endereço, com as regras do resumo (GET
 // /dashboard/summary). origem=cliente: pedido criado por conta de cliente (a proposta da equipe fica de fora);
 // periodo=proximos|passado: data do evento por vir ou já passada; proposta=nao-enviada: sem "Enviar proposta"
-// registrado (D11); ordem=antigos: do pedido criado há mais tempo para o mais novo. Valor desconhecido é ignorado.
-type UrlFilterKey = 'origem' | 'periodo' | 'proposta' | 'ordem';
+// registrado (D11); ordem=antigos: do pedido criado há mais tempo para o mais novo; contrato=aceito-sem-sinal: em aberto
+// (rascunho ou pendente), com contrato aceito e sem pagamento registrado (o número "contratos aceitos aguardando o sinal"
+// do cartão, revisão da onda 2). Valor desconhecido é ignorado.
+type UrlFilterKey = 'origem' | 'periodo' | 'proposta' | 'ordem' | 'contrato';
 const URL_FILTERS: Record<UrlFilterKey, Record<string, string>> = {
   origem: { cliente: 'Pedidos de clientes' },
   periodo: { proximos: 'Evento por vir', passado: 'Data já passada' },
   proposta: { 'nao-enviada': 'Sem proposta enviada' },
   ordem: { antigos: 'Mais antigos primeiro' },
+  contrato: { 'aceito-sem-sinal': 'Contrato aceito, sem sinal' },
 };
 type UrlFilters = Partial<Record<UrlFilterKey, string>>;
 
@@ -159,6 +168,9 @@ export const BookingListPage = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelReasonError, setCancelReasonError] = useState<string | null>(null);
   const [cancelSaving, setCancelSaving] = useState(false);
+  // Onda 2 (D2 e D6): avisar o cliente no cancelamento; registrar o sinal ao confirmar uma reserva aceita sem pagamento.
+  const [notifyOnCancel, setNotifyOnCancel] = useState(true);
+  const [markPayment, setMarkPayment] = useState(true);
   const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
 
   const fetchBookings = useCallback(async () => {
@@ -213,7 +225,7 @@ export const BookingListPage = () => {
     bookingId: string,
     field: 'status' | 'deliveryStatus',
     value: string,
-    extra?: { notifyClient?: false }
+    extra?: { notifyClient?: false; markInitialPaymentReceived?: true }
   ) => {
     try {
       const endpoint =
@@ -221,11 +233,15 @@ export const BookingListPage = () => {
             ? `/admin/bookings/${bookingId}/status`
             : `/admin/bookings/${bookingId}/delivery-status`;
 
-      await apiFetch(endpoint, {
+      const updated = await apiFetch<{ conflictWarning?: string } | null>(endpoint, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: value, ...extra }),
       });
+      // Onda 2 (D1): a confirmação avisa a pré-reserva de outra reserva com contrato aceito no mesmo equipamento.
+      if (typeof updated?.conflictWarning === 'string' && updated.conflictWarning) {
+        addNotification({ type: 'warning', title: 'Pré-reserva no mesmo equipamento', message: updated.conflictWarning });
+      }
 
       setBookings((prev) =>
         prev.map((b) => (b.id === bookingId ? { ...b, [field]: value } : b))
@@ -254,6 +270,7 @@ export const BookingListPage = () => {
     if (value === booking.status) return;
     if (value === 'CONFIRMED' && !['CONFIRMED', 'IN_PROGRESS', 'COMPLETED'].includes(booking.status)) {
       setNotifyClient(true);
+      setMarkPayment(true);
       setConfirmingBooking(booking);
       return;
     }
@@ -264,6 +281,8 @@ export const BookingListPage = () => {
     // Revisão de 21/11/2026: desfazer um reembolso (Reembolsada → Cancelada) não é um cancelamento novo: grava direto,
     // sem pedir motivo.
     if (value === 'CANCELLED' && booking.status !== 'REFUNDED') {
+      // Rascunho nunca enviado: o cliente não viu a proposta, então a caixa do aviso começa desmarcada.
+      setNotifyOnCancel(booking.status !== 'DRAFT');
       setCancelReason('');
       setCancelReasonError(null);
       setCancellingBooking(booking);
@@ -288,7 +307,7 @@ export const BookingListPage = () => {
       await apiFetch(`/bookings/${target.id}/cancel`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: motivo }),
+        body: JSON.stringify({ reason: motivo, ...notifyClientPayload(notifyOnCancel) }),
       });
       setCancellingBooking(null);
       setBookings((prev) => prev.map((b) => (b.id === target.id ? { ...b, status: 'CANCELLED' } : b)));
@@ -382,8 +401,10 @@ export const BookingListPage = () => {
       const eventTime = booking.eventDate ? Date.parse(booking.eventDate) : Number.NaN;
       const matchesPeriod = !urlFilters.periodo || (urlFilters.periodo === 'passado' ? eventTime < now : eventTime >= now);
       const matchesProposal = urlFilters.proposta !== 'nao-enviada' || !booking.proposalSent;
+      const matchesContract = urlFilters.contrato !== 'aceito-sem-sinal'
+        || ((booking.status === 'DRAFT' || booking.status === 'PENDING') && needsPaymentQuestion(booking));
 
-      return matchesSearch && matchesStatus && matchesPayment && matchesDate && matchesOrigin && matchesPeriod && matchesProposal;
+      return matchesSearch && matchesStatus && matchesPayment && matchesDate && matchesOrigin && matchesPeriod && matchesProposal && matchesContract;
     });
     // ordem=antigos: do pedido criado há mais tempo para o mais novo; sem ela, a ordem do servidor (data do evento).
     if (urlFilters.ordem !== 'antigos') return list;
@@ -697,6 +718,10 @@ export const BookingListPage = () => {
                           // C3: só o status atual e as trocas que valem a partir dele (a mesma tabela do servidor).
                           options={bookingStatusOptionsFrom(booking.status)}
                         />
+                        {(() => {
+                          const badge = acceptedContractBadge(booking);
+                          return badge ? <Badge variant={badge.variant} className="mt-1.5 whitespace-nowrap text-[11px]">{badge.label}</Badge> : null;
+                        })()}
                       </td>
                       <td className="px-6 py-4">
                         <Select
@@ -798,7 +823,12 @@ export const BookingListPage = () => {
         onConfirm={() => {
           const target = confirmingBooking;
           setConfirmingBooking(null);
-          if (target) void handleStatusChange(target.id, 'status', 'CONFIRMED', notifyClientPayload(notifyClient));
+          if (target) {
+            void handleStatusChange(target.id, 'status', 'CONFIRMED', {
+              ...notifyClientPayload(notifyClient),
+              ...(needsPaymentQuestion(target) && markPayment ? { markInitialPaymentReceived: true as const } : {}),
+            });
+          }
         }}
         title="Confirmar a reserva?"
         message="A reserva passa para Confirmada."
@@ -812,6 +842,7 @@ export const BookingListPage = () => {
           onChange={setNotifyClient}
           hasEmail={confirmingBooking ? Boolean(bookingEmail(confirmingBooking)) : undefined}
         />
+        {confirmingBooking && needsPaymentQuestion(confirmingBooking) && <MarkPaymentCheckbox checked={markPayment} onChange={setMarkPayment} />}
       </ConfirmModal>
 
       <ConfirmModal
@@ -835,7 +866,7 @@ export const BookingListPage = () => {
         onConfirm={() => void handleCancelBooking()}
         isLoading={cancelSaving}
         title="Cancelar a reserva?"
-        message="A reserva passa para Cancelada e a data do equipamento fica livre."
+        message="A reserva passa para Cancelada e a data do equipamento fica livre. A equipe escalada sai da escala e recebe um aviso, e o evento sai da Google Agenda."
         variant="danger"
         confirmText="Cancelar reserva"
         cancelText="Voltar"
@@ -851,6 +882,12 @@ export const BookingListPage = () => {
             setCancelReason(e.target.value);
             if (cancelReasonError) setCancelReasonError(null);
           }}
+        />
+        <NotifyClientCheckbox
+          checked={notifyOnCancel}
+          onChange={setNotifyOnCancel}
+          hasEmail={cancellingBooking ? Boolean(bookingEmail(cancellingBooking)) : undefined}
+          kind="cancelada"
         />
       </ConfirmModal>
 

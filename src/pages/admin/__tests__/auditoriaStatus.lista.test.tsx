@@ -27,10 +27,12 @@ import { resetAdminSummaryForTests } from '../../../stores/adminSummary';
 //   internas e quem cancelou no Histórico.
 // - B1: a entrega de uma reserva cancelada não muda.
 
-const linha = (status: string, id = 'XP-1') => ({
+const linha = (status: string, id = 'XP-1', extra: Record<string, unknown> = {}) => ({
   id, status, deliveryStatus: 'PENDING', totalPrice: '900', eventDate: '2027-12-21T01:00:00.000Z',
   createdAt: '2026-11-09T12:00:00.000Z', creator: { role: 'CLIENT' }, proposalSent: false,
   clientName: 'Bruno Lima', clientContact: '31977776666', clientEmail: 'bruno@cliente.test', client: null,
+  paymentStatus: null as string | null, acceptedContract: null as { acceptedAt: string | null; initialPaymentDueAt: string | null } | null,
+  ...extra,
 });
 let linhas: ReturnType<typeof linha>[] = [];
 const backend = (url: string, init?: { method?: string }) => {
@@ -148,6 +150,91 @@ describe('lista de Reservas — trocas de status (auditoria do status)', () => {
 
     await waitFor(() => expect(chamadas('PATCH')).toHaveLength(1));
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  // Onda 2 da auditoria do status (C5): o selo da reserva aceita pelo site.
+  it('C5: selo "Aceito — aguardando sinal", "Sinal vencido" ou "Sinal registrado — falta confirmar"', async () => {
+    const dia = 24 * 60 * 60 * 1000;
+    await abrir(
+      linha('PENDING', 'XP-A', { acceptedContract: { acceptedAt: '2026-11-20T12:00:00.000Z', initialPaymentDueAt: new Date(Date.now() + dia).toISOString() } }),
+      linha('PENDING', 'XP-V', { acceptedContract: { acceptedAt: '2026-11-10T12:00:00.000Z', initialPaymentDueAt: new Date(Date.now() - dia).toISOString() } }),
+      linha('PENDING', 'XP-P', { paymentStatus: 'PARTIAL', acceptedContract: { acceptedAt: '2026-11-10T12:00:00.000Z', initialPaymentDueAt: null } }),
+      linha('PENDING', 'XP-N'),
+    );
+    expect(screen.getByText('Aceito — aguardando sinal')).toBeInTheDocument();
+    expect(screen.getByText('Sinal vencido')).toBeInTheDocument();
+    expect(screen.getByText('Sinal registrado — falta confirmar')).toBeInTheDocument();
+  });
+
+  it('D2: cancelar pela lista com "Avisar o cliente" desmarcada manda notifyClient: false', async () => {
+    await abrir(linha('PENDING'));
+
+    fireEvent.change(screen.getByLabelText('Status da reserva XP-1'), { target: { value: 'CANCELLED' } });
+    const janela = await screen.findByRole('dialog', { name: 'Cancelar a reserva?' });
+    const avisar = within(janela).getByLabelText('Avisar o cliente por e-mail');
+    expect(avisar).toBeChecked();
+    fireEvent.click(avisar);
+    fireEvent.change(within(janela).getByLabelText('Motivo do cancelamento'), { target: { value: 'Chuva' } });
+    fireEvent.click(within(janela).getByRole('button', { name: 'Cancelar reserva' }));
+
+    await waitFor(() => expect(chamadas('PUT')).toHaveLength(1));
+    expect(JSON.parse(String(chamadas('PUT')[0][1].body))).toEqual({ reason: 'Chuva', notifyClient: false });
+  });
+
+  it('revisão da onda 2: rascunho nunca enviado: cancelar começa com "Avisar o cliente" desmarcada', async () => {
+    await abrir(linha('DRAFT'));
+
+    fireEvent.change(screen.getByLabelText('Status da reserva XP-1'), { target: { value: 'CANCELLED' } });
+    const janela = await screen.findByRole('dialog', { name: 'Cancelar a reserva?' });
+    expect(within(janela).getByLabelText('Avisar o cliente por e-mail')).not.toBeChecked();
+  });
+
+  it('revisão da onda 2: o link do cartão (contrato=aceito-sem-sinal) mostra só os aceitos em aberto, sem sinal e por vir', async () => {
+    const aceite = { acceptedAt: '2026-11-20T12:00:00.000Z', initialPaymentDueAt: null };
+    linhas = [
+      linha('PENDING', 'XP-A', { acceptedContract: aceite }),
+      linha('DRAFT', 'XP-D', { acceptedContract: aceite }),
+      linha('PENDING', 'XP-P', { paymentStatus: 'PARTIAL', acceptedContract: aceite }),
+      linha('CONFIRMED', 'XP-C', { acceptedContract: aceite }),
+      linha('PENDING', 'XP-N'),
+      linha('PENDING', 'XP-O', { acceptedContract: aceite, eventDate: '2025-01-10T20:00:00.000Z' }),
+    ];
+    render(
+      <MemoryRouter initialEntries={['/admin/reservas?contrato=aceito-sem-sinal&periodo=proximos&ordem=antigos']}>
+        <BookingListPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('Status da reserva XP-A');
+
+    expect(screen.getByLabelText('Status da reserva XP-D')).toBeInTheDocument();
+    for (const id of ['XP-P', 'XP-C', 'XP-N', 'XP-O']) expect(screen.queryByLabelText(`Status da reserva ${id}`)).not.toBeInTheDocument();
+    expect(screen.getByText('Contrato aceito, sem sinal')).toBeInTheDocument();
+  });
+
+  it('D6: confirmar pela lista a reserva aceita sem pagamento pergunta "registrar o sinal" e manda markInitialPaymentReceived', async () => {
+    await abrir(linha('PENDING', 'XP-1', { acceptedContract: { acceptedAt: '2026-11-20T12:00:00.000Z', initialPaymentDueAt: null } }));
+
+    fireEvent.change(screen.getByLabelText('Status da reserva XP-1'), { target: { value: 'CONFIRMED' } });
+    const janela = await screen.findByRole('dialog', { name: 'Confirmar a reserva?' });
+    expect(within(janela).getByLabelText('Registrar o sinal como recebido')).toBeChecked();
+    fireEvent.click(within(janela).getByRole('button', { name: 'Confirmar' }));
+
+    await waitFor(() => expect(chamadas('PATCH')).toHaveLength(1));
+    expect(JSON.parse(String(chamadas('PATCH')[0][1].body))).toEqual({ status: 'CONFIRMED', markInitialPaymentReceived: true });
+  });
+
+  it('D6: sem contrato aceito, a pergunta não aparece; D1: o aviso da pré-reserva que o PATCH devolve aparece', async () => {
+    apiFetch.mockImplementation((url: string, init?: { method?: string }) =>
+      init?.method === 'PATCH' ? Promise.resolve({ conflictWarning: 'Atenção: pré-reserva no mesmo kit.' }) : backend(url, init));
+    await abrir(linha('PENDING'));
+
+    fireEvent.change(screen.getByLabelText('Status da reserva XP-1'), { target: { value: 'CONFIRMED' } });
+    const janela = await screen.findByRole('dialog', { name: 'Confirmar a reserva?' });
+    expect(within(janela).queryByLabelText('Registrar o sinal como recebido')).not.toBeInTheDocument();
+    fireEvent.click(within(janela).getByRole('button', { name: 'Confirmar' }));
+
+    await waitFor(() => expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'warning', message: 'Atenção: pré-reserva no mesmo kit.' })));
+    expect(JSON.parse(String(chamadas('PATCH')[0][1].body))).toEqual({ status: 'CONFIRMED' });
   });
 
   it('B1: na reserva cancelada ou reembolsada, a entrega só volta ao início ou registra o recolhimento', async () => {

@@ -235,7 +235,7 @@ describe('P3 — o resumo do painel é pedido de novo logo depois de cada mudan�
     // C7: com o motivo, pela rota de cancelar.
     fireEvent.change(within(cancelar).getByLabelText('Motivo do cancelamento'), { target: { value: 'Chuva' } });
     fireEvent.click(within(cancelar).getByRole('button', { name: 'Cancelar reserva' }));
-    await waitFor(() => expect(bookingAPI.cancel).toHaveBeenCalledWith(naFicha.id, 'Chuva'));
+    await waitFor(() => expect(bookingAPI.cancel).toHaveBeenCalledWith(naFicha.id, 'Chuva', {}));
     await waitFor(() => expect(resumos()).toBe(2));
   });
 

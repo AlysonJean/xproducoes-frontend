@@ -447,7 +447,7 @@ export const BookingDetailsPage = () => {
           {/* Aceite online (13/11/2026): o contrato aceito pelo site (estado, data, vencimentos, baixar e, no prazo,
               "Desistir da contratação"). Sem contrato (ou com o aceite desligado), nada aparece. */}
           {booking.contractSummary && (
-            <ClientContractCard bookingId={booking.id} summary={booking.contractSummary} onChanged={fetchBookingDetails} />
+            <ClientContractCard bookingId={booking.id} summary={booking.contractSummary} onChanged={fetchBookingDetails} bookingStatus={booking.status} />
           )}
 
           {/* Comprovantes de Pagamento */}

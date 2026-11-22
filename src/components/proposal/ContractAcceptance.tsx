@@ -61,6 +61,7 @@ function initialConfirmation(contract: ProposalContractStatus): ContractConfirma
     pixKey: contract.pix?.key,
     pixCopyPaste: contract.pix?.copyPaste,
     initialPaymentReceived: contract.initialPaymentReceived,
+    bookingConfirmed: contract.bookingConfirmed,
     proofs: contract.proofs ?? [],
   };
 }
@@ -209,6 +210,7 @@ export function ContractAcceptance({ token, contract, onReload, prefill }: Contr
                   pixKey: accepted.pix?.key,
                   pixCopyPaste: accepted.pix?.copyPaste,
                   initialPaymentReceived: accepted.initialPaymentReceived,
+                  bookingConfirmed: accepted.bookingConfirmed,
                   proofs: [],
                   contractId: prepared.contractId,
                   sentTo,

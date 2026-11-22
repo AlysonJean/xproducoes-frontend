@@ -9,14 +9,16 @@ interface NotifyClientCheckboxProps {
   /** A reserva tem e-mail do cliente? undefined quando a tela não sabe (o e-mail é resolvido no servidor). */
   hasEmail?: boolean;
   id?: string;
+  /** Onda 2 da auditoria do status (D2): o mesmo aviso no cancelamento ("reserva cancelada"). */
+  kind?: 'confirmada' | 'cancelada';
 }
 
-export function NotifyClientCheckbox({ checked, onChange, hasEmail, id }: NotifyClientCheckboxProps) {
+export function NotifyClientCheckbox({ checked, onChange, hasEmail, id, kind = 'confirmada' }: NotifyClientCheckboxProps) {
   const noEmail = hasEmail === false;
   const description = noEmail
     ? 'Esta reserva não tem e-mail do cliente.'
     : hasEmail
-      ? 'O cliente recebe o e-mail de reserva confirmada.'
+      ? `O cliente recebe o e-mail de reserva ${kind}.`
       : 'O e-mail sai se a reserva tiver o e-mail do cliente.';
   return (
     <Checkbox

@@ -31,12 +31,14 @@ const TOUCH = 'h-11 text-base';
 
 export interface ClientContractCardProps {
   bookingId: string;
+  /** Onda 2 da auditoria do status (M3): o status da reserva; cancelada ou reembolsada, o contrato aceito fica "Encerrado". */
+  bookingStatus?: string | null;
   summary: BookingContractSummary;
   /** Depois da desistência: a tela recarrega a reserva (cancelada). */
   onChanged: () => void;
 }
 
-export function ClientContractCard({ bookingId, summary, onChanged }: ClientContractCardProps) {
+export function ClientContractCard({ bookingId, summary, onChanged, bookingStatus }: ClientContractCardProps) {
   const { addNotification } = useNotifications();
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
@@ -56,6 +58,7 @@ export function ClientContractCard({ bookingId, summary, onChanged }: ClientCont
   }, [bookingId, summary.state, attempt]);
 
   const contract = load.status === 'ready' ? load.contract : null;
+  const closed = summary.state === 'ACCEPTED' && (bookingStatus === 'CANCELLED' || bookingStatus === 'REFUNDED');
   const state = contract?.state ?? summary.state;
   const acceptedAt = contract?.acceptedAt ?? summary.acceptedAt;
   const canWithdraw = Boolean(contract?.canWithdraw) && withdrawalOpen(contract?.withdrawUntil, contract?.canWithdraw);
@@ -105,14 +108,16 @@ export function ClientContractCard({ bookingId, summary, onChanged }: ClientCont
     <Card padding>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-semibold text-foreground">Contrato</h2>
-        <Badge variant={contractStateVariant(state)} size="lg">
-          {contractStateLabel(state)}
+        <Badge variant={closed ? 'outline' : contractStateVariant(state)} size="lg">
+          {closed ? 'Encerrado' : contractStateLabel(state)}
         </Badge>
       </div>
 
       <div className="space-y-3 text-base">
         {state === 'PREPARED' && <p className="text-muted-foreground">O contrato ainda não foi aceito. O aceite é feito pelo link da proposta.</p>}
         {state === 'SUPERSEDED' && <p className="text-muted-foreground">Este contrato foi trocado por outro.</p>}
+        {/* Onda 2 (M3): a reserva cancelada pela equipe com o contrato aceito; os vencimentos saem da tela. */}
+        {closed && <p className="font-medium text-foreground">A reserva foi cancelada. Os pagamentos combinados com a equipe seguem o contrato.</p>}
         {state === 'WITHDRAWN' && (
           <p className="font-medium text-foreground">
             Contratação desistida{contract?.withdrawnAt ? ` em ${contractDayMonth(contract.withdrawnAt)}` : ''}.
@@ -137,7 +142,7 @@ export function ClientContractCard({ bookingId, summary, onChanged }: ClientCont
               <dd className="font-medium text-foreground">{contractDateTime(acceptedAt)}</dd>
             </div>
           )}
-          {state === 'ACCEPTED' && contract?.initialPayment && (
+          {state === 'ACCEPTED' && !closed && contract?.initialPayment && (
             <div>
               <dt className="text-sm text-muted-foreground">Parcela inicial (PIX)</dt>
               <dd className="font-medium text-foreground">
@@ -145,7 +150,7 @@ export function ClientContractCard({ bookingId, summary, onChanged }: ClientCont
               </dd>
             </div>
           )}
-          {state === 'ACCEPTED' && contract?.balance && (
+          {state === 'ACCEPTED' && !closed && contract?.balance && (
             <div>
               <dt className="text-sm text-muted-foreground">Saldo</dt>
               <dd className="font-medium text-foreground">
@@ -161,7 +166,7 @@ export function ClientContractCard({ bookingId, summary, onChanged }: ClientCont
           )}
         </dl>
 
-        {state === 'ACCEPTED' && contract?.pix?.copyPaste && !contract.initialPaymentReceived && (
+        {state === 'ACCEPTED' && !closed && contract?.pix?.copyPaste && !contract.initialPaymentReceived && (
           <div className="space-y-2 rounded-lg border-2 border-primary/40 bg-primary/5 p-4">
             <p className="font-semibold text-foreground">Pagar a parcela inicial por PIX</p>
             <ContractPixPayment copyPaste={contract.pix.copyPaste} pixKey={contract.pix.key} dueDate={contract.initialPayment?.dueDate} />

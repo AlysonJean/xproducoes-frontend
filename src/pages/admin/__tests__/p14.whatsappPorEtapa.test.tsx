@@ -187,7 +187,7 @@ describe('BookingDetailPage — WhatsApp por etapa (P14 parte 2)', () => {
     expect(bookingAPI.cancel).not.toHaveBeenCalled();
     fireEvent.change(within(cancelar).getByLabelText('Motivo do cancelamento'), { target: { value: 'Cliente mudou a data' } });
     fireEvent.click(within(cancelar).getByRole('button', { name: 'Cancelar reserva' }));
-    await waitFor(() => expect(bookingAPI.cancel).toHaveBeenCalledWith(base.id, 'Cliente mudou a data'));
+    await waitFor(() => expect(bookingAPI.cancel).toHaveBeenCalledWith(base.id, 'Cliente mudou a data', {}));
     expect(bookingAPI.updateStatus).not.toHaveBeenCalledWith(base.id, 'CANCELLED', undefined);
 
     expect(open).not.toHaveBeenCalled();

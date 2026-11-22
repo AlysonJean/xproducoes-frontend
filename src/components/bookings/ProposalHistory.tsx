@@ -58,6 +58,9 @@ const EMAIL_TYPE_TEXT: Record<string, string> = {
   'booking-reminder': 'E-mail de lembrete da véspera',
   'booking-review-request': 'E-mail de avaliação',
   'crew-assignment': 'E-mail de escala da equipe',
+  // Onda 2 da auditoria do status (C2): o aviso de cancelamento ao cliente e à equipe.
+  'booking-cancelled': 'E-mail de cancelamento ao cliente',
+  'crew-cancelled': 'E-mail de evento cancelado à equipe',
 };
 
 // Auditoria do status (21/11/2026), C7: as trocas de status, pagamento, entrega e valor (de, para e por quem).

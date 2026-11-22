@@ -6,6 +6,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Inbox } from 'lucide-react';
 import {
+  acceptedAwaitingText,
   formatWaitingAge,
   pastEventRequestsText,
   waitingAge,
@@ -17,6 +18,9 @@ import {
 // Os filtros da lista de Reservas (BookingListPage) que reproduzem cada número do resumo.
 export const WAITING_REQUESTS_HREF = '/admin/reservas?status=PENDING&origem=cliente&periodo=proximos&proposta=nao-enviada&ordem=antigos';
 export const PAST_EVENT_REQUESTS_HREF = '/admin/reservas?status=PENDING&origem=cliente&periodo=passado&ordem=antigos';
+// Onda 2 da auditoria do status (C5): os aceitos sem sinal, com o evento por vir (a mesma regra do número), com o selo
+// "Aceito — aguardando sinal" na lista.
+export const ACCEPTED_AWAITING_HREF = '/admin/reservas?contrato=aceito-sem-sinal&periodo=proximos&ordem=antigos';
 
 interface PendingRequestsCardProps {
   summary: AdminSummary | null;
@@ -25,9 +29,11 @@ interface PendingRequestsCardProps {
 const linkClass = 'rounded underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 export const PendingRequestsCard: React.FC<PendingRequestsCardProps> = ({ summary }) => {
-  if (!summary || (summary.waitingRequests === 0 && summary.pastEventRequests === 0)) return null;
+  if (!summary || (summary.waitingRequests === 0 && summary.pastEventRequests === 0 && !summary.acceptedAwaitingPayment)) return null;
 
   const { waitingRequests, pastEventRequests } = summary;
+  const accepted = summary.acceptedAwaitingPayment ?? 0;
+  const overdue = summary.overdueInitialPayments ?? 0;
   const age = waitingRequests > 0 ? waitingAge(summary.oldestWaitingAt) : null;
   const classes = WAITING_TONE_CLASSES[age?.tone ?? 'muted'];
 
@@ -50,6 +56,11 @@ export const PendingRequestsCard: React.FC<PendingRequestsCardProps> = ({ summar
         {pastEventRequests > 0 && (
           <Link to={PAST_EVENT_REQUESTS_HREF} className={`block text-sm opacity-90 ${linkClass}`}>
             {pastEventRequestsText(pastEventRequests)}
+          </Link>
+        )}
+        {accepted > 0 && (
+          <Link to={ACCEPTED_AWAITING_HREF} className={`block text-sm ${overdue > 0 ? 'font-semibold' : 'opacity-90'} ${linkClass}`}>
+            {acceptedAwaitingText(accepted, overdue)}
           </Link>
         )}
       </div>

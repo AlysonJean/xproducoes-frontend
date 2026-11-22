@@ -23,9 +23,19 @@ export interface AdminSummary {
   proposalsAwaitingClient: number | null;
   /** Mensagens de contato não lidas. */
   unreadContacts: number;
+  /** Onda 2 da auditoria do status (C5): contratos aceitos pelo site esperando o sinal (resposta antiga: 0). */
+  acceptedAwaitingPayment?: number;
+  /** Dessas, as que já passaram do vencimento da parcela inicial. */
+  overdueInitialPayments?: number;
 }
 
 export const SUMMARY_CEILING_MS = 60_000;
+
+/** Onda 2 da auditoria do status (C5): "2 contratos aceitos aguardando o sinal, 1 com o sinal vencido". */
+export const acceptedAwaitingText = (accepted: number, overdue: number) =>
+  `${accepted} ${accepted === 1 ? 'contrato aceito aguardando o sinal' : 'contratos aceitos aguardando o sinal'}${
+    overdue > 0 ? `, ${overdue} com o sinal vencido` : ''
+  }`;
 
 let summary: AdminSummary | null = null;
 let fetchedAt = 0;
@@ -48,6 +58,8 @@ function asSummary(data: unknown): AdminSummary | null {
     pastEventRequests: d.pastEventRequests,
     proposalsAwaitingClient: isCount(d.proposalsAwaitingClient) ? d.proposalsAwaitingClient : null,
     unreadContacts: d.unreadContacts,
+    acceptedAwaitingPayment: isCount(d.acceptedAwaitingPayment) ? d.acceptedAwaitingPayment : 0,
+    overdueInitialPayments: isCount(d.overdueInitialPayments) ? d.overdueInitialPayments : 0,
   };
 }
 

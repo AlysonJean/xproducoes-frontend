@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ConfirmModal } from './ConfirmModal';
 import { Checkbox } from '../ui/Checkbox';
 import { Textarea } from '../ui/Textarea';
@@ -22,6 +22,8 @@ interface WhatsAppConfirmationModalProps {
   isSending: boolean;
   /** Auditoria do status (21/11/2026), C7: pede o motivo (o cancelamento grava nas observações internas). */
   askReason?: boolean;
+  /** Onda 2: o que mais a troca pergunta (avisar o cliente por e-mail, registrar o sinal, desistência ou cancelamento). */
+  extra?: ReactNode;
 }
 
 // Achado (auditoria do design system): a prévia abaixo era passada como children, mas o ConfirmModal
@@ -52,6 +54,7 @@ const OpenWhatsAppConfirmation = ({
   contactNumber,
   isSending,
   askReason = false,
+  extra,
 }: WhatsAppConfirmationModalProps) => {
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
   const [reason, setReason] = useState('');
@@ -92,6 +95,7 @@ const OpenWhatsAppConfirmation = ({
       variant={variant}
     >
       <div className="space-y-3">
+        {extra}
         {askReason && (
           <Textarea
             label="Motivo do cancelamento"

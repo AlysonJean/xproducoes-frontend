@@ -66,6 +66,7 @@ import {
 } from '../../utils/whatsappTemplates';
 import { notifyClientPayload } from '../../utils/notifyClient';
 import { NotifyClientCheckbox } from '../../components/bookings/NotifyClientCheckbox';
+import { CancelChoices, MarkPaymentCheckbox } from '../../components/bookings/CancelChoices';
 import { SendProposalPanel } from '../../components/bookings/SendProposalPanel';
 import { itemsLockedReason, proposalForBookingPath } from '../../utils/proposalFromBooking';
 import { refreshAdminSummary } from '../../stores/adminSummary';
@@ -235,6 +236,9 @@ function venueAnswers(b: {
 
 // P14 (aprovada em 02/11/2026), parte 2: as trocas de status da ficha que podem levar um aviso pelo WhatsApp. O
 // WhatsApp é opcional (caixa na janela); sem telefone, a janela muda só o status.
+// Onda 2 (D5): o dia de Brasília como AAAA-MM-DD, que dá para comparar como texto.
+const brasiliaDayKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' });
+
 // Auditoria do status (21/11/2026), M6: bookingAPI usa axios, que rejeita com o erro cru ("Request failed with status code
 // 409"); o motivo do servidor vem em response.data (message na maioria das rotas, error no tratador geral).
 const serverMessage = (error: unknown, fallback: string): string => {
@@ -268,7 +272,13 @@ export const BookingDetailPage = () => {
   const [wppMessage, setWppMessage] = useState('');
   const [wppContact, setWppContact] = useState<string | null>(null);
   const [wppAction, setWppAction] = useState<StatusAction>('confirm');
-  const [actionToConfirm, setActionToConfirm] = useState<((reason?: string) => Promise<boolean>) | null>(null);
+  // Onda 2 da auditoria do status: no cancelamento com contrato aceito, desistência (D9) ou cancelamento pela tabela;
+  // na confirmação, "registrar o sinal como recebido" (D6). Lidos na hora da troca (a janela usa o estado atual).
+  const [cancelMode, setCancelMode] = useState<'cancel' | 'withdraw'>('cancel');
+  const [markPayment, setMarkPayment] = useState(true);
+  // Revisão da onda 2: o aviso do cancelamento tem a caixa dele (antes era a mesma da confirmação: desmarcar no cancelar
+  // e desistir deixava a confirmação seguinte sem o e-mail ao cliente).
+  const [notifyOnCancel, setNotifyOnCancel] = useState(true);
   
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isConfirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -276,6 +286,8 @@ export const BookingDetailPage = () => {
   // ao cliente o pedido de avaliação e cria a recompensa da indicação, e voltar o status não desfaz isso: agora pergunta
   // antes e só aparece com a reserva confirmada ou em andamento (o servidor recusa os outros status com 409).
   const [isCompleteModalOpen, setCompleteModalOpen] = useState(false);
+  // Onda 2 da auditoria do status (D5): "Iniciar evento" pergunta antes.
+  const [isStartModalOpen, setStartModalOpen] = useState(false);
   const [isEventModalOpen, setEventModalOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [isEditDirty, setEditDirty] = useState(false);
@@ -373,6 +385,12 @@ export const BookingDetailPage = () => {
     }
   };
 
+  // Onda 2 (D1): a confirmação devolve o aviso da pré-reserva (outra reserva com contrato aceito no mesmo equipamento).
+  const warnPreReservation = (data: unknown) => {
+    const warning = (data as { conflictWarning?: unknown } | null | undefined)?.conflictWarning;
+    if (typeof warning === 'string' && warning) addNotification({ type: 'warning', title: 'Pré-reserva no mesmo equipamento', message: warning });
+  };
+
   // Devolve true quando a troca gravou (a janela do WhatsApp só abre o WhatsApp nesse caso, M7).
   const handleStatusChange = async (bookingId: string, value: string, reason?: string): Promise<boolean> => {
     try {
@@ -380,9 +398,18 @@ export const BookingDetailPage = () => {
       // "A caminho" é status de entrega (DeliveryStatus), não de reserva.
       if (value === 'ON_THE_WAY') await bookingAPI.updateDeliveryStatus(bookingId, value);
       // Auditoria do status (21/11/2026), C7: cancelar pela ficha leva o motivo (fica nas observações internas, com quem
-      // cancelou no Histórico); antes ia pela troca de status, sem rastro.
-      else if (value === 'CANCELLED') await bookingAPI.cancel(bookingId, reason || 'Cancelada pela equipe.');
-      else await bookingAPI.updateStatus(bookingId, value, value === 'CONFIRMED' ? notifyClientPayload(notifyClient) : undefined);
+      // cancelou no Histórico); antes ia pela troca de status, sem rastro. Onda 2: com contrato aceito, a desistência do
+      // cliente (D9) vai pela rota da desistência; o cancelamento leva "Avisar o cliente por e-mail" (D2).
+      else if (value === 'CANCELLED' && contractAccepted && cancelMode === 'withdraw') await bookingAPI.withdrawForClient(bookingId);
+      else if (value === 'CANCELLED') await bookingAPI.cancel(bookingId, reason || 'Cancelada pela equipe.', notifyClientPayload(notifyOnCancel));
+      else {
+        const res = await bookingAPI.updateStatus(
+          bookingId,
+          value,
+          value === 'CONFIRMED' ? { ...notifyClientPayload(notifyClient), ...(askPayment && markPayment ? { markInitialPaymentReceived: true as const } : {}) } : undefined,
+        );
+        warnPreReservation(res?.data);
+      }
       // P3: confirmar ou cancelar tira o pedido do número do menu e do cartão do painel na hora ("a caminho" é entrega).
       if (value !== 'ON_THE_WAY') void refreshAdminSummary({ force: true });
       await fetchBooking();
@@ -429,7 +456,12 @@ export const BookingDetailPage = () => {
           },
         ];
       }
-      await bookingAPI.confirmWithDetails(booking.id, { ...payload, ...notifyClientPayload(notifyClient) });
+      const res = await bookingAPI.confirmWithDetails(booking.id, {
+        ...payload,
+        ...notifyClientPayload(notifyClient),
+        ...(askPayment && markPayment ? { markInitialPaymentReceived: true } : {}),
+      });
+      warnPreReservation(res?.data);
       void refreshAdminSummary({ force: true }); // P3: a reserva saiu de Pendente.
       await fetchBooking();
       setConfirmModalOpen(false);
@@ -448,13 +480,17 @@ export const BookingDetailPage = () => {
   // utils/whatsappTemplates (a confirmação é a mesma do botão "Enviar confirmação no WhatsApp").
   const prepareWhatsAppMessage = (action: StatusAction) => {
     if (!booking?.id) return;
-    const bookingId = booking.id;
     const messages: Record<StatusAction, () => string> = {
       confirm: () => bookingConfirmedWhatsAppText(booking),
       cancel: () => bookingCancelledWhatsAppText(booking),
       on_the_way: () => crewOnTheWayWhatsAppText(booking),
     };
-    setActionToConfirm(() => (reason?: string) => handleStatusChange(bookingId, STATUS_ACTIONS[action].status, reason));
+    if (action === 'cancel') {
+      setCancelMode('cancel');
+      // Rascunho nunca enviado: o cliente não viu a proposta, então a caixa do aviso começa desmarcada.
+      setNotifyOnCancel(booking.status !== 'DRAFT');
+    }
+    setMarkPayment(true);
     setWppAction(action);
     setWppMessage(messages[action]());
     // Contato da reserva antes do cadastro, já com DDI: sem o 55, o wa.me abria outro país (31 é a
@@ -645,9 +681,16 @@ export const BookingDetailPage = () => {
   // tira o envio da proposta quando o cliente já respondeu o contrato.
   const contractAnswered = booking.contractSummary?.state === 'ACCEPTED' || booking.contractSummary?.state === 'WITHDRAWN';
   const canSendProposal = canConfirm && !contractAnswered;
+  // Onda 2 (D6): com o contrato aceito e o pagamento ainda não registrado, confirmar pergunta "registrar o sinal".
+  const contractAccepted = booking.contractSummary?.state === 'ACCEPTED';
+  const askPayment = contractAccepted && booking.paymentStatus !== 'PARTIAL' && booking.paymentStatus !== 'PAID';
   const isClosed = status === 'CANCELLED' || status === 'REFUNDED';
   const deliveryIndex = DELIVERY_STATUS_OPTIONS.findIndex((o) => o.value === (booking.deliveryStatus || 'PENDING'));
   const eventDate = booking.eventDate ? new Date(booking.eventDate) : null;
+  // Onda 2 (D4 e D5): o dia do evento já chegou (dia de Brasília) e o evento já terminou.
+  const eventDayReached = eventDate ? brasiliaDayKey.format(eventDate) <= brasiliaDayKey.format(new Date()) : false;
+  const eventEnd = booking.eventEndDate ? new Date(booking.eventEndDate) : null;
+  const eventEnded = eventEnd ? eventEnd.getTime() < Date.now() : false;
   const clientName = booking.client?.name || booking.client?.user?.name || booking.clientName || 'Cliente sem nome';
   // O mesmo contato que os botões de WhatsApp e o PDF usam (ver utils/bookingContact).
   const clientPhone = bookingPhone(booking);
@@ -775,7 +818,7 @@ export const BookingDetailPage = () => {
                 <Button
                   fullWidth
                   size="sm"
-                  onClick={() => { setConfirmPrice(String(booking.totalPrice || '')); fetchAvailableCollaborators().then(() => setConfirmModalOpen(true)); }}
+                  onClick={() => { setConfirmPrice(String(booking.totalPrice || '')); setMarkPayment(true); fetchAvailableCollaborators().then(() => setConfirmModalOpen(true)); }}
                   leftIcon={<ShieldCheck className="h-4 w-4" />}
                 >
                   Confirmar reserva
@@ -816,6 +859,17 @@ export const BookingDetailPage = () => {
               </p>
             ) : (
               <div className="space-y-2">
+                {/* Onda 2 (D4): o evento que já terminou e segue confirmado (ou em andamento) fica fora do faturamento até
+                    alguém concluir; nada conclui sozinho (a conclusão manda o pedido de avaliação). */}
+                {eventEnded && (status === 'CONFIRMED' || status === 'IN_PROGRESS') && (
+                  <Alert variant="warning" title="O evento já passou" description="Marque como concluída para ele entrar no faturamento." />
+                )}
+                {/* D5: "Iniciar evento" a partir do dia do evento (dia de Brasília), só da reserva confirmada. */}
+                {status === 'CONFIRMED' && eventDayReached && !eventEnded && (
+                  <Button variant="outline" size="sm" fullWidth className="justify-start" onClick={() => setStartModalOpen(true)} leftIcon={<Truck className="h-4 w-4 text-success" />}>
+                    Iniciar evento
+                  </Button>
+                )}
                 {/* Auditoria do status (21/11/2026), B1: "equipe a caminho" só com o evento confirmado (ou em andamento) e
                     a entrega ainda no começo; antes aparecia em Rascunho e Pendente e voltava "No local" para "A caminho". */}
                 {(status === 'CONFIRMED' || status === 'IN_PROGRESS') && ['PENDING', 'PREPARING'].includes(booking.deliveryStatus || 'PENDING') && (
@@ -1023,7 +1077,7 @@ export const BookingDetailPage = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => fetchAvailableCollaborators().then(() => setEventModalOpen(true))}
+                    onClick={() => { setMarkPayment(true); fetchAvailableCollaborators().then(() => setEventModalOpen(true)); }}
                     leftIcon={<Users size={16} />}
                   >
                     {canConfirm ? 'Alocar equipe e confirmar' : 'Alocar equipe'}
@@ -1258,13 +1312,29 @@ export const BookingDetailPage = () => {
         onConfirm={async (reason) => {
           // Auditoria do status (21/11/2026), M7: a troca que falhou deixa a janela aberta (o aviso diz o motivo) e o
           // WhatsApp não abre.
-          const ok = actionToConfirm ? await actionToConfirm(reason) : true;
+          if (!booking?.id) return false;
+          const ok = await handleStatusChange(booking.id, STATUS_ACTIONS[wppAction].status, reason);
           if (!ok) return false;
           setWppModalOpen(false);
-          setActionToConfirm(null);
           return true;
         }}
-        askReason={wppAction === 'cancel'}
+        // A desistência registrada não pede motivo (o contrato guarda o da desistência).
+        askReason={wppAction === 'cancel' && !(contractAccepted && cancelMode === 'withdraw')}
+        extra={
+          wppAction === 'cancel' ? (
+            <CancelChoices
+              contractAccepted={contractAccepted}
+              withdrawUntil={booking.contractSummary?.withdrawUntil ?? null}
+              mode={cancelMode}
+              onModeChange={setCancelMode}
+              notifyClient={notifyOnCancel}
+              onNotifyChange={setNotifyOnCancel}
+              hasEmail={Boolean(clientEmail)}
+            />
+          ) : wppAction === 'confirm' && askPayment ? (
+            <MarkPaymentCheckbox checked={markPayment} onChange={setMarkPayment} />
+          ) : undefined
+        }
         title={STATUS_ACTIONS[wppAction].title}
         confirmText={STATUS_ACTIONS[wppAction].confirmText}
         variant={STATUS_ACTIONS[wppAction].variant}
@@ -1309,6 +1379,7 @@ export const BookingDetailPage = () => {
             )}
           </div>
           <NotifyClientCheckbox checked={notifyClient} onChange={setNotifyClient} hasEmail={Boolean(clientEmail)} />
+          {askPayment && <MarkPaymentCheckbox checked={markPayment} onChange={setMarkPayment} />}
           <div className="flex flex-col gap-2 pt-2">
             <Button onClick={handleConfirmWithDetails} isLoading={actionLoading} fullWidth size="sm">
               Confirmar reserva
@@ -1329,8 +1400,16 @@ export const BookingDetailPage = () => {
             location: booking.location || booking.eventLocation || '',
           }}
           collaborators={availableCollaborators}
-          // Salvar aqui também confirma a reserva pendente (/confirm-details): a caixa aparece só nesse caso.
-          footerExtra={canConfirm ? <NotifyClientCheckbox checked={notifyClient} onChange={setNotifyClient} hasEmail={Boolean(clientEmail)} /> : undefined}
+          // Salvar aqui também confirma a reserva pendente (/confirm-details): as caixas aparecem só nesse caso (a do sinal,
+          // com contrato aceito, como em "Confirmar reserva": revisão da onda 2).
+          footerExtra={
+            canConfirm ? (
+              <div className="space-y-2">
+                <NotifyClientCheckbox checked={notifyClient} onChange={setNotifyClient} hasEmail={Boolean(clientEmail)} />
+                {askPayment && <MarkPaymentCheckbox checked={markPayment} onChange={setMarkPayment} />}
+              </div>
+            ) : undefined
+          }
           onSave={async (assignments) => {
             if (!booking?.id) return;
             try {
@@ -1346,7 +1425,12 @@ export const BookingDetailPage = () => {
                 totalHours: a.estimatedHours,
                 ...(a.hourlyRate != null ? { hourlyRate: a.hourlyRate, totalPayment: a.hourlyRate * a.estimatedHours } : {}),
               }));
-              await bookingAPI.confirmWithDetails(booking.id, { collaborators: payload, ...notifyClientPayload(notifyClient) });
+              const res = await bookingAPI.confirmWithDetails(booking.id, {
+                collaborators: payload,
+                ...notifyClientPayload(notifyClient),
+                ...(canConfirm && askPayment && markPayment ? { markInitialPaymentReceived: true } : {}),
+              });
+              warnPreReservation(res?.data);
               void refreshAdminSummary({ force: true }); // P3: salvar a equipe confirma a reserva pendente.
               await fetchBooking();
               setEventModalOpen(false);
@@ -1403,6 +1487,21 @@ export const BookingDetailPage = () => {
         isLoading={actionLoading}
         confirmText="Excluir"
         cancelText="Cancelar"
+      />
+
+      <ConfirmModal
+        isOpen={isStartModalOpen}
+        onClose={() => setStartModalOpen(false)}
+        onConfirm={async () => {
+          setStartModalOpen(false);
+          if (booking.id) await handleStatusChange(booking.id, 'IN_PROGRESS');
+        }}
+        title="Iniciar o evento?"
+        message="A reserva passa para Em andamento. O cliente não recebe nenhum aviso por isso."
+        variant="success"
+        isLoading={actionLoading}
+        confirmText="Iniciar"
+        cancelText="Voltar"
       />
 
       <ConfirmModal

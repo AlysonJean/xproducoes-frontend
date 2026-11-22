@@ -557,11 +557,15 @@ export const bookingAPI = {
   delete: (id: string) => api.delete(`/bookings/${id}`),
   // PUT: o backend só expõe PUT /bookings/:id/status — o PATCH dava 404 (o PATCH existe só em /admin/bookings).
   // D11: extra leva o notifyClient: false da caixa "Avisar o cliente por e-mail" (ver utils/notifyClient).
-  updateStatus: (id: string, status: string, extra?: { notifyClient?: false }) =>
+  // Onda 2 da auditoria do status (D6): extra também leva markInitialPaymentReceived ("registrar o sinal como recebido").
+  updateStatus: (id: string, status: string, extra?: { notifyClient?: false; markInitialPaymentReceived?: true }) =>
     api.put(`/bookings/${id}/status`, { status, ...extra }),
   updateDeliveryStatus: (id: string, status: string) => api.put(`/bookings/${id}/delivery-status`, { status }),
   // Auditoria do status (21/11/2026), C7: cancelar com o motivo (fica nas observações internas e no histórico, com quem).
-  cancel: (id: string, reason: string) => api.put(`/bookings/${id}/cancel`, { reason }),
+  // Onda 2 (D2): extra leva o notifyClient: false da caixa "Avisar o cliente por e-mail" do cancelamento.
+  cancel: (id: string, reason: string, extra?: { notifyClient?: false }) => api.put(`/bookings/${id}/cancel`, { reason, ...extra }),
+  // Onda 2 (D9): a equipe registra a desistência que o cliente pediu fora do site (mesmo prazo legal da desistência).
+  withdrawForClient: (id: string) => api.post(`/admin/bookings/${id}/contract/withdraw`, {}),
   // Confirma a reserva com preço e colaboradores (admin)
   confirmWithDetails: (id: string, data: Record<string, unknown>) =>
     api.put(`/bookings/${id}/confirm-details`, data),

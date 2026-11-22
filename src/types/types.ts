@@ -577,6 +577,8 @@ export interface BookingListItem {
   createdAt?: string;
   creator?: { role: string } | null; // só o papel de quem criou (CLIENT = pedido de cliente)
   proposalSent?: boolean; // já houve "Enviar proposta" (D11)
+  // Onda 2 da auditoria do status (C5): o contrato aceito pelo site (quando e até quando a parcela inicial vence).
+  acceptedContract?: { acceptedAt: string | null; initialPaymentDueAt: string | null } | null;
 }
 
 export interface ContactSubmission {

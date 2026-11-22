@@ -49,6 +49,8 @@ export interface ContractConfirmationData {
   pixCopyPaste?: string;
   /** Semanas 2 e 3: a equipe já registrou a parcela inicial. */
   initialPaymentReceived?: boolean;
+  /** Onda 2 da auditoria do status (D6): a equipe já confirmou a reserva (com ou sem o sinal registrado). */
+  bookingConfirmed?: boolean;
   /** Semanas 2 e 3: os comprovantes já enviados pela página (só a data). */
   proofs?: ContractProof[];
   contractId?: string;
@@ -253,7 +255,9 @@ export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: Con
           <p>
             {received
               ? 'A equipe já registrou a parcela inicial.'
-              : 'A data fica reservada depois que a parcela inicial é paga. A equipe confirma a reserva quando receber o PIX.'}
+              : data.bookingConfirmed
+                ? 'A equipe já confirmou a reserva. Se você já pagou a parcela inicial, envie o comprovante abaixo.'
+                : 'A data fica reservada depois que a parcela inicial é paga. A equipe confirma a reserva quando receber o PIX.'}
           </p>
         </div>
       </div>

@@ -164,6 +164,8 @@ export interface ContractAccepted {
   pix: ContractPix;
   /** A equipe já tinha registrado a parcela inicial (servidor de 16/11/2026 em diante). */
   initialPaymentReceived?: boolean;
+  /** Onda 2 da auditoria do status (D6): a equipe já confirmou a reserva (o sinal é a situação do pagamento). */
+  bookingConfirmed?: boolean;
 }
 
 /**
@@ -197,6 +199,8 @@ export interface ProposalContractStatus {
   pix?: ContractPix | null;
   /** Semanas 2 e 3: a equipe já registrou a parcela inicial (a página tira o QR Code). */
   initialPaymentReceived?: boolean;
+  /** Onda 2 da auditoria do status (D6): a equipe já confirmou a reserva (o sinal é a situação do pagamento). */
+  bookingConfirmed?: boolean;
   /** Semanas 2 e 3: os comprovantes enviados pela página (só a data). */
   proofs?: ContractProof[];
 }
@@ -226,6 +230,8 @@ export interface ClientContract {
   /** Semanas 2 e 3: só no aceito, o PIX da parcela inicial (com o copia e cola enquanto ela não foi registrada). */
   pix?: ContractPix | null;
   initialPaymentReceived?: boolean;
+  /** Onda 2 da auditoria do status (D6): a equipe já confirmou a reserva (o sinal é a situação do pagamento). */
+  bookingConfirmed?: boolean;
 }
 
 /** Um evento da trilha do aceite (gerado, código enviado, código conferido, aceito, e-mail enviado, desistiu). */

@@ -88,6 +88,19 @@ export const deliveryOptionsFor = (status?: string | null, current?: string | nu
   return DELIVERY_STATUS_OPTIONS.filter((option) => CLOSED_DELIVERY.includes(option.value) || option.value === (current || 'PENDING'));
 };
 
+// Onda 2 da auditoria do status (C5): a reserva aceita pelo site segue Pendente até a equipe registrar o sinal e
+// confirmar. Na lista ela aparecia só como "Pendente"; o selo diz em que pé está.
+export const acceptedContractBadge = (
+  booking: { status?: string | null; paymentStatus?: string | null; acceptedContract?: { initialPaymentDueAt: string | null } | null },
+  now: number = Date.now(),
+): { label: string; variant: StandardVariant } | null => {
+  if (!booking.acceptedContract || (booking.status !== 'PENDING' && booking.status !== 'DRAFT')) return null;
+  if (booking.paymentStatus === 'PARTIAL' || booking.paymentStatus === 'PAID') return { label: 'Sinal registrado — falta confirmar', variant: 'info' };
+  const due = booking.acceptedContract.initialPaymentDueAt ? Date.parse(booking.acceptedContract.initialPaymentDueAt) : NaN;
+  if (Number.isFinite(due) && due < now) return { label: 'Sinal vencido', variant: 'destructive' };
+  return { label: 'Aceito — aguardando sinal', variant: 'warning' };
+};
+
 export const bookingStatusLabel = (status?: string | null) =>
   (status && BOOKING_STATUS_LABELS[status]) || status || '—';
 export const bookingStatusVariant = (status?: string | null): StandardVariant =>

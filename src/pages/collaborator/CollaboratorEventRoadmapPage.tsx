@@ -442,9 +442,14 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
 
   const eventDate = new Date(booking.eventDate);
   const pendingTasks = booking.tasks?.filter((t) => !t.isCompleted).length ?? 0;
-  const statusText = myCollaboratorData?.status
-    ? ASSIGNMENT_STATUS_LABELS[myCollaboratorData.status] ?? myCollaboratorData.status
-    : bookingStatusLabel(booking.status);
+  // Auditoria do status (21/11/2026), B9: a reserva cancelada (ou reembolsada) diz isso no lugar do status da escala
+  // (antes, "Sua escala: Confirmado" num evento cancelado, para quem abria o Roteiro por um link antigo).
+  const eventCancelled = booking.status === 'CANCELLED' || booking.status === 'REFUNDED';
+  const statusText = eventCancelled
+    ? 'Evento cancelado'
+    : myCollaboratorData?.status
+      ? ASSIGNMENT_STATUS_LABELS[myCollaboratorData.status] ?? myCollaboratorData.status
+      : bookingStatusLabel(booking.status);
   const streetLine = [booking.street, booking.addressNumber].filter(Boolean).join(', ');
   const cityLine = [booking.city, booking.state].filter(Boolean).join('/');
   const address = [streetLine, cityLine].filter(Boolean).join(' – ') || booking.location || 'Endereço a definir';
@@ -496,7 +501,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
               </div>
               {/* Achado: era "Status: Confirmado" fixo para todo evento. */}
               <span className="text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full bg-primary-foreground/15 border border-primary-foreground/20">
-                {myCollaboratorData ? 'Sua escala' : 'Reserva'}: {statusText}
+                {eventCancelled ? statusText : `${myCollaboratorData ? 'Sua escala' : 'Reserva'}: ${statusText}`}
               </span>
             </div>
           </div>
