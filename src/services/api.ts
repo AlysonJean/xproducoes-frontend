@@ -560,6 +560,8 @@ export const bookingAPI = {
   updateStatus: (id: string, status: string, extra?: { notifyClient?: false }) =>
     api.put(`/bookings/${id}/status`, { status, ...extra }),
   updateDeliveryStatus: (id: string, status: string) => api.put(`/bookings/${id}/delivery-status`, { status }),
+  // Auditoria do status (21/11/2026), C7: cancelar com o motivo (fica nas observações internas e no histórico, com quem).
+  cancel: (id: string, reason: string) => api.put(`/bookings/${id}/cancel`, { reason }),
   // Confirma a reserva com preço e colaboradores (admin)
   confirmWithDetails: (id: string, data: Record<string, unknown>) =>
     api.put(`/bookings/${id}/confirm-details`, data),

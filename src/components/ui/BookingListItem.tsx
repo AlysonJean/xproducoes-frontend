@@ -21,7 +21,8 @@ const STATUS_CHIP_CLASSES: Record<string, string> = {
   DRAFT: 'bg-muted/40 text-muted-foreground',
   PENDING: 'bg-warning/20 text-warning',
   CONFIRMED: 'bg-success/20 text-success',
-  IN_PROGRESS: 'bg-primary/20 text-primary',
+  // Auditoria do status (21/11/2026), B7: Em andamento tinha a mesma cor de Concluída; agora a das outras telas (info).
+  IN_PROGRESS: 'bg-info/20 text-info',
   COMPLETED: 'bg-primary/20 text-primary',
   CANCELLED: 'bg-destructive/20 text-destructive',
   REFUNDED: 'bg-muted/40 text-muted-foreground',

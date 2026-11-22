@@ -38,7 +38,7 @@ describe('bookingsToSheetRows', () => {
       'E-mail': 'ana@t.com',
       'Telefone': '31988887777',
       'Cidade': 'Belo Horizonte',
-      'Status': 'Confirmado',
+      'Status': 'Confirmada',
       'Entrega': 'A caminho',
       'Pagamento': 'Pago',
       'Valor total (R$)': 1500.5,

@@ -235,6 +235,17 @@ function venueAnswers(b: {
 
 // P14 (aprovada em 02/11/2026), parte 2: as trocas de status da ficha que podem levar um aviso pelo WhatsApp. O
 // WhatsApp é opcional (caixa na janela); sem telefone, a janela muda só o status.
+// Auditoria do status (21/11/2026), M6: bookingAPI usa axios, que rejeita com o erro cru ("Request failed with status code
+// 409"); o motivo do servidor vem em response.data (message na maioria das rotas, error no tratador geral).
+const serverMessage = (error: unknown, fallback: string): string => {
+  const data = (error as { response?: { data?: { message?: unknown; error?: unknown } } })?.response?.data;
+  if (typeof data?.message === 'string' && data.message) return data.message;
+  if (typeof data?.error === 'string' && data.error) return data.error;
+  // Um erro que já traz o motivo (não o genérico do axios) também serve.
+  if (error instanceof Error && error.message && !/^Request failed with status code/.test(error.message)) return error.message;
+  return fallback;
+};
+
 type StatusAction = 'confirm' | 'cancel' | 'on_the_way';
 const STATUS_ACTIONS: Record<StatusAction, { status: string; title: string; confirmText: string; variant: 'default' | 'danger' | 'success' }> = {
   confirm: { status: 'CONFIRMED', title: 'Confirmar a reserva?', confirmText: 'Confirmar', variant: 'success' },
@@ -257,7 +268,7 @@ export const BookingDetailPage = () => {
   const [wppMessage, setWppMessage] = useState('');
   const [wppContact, setWppContact] = useState<string | null>(null);
   const [wppAction, setWppAction] = useState<StatusAction>('confirm');
-  const [actionToConfirm, setActionToConfirm] = useState<(() => Promise<void>) | null>(null);
+  const [actionToConfirm, setActionToConfirm] = useState<((reason?: string) => Promise<boolean>) | null>(null);
   
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isConfirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -362,20 +373,31 @@ export const BookingDetailPage = () => {
     }
   };
 
-  const handleStatusChange = async (bookingId: string, value: string) => {
+  // Devolve true quando a troca gravou (a janela do WhatsApp só abre o WhatsApp nesse caso, M7).
+  const handleStatusChange = async (bookingId: string, value: string, reason?: string): Promise<boolean> => {
     try {
       setActionLoading(true);
       // "A caminho" é status de entrega (DeliveryStatus), não de reserva.
       if (value === 'ON_THE_WAY') await bookingAPI.updateDeliveryStatus(bookingId, value);
+      // Auditoria do status (21/11/2026), C7: cancelar pela ficha leva o motivo (fica nas observações internas, com quem
+      // cancelou no Histórico); antes ia pela troca de status, sem rastro.
+      else if (value === 'CANCELLED') await bookingAPI.cancel(bookingId, reason || 'Cancelada pela equipe.');
       else await bookingAPI.updateStatus(bookingId, value, value === 'CONFIRMED' ? notifyClientPayload(notifyClient) : undefined);
       // P3: confirmar ou cancelar tira o pedido do número do menu e do cartão do painel na hora ("a caminho" é entrega).
       if (value !== 'ON_THE_WAY') void refreshAdminSummary({ force: true });
       await fetchBooking();
-      addNotification({ type: 'success', title: 'Status atualizado', message: 'O status da reserva foi atualizado.' });
-        } catch (error: unknown) {
+      setProposalHistoryKey((key) => key + 1);
+      // B5: a entrega não é o status da reserva.
+      addNotification(
+        value === 'ON_THE_WAY'
+          ? { type: 'success', title: 'Entrega atualizada', message: 'A entrega ficou como "A caminho".' }
+          : { type: 'success', title: 'Status atualizado', message: `A reserva ficou como ${bookingStatusLabel(value)}.` },
+      );
+      return true;
+    } catch (error: unknown) {
       // Mostra o motivo vindo do backend (ex.: 409 de conflito de equipamento) quando houver.
-      const err = error as { response?: { data?: { error?: string; message?: string } } };
-      addNotification({ type: 'error', title: 'Erro ao atualizar', message: err.response?.data?.message || err.response?.data?.error || 'Não foi possível atualizar o status.' });
+      addNotification({ type: 'error', title: 'Erro ao atualizar', message: serverMessage(error, 'Não foi possível atualizar o status.') });
+      return false;
     } finally {
       setActionLoading(false);
     }
@@ -387,6 +409,12 @@ export const BookingDetailPage = () => {
     // "Dados de entrada inválidos"; a ficha para antes, com o motivo (como a agenda). Em branco, fica o valor de hoje.
     if (confirmPrice.trim() !== '' && !(Number(confirmPrice) > 0)) {
       addNotification({ type: 'error', title: 'Valor inválido', message: 'O valor final precisa ser maior que zero. Em branco, fica o valor de hoje.' });
+      return;
+    }
+    // Auditoria do status (21/11/2026), B4: o pedido do briefing ainda sem valor ("Em preparação") era confirmado com
+    // R$ 0 e o cliente recebia "confirmada". Sem valor na reserva, o valor final é obrigatório.
+    if (confirmPrice.trim() === '' && !(Number(booking.totalPrice) > 0)) {
+      addNotification({ type: 'error', title: 'Falta o valor', message: 'Esta reserva ainda não tem valor. Digite o valor final antes de confirmar.' });
       return;
     }
     try {
@@ -408,7 +436,7 @@ export const BookingDetailPage = () => {
       addNotification({ type: 'success', title: 'Reserva confirmada', message: 'Valor e equipe salvos.' });
         } catch (e: unknown) {
       // O motivo do servidor (409 de equipamento em uso, colaborador sem acesso, 400) em vez do genérico.
-      addNotification({ type: 'error', title: 'Erro ao confirmar', message: e instanceof Error && e.message ? e.message : 'Não foi possível confirmar a reserva.' });
+      addNotification({ type: 'error', title: 'Erro ao confirmar', message: serverMessage(e, 'Não foi possível confirmar a reserva.') });
     } finally {
       setActionLoading(false);
     }
@@ -426,7 +454,7 @@ export const BookingDetailPage = () => {
       cancel: () => bookingCancelledWhatsAppText(booking),
       on_the_way: () => crewOnTheWayWhatsAppText(booking),
     };
-    setActionToConfirm(() => () => handleStatusChange(bookingId, STATUS_ACTIONS[action].status));
+    setActionToConfirm(() => (reason?: string) => handleStatusChange(bookingId, STATUS_ACTIONS[action].status, reason));
     setWppAction(action);
     setWppMessage(messages[action]());
     // Contato da reserva antes do cadastro, já com DDI: sem o 55, o wa.me abria outro país (31 é a
@@ -767,7 +795,13 @@ export const BookingDetailPage = () => {
             ) : (
               // Antes mandava usar o Editar, que nunca gravou o status (e agora nem o mostra).
               <p className="text-sm text-muted-foreground">
-                Reserva {bookingStatusLabel(status).toLowerCase()}. Para mudar o status, use os botões de Logística ou a lista de Reservas.
+                {/* Auditoria do status (21/11/2026): na cancelada, o cartão Logística não tem ações; reabrir e reembolso
+                    ficam no seletor da lista, que só oferece as trocas que valem. */}
+                {status === 'REFUNDED'
+                  ? 'Reserva reembolsada. Se o reembolso foi um engano, volte para Cancelada na lista de Reservas.'
+                  : isClosed
+                    ? `Reserva ${bookingStatusLabel(status).toLowerCase()}. Para reabrir como Pendente ou registrar o reembolso, use a lista de Reservas.`
+                    : `Reserva ${bookingStatusLabel(status).toLowerCase()}. Para mudar o status, use os botões de Logística ou a lista de Reservas.`}
               </p>
             )}
           </Card>
@@ -782,9 +816,13 @@ export const BookingDetailPage = () => {
               </p>
             ) : (
               <div className="space-y-2">
-                <Button variant="outline" size="sm" fullWidth className="justify-start" onClick={() => prepareWhatsAppMessage('on_the_way')} leftIcon={<Truck className="h-4 w-4 text-info" />}>
-                  Avisar: equipe a caminho
-                </Button>
+                {/* Auditoria do status (21/11/2026), B1: "equipe a caminho" só com o evento confirmado (ou em andamento) e
+                    a entrega ainda no começo; antes aparecia em Rascunho e Pendente e voltava "No local" para "A caminho". */}
+                {(status === 'CONFIRMED' || status === 'IN_PROGRESS') && ['PENDING', 'PREPARING'].includes(booking.deliveryStatus || 'PENDING') && (
+                  <Button variant="outline" size="sm" fullWidth className="justify-start" onClick={() => prepareWhatsAppMessage('on_the_way')} leftIcon={<Truck className="h-4 w-4 text-info" />}>
+                    Avisar: equipe a caminho
+                  </Button>
+                )}
                 {(status === 'CONFIRMED' || status === 'IN_PROGRESS') && (
                   <Button variant="outline" size="sm" fullWidth className="justify-start" onClick={() => setCompleteModalOpen(true)} leftIcon={<CheckCircle2 className="h-4 w-4 text-success" />}>
                     Marcar como concluída
@@ -977,15 +1015,20 @@ export const BookingDetailPage = () => {
                   <Award className="text-primary h-6 w-6" />
                   <h3 className="text-lg font-bold text-foreground">Equipe</h3>
                 </div>
-                {/* Este fluxo grava por /confirm-details, que também CONFIRMA a reserva — o rótulo diz isso. */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fetchAvailableCollaborators().then(() => setEventModalOpen(true))}
-                  leftIcon={<Users size={16} />}
-                >
-                  Alocar equipe e confirmar
-                </Button>
+                {/* Este fluxo grava por /confirm-details, que também CONFIRMA a reserva pendente — o rótulo diz isso.
+                    Auditoria do status (21/11/2026), C1: na reserva cancelada ou reembolsada o botão sai (ele a voltava
+                    para Confirmada e mandava "Reserva confirmada" ao cliente, sem a caixa de aviso). Já confirmada, em
+                    andamento ou concluída, ele só aloca. */}
+                {!isClosed && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fetchAvailableCollaborators().then(() => setEventModalOpen(true))}
+                    leftIcon={<Users size={16} />}
+                  >
+                    {canConfirm ? 'Alocar equipe e confirmar' : 'Alocar equipe'}
+                  </Button>
+                )}
               </div>
               <div className="p-6 sm:p-8 bg-muted/10">
                 <BookingCollaborators
@@ -1212,11 +1255,16 @@ export const BookingDetailPage = () => {
       <WhatsAppConfirmationModal
         isOpen={isWppModalOpen}
         onClose={() => setWppModalOpen(false)}
-        onConfirm={async () => {
-          if (actionToConfirm) await actionToConfirm();
+        onConfirm={async (reason) => {
+          // Auditoria do status (21/11/2026), M7: a troca que falhou deixa a janela aberta (o aviso diz o motivo) e o
+          // WhatsApp não abre.
+          const ok = actionToConfirm ? await actionToConfirm(reason) : true;
+          if (!ok) return false;
           setWppModalOpen(false);
           setActionToConfirm(null);
+          return true;
         }}
+        askReason={wppAction === 'cancel'}
         title={STATUS_ACTIONS[wppAction].title}
         confirmText={STATUS_ACTIONS[wppAction].confirmText}
         variant={STATUS_ACTIONS[wppAction].variant}
@@ -1302,9 +1350,10 @@ export const BookingDetailPage = () => {
               void refreshAdminSummary({ force: true }); // P3: salvar a equipe confirma a reserva pendente.
               await fetchBooking();
               setEventModalOpen(false);
-              addNotification({ type: 'success', title: 'Equipe salva', message: 'Equipe alocada e reserva confirmada.' });
+              // B5: só a reserva pendente é confirmada por aqui; nas outras, só a equipe muda.
+              addNotification({ type: 'success', title: 'Equipe salva', message: canConfirm ? 'Equipe alocada e reserva confirmada.' : 'Equipe alocada.' });
             } catch (e: unknown) {
-              addNotification({ type: 'error', title: 'Erro ao salvar equipe', message: e instanceof Error && e.message ? e.message : 'Não foi possível salvar a equipe.' });
+              addNotification({ type: 'error', title: 'Erro ao salvar equipe', message: serverMessage(e, 'Não foi possível salvar a equipe.') });
             } finally {
               setActionLoading(false);
             }

@@ -7,7 +7,7 @@ const { apiFetch, api, bookingAPI, useAuth, addNotification } = vi.hoisted(() =>
   api: { get: vi.fn(), post: vi.fn(), delete: vi.fn() },
   bookingAPI: {
     getById: vi.fn(), updateStatus: vi.fn(), updateDeliveryStatus: vi.fn(), delete: vi.fn(), confirmWithDetails: vi.fn(),
-    sendProposal: vi.fn(), getAuditHistory: vi.fn(),
+    sendProposal: vi.fn(), getAuditHistory: vi.fn(), cancel: vi.fn(),
   },
   useAuth: vi.fn(),
   addNotification: vi.fn(),
@@ -133,7 +133,9 @@ describe('P3 — o resumo do painel é pedido de novo logo depois de cada mudan�
     await waitFor(() => expect(addNotification).toHaveBeenCalledTimes(1));
     expect(resumos()).toBe(1);
 
-    fireEvent.change(screen.getByLabelText('Status da reserva XP-1'), { target: { value: 'CANCELLED' } });
+    // Auditoria do status (21/11/2026): Cancelada e Concluída perguntam antes (casos em auditoriaStatus.lista); a troca
+    // direta é Pendente → Rascunho.
+    fireEvent.change(screen.getByLabelText('Status da reserva XP-1'), { target: { value: 'DRAFT' } });
     await waitFor(() => expect(metodo('PATCH')).toHaveLength(2));
     await waitFor(() => expect(resumos()).toBe(2));
   });
@@ -154,7 +156,7 @@ describe('P3 — o resumo do painel é pedido de novo logo depois de cada mudan�
     await screen.findByLabelText('Status da reserva XP-1');
     await menuMontado();
 
-    fireEvent.change(screen.getByLabelText('Status da reserva XP-1'), { target: { value: 'CANCELLED' } });
+    fireEvent.change(screen.getByLabelText('Status da reserva XP-1'), { target: { value: 'DRAFT' } });
     await waitFor(() => expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' })));
     expect(resumos()).toBe(1);
   });
@@ -216,6 +218,9 @@ describe('P3 — o resumo do painel é pedido de novo logo depois de cada mudan�
   });
 
   it('ficha da reserva: cancelar consulta na hora; "equipe a caminho" (entrega) não', async () => {
+    // Auditoria do status (21/11/2026), B1: "equipe a caminho" só com a reserva confirmada.
+    bookingAPI.getById.mockResolvedValue({ data: { ...naFicha, status: 'CONFIRMED' } });
+    bookingAPI.cancel.mockResolvedValue({});
     await abrirFicha();
 
     fireEvent.click(screen.getByRole('button', { name: 'Avisar: equipe a caminho' }));
@@ -227,8 +232,10 @@ describe('P3 — o resumo do painel é pedido de novo logo depois de cada mudan�
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar reserva' }));
     const cancelar = await screen.findByRole('dialog', { name: 'Cancelar a reserva?' });
+    // C7: com o motivo, pela rota de cancelar.
+    fireEvent.change(within(cancelar).getByLabelText('Motivo do cancelamento'), { target: { value: 'Chuva' } });
     fireEvent.click(within(cancelar).getByRole('button', { name: 'Cancelar reserva' }));
-    await waitFor(() => expect(bookingAPI.updateStatus).toHaveBeenCalledWith(naFicha.id, 'CANCELLED', undefined));
+    await waitFor(() => expect(bookingAPI.cancel).toHaveBeenCalledWith(naFicha.id, 'Chuva'));
     await waitFor(() => expect(resumos()).toBe(2));
   });
 

@@ -383,6 +383,7 @@ export const ClientCalendarPage = () => {
       in_progress: 'event-in-progress',
       completed: 'event-completed',
       cancelled: 'event-cancelled',
+      refunded: 'event-refunded',
       draft: 'event-draft',
     };
     return { className: map[status] || 'event-default' };

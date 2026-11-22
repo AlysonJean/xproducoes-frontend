@@ -1,7 +1,6 @@
 import type { BookingListItem } from '../types/types';
-import type { BookingStatus } from '../types/enums';
-import { formatBookingPaymentStatus, formatBookingStatus } from './typeSafeFormatters';
-import { DELIVERY_STATUS_LABELS } from './bookingStatus';
+import { formatBookingPaymentStatus } from './typeSafeFormatters';
+import { DELIVERY_STATUS_LABELS, bookingStatusLabel } from './bookingStatus';
 import { bookingEmail, bookingPhone } from './bookingContact';
 import { downloadSheet, formatDateTimeBR as formatDateTime, toMoney as money, type SheetRow } from './spreadsheet';
 
@@ -35,7 +34,8 @@ export function bookingsToSheetRows(bookings: BookingExportSource[]): SheetRow[]
     'E-mail': bookingEmail(b) || '',
     'Telefone': bookingPhone(b) || '',
     'Cidade': b.city || '',
-    'Status': formatBookingStatus(b.status as BookingStatus),
+    // Auditoria do status (21/11/2026), B6: o mesmo rótulo das telas ("Confirmada", não "Confirmado").
+    'Status': bookingStatusLabel(b.status),
     'Entrega': (b.deliveryStatus && DELIVERY_LABELS[b.deliveryStatus]) || b.deliveryStatus || '',
     'Pagamento': formatBookingPaymentStatus(b.paymentStatus),
     'Valor total (R$)': money(b.totalPrice),

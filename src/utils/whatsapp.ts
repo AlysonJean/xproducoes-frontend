@@ -62,6 +62,37 @@ export const openWhatsAppUntracked = (phone: string, message: string): void => {
   }
 };
 
+/**
+ * Auditoria do status (21/11/2026), M7: "Confirmar e avisar pelo WhatsApp" abria o WhatsApp antes de gravar; com o kit
+ * em conflito (409), a reserva continuava pendente e a aba já estava aberta com "sua reserva está confirmada". Agora a
+ * troca grava primeiro. O navegador só deixa abrir janela no próprio clique, então a aba vazia abre no clique
+ * (reserveWhatsAppTab) e recebe o WhatsApp depois que a troca deu certo (sendWhatsAppToTab), ou fecha se falhou.
+ * null: o navegador não abriu a aba (o envio cai no openWhatsAppUntracked de sempre).
+ */
+export const reserveWhatsAppTab = (): Window | null => {
+  try {
+    const tab = window.open('', '_blank');
+    if (tab) tab.opener = null;
+    return tab ?? null;
+  } catch {
+    return null;
+  }
+};
+
+/** Leva a aba reservada no clique ao WhatsApp com o texto; sem a aba (ou fechada), abre como antes. */
+export const sendWhatsAppToTab = (tab: Window | null, phone: string, message: string): void => {
+  const url = `https://wa.me/${normalizePhone(phone)}?text=${encodeURIComponent(message)}`;
+  if (tab && !tab.closed) {
+    try {
+      tab.location.href = url;
+      return;
+    } catch {
+      // A aba não aceitou o endereço: segue para o caminho de sempre.
+    }
+  }
+  openWhatsAppUntracked(phone, message);
+};
+
 export const openWhatsApp = (phone: string, message: string): void => {
   // GA4 Event Tracking
   try {

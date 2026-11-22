@@ -230,11 +230,24 @@ describe('Ficha da reserva — auditoria do orçamento (onda 2)', () => {
     expect(cartao.queryByRole('button', { name: 'Avisar: equipe a caminho' })).toBeNull();
   });
 
-  it('reserva pendente: o cartão Logística tem "Avisar: equipe a caminho" e "Cancelar reserva"', async () => {
+  // Atualizado de propósito (auditoria do status, 21/11/2026), B1: "Avisar: equipe a caminho" só com o evento confirmado
+  // (ou em andamento) e a entrega ainda no começo.
+  it('reserva pendente: o cartão Logística tem "Cancelar reserva", sem "Avisar: equipe a caminho"', async () => {
     await renderFicha();
     const cartao = within(screen.getByRole('heading', { name: 'Logística' }).parentElement!);
-    expect(cartao.getByRole('button', { name: 'Avisar: equipe a caminho' })).toBeInTheDocument();
+    expect(cartao.queryByRole('button', { name: 'Avisar: equipe a caminho' })).not.toBeInTheDocument();
     expect(cartao.getByRole('button', { name: 'Cancelar reserva' })).toBeInTheDocument();
+  });
+
+  it.each([
+    ['CONFIRMED', 'PENDING', true],
+    ['IN_PROGRESS', 'PREPARING', true],
+    ['CONFIRMED', 'ON_THE_WAY', false],
+    ['CONFIRMED', 'ARRIVED', false],
+  ])('B1: reserva %s com a entrega %s: "Avisar: equipe a caminho" aparece? %s', async (status, deliveryStatus, aparece) => {
+    await renderFicha({ ...RESERVA, status, deliveryStatus });
+    const cartao = within(screen.getByRole('heading', { name: 'Logística' }).parentElement!);
+    expect(Boolean(cartao.queryByRole('button', { name: 'Avisar: equipe a caminho' }))).toBe(aparece);
   });
 
   // O25: o texto do pedido pode trazer o que o cliente escreveu à vontade (o "O cliente também disse" do briefing), quebra

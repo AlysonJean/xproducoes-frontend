@@ -50,8 +50,10 @@ const renderFicha = async (reserva: object) => {
   await renderFichaUnmountable(reserva);
 };
 
+// Auditoria do status (21/11/2026), M7: o endereço da abertura é o do window.open ou o que entrou na aba reservada.
+let tabs: Array<{ location: { href: string }; close: ReturnType<typeof vi.fn>; closed: boolean; opener: unknown }> = [];
 const waMe = (open: MockInstance<typeof window.open>) => {
-  const url = new URL(String(open.mock.calls[0][0]));
+  const url = new URL(String(open.mock.calls[0][0] ?? '') || tabs[0]?.location.href || '');
   return `${url.origin}${url.pathname}`;
 };
 
@@ -67,7 +69,14 @@ describe('BookingDetailPage — contato do cliente nos botões manuais', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     bookingAPI.updateDeliveryStatus.mockResolvedValue({});
-    open = vi.spyOn(window, 'open').mockReturnValue({} as Window);
+    // Auditoria do status (21/11/2026), M7: a troca de status reserva a aba no clique (window.open('', '_blank')) e só
+    // põe o WhatsApp nela depois de gravar; os outros botões abrem o wa.me direto.
+    tabs = [];
+    open = vi.spyOn(window, 'open').mockImplementation(() => {
+      const tab = { location: { href: '' }, close: vi.fn(), closed: false, opener: {} };
+      tabs.push(tab);
+      return tab as unknown as Window;
+    });
   });
 
   afterEach(() => {
@@ -106,8 +115,8 @@ describe('BookingDetailPage — contato do cliente nos botões manuais', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Marcar a caminho' }));
 
     expect(open).toHaveBeenCalledTimes(1);
-    expect(waMe(open)).toBe(`https://wa.me/${numero}`);
     await waitFor(() => expect(bookingAPI.updateDeliveryStatus).toHaveBeenCalledWith(reserva.id, 'ON_THE_WAY'));
+    await waitFor(() => expect(waMe(open)).toBe(`https://wa.me/${numero}`));
   });
 
   // Sem telefone válido nunca abre o wa.me quebrado (antes de 89ef066 abria e mudava). P14 parte 2 (aprovada em

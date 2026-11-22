@@ -96,8 +96,11 @@ describe('Ficha da reserva — auditoria completa (19/11/2026)', () => {
 
     // O cartão Logística está na tela: com as ações na reserva aberta; fechada (cancelada, estornada ou concluída), sem
     // ações (teste de ponta a ponta de 21/11/2026: a cancelada seguia com "Cancelar reserva" e "Avisar: equipe a caminho").
+    // Auditoria do status (21/11/2026), B1: "Avisar: equipe a caminho" só com o evento confirmado; na reserva em aberto,
+    // o cartão tem o "Cancelar reserva".
     if (status === 'DRAFT' || status === 'PENDING') {
-      expect(screen.getByRole('button', { name: 'Avisar: equipe a caminho' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Cancelar reserva' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Avisar: equipe a caminho' })).not.toBeInTheDocument();
     } else {
       expect(screen.getByText(/: sem ações de logística\.$/)).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Avisar: equipe a caminho' })).not.toBeInTheDocument();

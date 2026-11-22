@@ -4,7 +4,7 @@ import { apiFetch } from '../../services/api';
 import { fetchAllAdminBookings } from '../../services/adminBookings';
 import { isWithinLocalDateRange } from '../../utils/dateRange';
 import { downloadBookingsSpreadsheet } from '../../utils/bookingExport';
-import { BOOKING_STATUS_OPTIONS, DELIVERY_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '../../utils/bookingStatus';
+import { BOOKING_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, bookingStatusOptionsFrom, deliveryOptionsFor } from '../../utils/bookingStatus';
 import { logger } from '../../utils/logger';
 import { formatBookingTotal, hasBookingTotal } from '../../utils/formatPrice';
 import { normalizeString } from '../../utils/string';
@@ -22,6 +22,7 @@ import {
   Select,
   Modal,
   ConfirmModal,
+  Textarea,
   Card,
   Badge,
   Grid,
@@ -54,8 +55,6 @@ import {
 // Seletores da tabela: todos os valores que o backend aceita (fonte única em utils/bookingStatus). Com
 // uma lista parcial, a reserva cujo valor não estava nela (rascunho, em andamento, entrega concluída —
 // inclusive todo o histórico importado) aparecia como a primeira opção, "Pendente".
-const STATUS_OPTIONS = BOOKING_STATUS_OPTIONS;
-const DELIVERY_OPTIONS = DELIVERY_STATUS_OPTIONS;
 // Filtro de status: só status da RESERVA (antes misturava "Em trânsito"/"No local", que são de entrega,
 // e não tinha Rascunho, Em andamento nem Reembolsada).
 const STATUS_FILTER_OPTIONS = [
@@ -153,6 +152,13 @@ export const BookingListPage = () => {
   // D11: escolher "Confirmada" no status da linha abre a confirmação com "Avisar o cliente por e-mail".
   const [confirmingBooking, setConfirmingBooking] = useState<BookingListItem | null>(null);
   const [notifyClient, setNotifyClient] = useState(true);
+  // Auditoria do status (21/11/2026), C3 e C7: "Concluída" e "Cancelada" gravavam num clique. Concluir manda o pedido de
+  // avaliação e o cupom da indicação (não se desfaz); cancelar pede o motivo (observações internas e Histórico).
+  const [completingBooking, setCompletingBooking] = useState<BookingListItem | null>(null);
+  const [cancellingBooking, setCancellingBooking] = useState<BookingListItem | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelReasonError, setCancelReasonError] = useState<string | null>(null);
+  const [cancelSaving, setCancelSaving] = useState(false);
   const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
 
   const fetchBookings = useCallback(async () => {
@@ -245,12 +251,55 @@ export const BookingListPage = () => {
   // com "Avisar o cliente por e-mail" marcada. Devolver a Confirmada um evento em andamento ou concluído não
   // avisa ninguém (o servidor não repete a confirmação) e grava direto, como os outros status.
   const handleStatusSelect = (booking: BookingListItem, value: string) => {
+    if (value === booking.status) return;
     if (value === 'CONFIRMED' && !['CONFIRMED', 'IN_PROGRESS', 'COMPLETED'].includes(booking.status)) {
       setNotifyClient(true);
       setConfirmingBooking(booking);
       return;
     }
+    if (value === 'COMPLETED') {
+      setCompletingBooking(booking);
+      return;
+    }
+    // Revisão de 21/11/2026: desfazer um reembolso (Reembolsada → Cancelada) não é um cancelamento novo: grava direto,
+    // sem pedir motivo.
+    if (value === 'CANCELLED' && booking.status !== 'REFUNDED') {
+      setCancelReason('');
+      setCancelReasonError(null);
+      setCancellingBooking(booking);
+      return;
+    }
     void handleStatusChange(booking.id, 'status', value);
+  };
+
+  // C7: o cancelamento pela lista vai pela rota de cancelar, com o motivo (antes, a troca de status não deixava rastro).
+  const handleCancelBooking = async () => {
+    const target = cancellingBooking;
+    const motivo = cancelReason.trim();
+    if (!target) return;
+    if (!motivo) {
+      setCancelReasonError('Escreva o motivo do cancelamento.');
+      return;
+    }
+    // Revisão de 21/11/2026: a janela fica aberta até o servidor responder (com erro, o motivo digitado não se perde), e
+    // a lista é relida depois (o cancelamento também mexe na entrega).
+    setCancelSaving(true);
+    try {
+      await apiFetch(`/bookings/${target.id}/cancel`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: motivo }),
+      });
+      setCancellingBooking(null);
+      setBookings((prev) => prev.map((b) => (b.id === target.id ? { ...b, status: 'CANCELLED' } : b)));
+      void fetchBookings();
+      void refreshAdminSummary({ force: true });
+      addNotification({ type: 'success', title: 'Reserva cancelada', message: 'O motivo ficou nas observações internas.' });
+    } catch (err: unknown) {
+      addNotification({ type: 'error', title: 'Erro', message: err instanceof Error ? err.message : 'Erro ao cancelar a reserva.' });
+    } finally {
+      setCancelSaving(false);
+    }
   };
 
   // Situação do pagamento: PUT só com o campo (vazio = "não informado"). Não passa pelo formulário
@@ -645,7 +694,8 @@ export const BookingListPage = () => {
                           value={booking.status}
                                                     onChange={(e: ChangeEvent<HTMLSelectElement>) => handleStatusSelect(booking, e.target.value)}
                           aria-label={`Status da reserva ${booking.id}`}
-                          options={STATUS_OPTIONS}
+                          // C3: só o status atual e as trocas que valem a partir dele (a mesma tabela do servidor).
+                          options={bookingStatusOptionsFrom(booking.status)}
                         />
                       </td>
                       <td className="px-6 py-4">
@@ -663,7 +713,9 @@ export const BookingListPage = () => {
                           value={booking.deliveryStatus || 'PENDING'}
                                                     onChange={(e: ChangeEvent<HTMLSelectElement>) => handleStatusChange(booking.id, 'deliveryStatus', e.target.value)}
                           aria-label={`Entrega da reserva ${booking.id}`}
-                          options={DELIVERY_OPTIONS}
+                          // B1 (com a revisão de 21/11/2026): na reserva cancelada ou reembolsada, só voltar ao início ou
+                          // registrar o recolhimento do que ficou no local.
+                          options={deliveryOptionsFor(booking.status, booking.deliveryStatus)}
                         />
                       </td>
                       <td className="px-6 py-4">
@@ -759,6 +811,46 @@ export const BookingListPage = () => {
           checked={notifyClient}
           onChange={setNotifyClient}
           hasEmail={confirmingBooking ? Boolean(bookingEmail(confirmingBooking)) : undefined}
+        />
+      </ConfirmModal>
+
+      <ConfirmModal
+        isOpen={!!completingBooking}
+        onClose={() => setCompletingBooking(null)}
+        onConfirm={() => {
+          const target = completingBooking;
+          setCompletingBooking(null);
+          if (target) void handleStatusChange(target.id, 'status', 'COMPLETED');
+        }}
+        title="Marcar como concluída?"
+        message="O evento fica como concluído. O cliente recebe o pedido de avaliação e, se a reserva usou um código de indicação, quem indicou ganha o cupom de recompensa. Voltar o status depois não desfaz isso."
+        variant="success"
+        confirmText="Concluir"
+        cancelText="Voltar"
+      />
+
+      <ConfirmModal
+        isOpen={!!cancellingBooking}
+        onClose={() => setCancellingBooking(null)}
+        onConfirm={() => void handleCancelBooking()}
+        isLoading={cancelSaving}
+        title="Cancelar a reserva?"
+        message="A reserva passa para Cancelada e a data do equipamento fica livre."
+        variant="danger"
+        confirmText="Cancelar reserva"
+        cancelText="Voltar"
+      >
+        <Textarea
+          label="Motivo do cancelamento"
+          description="Fica nas observações internas da reserva (o cliente não vê)."
+          value={cancelReason}
+          maxLength={500}
+          rows={3}
+          error={cancelReasonError ?? undefined}
+          onChange={(e) => {
+            setCancelReason(e.target.value);
+            if (cancelReasonError) setCancelReasonError(null);
+          }}
         />
       </ConfirmModal>
 

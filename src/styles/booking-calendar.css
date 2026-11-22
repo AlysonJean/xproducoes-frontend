@@ -5,11 +5,13 @@
 .event-default{background:hsl(var(--muted));color:hsl(var(--foreground))}
 .event-pending{background:hsl(var(--warning) / 0.15);color:hsl(var(--foreground));border-left:3px solid hsl(var(--warning))}
 .event-confirmed{background:hsl(var(--success) / 0.15);color:hsl(var(--foreground));border-left:3px solid hsl(var(--success))}
+/* Auditoria do status (21/11/2026), B7: Em andamento, Cancelada e Rascunho também com os tokens do tema (antes, hex claros
+   fixos, ilegíveis no tema escuro); o .event-completed duplicado (hex) saiu; Reembolsada ganhou cor (caía no padrão). */
 .event-completed{background:hsl(var(--primary) / 0.1);color:hsl(var(--foreground));border-left:3px solid hsl(var(--primary))}
-.event-in-progress{background:#e0e7ff;color:#3730a3}
-.event-completed{background:#e0f2fe;color:#075985}
-.event-cancelled{background:#fee2e2;color:#991b1b}
-.event-draft{background:#f3f4f6;color:#374151}
+.event-in-progress{background:hsl(var(--info) / 0.15);color:hsl(var(--foreground));border-left:3px solid hsl(var(--info))}
+.event-cancelled{background:hsl(var(--destructive) / 0.12);color:hsl(var(--foreground));border-left:3px solid hsl(var(--destructive))}
+.event-refunded{background:hsl(var(--muted));color:hsl(var(--muted-foreground));border-left:3px solid hsl(var(--border))}
+.event-draft{background:hsl(var(--muted));color:hsl(var(--muted-foreground))}
 /* Ajustes de layout - evitar scroll horizontal */
 .rbc-time-view,.rbc-month-view{overflow-x:hidden}
 .rbc-time-header-content{overflow:hidden}

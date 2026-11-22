@@ -3,6 +3,7 @@ import { bookingAPI } from '@/services/api';
 import { formatPricingLineTotal, type ToArrangeKind } from '@/utils/bookingPricing';
 import { formatPrice } from '@/utils/formatPrice';
 import type { ProposalEmailStatus } from './SendProposalPanel';
+import { bookingStatusLabel, deliveryStatusLabel, PAYMENT_STATUS_LABELS } from '@/utils/bookingStatus';
 
 // D11 (aprovada em 02/11/2026): o cartão Histórico da ficha mostra cada envio da proposta (quando, o que e por quem),
 // lido de GET /admin/bookings/:id/history (registros da reserva, só campos seguros: nunca o link nem o nonce). Lê
@@ -37,6 +38,8 @@ interface HistoryEntry {
     discount?: number | null;
     adjustment?: number;
     changedSince?: boolean;
+    from?: string | number | null;
+    to?: string | number | null;
   };
 }
 
@@ -57,7 +60,32 @@ const EMAIL_TYPE_TEXT: Record<string, string> = {
   'crew-assignment': 'E-mail de escala da equipe',
 };
 
-const SHOWN_ACTIONS = ['PROPOSAL_SENT', 'EMAIL_SENT', 'EMAIL_FAILED', 'REVIEW_REQUESTED'];
+// Auditoria do status (21/11/2026), C7: as trocas de status, pagamento, entrega e valor (de, para e por quem).
+const CHANGE_ACTIONS = ['STATUS_CHANGED', 'PAYMENT_STATUS_CHANGED', 'DELIVERY_STATUS_CHANGED', 'PRICE_CHANGED'];
+const SHOWN_ACTIONS = ['PROPOSAL_SENT', 'EMAIL_SENT', 'EMAIL_FAILED', 'REVIEW_REQUESTED', ...CHANGE_ACTIONS];
+
+const paymentLabel = (value: unknown) =>
+  typeof value === 'string' && PAYMENT_STATUS_LABELS[value] ? PAYMENT_STATUS_LABELS[value] : 'Não informado';
+const priceLabel = (value: unknown) => (typeof value === 'number' ? formatPrice(value) : '—');
+
+/** "Status: Pendente → Confirmada", ou null quando não é uma troca. */
+const changeText = (entry: HistoryEntry): string | null => {
+  const { from, to, channel } = entry.details;
+  switch (entry.action) {
+    case 'STATUS_CHANGED': {
+      const who = channel === 'cliente' ? ' (pelo cliente)' : '';
+      return `Status: ${bookingStatusLabel(String(from ?? ''))} → ${bookingStatusLabel(String(to ?? ''))}${who}`;
+    }
+    case 'PAYMENT_STATUS_CHANGED':
+      return `Pagamento: ${paymentLabel(from)} → ${paymentLabel(to)}`;
+    case 'DELIVERY_STATUS_CHANGED':
+      return `Entrega: ${deliveryStatusLabel(String(from ?? 'PENDING'))} → ${deliveryStatusLabel(String(to ?? 'PENDING'))}`;
+    case 'PRICE_CHANGED':
+      return `Valor: ${priceLabel(from)} → ${priceLabel(to)}`;
+    default:
+      return null;
+  }
+};
 
 const dateTimeBR = new Intl.DateTimeFormat('pt-BR', {
   timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
@@ -65,6 +93,8 @@ const dateTimeBR = new Intl.DateTimeFormat('pt-BR', {
 const dateBR = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric' });
 
 const entryText = (entry: HistoryEntry) => {
+  const change = changeText(entry);
+  if (change) return change;
   if (entry.action === 'EMAIL_SENT' || entry.action === 'EMAIL_FAILED') {
     const label = (entry.details.type && EMAIL_TYPE_TEXT[entry.details.type]) || 'E-mail';
     return `${label} ${entry.action === 'EMAIL_SENT' ? 'enviado' : 'falhou'}`;

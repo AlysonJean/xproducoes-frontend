@@ -415,6 +415,7 @@ export const BookingCalendarPage = () => {
       IN_PROGRESS: 'event-in-progress',
       COMPLETED: 'event-completed',
       CANCELLED: 'event-cancelled',
+      REFUNDED: 'event-refunded',
       DRAFT: 'event-draft',
     };
     return { className: map[status] || 'event-default' };
@@ -625,7 +626,9 @@ export const BookingCalendarPage = () => {
                                         onChange={(e: ChangeEvent<HTMLSelectElement>) => setFilters(f => ({ ...f, status: e.target.value as FilterStatus }))}
                     options={[
                         { value: 'ALL', label: 'Todos os status' },
-                        ...BOOKING_STATUS_OPTIONS
+                        // Auditoria do status (21/11/2026), B7: a agenda não traz as canceladas (GET /bookings/calendar
+                        // as tira), então o filtro "Cancelada" nunca mostrava nada.
+                        ...BOOKING_STATUS_OPTIONS.filter((option) => option.value !== 'CANCELLED')
                     ]}
                   />
                   </div>

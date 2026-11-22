@@ -132,13 +132,26 @@ describe('BookingDetailPage — "Avisar o cliente por e-mail" (D11)', () => {
     });
   });
 
-  it('"Alocar equipe e confirmar" em reserva já confirmada: salvar não confirma de novo, e a caixa não aparece', async () => {
+  // Auditoria do status (21/11/2026): na reserva já confirmada o botão diz só "Alocar equipe" (não confirma nada).
+  it('"Alocar equipe" em reserva já confirmada: salvar não confirma de novo, e a caixa não aparece', async () => {
     await renderFicha({ ...pendente, status: 'CONFIRMED' });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Alocar equipe e confirmar' }));
+    expect(screen.queryByRole('button', { name: 'Alocar equipe e confirmar' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Alocar equipe' }));
     const janela = await screen.findByRole('dialog', { name: 'Gerenciar Colaboradores' });
 
     expect(within(janela).queryByLabelText(LABEL)).not.toBeInTheDocument();
+  });
+
+  // C1: na reserva cancelada ou reembolsada o botão some (ele a voltava para Confirmada e avisava o cliente sem a caixa).
+  it.each([
+    ['CANCELLED', 'Reserva cancelada. Para reabrir como Pendente ou registrar o reembolso, use a lista de Reservas.'],
+    ['REFUNDED', 'Reserva reembolsada. Se o reembolso foi um engano, volte para Cancelada na lista de Reservas.'],
+  ])('reserva %s: sem "Alocar equipe" (não reabre a reserva por aqui) e o caminho certo no cartão', async (status, texto) => {
+    await renderFicha({ ...pendente, status });
+
+    expect(screen.queryByRole('button', { name: /^Alocar equipe/ })).not.toBeInTheDocument();
+    expect(screen.getByText(texto)).toBeInTheDocument();
   });
 
   it('a janela "Gerenciar Colaboradores" de verdade mostra o rodapé extra (onde a caixa aparece)', async () => {

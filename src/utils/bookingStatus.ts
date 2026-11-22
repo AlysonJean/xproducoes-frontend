@@ -53,6 +53,41 @@ export const BOOKING_STATUS_OPTIONS = toOptions(BOOKING_STATUS_LABELS);
 export const DELIVERY_STATUS_OPTIONS = toOptions(DELIVERY_STATUS_LABELS);
 export const PAYMENT_STATUS_OPTIONS: Option[] = [{ value: '', label: 'Não informado' }, ...toOptions(PAYMENT_STATUS_LABELS)];
 
+// Auditoria do status (21/11/2026), C3: as trocas que valem a partir de cada status, iguais às do servidor
+// (backend/src/services/booking/bookingTransitions.ts, STATUS_TRANSITIONS). O seletor da lista só oferece estas; a data
+// do evento (Em andamento e Concluída só a partir do dia dele) e o contrato o servidor confere e explica no 409.
+export const BOOKING_STATUS_TRANSITIONS: Record<string, string[]> = {
+  DRAFT: ['PENDING', 'CONFIRMED', 'CANCELLED'],
+  PENDING: ['DRAFT', 'CONFIRMED', 'CANCELLED'],
+  CONFIRMED: ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+  IN_PROGRESS: ['CONFIRMED', 'COMPLETED', 'CANCELLED'],
+  COMPLETED: ['CONFIRMED', 'IN_PROGRESS'],
+  CANCELLED: ['PENDING', 'REFUNDED'],
+  REFUNDED: ['CANCELLED'],
+};
+
+/** As opções do seletor de status de uma reserva: o status atual e as trocas que valem a partir dele. */
+export const bookingStatusOptionsFrom = (status?: string | null): Option[] => {
+  const next = (status && BOOKING_STATUS_TRANSITIONS[status]) || null;
+  if (!status || !next) return BOOKING_STATUS_OPTIONS;
+  return BOOKING_STATUS_OPTIONS.filter((option) => option.value === status || next.includes(option.value));
+};
+
+// B2: uma reserva nova entra como Rascunho, Pendente ou Confirmada.
+export const NEW_BOOKING_STATUS_OPTIONS = BOOKING_STATUS_OPTIONS.filter((option) =>
+  ['DRAFT', 'PENDING', 'CONFIRMED'].includes(option.value),
+);
+
+// B1 (com a revisão de 21/11/2026): na reserva cancelada ou reembolsada, a entrega só volta ao início ou registra o
+// recolhimento do que ficou no local (aguardando retirada, concluída), como o servidor (deliveryRefusal).
+const CLOSED_DELIVERY = ['PENDING', 'PICKUP_PENDING', 'COMPLETED'];
+
+/** As opções do seletor de entrega de uma reserva: na cancelada ou reembolsada, as do recolhimento (e a atual). */
+export const deliveryOptionsFor = (status?: string | null, current?: string | null): Option[] => {
+  if (status !== 'CANCELLED' && status !== 'REFUNDED') return DELIVERY_STATUS_OPTIONS;
+  return DELIVERY_STATUS_OPTIONS.filter((option) => CLOSED_DELIVERY.includes(option.value) || option.value === (current || 'PENDING'));
+};
+
 export const bookingStatusLabel = (status?: string | null) =>
   (status && BOOKING_STATUS_LABELS[status]) || status || '—';
 export const bookingStatusVariant = (status?: string | null): StandardVariant =>
@@ -81,20 +116,38 @@ export interface ProposalSummaryView {
   expired?: boolean;
   sentTotal?: number | null;
   changedSinceSent?: boolean | null;
+  /** Auditoria do status (21/11/2026), C4: a data do aceite do contrato pelo site (o servidor já mandava). */
+  contractAcceptedAt?: string | null;
 }
 
-type ClientProposalBooking = { status?: string | null; proposal?: ProposalSummaryView | null };
+type ClientProposalBooking = { status?: string | null; paymentStatus?: string | null; proposal?: ProposalSummaryView | null };
+
+// C4: depois do aceite a reserva segue Pendente até a equipe registrar o sinal e confirmar. O selo dizia "Proposta
+// enviada — aguardando sua resposta" e, passada a validade, "Proposta vencida — peça uma nova", enquanto o cartão do
+// contrato pedia o PIX.
+export const CONTRACT_ACCEPTED_LABEL = 'Contrato aceito — aguardando o sinal';
+
+// Revisão de 21/11/2026: com o sinal já registrado pela equipe (pagamento parcial ou pago), o selo não pede o sinal.
+export const CONTRACT_PAID_LABEL = 'Contrato aceito — sinal recebido';
+
+const contractAccepted = (booking: ClientProposalBooking) =>
+  booking.status === 'PENDING' && Boolean(booking.proposal?.contractAcceptedAt);
 
 /** Proposta enviada de reserva pendente que já venceu: a conta do servidor (expired) ou a validade já passada. */
 export const proposalExpiredForClient = (booking: ClientProposalBooking, now: number = Date.now()): boolean => {
   const proposal = booking.proposal;
   if (booking.status !== 'PENDING' || !proposal?.sentAt) return false;
+  // C4: aceita não vence mais (a validade é da proposta, e ela já foi aceita).
+  if (contractAccepted(booking)) return false;
   if (proposal.expired === true) return true;
   const until = proposal.validUntil ? Date.parse(proposal.validUntil) : NaN;
   return Number.isFinite(until) && now > until;
 };
 
 export const clientBookingStatusLabel = (booking: ClientProposalBooking): string => {
+  if (contractAccepted(booking)) {
+    return booking.paymentStatus === 'PARTIAL' || booking.paymentStatus === 'PAID' ? CONTRACT_PAID_LABEL : CONTRACT_ACCEPTED_LABEL;
+  }
   if (booking.status === 'PENDING' && booking.proposal?.sentAt) {
     return proposalExpiredForClient(booking) ? PROPOSAL_EXPIRED_LABEL : PROPOSAL_SENT_LABEL;
   }
@@ -111,6 +164,8 @@ const brasiliaDay = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Pa
 export const clientProposalValidityText = (booking: ClientProposalBooking, now: number = Date.now()): string | null => {
   const proposal = booking.proposal;
   if (booking.status !== 'PENDING' || !proposal?.sentAt) return null;
+  // C4: com o contrato aceito, a validade da proposta não interessa mais (o cartão do contrato mostra os prazos).
+  if (contractAccepted(booking)) return null;
   const until = proposal.validUntil ? new Date(proposal.validUntil) : null;
   const day = until && !Number.isNaN(until.getTime()) ? brasiliaDay.format(until) : null;
   if (proposalExpiredForClient(booking, now)) {

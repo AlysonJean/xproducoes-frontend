@@ -10,7 +10,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 const { bookingAPI, addNotification, gaEvent } = vi.hoisted(() => ({
   bookingAPI: {
     getById: vi.fn(), updateStatus: vi.fn(), updateDeliveryStatus: vi.fn(), delete: vi.fn(), confirmWithDetails: vi.fn(),
-    sendProposal: vi.fn(), getAuditHistory: vi.fn(), requestReview: vi.fn(),
+    sendProposal: vi.fn(), getAuditHistory: vi.fn(), requestReview: vi.fn(), cancel: vi.fn(),
   },
   addNotification: vi.fn(),
   gaEvent: vi.fn(),
@@ -53,8 +53,11 @@ const renderFicha = async (reserva: object) => {
 
 describe('BookingDetailPage — WhatsApp por etapa (P14 parte 2)', () => {
   let open: MockInstance<typeof window.open>;
+  let tabs: Array<{ location: { href: string }; close: ReturnType<typeof vi.fn>; closed: boolean; opener: unknown }>;
+  // O endereço de cada abertura: o do window.open, ou o que entrou na aba reservada no clique.
+  const abertos = () => open.mock.calls.map((call, i) => String(call[0] ?? '') || tabs[i]?.location.href || '');
   const aberto = (i = 0) => {
-    const url = new URL(String(open.mock.calls[i][0]));
+    const url = new URL(abertos()[i]);
     return { para: `${url.origin}${url.pathname}`, texto: url.searchParams.get('text') ?? '' };
   };
 
@@ -63,7 +66,15 @@ describe('BookingDetailPage — WhatsApp por etapa (P14 parte 2)', () => {
     bookingAPI.getAuditHistory.mockResolvedValue({ data: [] });
     bookingAPI.updateStatus.mockResolvedValue({});
     bookingAPI.updateDeliveryStatus.mockResolvedValue({});
-    open = vi.spyOn(window, 'open').mockReturnValue({} as Window);
+    bookingAPI.cancel.mockResolvedValue({});
+    // Auditoria do status (21/11/2026), M7: a troca de status reserva a aba no clique (window.open('', '_blank')) e só
+    // põe o WhatsApp nela depois de gravar; os outros botões abrem o wa.me direto.
+    tabs = [];
+    open = vi.spyOn(window, 'open').mockImplementation(() => {
+      const tab = { location: { href: '' }, close: vi.fn(), closed: false, opener: {} };
+      tabs.push(tab);
+      return tab as unknown as Window;
+    });
   });
   afterEach(() => {
     open.mockRestore();
@@ -168,10 +179,16 @@ describe('BookingDetailPage — WhatsApp por etapa (P14 parte 2)', () => {
     await waitFor(() => expect(bookingAPI.updateStatus).toHaveBeenCalledWith(base.id, 'CONFIRMED', {}));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Confirmar a reserva?' })).toBeNull());
 
+    // Auditoria do status (21/11/2026), C7: cancelar pede o motivo e vai pela rota de cancelar.
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar reserva' }));
     const cancelar = await screen.findByRole('dialog', { name: 'Cancelar a reserva?' });
     fireEvent.click(within(cancelar).getByRole('button', { name: 'Cancelar reserva' }));
-    await waitFor(() => expect(bookingAPI.updateStatus).toHaveBeenCalledWith(base.id, 'CANCELLED', undefined));
+    expect(await within(cancelar).findByText('Escreva o motivo do cancelamento.')).toBeInTheDocument();
+    expect(bookingAPI.cancel).not.toHaveBeenCalled();
+    fireEvent.change(within(cancelar).getByLabelText('Motivo do cancelamento'), { target: { value: 'Cliente mudou a data' } });
+    fireEvent.click(within(cancelar).getByRole('button', { name: 'Cancelar reserva' }));
+    await waitFor(() => expect(bookingAPI.cancel).toHaveBeenCalledWith(base.id, 'Cliente mudou a data'));
+    expect(bookingAPI.updateStatus).not.toHaveBeenCalledWith(base.id, 'CANCELLED', undefined);
 
     expect(open).not.toHaveBeenCalled();
   });
@@ -183,10 +200,28 @@ describe('BookingDetailPage — WhatsApp por etapa (P14 parte 2)', () => {
     const janela = await screen.findByRole('dialog', { name: 'Confirmar a reserva?' });
     fireEvent.click(within(janela).getByRole('button', { name: 'Confirmar' }));
 
+    // M7: a aba abre no clique, vazia; o WhatsApp entra nela depois que a confirmação gravou.
     expect(open).toHaveBeenCalledTimes(1);
-    expect(aberto().texto).toContain('Sua reserva XP-ANA-20271220-2200-AB1 está confirmada.');
+    expect(open).toHaveBeenCalledWith('', '_blank');
     await waitFor(() => expect(bookingAPI.updateStatus).toHaveBeenCalledWith(base.id, 'CONFIRMED', {}));
+    await waitFor(() => expect(aberto().texto).toContain('Sua reserva XP-ANA-20271220-2200-AB1 está confirmada.'));
     expect(gaEvent).not.toHaveBeenCalled();
+  });
+
+  it('M7: a confirmação que falha (409) não leva o WhatsApp: a aba reservada fecha e a janela fica aberta com o motivo', async () => {
+    bookingAPI.updateStatus.mockRejectedValue(Object.assign(new Error('Request failed with status code 409'), {
+      response: { status: 409, data: { success: false, error: 'Não é possível confirmar: equipamento já reservado.' } },
+    }));
+    await renderFicha(base);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar e avisar pelo WhatsApp' }));
+    const janela = await screen.findByRole('dialog', { name: 'Confirmar a reserva?' });
+    fireEvent.click(within(janela).getByRole('button', { name: 'Confirmar' }));
+
+    await waitFor(() => expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'error', message: 'Não é possível confirmar: equipamento já reservado.' })));
+    await waitFor(() => expect(tabs[0].close).toHaveBeenCalled());
+    expect(tabs[0].location.href).toBe('');
+    expect(screen.getByRole('dialog', { name: 'Confirmar a reserva?' })).toBeInTheDocument();
   });
 
   // Auditoria do orçamento (12/11/2026), E8: o "PDF + WhatsApp" (PDF parado no valor do dia, "Segue em PDF a proposta")

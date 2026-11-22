@@ -28,8 +28,8 @@ const pendente = {
   attachments: [], equipments: [], services: [], eventCollaborators: [],
 };
 
-const abrirConfirmacao = async () => {
-  bookingAPI.getById.mockResolvedValue({ data: pendente });
+const abrirConfirmacao = async (reserva: Record<string, unknown> = pendente) => {
+  bookingAPI.getById.mockResolvedValue({ data: reserva });
   render(
     <MemoryRouter initialEntries={['/admin/reservas/XP']}>
       <Routes><Route path="/admin/reservas/:id" element={<BookingDetailPage />} /></Routes>
@@ -42,6 +42,24 @@ const abrirConfirmacao = async () => {
 
 describe('Ficha — "Confirmar reserva" com o motivo da recusa', () => {
   beforeEach(() => vi.clearAllMocks());
+
+  // Auditoria do status (21/11/2026), B4: o pedido do briefing ainda sem valor ("Em preparação") era confirmado com R$ 0, e
+  // o cliente recebia "confirmada". Sem valor na reserva, o valor final é obrigatório; com valor, em branco fica o de hoje.
+  it('reserva sem valor: confirmar com o campo em branco não vai ao servidor e pede o valor', async () => {
+    const janela = await abrirConfirmacao({ ...pendente, totalPrice: '0' });
+    const campo = within(janela).getByLabelText('Valor final, com frete e pedágio (R$)');
+    fireEvent.change(campo, { target: { value: '' } });
+    fireEvent.click(within(janela).getByRole('button', { name: 'Confirmar reserva' }));
+
+    await waitFor(() => expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'error', title: 'Falta o valor', message: 'Esta reserva ainda não tem valor. Digite o valor final antes de confirmar.',
+    })));
+    expect(bookingAPI.confirmWithDetails).not.toHaveBeenCalled();
+
+    fireEvent.change(campo, { target: { value: '1500' } });
+    fireEvent.click(within(janela).getByRole('button', { name: 'Confirmar reserva' }));
+    await waitFor(() => expect(bookingAPI.confirmWithDetails).toHaveBeenCalledWith(pendente.id, expect.objectContaining({ totalPrice: 1500 })));
+  });
 
   it('o campo diz que o valor inclui frete e pedágio; zero ou negativo não vai ao servidor', async () => {
     const janela = await abrirConfirmacao();
@@ -62,6 +80,20 @@ describe('Ficha — "Confirmar reserva" com o motivo da recusa', () => {
 
     await waitFor(() => expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({
       type: 'error', title: 'Erro ao confirmar', message: 'Equipamento em uso no evento "Casamento Bia" na mesma data.',
+    })));
+  });
+
+  // Auditoria do status (21/11/2026), M6: o bookingAPI usa axios, que rejeita com "Request failed with status code 409" e
+  // o motivo em response.data. A ficha mostrava a frase do axios.
+  it('erro do axios (409): a notificação traz o motivo de response.data, não "Request failed with status code 409"', async () => {
+    bookingAPI.confirmWithDetails.mockRejectedValue(Object.assign(new Error('Request failed with status code 409'), {
+      response: { status: 409, data: { success: false, message: 'Não é possível confirmar: equipamento(s) já reservado(s) para "Casamento Bia".' } },
+    }));
+    const janela = await abrirConfirmacao();
+    fireEvent.click(within(janela).getByRole('button', { name: 'Confirmar reserva' }));
+
+    await waitFor(() => expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'error', title: 'Erro ao confirmar', message: 'Não é possível confirmar: equipamento(s) já reservado(s) para "Casamento Bia".',
     })));
   });
 });

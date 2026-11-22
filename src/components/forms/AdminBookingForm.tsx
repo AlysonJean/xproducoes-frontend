@@ -17,7 +17,7 @@ import {
   Alert,
   Checkbox,
 } from '../ui/StandardComponents';
-import { BOOKING_STATUS_OPTIONS, DELIVERY_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '../../utils/bookingStatus';
+import { DELIVERY_STATUS_OPTIONS, NEW_BOOKING_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '../../utils/bookingStatus';
 import { BrandLoader } from '../ui/BrandLoader';
 import { logger } from '../../utils/logger';
 import { useFormDraft } from '../../hooks/useFormDraft';
@@ -802,7 +802,9 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
                 <Select
                   label="Status"
                   {...register('status')}
-                  options={BOOKING_STATUS_OPTIONS}
+                  // Auditoria do status (21/11/2026), B2: reserva nova é Rascunho, Pendente ou Confirmada (o servidor
+                  // recusa as outras).
+                  options={NEW_BOOKING_STATUS_OPTIONS}
                 />
               )}
               <Select
