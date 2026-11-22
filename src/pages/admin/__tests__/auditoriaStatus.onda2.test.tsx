@@ -208,6 +208,29 @@ describe('ficha — onda 2 da auditoria do status', () => {
     await waitFor(() => expect(bookingAPI.updateStatus).toHaveBeenCalledWith(base.id, 'CONFIRMED', { markInitialPaymentReceived: true }));
   });
 
+  it('onda 2b (D8): a reserva reembolsada diz quanto foi devolvido e quando', async () => {
+    await renderFicha({ ...base, status: 'REFUNDED', paymentStatus: 'REFUNDED', refundAmount: '450.00', refundedAt: '2026-11-20T15:00:00.000Z' });
+
+    expect(
+      screen.getByText('Reserva reembolsada: R$ 450,00 devolvidos em 20/11/2026. Se o reembolso foi um engano, volte para Cancelada na lista de Reservas.'),
+    ).toBeInTheDocument();
+  });
+
+  it('onda 2b (B3): confirmar de novo sem repetir o aviso: a ficha diz que o cliente já tinha recebido a confirmação', async () => {
+    bookingAPI.confirmWithDetails.mockResolvedValue({ data: { confirmationNoticeSkipped: true } });
+    await renderFicha(base);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
+    const janela = await screen.findByRole('dialog', { name: 'Confirmar reserva' });
+    fireEvent.click(within(janela).getByRole('button', { name: 'Confirmar reserva' }));
+
+    await waitFor(() =>
+      expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'info',
+        message: 'O cliente já tinha recebido a confirmação desta data: o e-mail e o aviso no site não foram repetidos.',
+      })),
+    );
+  });
+
   it('D1: o aviso da pré-reserva que a confirmação devolve aparece como alerta', async () => {
     bookingAPI.confirmWithDetails.mockResolvedValue({ data: { conflictWarning: 'Atenção: o mesmo equipamento está pré-reservado.' } });
     await renderFicha(base);

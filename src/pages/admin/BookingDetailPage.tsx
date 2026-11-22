@@ -257,6 +257,16 @@ const STATUS_ACTIONS: Record<StatusAction, { status: string; title: string; conf
   on_the_way: { status: 'ON_THE_WAY', title: 'Equipe a caminho?', confirmText: 'Marcar a caminho', variant: 'default' },
 };
 
+// Onda 2b da auditoria do status (D8): ": R$ 450,00 devolvidos em 20/11/2026", quando o reembolso foi registrado.
+const refundDay = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric' });
+function refundText(booking: { refundAmount?: number | string | null; refundedAt?: string | null }): string {
+  const amount = Number(booking.refundAmount);
+  if (booking.refundAmount === null || booking.refundAmount === undefined || !Number.isFinite(amount) || amount <= 0) return '';
+  const when = booking.refundedAt ? new Date(booking.refundedAt) : null;
+  const day = when && !Number.isNaN(when.getTime()) ? ` em ${refundDay.format(when)}` : '';
+  return `: ${amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} devolvidos${day}`;
+}
+
 export const BookingDetailPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -389,6 +399,10 @@ export const BookingDetailPage = () => {
   const warnPreReservation = (data: unknown) => {
     const warning = (data as { conflictWarning?: unknown } | null | undefined)?.conflictWarning;
     if (typeof warning === 'string' && warning) addNotification({ type: 'warning', title: 'Pré-reserva no mesmo equipamento', message: warning });
+    // Onda 2b (B3): confirmar de novo na mesma data não repete o aviso ao cliente.
+    if ((data as { confirmationNoticeSkipped?: unknown } | null | undefined)?.confirmationNoticeSkipped === true) {
+      addNotification({ type: 'info', title: 'Aviso não repetido', message: 'O cliente já tinha recebido a confirmação desta data: o e-mail e o aviso no site não foram repetidos.' });
+    }
   };
 
   // Devolve true quando a troca gravou (a janela do WhatsApp só abre o WhatsApp nesse caso, M7).
@@ -841,7 +855,7 @@ export const BookingDetailPage = () => {
                 {/* Auditoria do status (21/11/2026): na cancelada, o cartão Logística não tem ações; reabrir e reembolso
                     ficam no seletor da lista, que só oferece as trocas que valem. */}
                 {status === 'REFUNDED'
-                  ? 'Reserva reembolsada. Se o reembolso foi um engano, volte para Cancelada na lista de Reservas.'
+                  ? `Reserva reembolsada${refundText(booking)}. Se o reembolso foi um engano, volte para Cancelada na lista de Reservas.`
                   : isClosed
                     ? `Reserva ${bookingStatusLabel(status).toLowerCase()}. Para reabrir como Pendente ou registrar o reembolso, use a lista de Reservas.`
                     : `Reserva ${bookingStatusLabel(status).toLowerCase()}. Para mudar o status, use os botões de Logística ou a lista de Reservas.`}

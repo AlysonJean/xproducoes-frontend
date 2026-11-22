@@ -106,7 +106,8 @@ export const formatBookingPaymentStatus = (status?: BookingPaymentStatus | strin
   const statusMap: Record<BookingPaymentStatus, string> = {
     [BookingPaymentStatus.PENDING]: 'Pendente',
     [BookingPaymentStatus.PARTIAL]: 'Parcial',
-    [BookingPaymentStatus.PAID]: 'Pago'
+    [BookingPaymentStatus.PAID]: 'Pago',
+    [BookingPaymentStatus.REFUNDED]: 'Devolvido'
   };
 
   return (status && statusMap[status as BookingPaymentStatus]) || 'Não informado';

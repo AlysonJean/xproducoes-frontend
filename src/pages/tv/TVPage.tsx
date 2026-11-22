@@ -67,7 +67,9 @@ interface TVConfigResponse {
     // D22: janela ativa pelo relógio do servidor (ver serverWindowEnd)
     serverNow?: string;
     activeUntil?: string | null;
-    activeRule?: 'eventEnd' | 'lastActivity';
+    activeRule?: 'eventEnd' | 'lastActivity' | 'eventCancelled';
+    // Onda 2b da auditoria do status (B15): a reserva do mural foi cancelada (ou reembolsada).
+    eventCancelled?: boolean;
 }
 
 interface LeaderboardItem {
@@ -297,9 +299,9 @@ const serverWindowEnd = (res: TVConfigResponse): number | null => {
 
 // Aviso discreto da TV pausada, no alto da tela: o QR Code e o "Participe" ficam nas laterais, no centro ou
 // embaixo, nunca aqui.
-const PausedNotice: React.FC = () => (
+const PausedNotice: React.FC<{ eventCancelled?: boolean }> = ({ eventCancelled = false }) => (
     <div role="status" className="absolute top-6 left-1/2 -translate-x-1/2 z-30 max-w-[90%] rounded-full bg-black/70 px-6 py-3 text-center text-xl text-white/80 backdrop-blur-sm pointer-events-none">
-        Mural pausado. Toque na tela ou aperte uma tecla para continuar.
+        {eventCancelled ? 'Este evento foi cancelado. O mural não recebe mais fotos.' : 'Mural pausado. Toque na tela ou aperte uma tecla para continuar.'}
     </div>
 );
 
@@ -330,6 +332,8 @@ const TVPage: React.FC = () => {
     // D22: fim da janela ativa no relógio desta TV (null até a primeira configuração) e a pausa.
     const [windowEnd, setWindowEnd] = useState<number | null>(null);
     const [wallPaused, setWallPaused] = useState(false);
+    // B15: mural de evento cancelado: pausa na hora (sem o mínimo de 12 h do mural sem reserva) e não retoma ao toque.
+    const [eventCancelled, setEventCancelled] = useState(false);
     // Mural sem reserva (a janela anda com a atividade). Ref: lida nos handlers do socket sem reconectar.
     const standaloneRef = useRef(true);
 
@@ -366,6 +370,13 @@ const TVPage: React.FC = () => {
                 });
                 // D22: o fim da janela no relógio desta TV. Com a TV ativa nunca encolhe; na primeira
                 // configuração de um mural sem reserva, abrir a TV conta como atividade (pelo menos 12 h).
+                const cancelledNow = res.eventCancelled === true || res.activeRule === 'eventCancelled';
+                setEventCancelled(cancelledNow);
+                if (cancelledNow) {
+                    setWindowEnd(Date.now());
+                    setWallPaused(true);
+                    return res;
+                }
                 const fromServer = serverWindowEnd(res);
                 const standalone = res.activeRule !== 'eventEnd';
                 standaloneRef.current = standalone;
@@ -561,7 +572,7 @@ const TVPage: React.FC = () => {
     // buscada de novo (pode ter havido atividade) e os efeitos acima voltam a buscar avisos e ranking e
     // reconectam o socket.
     useEffect(() => {
-        if (!wallPaused) return;
+        if (!wallPaused || eventCancelled) return;
         const resume = () => {
             setWindowEnd(Date.now() + WALL_RESUME_MS);
             setWallPaused(false);
@@ -578,7 +589,7 @@ const TVPage: React.FC = () => {
             window.removeEventListener('keydown', resume);
             document.removeEventListener('visibilitychange', onVisibilityChange);
         };
-    }, [wallPaused, fetchConfig]);
+    }, [wallPaused, eventCancelled, fetchConfig]);
 
     // 3. Slideshow Rotation Logic (Dynamic Duration)
     useEffect(() => {
@@ -687,7 +698,7 @@ const TVPage: React.FC = () => {
         return (
             <div className="relative w-screen h-screen bg-black text-white overflow-hidden font-sans selection:bg-white selection:text-black">
                 <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-black to-black" aria-hidden="true" />
-                {wallPaused && <PausedNotice />}
+                {wallPaused && <PausedNotice eventCancelled={eventCancelled} />}
                 <div className="relative z-10 h-full flex flex-col items-center justify-center gap-10 p-12 text-center">
                     <h1 className="text-6xl xl:text-7xl font-bold tracking-tight">{config.name}</h1>
                     <p className="text-3xl xl:text-4xl text-white/70">Mande sua foto e apareça no telão!</p>
@@ -754,7 +765,7 @@ const TVPage: React.FC = () => {
                 <FloatingOverlay config={config} />
             )}
 
-            {wallPaused && <PausedNotice />}
+            {wallPaused && <PausedNotice eventCancelled={eventCancelled} />}
         </div>
     );
 }

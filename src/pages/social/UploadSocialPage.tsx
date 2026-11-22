@@ -22,6 +22,7 @@ interface TvConfigResponse {
     eventName?: string;
     hashtag?: string;
     qrCodeText?: string;
+    eventCancelled?: boolean;
 }
 
 interface UploadedPost {
@@ -33,7 +34,7 @@ interface UploadedPost {
 // jeito não resolve (ou só resolve depois de esperar). Esses textos vêm do backend
 // (middlewares/publicWallUpload.ts e os limites do mural em rateLimitMiddleware.ts) e aparecem como
 // chegam; o resto (queda de rede, tempo esgotado, erro de proxy) segue com a mensagem genérica.
-const GUEST_UPLOAD_SERVER_MESSAGE = /^(Foto muito grande|Envie uma foto|Muitos envios ao mesmo tempo|Muitas fotos|Mural não encontrado)/;
+const GUEST_UPLOAD_SERVER_MESSAGE = /^(Foto muito grande|Envie uma foto|Muitos envios ao mesmo tempo|Muitas fotos|Mural não encontrado|Este evento foi cancelado)/;
 
 const UploadSocialPage = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -43,6 +44,7 @@ const UploadSocialPage = () => {
     const [config, setConfig] = useState<WallConfig | null>(null);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
+    const [eventCancelled, setEventCancelled] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
@@ -59,6 +61,7 @@ const UploadSocialPage = () => {
             setLoadError(false);
             if (slug) {
                 const res = await apiFetch<TvConfigResponse>(`/tv/config?slug=${slug}`);
+                setEventCancelled(res.eventCancelled === true);
                 if (res.linked) {
                     setConfig({
                         name: res.eventName || '',
@@ -147,6 +150,19 @@ const UploadSocialPage = () => {
                         description="Verifique sua conexão e tente de novo."
                         action={<Button size="sm" variant="outline" onClick={fetchConfig}>Tentar de novo</Button>}
                     />
+                </div>
+            </div>
+        );
+    }
+
+    // Onda 2b da auditoria do status (B15): o mural de evento cancelado não recebe mais fotos.
+    if (eventCancelled) {
+        return (
+            <div className="min-h-[60vh] flex items-center justify-center bg-background p-6 text-center">
+                <div className="space-y-4">
+                    <h1 className="text-2xl font-bold text-foreground">Este evento foi cancelado</h1>
+                    <p className="text-muted-foreground">O mural não recebe mais fotos.</p>
+                    <Link to="/" className={buttonVariants({ variant: 'outline', size: 'sm' })}>Voltar para o início</Link>
                 </div>
             </div>
         );

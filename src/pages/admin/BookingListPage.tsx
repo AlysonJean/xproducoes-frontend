@@ -4,8 +4,9 @@ import { apiFetch } from '../../services/api';
 import { fetchAllAdminBookings } from '../../services/adminBookings';
 import { isWithinLocalDateRange } from '../../utils/dateRange';
 import { downloadBookingsSpreadsheet } from '../../utils/bookingExport';
-import { BOOKING_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, acceptedContractBadge, bookingStatusOptionsFrom, deliveryOptionsFor } from '../../utils/bookingStatus';
+import { BOOKING_STATUS_OPTIONS, acceptedContractBadge, bookingStatusOptionsFrom, deliveryOptionsFor, paymentOptionsFor } from '../../utils/bookingStatus';
 import { MarkPaymentCheckbox } from '../../components/bookings/CancelChoices';
+import { RefundModal, type RefundInput } from '../../components/bookings/RefundModal';
 import { logger } from '../../utils/logger';
 import { formatBookingTotal, hasBookingTotal } from '../../utils/formatPrice';
 import { normalizeString } from '../../utils/string';
@@ -171,6 +172,8 @@ export const BookingListPage = () => {
   // Onda 2 (D2 e D6): avisar o cliente no cancelamento; registrar o sinal ao confirmar uma reserva aceita sem pagamento.
   const [notifyOnCancel, setNotifyOnCancel] = useState(true);
   const [markPayment, setMarkPayment] = useState(true);
+  // Onda 2b (D8): "Reembolsada" pede o valor devolvido e o dia.
+  const [refundingBooking, setRefundingBooking] = useState<BookingListItem | null>(null);
   const { guardClose, isConfirmOpen, confirmDiscard, cancelDiscard } = useUnsavedChangesGuard(isFormDirty);
 
   const fetchBookings = useCallback(async () => {
@@ -225,15 +228,15 @@ export const BookingListPage = () => {
     bookingId: string,
     field: 'status' | 'deliveryStatus',
     value: string,
-    extra?: { notifyClient?: false; markInitialPaymentReceived?: true }
-  ) => {
+    extra?: { notifyClient?: false; markInitialPaymentReceived?: true } & Partial<RefundInput>
+  ): Promise<boolean> => {
     try {
       const endpoint =
           field === 'status'
             ? `/admin/bookings/${bookingId}/status`
             : `/admin/bookings/${bookingId}/delivery-status`;
 
-      const updated = await apiFetch<{ conflictWarning?: string } | null>(endpoint, {
+      const updated = await apiFetch<{ conflictWarning?: string; confirmationNoticeSkipped?: boolean; paymentStatus?: BookingPaymentStatus | null } | null>(endpoint, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: value, ...extra }),
@@ -242,9 +245,15 @@ export const BookingListPage = () => {
       if (typeof updated?.conflictWarning === 'string' && updated.conflictWarning) {
         addNotification({ type: 'warning', title: 'Pré-reserva no mesmo equipamento', message: updated.conflictWarning });
       }
+      // Onda 2b (B3): confirmar de novo na mesma data não repete o aviso ao cliente.
+      if (updated?.confirmationNoticeSkipped) {
+        addNotification({ type: 'info', title: 'Aviso não repetido', message: 'O cliente já tinha recebido a confirmação desta data: o e-mail e o aviso no site não foram repetidos.' });
+      }
 
+      // Onda 2b (D8): o reembolso (e desfazer o reembolso) também muda o pagamento; vale o que o servidor gravou.
+      const paymentAfter = field === 'status' && updated && 'paymentStatus' in updated ? { paymentStatus: updated.paymentStatus ?? null } : {};
       setBookings((prev) =>
-        prev.map((b) => (b.id === bookingId ? { ...b, [field]: value } : b))
+        prev.map((b) => (b.id === bookingId ? { ...b, [field]: value, ...paymentAfter } : b))
       );
       // P3: o status da reserva mudou; o número do menu e o cartão do painel se atualizam na hora.
       if (field === 'status') void refreshAdminSummary({ force: true });
@@ -254,12 +263,14 @@ export const BookingListPage = () => {
         title: 'Atualizado',
         message: `${field === 'status' ? 'Status' : 'Entrega'} atualizado com sucesso.`
       });
+      return true;
         } catch (err: unknown) {
       addNotification({
         type: 'error',
         title: 'Erro',
         message: err instanceof Error ? err.message : 'Erro ao atualizar o status.'
       });
+      return false;
     }
   };
 
@@ -276,6 +287,10 @@ export const BookingListPage = () => {
     }
     if (value === 'COMPLETED') {
       setCompletingBooking(booking);
+      return;
+    }
+    if (value === 'REFUNDED') {
+      setRefundingBooking(booking);
       return;
     }
     // Revisão de 21/11/2026: desfazer um reembolso (Reembolsada → Cancelada) não é um cancelamento novo: grava direto,
@@ -612,6 +627,7 @@ export const BookingListPage = () => {
                     { value: 'PAID', label: '💰 PAGO' },
                     { value: 'PARTIAL', label: '🌓 PARCIAL' },
                     { value: 'PENDING', label: '⏳ PAGAMENTO PENDENTE' },
+                    { value: 'REFUNDED', label: '↩️ DEVOLVIDO' },
                     { value: 'NONE', label: '❔ NÃO INFORMADO' },
                   ]}
                 />
@@ -729,7 +745,9 @@ export const BookingListPage = () => {
                           value={booking.paymentStatus || ''}
                           onChange={(e: ChangeEvent<HTMLSelectElement>) => handlePaymentChange(booking.id, e.target.value)}
                           aria-label={`Pagamento da reserva ${booking.id}`}
-                          options={PAYMENT_STATUS_OPTIONS}
+                          // Onda 2b (D8): "Devolvido" vem do reembolso; com ele, o seletor fica travado.
+                          options={paymentOptionsFor(booking.paymentStatus)}
+                          disabled={booking.paymentStatus === 'REFUNDED'}
                         />
                       </td>
                       <td className="px-6 py-4">
@@ -890,6 +908,13 @@ export const BookingListPage = () => {
           kind="cancelada"
         />
       </ConfirmModal>
+
+      <RefundModal
+        booking={refundingBooking}
+        onClose={() => setRefundingBooking(null)}
+        // A janela fecha quando grava; num erro (400 com o motivo) fica aberta com o que foi digitado.
+        onConfirm={(refund) => (refundingBooking ? handleStatusChange(refundingBooking.id, 'status', 'REFUNDED', refund) : Promise.resolve(false))}
+      />
 
       <HistoryImportModal
         isOpen={isImportOpen}

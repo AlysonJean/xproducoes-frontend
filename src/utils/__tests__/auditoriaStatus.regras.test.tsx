@@ -10,7 +10,9 @@ import {
   CONTRACT_ACCEPTED_LABEL,
   CONTRACT_PAID_LABEL,
   NEW_BOOKING_STATUS_OPTIONS,
+  PAYMENT_STATUS_OPTIONS,
   deliveryOptionsFor,
+  paymentOptionsFor,
   bookingStatusOptionsFrom,
   clientBookingStatusLabel,
   clientProposalValidityText,
@@ -109,5 +111,29 @@ describe('C7: o cartão Histórico mostra as trocas', () => {
     expect(screen.getByText('Pagamento: Não informado → Parcial')).toBeInTheDocument();
     expect(screen.getByText('Status: Rascunho → Confirmada')).toBeInTheDocument();
     expect(screen.getByText(/por Ana Cliente/)).toBeInTheDocument();
+  });
+});
+
+describe('onda 2b da auditoria do status (D8): o pagamento "Devolvido"', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('não se escolhe à mão; com ele, o seletor só tem ele', () => {
+    expect(PAYMENT_STATUS_OPTIONS.map((o) => o.value)).toEqual(['', 'PENDING', 'PARTIAL', 'PAID']);
+    expect(paymentOptionsFor('PAID')).toBe(PAYMENT_STATUS_OPTIONS);
+    expect(paymentOptionsFor(null)).toBe(PAYMENT_STATUS_OPTIONS);
+    expect(paymentOptionsFor('REFUNDED')).toEqual([{ value: 'REFUNDED', label: 'Devolvido' }]);
+  });
+
+  it('o histórico mostra o reembolso registrado (valor e dia) e a troca do pagamento para Devolvido', async () => {
+    bookingAPI.getAuditHistory.mockResolvedValue({
+      data: [
+        { action: 'REFUND_RECORDED', timestamp: '2026-11-22T15:00:00.000Z', actorName: 'Dono', details: { from: null, to: 450.5, date: '2026-11-20' } },
+        { action: 'PAYMENT_STATUS_CHANGED', timestamp: '2026-11-22T15:00:00.000Z', actorName: 'Dono', details: { from: 'PAID', to: 'REFUNDED' } },
+      ],
+    });
+    render(<ul><ProposalHistory bookingId="XP-1" refreshKey={0} /></ul>);
+
+    expect(await screen.findByText('Reembolso registrado: R$ 450,50 devolvidos em 20/11/2026')).toBeInTheDocument();
+    expect(screen.getByText('Pagamento: Pago → Devolvido')).toBeInTheDocument();
   });
 });

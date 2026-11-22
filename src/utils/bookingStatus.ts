@@ -47,11 +47,20 @@ export const PAYMENT_STATUS_LABELS: Record<string, string> = {
   PENDING: 'Pendente',
   PARTIAL: 'Parcial',
   PAID: 'Pago',
+  // Onda 2b (D8): o pagamento devolvido no reembolso registrado.
+  REFUNDED: 'Devolvido',
 };
 
 export const BOOKING_STATUS_OPTIONS = toOptions(BOOKING_STATUS_LABELS);
 export const DELIVERY_STATUS_OPTIONS = toOptions(DELIVERY_STATUS_LABELS);
-export const PAYMENT_STATUS_OPTIONS: Option[] = [{ value: '', label: 'Não informado' }, ...toOptions(PAYMENT_STATUS_LABELS)];
+// As que se escolhem à mão: "Devolvido" entra só pelo reembolso (Reembolsada, pela lista) e sai ao voltar a Cancelada.
+export const PAYMENT_STATUS_OPTIONS: Option[] = [
+  { value: '', label: 'Não informado' },
+  ...toOptions(PAYMENT_STATUS_LABELS).filter((option) => option.value !== 'REFUNDED'),
+];
+/** Onda 2b (D8): as opções do seletor de pagamento; com o pagamento Devolvido, só ele (o seletor fica travado). */
+export const paymentOptionsFor = (current: string | null | undefined): Option[] =>
+  current === 'REFUNDED' ? [{ value: 'REFUNDED', label: PAYMENT_STATUS_LABELS.REFUNDED }] : PAYMENT_STATUS_OPTIONS;
 
 // Auditoria do status (21/11/2026), C3: as trocas que valem a partir de cada status, iguais às do servidor
 // (backend/src/services/booking/bookingTransitions.ts, STATUS_TRANSITIONS). O seletor da lista só oferece estas; a data

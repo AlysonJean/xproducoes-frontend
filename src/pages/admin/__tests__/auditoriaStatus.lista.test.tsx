@@ -237,6 +237,86 @@ describe('lista de Reservas — trocas de status (auditoria do status)', () => {
     expect(JSON.parse(String(chamadas('PATCH')[0][1].body))).toEqual({ status: 'CONFIRMED' });
   });
 
+  it('onda 2b (D8): "Reembolsada" pede o valor e o dia; sem valor ou acima do valor da reserva, não grava', async () => {
+    await abrir(linha('CANCELLED', 'XP-1', { paymentStatus: 'PAID' }));
+
+    fireEvent.change(screen.getByLabelText('Status da reserva XP-1'), { target: { value: 'REFUNDED' } });
+    const janela = await screen.findByRole('dialog', { name: 'Registrar o reembolso' });
+    expect(within(janela).getByLabelText('Dia da devolução')).toHaveValue(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date()));
+
+    fireEvent.click(within(janela).getByRole('button', { name: 'Registrar reembolso' }));
+    expect(within(janela).getByText('Digite o valor devolvido ao cliente (maior que zero).')).toBeInTheDocument();
+    fireEvent.change(within(janela).getByLabelText('Valor devolvido (R$)'), { target: { value: '900.01' } });
+    fireEvent.click(within(janela).getByRole('button', { name: 'Registrar reembolso' }));
+    expect(within(janela).getByText('O valor devolvido passa do valor da reserva.')).toBeInTheDocument();
+    fireEvent.change(within(janela).getByLabelText('Dia da devolução'), { target: { value: '2099-01-01' } });
+    fireEvent.change(within(janela).getByLabelText('Valor devolvido (R$)'), { target: { value: '450' } });
+    fireEvent.click(within(janela).getByRole('button', { name: 'Registrar reembolso' }));
+    expect(within(janela).getByText('O dia da devolução não pode ser no futuro.')).toBeInTheDocument();
+    expect(chamadas('PATCH')).toHaveLength(0);
+  });
+
+  it('onda 2b (D8): com o valor e o dia, grava Reembolsada e o pagamento da linha vira "Devolvido", travado', async () => {
+    apiFetch.mockImplementation((url: string, init?: { method?: string }) =>
+      init?.method === 'PATCH' ? Promise.resolve({ status: 'REFUNDED', paymentStatus: 'REFUNDED' }) : backend(url, init));
+    await abrir(linha('CANCELLED', 'XP-1', { paymentStatus: 'PAID' }));
+
+    fireEvent.change(screen.getByLabelText('Status da reserva XP-1'), { target: { value: 'REFUNDED' } });
+    const janela = await screen.findByRole('dialog', { name: 'Registrar o reembolso' });
+    fireEvent.change(within(janela).getByLabelText('Valor devolvido (R$)'), { target: { value: '450.50' } });
+    fireEvent.change(within(janela).getByLabelText('Dia da devolução'), { target: { value: '2026-11-20' } });
+    fireEvent.click(within(janela).getByRole('button', { name: 'Registrar reembolso' }));
+
+    await waitFor(() => expect(chamadas('PATCH')).toHaveLength(1));
+    expect(JSON.parse(String(chamadas('PATCH')[0][1].body))).toEqual({ status: 'REFUNDED', refundAmount: 450.5, refundedAt: '2026-11-20' });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Registrar o reembolso' })).not.toBeInTheDocument());
+    const pagamento = await screen.findByLabelText('Pagamento da reserva XP-1');
+    await waitFor(() => expect(pagamento).toHaveValue('REFUNDED'));
+    expect(pagamento).toBeDisabled();
+    expect(within(pagamento).getAllByRole('option').map((o) => o.textContent)).toEqual(['Devolvido']);
+  });
+
+  it('onda 2b (revisão): o servidor recusa o reembolso: a janela fica aberta com o que foi digitado e o motivo aparece', async () => {
+    apiFetch.mockImplementation((url: string, init?: { method?: string }) =>
+      init?.method === 'PATCH' ? Promise.reject(new Error('O valor devolvido passa do valor da reserva.')) : backend(url, init));
+    await abrir(linha('CANCELLED', 'XP-1', { paymentStatus: 'PAID', totalPrice: '0' }));
+
+    fireEvent.change(screen.getByLabelText('Status da reserva XP-1'), { target: { value: 'REFUNDED' } });
+    const janela = await screen.findByRole('dialog', { name: 'Registrar o reembolso' });
+    fireEvent.change(within(janela).getByLabelText('Valor devolvido (R$)'), { target: { value: '450' } });
+    fireEvent.click(within(janela).getByRole('button', { name: 'Registrar reembolso' }));
+
+    await waitFor(() => expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'error', message: 'O valor devolvido passa do valor da reserva.' })));
+    expect(screen.getByRole('dialog', { name: 'Registrar o reembolso' })).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog', { name: 'Registrar o reembolso' })).getByLabelText('Valor devolvido (R$)')).toHaveValue(450);
+  });
+
+  it('onda 2b: o filtro de pagamento tem "Devolvido"; o seletor de pagamento comum não oferece Devolvido', async () => {
+    await abrir(linha('REFUNDED', 'XP-R', { paymentStatus: 'REFUNDED' }), linha('PENDING', 'XP-P'));
+
+    expect(within(screen.getByLabelText('Pagamento da reserva XP-P')).queryByRole('option', { name: 'Devolvido' })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Filtrar por pagamento'), { target: { value: 'REFUNDED' } });
+    expect(screen.getByLabelText('Status da reserva XP-R')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Status da reserva XP-P')).not.toBeInTheDocument();
+  });
+
+  it('onda 2b (B3): confirmar de novo sem repetir o aviso: a tela diz que o cliente já tinha recebido a confirmação', async () => {
+    apiFetch.mockImplementation((url: string, init?: { method?: string }) =>
+      init?.method === 'PATCH' ? Promise.resolve({ confirmationNoticeSkipped: true }) : backend(url, init));
+    await abrir(linha('PENDING'));
+
+    fireEvent.change(screen.getByLabelText('Status da reserva XP-1'), { target: { value: 'CONFIRMED' } });
+    const janela = await screen.findByRole('dialog', { name: 'Confirmar a reserva?' });
+    fireEvent.click(within(janela).getByRole('button', { name: 'Confirmar' }));
+
+    await waitFor(() =>
+      expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'info',
+        message: 'O cliente já tinha recebido a confirmação desta data: o e-mail e o aviso no site não foram repetidos.',
+      })),
+    );
+  });
+
   it('B1: na reserva cancelada ou reembolsada, a entrega só volta ao início ou registra o recolhimento', async () => {
     await abrir(linha('CANCELLED', 'XP-X'), linha('REFUNDED', 'XP-R'), linha('CONFIRMED', 'XP-C'));
     const entregas = (id: string) =>

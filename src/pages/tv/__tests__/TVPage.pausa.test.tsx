@@ -51,7 +51,7 @@ const DESVIO = 3 * H;
 const PAUSA = 'Mural pausado. Toque na tela ou aperte uma tecla para continuar.';
 
 // "Servidor": activeUntil no relógio da TV (o teste soma o desvio ao responder).
-let servidor: { activeUntil: number | null; activeRule: 'eventEnd' | 'lastActivity'; gamification: boolean };
+let servidor: { activeUntil: number | null; activeRule: 'eventEnd' | 'lastActivity' | 'eventCancelled'; gamification: boolean };
 const configDoServidor = () => ({
   linked: true,
   settingId: 'mural-1',
@@ -64,6 +64,7 @@ const configDoServidor = () => ({
   serverNow: new Date(Date.now() + DESVIO).toISOString(),
   activeUntil: servidor.activeUntil === null ? null : new Date(servidor.activeUntil + DESVIO).toISOString(),
   activeRule: servidor.activeRule,
+  ...(servidor.activeRule === 'eventCancelled' ? { eventCancelled: true } : {}),
 });
 
 const chamadas = (prefixo: string) => apiFetch.mock.calls.filter(([url]) => String(url).startsWith(prefixo)).length;
@@ -159,6 +160,25 @@ describe('TVPage — TV esquecida ligada pausa sozinha (D22)', () => {
     expect(consultasDeConfig()).toBe(2);
     // O convite com o QR Code continua na tela.
     expect(screen.getByText('Aponte a câmera')).toBeInTheDocument();
+  });
+
+  it('onda 2b (B15): mural de evento cancelado: pausa na hora, diz que o evento foi cancelado e não retoma ao toque', async () => {
+    servidor = { activeUntil: AGORA.getTime(), activeRule: 'eventCancelled', gamification: false };
+    await abrirTV();
+
+    expect(screen.getByRole('status')).toHaveTextContent('Este evento foi cancelado. O mural não recebe mais fotos.');
+    const config = consultasDeConfig();
+    const avisos = buscasDeAvisos();
+    // Sem o mínimo de 12 h do mural sem reserva: nada é buscado depois.
+    await avancar(6 * H);
+    expect(buscasDeAvisos()).toBe(avisos);
+    expect(consultasDeConfig()).toBe(config);
+
+    fireEvent.keyDown(window, { key: 'Enter' });
+    fireEvent.pointerDown(window);
+    await avancar(MIN);
+    expect(consultasDeConfig()).toBe(config);
+    expect(screen.getByRole('status')).toHaveTextContent('Este evento foi cancelado.');
   });
 
   it('no fim da janela, se o servidor já tem um prazo novo (evento esticado), continua até ele', async () => {

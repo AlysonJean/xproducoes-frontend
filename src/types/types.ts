@@ -209,6 +209,9 @@ export interface Booking {
   discount?: number;
   status?: BookingStatus;
   paymentStatus?: BookingPaymentStatus | null;
+  // Onda 2b da auditoria do status (D8): o reembolso registrado (valor devolvido e dia).
+  refundAmount?: number | string | null;
+  refundedAt?: string | null;
   notes?: string;
   userId?: string;
   user?: User;
@@ -465,6 +468,9 @@ export interface BookingDetails {
   status?: string;
   deliveryStatus?: string;
   paymentStatus?: string;
+  // Onda 2b da auditoria do status (D8): o reembolso registrado (valor devolvido e dia).
+  refundAmount?: number | string | null;
+  refundedAt?: string | null;
   // D21: sem url. O arquivo é privado e abre por um link de 5 minutos (utils/bookingAttachments).
   attachments?: Array<{
     id?: string;

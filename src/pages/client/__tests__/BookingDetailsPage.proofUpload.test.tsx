@@ -192,7 +192,8 @@ describe('BookingDetailsPage (cliente) — comprovantes privados (D21)', () => {
     expect(await screen.findByRole('button', { name: 'Excluir comprovante pix.pdf' })).toBeInTheDocument();
   });
 
-  it.each(['PAID', 'PARTIAL'])('lixeira: some com o pagamento registrado (%s), e a tela diz por quê', async (paymentStatus) => {
+  // Onda 2b (D8): também com o pagamento devolvido (reserva reembolsada).
+  it.each(['PAID', 'PARTIAL', 'REFUNDED'])('lixeira: some com o pagamento registrado (%s), e a tela diz por quê', async (paymentStatus) => {
     BOOKING = reserva({ attachments: [COMPROVANTE], paymentStatus });
     renderPage();
 

@@ -17,7 +17,7 @@ import {
   Alert,
   Checkbox,
 } from '../ui/StandardComponents';
-import { DELIVERY_STATUS_OPTIONS, NEW_BOOKING_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from '../../utils/bookingStatus';
+import { DELIVERY_STATUS_OPTIONS, NEW_BOOKING_STATUS_OPTIONS, paymentOptionsFor } from '../../utils/bookingStatus';
 import { BrandLoader } from '../ui/BrandLoader';
 import { logger } from '../../utils/logger';
 import { useFormDraft } from '../../hooks/useFormDraft';
@@ -761,10 +761,12 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
                 error={errors.paymentProof ? String(errors.paymentProof.message) : undefined}
                 description={`Opcional. ${ATTACHMENT_RULE_TEXT}. Vai para "Anexos e comprovantes" da reserva depois de salvar.`}
               />
+              {/* Onda 2b (D8): "Devolvido" vem do reembolso registrado; aqui ele é a única opção (o valor segue no envio). */}
               <Select
                 label="Situação do Pagamento"
                 {...register('paymentStatus')}
-                options={PAYMENT_STATUS_OPTIONS}
+                options={paymentOptionsFor(watchedValues.paymentStatus)}
+                description={watchedValues.paymentStatus === 'REFUNDED' ? 'Reserva reembolsada. Para mudar, volte a reserva para Cancelada na lista.' : undefined}
               />
             </div>
           </FormSection>

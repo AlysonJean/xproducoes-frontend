@@ -54,6 +54,8 @@ describe('UploadSocialPage — erro do envio', () => {
     [429, 'Muitas fotos enviadas desta rede em poucos minutos. Aguarde um pouco e tente de novo.'],
     [429, 'Muitas fotos no mural na última hora. Tente de novo mais tarde.'],
     [404, 'Mural não encontrado'],
+    // Onda 2b (B15): o mural de evento cancelado não recebe mais fotos.
+    [410, 'Este evento foi cancelado: o mural não recebe mais fotos.'],
   ])('HTTP %i: mostra a explicação do servidor (%s)', async (status, message) => {
     const alerta = await enviarComResposta(json(status, { success: false, message }));
     expect(alerta).toHaveTextContent(message);

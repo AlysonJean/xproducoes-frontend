@@ -16,6 +16,7 @@ interface TvConfigResponse {
     linked: boolean;
     eventName: string;
     hashtag: string;
+    eventCancelled?: boolean;
 }
 
 type CopyState = 'idle' | 'copied' | 'failed';
@@ -26,6 +27,7 @@ const ParticipatePage = () => {
     const [config, setConfig] = useState<WallConfig | null>(null);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
+    const [eventCancelled, setEventCancelled] = useState(false);
     const [copyState, setCopyState] = useState<CopyState>('idle');
     const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -35,6 +37,7 @@ const ParticipatePage = () => {
             setLoadError(false);
             if (slug) {
                 const res = await apiFetch<TvConfigResponse>(`/tv/config?slug=${slug}`);
+                setEventCancelled(res.eventCancelled === true);
                 if (res.linked) {
                     setConfig({
                         name: res.eventName,
@@ -114,6 +117,19 @@ const ParticipatePage = () => {
                         description="Verifique sua conexão e tente de novo."
                         action={<Button size="sm" variant="outline" onClick={fetchConfig}>Tentar de novo</Button>}
                     />
+                </div>
+            </div>
+        );
+    }
+
+    // Onda 2b da auditoria do status (B15): o mural de evento cancelado não recebe mais fotos.
+    if (eventCancelled) {
+        return (
+            <div className="min-h-[60vh] flex items-center justify-center bg-background p-6 text-center">
+                <div className="space-y-4">
+                    <h1 className="text-2xl font-bold text-foreground">Este evento foi cancelado</h1>
+                    <p className="text-muted-foreground">O mural não recebe mais fotos.</p>
+                    <Link to="/" className={buttonVariants({ variant: 'outline', size: 'sm' })}>Voltar para o início</Link>
                 </div>
             </div>
         );

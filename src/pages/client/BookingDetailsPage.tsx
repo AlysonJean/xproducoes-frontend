@@ -223,7 +223,8 @@ export const BookingDetailsPage = () => {
   // O11/D6: a validade da proposta enviada (vencida: "peça uma nova").
   const proposalValidity = clientProposalValidityText(booking);
   // D21: o cliente apaga comprovante só enquanto o pagamento não foi registrado (a mesma regra do servidor).
-  const clientMayDeleteProof = booking.paymentStatus !== 'PAID' && booking.paymentStatus !== 'PARTIAL';
+  // Onda 2b (D8): e o pagamento devolvido (o comprovante faz parte do registro da devolução).
+  const clientMayDeleteProof = booking.paymentStatus !== 'PAID' && booking.paymentStatus !== 'PARTIAL' && booking.paymentStatus !== 'REFUNDED';
   // D20: texto pronto do contato com a equipe (o nome informado na reserva ou o da conta, o código inteiro
   // e a data do evento em Brasília), o mesmo no WhatsApp e no corpo do e-mail.
   const bookingCode = formatBookingCode(booking.id);

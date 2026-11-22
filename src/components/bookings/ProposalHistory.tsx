@@ -32,6 +32,7 @@ interface HistoryEntry {
     rotated?: boolean;
     type?: string;
     channel?: string;
+    date?: string;
     validUntil?: string;
     total?: number;
     lines?: SentLine[];
@@ -64,7 +65,8 @@ const EMAIL_TYPE_TEXT: Record<string, string> = {
 };
 
 // Auditoria do status (21/11/2026), C7: as trocas de status, pagamento, entrega e valor (de, para e por quem).
-const CHANGE_ACTIONS = ['STATUS_CHANGED', 'PAYMENT_STATUS_CHANGED', 'DELIVERY_STATUS_CHANGED', 'PRICE_CHANGED'];
+// Onda 2b (D8): e o reembolso registrado (valor e dia).
+const CHANGE_ACTIONS = ['STATUS_CHANGED', 'PAYMENT_STATUS_CHANGED', 'DELIVERY_STATUS_CHANGED', 'PRICE_CHANGED', 'REFUND_RECORDED'];
 const SHOWN_ACTIONS = ['PROPOSAL_SENT', 'EMAIL_SENT', 'EMAIL_FAILED', 'REVIEW_REQUESTED', ...CHANGE_ACTIONS];
 
 const paymentLabel = (value: unknown) =>
@@ -85,6 +87,10 @@ const changeText = (entry: HistoryEntry): string | null => {
       return `Entrega: ${deliveryStatusLabel(String(from ?? 'PENDING'))} → ${deliveryStatusLabel(String(to ?? 'PENDING'))}`;
     case 'PRICE_CHANGED':
       return `Valor: ${priceLabel(from)} → ${priceLabel(to)}`;
+    case 'REFUND_RECORDED': {
+      const day = typeof entry.details.date === 'string' ? entry.details.date.split('-').reverse().join('/') : null;
+      return `Reembolso registrado: ${priceLabel(to)} devolvidos${day ? ` em ${day}` : ''}`;
+    }
     default:
       return null;
   }

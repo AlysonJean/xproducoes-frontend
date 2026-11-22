@@ -22,7 +22,9 @@ export enum BookingStatus {
 export enum BookingPaymentStatus {
   PENDING = 'PENDING',
   PARTIAL = 'PARTIAL',
-  PAID = 'PAID'
+  PAID = 'PAID',
+  // Onda 2b da auditoria do status (D8): "Devolvido", só junto com a reserva Reembolsada (não se escolhe à mão).
+  REFUNDED = 'REFUNDED'
 }
 
 export enum PaymentStatus {
