@@ -23,7 +23,18 @@ export interface DashboardStats {
   favoriteEquipments?: number;
 }
 
+// Onda 3 da auditoria do status (M10): o que falta receber das reservas confirmadas (ou depois), sem o histórico importado.
+export interface DashboardReceivables {
+  noPaymentCount: number;
+  noPaymentTotal: number;
+  partialCount: number;
+  partialBalance: number;
+  overdueBalanceCount: number;
+  total: number;
+}
+
 export interface AdminDashboardStats {
+  receivables?: DashboardReceivables;
   totalRevenue: number;
   revenueGrowth: number;
   newBookingsThisMonth: number;

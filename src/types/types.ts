@@ -583,6 +583,7 @@ export interface BookingListItem {
   createdAt?: string;
   creator?: { role: string } | null; // só o papel de quem criou (CLIENT = pedido de cliente)
   proposalSent?: boolean; // já houve "Enviar proposta" (D11)
+  fromHistory?: boolean; // onda 3 (M10): reserva do histórico importado (fora do "a receber")
   // Onda 2 da auditoria do status (C5): o contrato aceito pelo site (quando e até quando a parcela inicial vence).
   acceptedContract?: { acceptedAt: string | null; initialPaymentDueAt: string | null } | null;
 }

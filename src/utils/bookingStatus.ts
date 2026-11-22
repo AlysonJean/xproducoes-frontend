@@ -195,3 +195,65 @@ export const clientProposalValidityText = (booking: ClientProposalBooking, now: 
   }
   return day ? `Proposta válida até ${day}.` : null;
 };
+
+/** Onda 3 da auditoria do status (M10): o resumo do card "A receber" do painel. */
+export const receivablesText = (
+  receivables?: { noPaymentCount: number; partialCount: number; overdueBalanceCount: number } | null,
+): string => {
+  if (!receivables) return 'Reservas confirmadas com pagamento em aberto';
+  const parts = [`${receivables.noPaymentCount} sem pagamento registrado`, `${receivables.partialCount} só com o sinal`];
+  if (receivables.overdueBalanceCount > 0) parts.push(`${receivables.overdueBalanceCount} com o saldo vencido`);
+  return parts.join(' · ');
+};
+
+export interface JourneyStep {
+  label: string;
+  done: boolean;
+}
+
+/**
+ * Onda 3 da auditoria do status: a trilha da reserva para o cliente (Pedido recebido → Proposta enviada → Contrato
+ * aceito → Sinal recebido → Confirmada → Concluída) e o próximo passo dele. As etapas que a reserva não teve (a criada
+ * pela equipe já confirmada, sem proposta nem contrato) não aparecem. Rascunho, cancelada e reembolsada: sem trilha (o
+ * selo do status já diz).
+ */
+export const clientJourney = (
+  booking: ClientProposalBooking & { eventDate?: string | null; review?: unknown },
+  now: number = Date.now(),
+): { steps: JourneyStep[]; nextStep: string | null } | null => {
+  const status = booking.status ?? '';
+  if (!['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED'].includes(status)) return null;
+  const confirmed = status !== 'PENDING';
+  const sent = Boolean(booking.proposal?.sentAt);
+  const accepted = Boolean(booking.proposal?.contractAcceptedAt);
+  const paid = booking.paymentStatus === 'PARTIAL' || booking.paymentStatus === 'PAID';
+
+  const steps: JourneyStep[] = [{ label: 'Pedido recebido', done: true }];
+  if (sent || !confirmed) steps.push({ label: 'Proposta enviada', done: sent || confirmed });
+  if (accepted || (sent && !confirmed)) steps.push({ label: 'Contrato aceito', done: accepted });
+  if (accepted || paid) steps.push({ label: 'Sinal recebido', done: paid });
+  steps.push({ label: 'Confirmada', done: confirmed });
+  steps.push({ label: 'Concluída', done: status === 'COMPLETED' });
+
+  let nextStep: string | null = null;
+  const eventTime = booking.eventDate ? Date.parse(booking.eventDate) : NaN;
+  if (status === 'PENDING' && Number.isFinite(eventTime) && eventTime < now) {
+    // Revisão da onda 3: pedido parado com a data já passada (não está mais "montando o orçamento").
+    nextStep = 'A data do evento já passou. Se ainda quiser o evento, fale com a equipe.';
+  } else if (status === 'PENDING') {
+    if (!sent) nextStep = 'Estamos montando o seu orçamento. A proposta chega por e-mail.';
+    // O texto vale com o aceite online ligado ou não (com ele desligado, a resposta é pela equipe).
+    else if (!accepted) nextStep = proposalExpiredForClient(booking, now) ? null : 'Confira a proposta que chegou por e-mail e responda pelo link dela.';
+    else if (!paid) nextStep = 'Pague a parcela inicial (o PIX está no cartão do contrato) e envie o comprovante. A equipe confirma a reserva depois.';
+    else nextStep = 'Recebemos a parcela inicial. A equipe vai confirmar a reserva.';
+  } else if (status === 'CONFIRMED') {
+    nextStep = 'Reserva confirmada. Perto da data, a equipe fala com você para combinar os detalhes.';
+  } else if (status === 'IN_PROGRESS') {
+    nextStep = 'O evento está acontecendo. Qualquer coisa, fale com a equipe pelos contatos desta página.';
+  } else {
+    nextStep = booking.review
+      ? 'Evento concluído. Obrigado pela sua avaliação!'
+      : 'Evento concluído. Obrigado! Se puder, deixe sua avaliação: ela ajuda muito a equipe.';
+  }
+  return { steps, nextStep };
+};

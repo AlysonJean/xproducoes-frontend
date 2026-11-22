@@ -291,6 +291,28 @@ describe('lista de Reservas — trocas de status (auditoria do status)', () => {
     expect(within(screen.getByRole('dialog', { name: 'Registrar o reembolso' })).getByLabelText('Valor devolvido (R$)')).toHaveValue(450);
   });
 
+  it('onda 3 (M10): o link do card "A receber" (pagamento=a-receber): confirmada ou depois, sem pagamento completo, sem o histórico', async () => {
+    linhas = [
+      linha('CONFIRMED', 'XP-S', { paymentStatus: null }),
+      linha('COMPLETED', 'XP-P', { paymentStatus: 'PARTIAL' }),
+      linha('IN_PROGRESS', 'XP-E', { paymentStatus: 'PENDING' }),
+      linha('CONFIRMED', 'XP-G', { paymentStatus: 'PAID' }),
+      linha('REFUNDED', 'XP-R', { paymentStatus: 'REFUNDED' }),
+      linha('PENDING', 'XP-N', { paymentStatus: null }),
+      linha('COMPLETED', 'XP-H', { paymentStatus: null, fromHistory: true }),
+    ];
+    render(
+      <MemoryRouter initialEntries={['/admin/reservas?pagamento=a-receber']}>
+        <BookingListPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('Status da reserva XP-S');
+
+    for (const id of ['XP-P', 'XP-E']) expect(screen.getByLabelText(`Status da reserva ${id}`)).toBeInTheDocument();
+    for (const id of ['XP-G', 'XP-R', 'XP-N', 'XP-H']) expect(screen.queryByLabelText(`Status da reserva ${id}`)).not.toBeInTheDocument();
+    expect(screen.getByText('A receber')).toBeInTheDocument();
+  });
+
   it('onda 2b: o filtro de pagamento tem "Devolvido"; o seletor de pagamento comum não oferece Devolvido', async () => {
     await abrir(linha('REFUNDED', 'XP-R', { paymentStatus: 'REFUNDED' }), linha('PENDING', 'XP-P'));
 

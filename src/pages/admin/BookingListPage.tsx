@@ -75,13 +75,16 @@ const STATUS_FILTER_OPTIONS = [
 // registrado (D11); ordem=antigos: do pedido criado há mais tempo para o mais novo; contrato=aceito-sem-sinal: em aberto
 // (rascunho ou pendente), com contrato aceito e sem pagamento registrado (o número "contratos aceitos aguardando o sinal"
 // do cartão, revisão da onda 2). Valor desconhecido é ignorado.
-type UrlFilterKey = 'origem' | 'periodo' | 'proposta' | 'ordem' | 'contrato';
+// pagamento=a-receber (onda 3, M10): confirmada, em andamento ou concluída, sem o pagamento completo (nem pago nem
+// devolvido), fora o histórico importado (o card "A receber" do painel).
+type UrlFilterKey = 'origem' | 'periodo' | 'proposta' | 'ordem' | 'contrato' | 'pagamento';
 const URL_FILTERS: Record<UrlFilterKey, Record<string, string>> = {
   origem: { cliente: 'Pedidos de clientes' },
   periodo: { proximos: 'Evento por vir', passado: 'Data já passada' },
   proposta: { 'nao-enviada': 'Sem proposta enviada' },
   ordem: { antigos: 'Mais antigos primeiro' },
   contrato: { 'aceito-sem-sinal': 'Contrato aceito, sem sinal' },
+  pagamento: { 'a-receber': 'A receber' },
 };
 type UrlFilters = Partial<Record<UrlFilterKey, string>>;
 
@@ -419,7 +422,10 @@ export const BookingListPage = () => {
       const matchesContract = urlFilters.contrato !== 'aceito-sem-sinal'
         || ((booking.status === 'DRAFT' || booking.status === 'PENDING') && needsPaymentQuestion(booking));
 
-      return matchesSearch && matchesStatus && matchesPayment && matchesDate && matchesOrigin && matchesPeriod && matchesProposal && matchesContract;
+      const matchesReceivable = urlFilters.pagamento !== 'a-receber'
+        || (['CONFIRMED', 'IN_PROGRESS', 'COMPLETED'].includes(booking.status) && booking.paymentStatus !== 'PAID' && booking.paymentStatus !== 'REFUNDED' && !booking.fromHistory);
+
+      return matchesSearch && matchesStatus && matchesPayment && matchesDate && matchesOrigin && matchesPeriod && matchesProposal && matchesContract && matchesReceivable;
     });
     // ordem=antigos: do pedido criado há mais tempo para o mais novo; sem ela, a ordem do servidor (data do evento).
     if (urlFilters.ordem !== 'antigos') return list;

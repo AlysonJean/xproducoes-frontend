@@ -81,6 +81,13 @@ describe('BookingDetailsPage (cliente) — comprovantes privados (D21)', () => {
     openSpy = vi.spyOn(window, 'open').mockImplementation(() => janela as unknown as Window);
   });
 
+  it('onda 3 da auditoria do status: a página mostra o andamento da reserva e o próximo passo', async () => {
+    BOOKING = reserva();
+    renderPage();
+    expect(await screen.findByRole('heading', { name: 'Andamento da reserva' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Etapas da reserva' })).toHaveTextContent('Pedido recebido(feito)');
+  });
+
   afterEach(() => {
     openSpy.mockRestore();
   });

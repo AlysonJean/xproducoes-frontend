@@ -14,6 +14,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { BookingChatPanel } from '../../components/client/BookingChatPanel';
 import { ClientContractCard } from '../../components/proposal/ClientContractCard';
+import { ClientBookingJourney } from '../../components/bookings/ClientBookingJourney';
 import { bookingEmail, bookingPhone } from '../../utils/bookingContact';
 import { formatBookingCode } from '../../utils/bookingCode';
 import { buildBookingContactText, buildWhatsAppUrl, getWhatsAppPhone } from '../../utils/whatsapp';
@@ -297,6 +298,9 @@ export const BookingDetailsPage = () => {
               </div>
             </dl>
           </Card>
+
+          {/* Onda 3 da auditoria do status: as etapas da reserva e o próximo passo do cliente. */}
+          <ClientBookingJourney booking={booking} />
 
           {/* Itens da Reserva */}
           {((booking.kits && booking.kits.length > 0) || (booking.equipments && booking.equipments.length > 0) || (booking.services && booking.services.length > 0) || booking.kit) && (

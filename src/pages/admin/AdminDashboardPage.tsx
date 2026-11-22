@@ -30,6 +30,7 @@ import {
   CreditCard,
   Target
 } from 'lucide-react';
+import { receivablesText } from '../../utils/bookingStatus';
 import {
   Button,
   Card,
@@ -423,6 +424,18 @@ export const AdminDashboardPage = () => {
                 trend={stats?.revenueGrowth ? { value: stats.revenueGrowth, type: stats.revenueGrowth > 0 ? 'positive' : 'negative' } : undefined}
                 tone="info"
               />
+              {/* Onda 3 da auditoria do status (M10): o que falta receber das confirmadas (ou depois). Só com o número na
+                  resposta (a guardada no cache antes da onda 3 não o traz: o card não mostra R$ 0 por engano). */}
+              {stats?.receivables && (
+                <StatItem
+                  title="A receber"
+                  value={formatCurrency(stats.receivables.total)}
+                  icon={CreditCard}
+                  description={receivablesText(stats.receivables)}
+                  tone="warning"
+                  onClick={() => navigate('/admin/reservas?pagamento=a-receber')}
+                />
+              )}
               <StatItem
                 title="Equipamentos"
                 value={stats?.totalEquipments || 0}
