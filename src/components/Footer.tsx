@@ -237,7 +237,7 @@ export const Footer = () => {
                   bloqueado), aparece o link de dentro da tag, na cor do texto ao redor. */}
               <p className="text-xs text-muted-foreground mt-1">
                 <x-selo site="xproducoeseeventos.com.br">
-                  <a href="https://wa.me/5531975808477" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>Desenvolvido por X Soluções Digitais</a>
+                  <a href="https://wa.me/5531935027635" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>Desenvolvido por X Soluções Digitais</a>
                 </x-selo>
               </p>
             </div>
