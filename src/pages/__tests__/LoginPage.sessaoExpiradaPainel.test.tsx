@@ -114,7 +114,8 @@ describe('sessão expirada no painel: o aviso chega à página nova de /login', 
     await act(async () => {
       await authService.refreshToken();
     });
-    expect(window.location.href).toBe('/login');
+    // Onda 2 da auditoria de 19/11 (F1-06/F1-07): o login recebe a página de onde a pessoa saiu.
+    expect(window.location.href).toBe('/login?next=%2Fcliente%2Fpainel');
     // Ainda na página antiga, o painel já caiu na tela de login (auth:logout + ProtectedRoute).
     await waitFor(() => expect(telaDeLogin(antiga.container)).toBeInTheDocument());
     expect(await within(antiga.container).findByText(AVISO)).toBeInTheDocument();

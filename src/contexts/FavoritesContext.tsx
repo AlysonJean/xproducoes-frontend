@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../services/api';
 import { useAuth } from './AuthContext';
 import { logger } from '../utils/logger';
+import { safeGetItem, safeRemoveItem } from '../utils/safeStorage';
 
 export type FavoriteType = 'equipment' | 'kit' | 'service';
 
@@ -35,7 +36,8 @@ const STORAGE_KEY = 'xproducoes-favorites';
 
 const readLocalFavorites = (): FavoriteItem[] => {
   if (typeof window === 'undefined') return [];
-  const saved = localStorage.getItem(STORAGE_KEY);
+  // F1-05 (onda 2 da auditoria de 19/11): a leitura ficava fora do try e derrubava o site com os dados bloqueados.
+  const saved = safeGetItem(STORAGE_KEY);
   if (!saved) return [];
   try {
     const parsed = JSON.parse(saved);
@@ -89,8 +91,20 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
   // Decisão D14 do guia: só conta de cliente tem perfil de cliente, e o servidor recusa favorito da equipe.
   // Para a equipe, os favoritos ficam neste navegador, como os do visitante.
   const usesServer = isAuthenticated && user?.role === 'CLIENT';
-  const [favorites, setFavorites] = useState<FavoriteItem[]>(() => readLocalFavorites());
+  // Onda 2 da auditoria de 19/11 (F1-04): começa vazio e lê o armazenamento depois da hidratação (o HTML do servidor
+  // sai sempre sem favoritos; lidos no primeiro render, a página do navegador não batia com ele).
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const [localLoaded, setLocalLoaded] = useState(false);
   const wasUsingServer = useRef(usesServer);
+
+  useEffect(() => {
+    setLocalLoaded(true);
+    if (usesServer) return;
+    const stored = readLocalFavorites();
+    if (stored.length > 0) setFavorites(stored);
+    // Só na montagem: depois, o visitante muda os favoritos pela tela e o efeito abaixo grava.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Usuário autenticado: servidor é a fonte da verdade.
   useEffect(() => {
@@ -107,9 +121,9 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
 
   // Visitante: persiste em localStorage a cada mudança.
   useEffect(() => {
-    if (usesServer) return;
+    if (usesServer || !localLoaded) return;
     writeLocalFavorites(favorites);
-  }, [favorites, usesServer]);
+  }, [favorites, usesServer, localLoaded]);
 
   // Ao logar com favoritos já coletados como convidado, mescla para a conta antes de
   // descartar o armazenamento local — evita perder o que a pessoa já tinha marcado.
@@ -129,7 +143,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
             body: JSON.stringify({ itemId: item.id, itemType: item.type }),
           });
         }
-        localStorage.removeItem(STORAGE_KEY);
+        safeRemoveItem(STORAGE_KEY);
         const resp = await apiFetch<RemoteFavoritesResponse>('/user/favorites');
         setFavorites(remoteResponseToItems(resp));
       } catch (e) {

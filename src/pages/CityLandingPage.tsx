@@ -19,13 +19,26 @@ import { formatPhoneDisplay } from '../data/site';
 import { briefingHref } from '../utils/briefing';
 import { NotFoundPage } from './NotFoundPage';
 
+type CityServiceCombo = NonNullable<ReturnType<typeof parseServiceCitySlug>>;
+
 export const CityLandingPage = () => {
   const { seoSlug } = useParams<{ seoSlug: string }>();
-  const [reviewStats, setReviewStats] = useState<{ total: number; averageRating: number } | null>(null);
-
   const combo = seoSlug ? parseServiceCitySlug(seoSlug) : null;
-  const city = combo?.city;
-  const service = combo?.service;
+
+  // Achado (auditoria ponta a ponta): slug que não é serviço×cidade fazia <Navigate to="/404" /> —
+  // mas /404 também casa com /:seoSlug, então o redirecionamento caía aqui de novo e terminava numa
+  // página em branco, sem título, indexável e com status 200. Agora o próprio endereço mostra a
+  // página 404 (com noindex) e o SSR responde 404 (ver NotFoundPage).
+  // Onda 2 da auditoria de 19/11 (F5-02): a checagem vem antes dos hooks da página (estatísticas e recomendações), que
+  // rodavam também em todo endereço inexistente de um segmento.
+  if (!combo) {
+    return <NotFoundPage />;
+  }
+  return <CityLandingContent city={combo.city} service={combo.service} />;
+};
+
+const CityLandingContent = ({ city, service }: CityServiceCombo) => {
+  const [reviewStats, setReviewStats] = useState<{ total: number; averageRating: number } | null>(null);
 
   // Achado: a página inteira esperava as estatísticas de avaliação + um temporizador mínimo de
   // 800ms antes de aparecer — e, como o useEffect não roda no SSR, as ~20 landings de SEO local
@@ -37,20 +50,14 @@ export const CityLandingPage = () => {
       .catch(err => logger.error('Failed to fetch stats', 'CityLandingPage', err));
   }, []);
 
+  // F5-02: 'similar' exige um item de referência, que a landing não tem; o hook lançava o erro (que ia ao Sentry a cada
+  // visita) e a seção ficava vazia. 'trending' (os mais pedidos) não precisa de item.
   const recommendations = useRecommendations({
-    type: 'similar',
+    type: 'trending',
     itemType: 'equipment',
     limit: 4,
     autoFetch: true
   });
-
-  // Achado (auditoria ponta a ponta): slug que não é serviço×cidade fazia <Navigate to="/404" /> —
-  // mas /404 também casa com /:seoSlug, então o redirecionamento caía aqui de novo e terminava numa
-  // página em branco, sem título, indexável e com status 200. Agora o próprio endereço mostra a
-  // página 404 (com noindex) e o SSR responde 404 (ver NotFoundPage).
-  if (!city || !service) {
-    return <NotFoundPage />;
-  }
 
   // Sem "| X-Produções" aqui: o <SEO>/PageLayout já acrescentam o nome do site (saía duplicado).
   const title = `${service.name} em ${city.name}, ${city.uf}`;

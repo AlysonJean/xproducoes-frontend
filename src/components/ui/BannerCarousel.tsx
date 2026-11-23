@@ -9,9 +9,17 @@ import { Link } from 'react-router-dom';
 export const BannerCarousel = () => {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  // Onda 2 da auditoria de 19/11 (F3-05): até a resposta de /banners/public, o carrossel reserva a própria altura. Antes
+  // não desenhava nada (no SSR e antes da resposta) e, quando os banners chegavam, um bloco de até 500 px entrava no topo
+  // e empurrava a página inteira. Só some se a lista vier vazia (ou a busca falhar).
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    bannerService.getPublicBanners().then(setBanners).catch(console.error);
+    bannerService
+      .getPublicBanners()
+      .then(setBanners)
+      .catch(console.error)
+      .finally(() => setLoaded(true));
   }, []);
 
   useEffect(() => {
@@ -22,6 +30,9 @@ export const BannerCarousel = () => {
     return () => clearInterval(interval);
   }, [banners.length]);
 
+  if (!loaded) {
+    return <div className="w-full bg-muted h-[min(500px,60vh)]" aria-hidden="true" data-testid="banner-placeholder" />;
+  }
   if (!banners.length) return null;
 
   const current = banners[currentIndex];

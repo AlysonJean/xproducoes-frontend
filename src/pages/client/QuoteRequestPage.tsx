@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -148,6 +148,10 @@ export const QuoteRequestPage: React.FC = () => {
   const [serverError, setServerError] = useState<string | null>(null);
   // O envio esvazia o carrinho antes de ir para a tela de sucesso: sem isto, a tela de carrinho vazio piscaria.
   const [sent, setSent] = useState(false);
+  // Onda 2 da auditoria de 19/11 (F8-05): a chave de idempotência fica a mesma enquanto o pedido não muda, como no
+  // /briefing. Antes era nova a cada clique: se a resposta se perdia (timeout com o Neon acordando), o novo envio criava
+  // outra reserva e outro e-mail.
+  const submission = useRef<{ payload: string; key: string } | null>(null);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
@@ -493,7 +497,11 @@ export const QuoteRequestPage: React.FC = () => {
       if (equipmentIds.length > 0) bookingData.equipmentIds = equipmentIds;
       if (serviceIds.length > 0) bookingData.serviceIds = serviceIds;
 
-      const idempotencyKey = uuidv4();
+      const payloadFingerprint = JSON.stringify({ endpoint: user?.id ? 'auth' : 'guest', bookingData });
+      if (submission.current?.payload !== payloadFingerprint) {
+        submission.current = { payload: payloadFingerprint, key: uuidv4() };
+      }
+      const idempotencyKey = submission.current.key;
 
       addNotification({
         type: 'info',
@@ -529,7 +537,14 @@ export const QuoteRequestPage: React.FC = () => {
         value: 0
       });
 
-      await clearCart();
+      // F8-05: o pedido já foi criado; a falha ao esvaziar o carrinho não pode cair no catch do envio (que dizia "Falha
+      // no envio" e deixava o carrinho cheio para um novo envio).
+      try {
+        await clearCart();
+      } catch (clearError) {
+        logger.warn('Pedido criado, mas o carrinho não foi esvaziado', 'QuoteRequestPage', clearError);
+      }
+      submission.current = null;
 
       addNotification({
         type: 'success',

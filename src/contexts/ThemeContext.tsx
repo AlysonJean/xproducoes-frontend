@@ -4,8 +4,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { logger } from '../utils/logger';
 import type { ReactNode } from 'react';
+import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 
 export type Theme = 'light' | 'dark' | 'system';
+// A chave do tema no armazenamento do navegador (listada na Política de Cookies).
+const THEME_KEY = 'theme';
 
 interface ThemeContextType {
   theme: Theme;
@@ -37,7 +40,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   // flash de 'system' → tema salvo que o useEffect anterior causava.
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === 'undefined') return 'system';
-    const saved = localStorage.getItem('theme') as Theme;
+    // F1-05 (onda 2 da auditoria de 19/11): leitura que não lança com os dados de sites bloqueados.
+    const saved = safeGetItem(THEME_KEY) as Theme;
     if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
     return 'system';
   });
@@ -97,10 +101,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   // Salva no localStorage e sincroniza entre abas
   useEffect(() => {
-    localStorage.setItem('theme', theme);
+    safeSetItem(THEME_KEY, theme);
     const onStorage = (e: StorageEvent) => {
       if (
-        e.key === 'theme' &&
+        e.key === THEME_KEY &&
         (e.newValue === 'light' || e.newValue === 'dark' || e.newValue === 'system')
       ) {
         setThemeState(e.newValue as Theme);

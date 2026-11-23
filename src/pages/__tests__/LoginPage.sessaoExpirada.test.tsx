@@ -56,7 +56,8 @@ describe('tela de login depois de a sessão expirar', () => {
     fetchMock.mockResolvedValue(resposta(401, { success: false, code: 'SESSION_EXPIRED_ABSOLUTE', error: AVISO }));
 
     await expect(authService.refreshToken()).resolves.toBeNull();
-    expect(window.location.href).toBe('/login');
+    // Onda 2 da auditoria de 19/11 (F1-06/F1-07): o login recebe a página de onde a pessoa saiu, para voltar a ela.
+    expect(window.location.href).toBe('/login?next=%2Fcliente%2Fpainel');
 
     // A página nova de /login, o carregamento que o authservice pediu: módulos novos (revisão: a tela de login que
     // aparece ainda na página antiga não apaga o aviso; ver LoginPage.sessaoExpiradaPainel.test.tsx).

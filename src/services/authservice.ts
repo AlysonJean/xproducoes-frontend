@@ -1,6 +1,7 @@
 import { getApiBaseUrl } from '../utils/apiConfig';
 import { logDebug } from '../utils/logger';
 import { shouldTrySessionRestore, markSessionRestoreTried } from '../utils/sessionHint';
+import { loginPathFor } from '../utils/authUtils';
 
 /**
  * ✅ CENTRALIZED AUTH SERVICE
@@ -13,6 +14,9 @@ import { shouldTrySessionRestore, markSessionRestoreTried } from '../utils/sessi
 // SESSION_EXPIRED_ABSOLUTE, ou sessão encerrada), a pessoa vai para o login e vê uma vez o motivo. O "Sair"
 // normal não mostra o aviso.
 const SESSION_EXPIRED_KEY = 'xp_session_expired';
+// F1-07: as áreas que exigem conta (ProtectedRoute): painel, áreas do cliente e da equipe, completar perfil.
+const LOGIN_REQUIRED = /^\/(admin|cliente|client|colaborador|collaborator|painel|dashboard|completar-perfil)(\/|$)/;
+const requiresLogin = (pathname: string): boolean => LOGIN_REQUIRED.test(pathname);
 export const SESSION_EXPIRED_MESSAGE = 'Sua sessão expirou por segurança. Entre de novo.';
 // A renovação recusada pediu, nesta página, o carregamento de /login (endSession).
 let expiredRedirectPending = false;
@@ -136,8 +140,14 @@ class AuthService {
     logDebug('AuthService: Executing global logout');
     // Sessão encerrada: a próxima página não precisa perguntar ao servidor.
     markSessionRestoreTried();
+    const { pathname, search, hash } = window.location;
+    // Onda 2 da auditoria de 19/11 (F1-07): a renovação recusada levava ao /login em qualquer página, inclusive nas
+    // públicas (home, catálogo, /proposta#token=..., que não exige conta, e o #token se perdia). Agora, numa página
+    // pública, a sessão só é limpa e a pessoa fica onde está; numa página que exige conta, vai ao login com o aviso e
+    // volta para ela depois de entrar. O "Sair" normal continua indo ao login.
+    const goToLogin = !pathname.includes('/login') && (!expired || requiresLogin(pathname));
     try {
-      if (expired) sessionStorage.setItem(SESSION_EXPIRED_KEY, '1');
+      if (expired && goToLogin) sessionStorage.setItem(SESSION_EXPIRED_KEY, '1');
       else sessionStorage.removeItem(SESSION_EXPIRED_KEY);
     } catch {
       // sem sessionStorage: sem aviso
@@ -145,11 +155,10 @@ class AuthService {
 
     // Notify application
     window.dispatchEvent(new Event('auth:logout'));
-    
-    // Hard redirect if not on login page
-    if (!window.location.pathname.includes('/login')) {
+
+    if (goToLogin) {
       expiredRedirectPending = expired;
-      window.location.href = '/login';
+      window.location.href = expired ? loginPathFor(`${pathname}${search || ''}${hash || ''}`) : '/login';
     }
   }
 }

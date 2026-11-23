@@ -126,7 +126,7 @@ describe('D7 e D8c — Política de Cookies', () => {
       ['src/contexts/CartContext.tsx', /const GUEST_CART_KEY = '([^']+)'/],
       ['src/contexts/FavoritesContext.tsx', /const STORAGE_KEY = '([^']+)'/],
       ['src/contexts/CompareContext.tsx', /const COMPARE_STORAGE_KEY = '([^']+)'/],
-      ['src/contexts/ThemeContext.tsx', /localStorage\.setItem\('([^']+)'/],
+      ['src/contexts/ThemeContext.tsx', /const THEME_KEY = '([^']+)'/],
       ['src/pages/client/BriefingPage.tsx', /const DRAFT_KEY = '([^']+)'/],
       ['src/components/PWAInstallBanner.tsx', /const DISMISS_KEY = '([^']+)'/],
       ['src/utils/sessionHint.ts', /const TRIED_KEY = '([^']+)'/],

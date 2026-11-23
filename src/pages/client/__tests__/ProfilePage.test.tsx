@@ -84,10 +84,19 @@ describe('ProfilePage (cliente)', () => {
     await waitFor(() => expect(apiFetch.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(true));
     const put = apiFetch.mock.calls.find(([, init]) => init?.method === 'PUT')!;
     expect(put[0]).toBe('/users/profile');
+    // Onda 2 da auditoria de 19/11 (F8-06): a aba Preferências saiu; vão só as notificações (o servidor mescla, e o que já
+    // estava gravado em general fica).
     expect(bodyOf(put).preferences).toEqual({
       notifications: expect.objectContaining({ bookingUpdatesEmail: true }),
-      general: expect.objectContaining({ currency: 'BRL' }),
     });
+  });
+
+  it('F8-06: sem a aba Preferências; o "Total Gasto" sai sempre em reais, mesmo com outra moeda gravada', async () => {
+    apiFetch.mockImplementation(() => Promise.resolve({ ...PROFILE, preferences: { general: { currency: 'USD' } } }));
+    renderPage();
+    expect(await screen.findByText(/R\$\s?1\.800,50/)).toBeInTheDocument();
+    expect(screen.queryByText(/US\$/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /Preferências/ })).not.toBeInTheDocument();
   });
 
   it('envia a foto por /upload/avatar e grava a URL no perfil', async () => {

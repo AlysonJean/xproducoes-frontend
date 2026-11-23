@@ -128,11 +128,17 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
   // violado — quem usa controle por voz não conseguia dizer "clique em Disponível" porque
   // esse texto não fazia parte do nome acessível do link. Removido o aria-label para o nome
   // acessível ser computado a partir do conteúdo visível real do card (inclui tudo).
+  // Onda 2 da auditoria de 19/11 (F3-06): os botões Comparar e Favoritar ficavam DENTRO do <Link> do cartão (botão
+  // dentro de link: HTML inválido, regra axe nested-interactive), e o nome do link somava os rótulos deles. Agora são
+  // irmãos do link, posicionados por cima, como no KitCard e no ServiceCard.
   return (
-    <Link
+    <div
       {...rest}
+      className={`relative bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02] ${className}`}
+    >
+    <Link
       to={`/equipamentos/${equipment.slug || equipment.id}`}
-      className={`relative block bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02] ${className}`}
+      className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring rounded-lg"
       onClick={() => {
         if (equipment.id && onCardClick) onCardClick(equipment.id);
       }}
@@ -145,16 +151,6 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
           status={equipment.status}
           isAvailable={equipment.isAvailable ?? true}
         />
-
-        {/* Botões de Favoritar e Comparar */}
-        {(showCompare || showFavorite) && (
-          <div className="absolute top-2 right-2 flex space-x-2 z-20">
-            {showCompare && <CompareButton equipment={equipment} size="sm" itemType="equipment" />}
-            {showFavorite && equipment.id && (
-              <FavoriteButton equipmentId={equipment.id} equipmentName={equipment.name} size="sm" />
-            )}
-          </div>
-        )}
 
         <div className="absolute bottom-0 right-0 bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-tl-lg pointer-events-none">
           Ver Detalhes
@@ -215,5 +211,16 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
         </div>
       </div>
     </Link>
+
+      {/* Botões de Favoritar e Comparar, fora do link */}
+      {(showCompare || showFavorite) && (
+        <div className="absolute top-2 right-2 flex space-x-2 z-20">
+          {showCompare && <CompareButton equipment={equipment} size="sm" itemType="equipment" />}
+          {showFavorite && equipment.id && (
+            <FavoriteButton equipmentId={equipment.id} equipmentName={equipment.name} size="sm" />
+          )}
+        </div>
+      )}
+    </div>
   );
 };

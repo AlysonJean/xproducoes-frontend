@@ -131,41 +131,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { isMounted = false; };
   }, []);
 
+  // Onda 2 da auditoria de 19/11 (F1-03): o login não liga mais o isLoading global. O AuthRedirect troca a página
+  // pelo carregando enquanto isLoading; a LoginPage era desmontada no meio do envio, e o erro, o e-mail digitado e o
+  // "Reenviar confirmação" se perdiam. A LoginPage já mostra o próprio "Entrando...".
   const loginWithCredentials = useCallback(async (data: { email: string; password: string }): Promise<string> => {
-    setIsLoading(true);
-    try {
-      const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // Important: include=send+receive cookies
-        body: JSON.stringify({ ...data, email: data.email.toLowerCase().trim() }),
-      });
+    const baseUrl = getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // Important: include=send+receive cookies
+      body: JSON.stringify({ ...data, email: data.email.toLowerCase().trim() }),
+    });
 
-      if (!response.ok) {
-        // N1 (02/11/2026): o servidor manda o motivo em `error` e o código em `code` (globalErrorHandler);
-        // aqui só se lia `message`, e toda recusa virava "Login failed". O código vai junto no erro para a
-        // tela oferecer "Reenviar confirmação" quando for EMAIL_NOT_VERIFIED.
-        const errorData = await response.json().catch(() => ({})) as { error?: string; message?: string; code?: string };
-        const loginError = new Error(errorData.error || errorData.message || 'Não foi possível entrar. Tente de novo.') as Error & { code?: string };
-        if (typeof errorData.code === 'string') loginError.code = errorData.code;
-        throw loginError;
-      }
+    if (!response.ok) {
+      // N1 (02/11/2026): o servidor manda o motivo em `error` e o código em `code` (globalErrorHandler);
+      // aqui só se lia `message`, e toda recusa virava "Login failed". O código vai junto no erro para a
+      // tela oferecer "Reenviar confirmação" quando for EMAIL_NOT_VERIFIED.
+      const errorData = await response.json().catch(() => ({})) as { error?: string; message?: string; code?: string };
+      const loginError = new Error(errorData.error || errorData.message || 'Não foi possível entrar. Tente de novo.') as Error & { code?: string };
+      if (typeof errorData.code === 'string') loginError.code = errorData.code;
+      throw loginError;
+    }
 
-      const { user: userData, redirectTo } = await response.json();
+    const { user: userData, redirectTo } = await response.json();
 
-      // Tokens já foram gravados como cookies httpOnly pelo backend.
-      setUser(userData);
+    // Tokens já foram gravados como cookies httpOnly pelo backend.
+    setUser(userData);
 
-      if (redirectTo) return redirectTo;
-      switch (userData.role) {
-        case 'ADMIN': return '/admin/painel';
-        case 'COLLABORATOR': return '/collaborator/dashboard';
-        case 'CLIENT': return '/client/dashboard';
-        default: return '/dashboard';
-      }
-    } finally {
-      setIsLoading(false);
+    if (redirectTo) return redirectTo;
+    switch (userData.role) {
+      case 'ADMIN': return '/admin/painel';
+      case 'COLLABORATOR': return '/collaborator/dashboard';
+      case 'CLIENT': return '/client/dashboard';
+      default: return '/dashboard';
     }
   }, []);
 

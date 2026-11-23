@@ -4,6 +4,8 @@
 // grafias diferentes, telefone do desenvolvedor exibido como WhatsApp comercial).
 
 export const SITE_NAME = 'X Produções';
+// Onda 2 da auditoria de 19/11 (F3-02/F5-03): a origem do site, base do canonical e do og:url.
+export const SITE_URL = 'https://www.xproducoeseeventos.com.br';
 // Nome comercial (o nome fantasia). O nome empresarial do CNPJ é COMPANY_REGISTERED_NAME, logo abaixo.
 export const COMPANY_LEGAL_NAME = 'X Produções e Eventos';
 export const COMPANY_CNPJ = '55.343.824/0001-56';

@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ReactGA from 'react-ga4';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import GoogleAuthButton from '../components/ui/GoogleAuthButton';
-import { getDashboardRoute } from '../utils/authUtils';
+import { getDashboardRoute, safeNextPath } from '../utils/authUtils';
 import {
   Button,
   Input,
@@ -42,6 +42,8 @@ export const LoginPage = () => {
   const { loginWithCredentials } = useAuth();
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
+  // Onda 2 da auditoria de 19/11 (F1-06): a página que a pessoa pediu antes do login (só caminho interno).
+  const nextPath = safeNextPath(useLocation().search);
 
   const {
     register,
@@ -78,11 +80,7 @@ export const LoginPage = () => {
         message: 'Bem-vindo!',
       });
 
-      if (redirectTo) {
-        navigate(redirectTo);
-      } else {
-        navigate('/painel');
-      }
+      navigate(nextPath ?? redirectTo ?? '/painel');
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Falha no login. Verifique as suas credenciais.';
       if ((err as { code?: string } | null)?.code === 'EMAIL_NOT_VERIFIED') {
@@ -142,7 +140,7 @@ export const LoginPage = () => {
       if (response.ok) {
         const userData = await response.json();
         const dashboardRoute = getDashboardRoute(userData.role);
-        navigate(dashboardRoute);
+        navigate(nextPath ?? dashboardRoute);
       } else {
         navigate('/painel');
       }

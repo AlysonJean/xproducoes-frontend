@@ -20,6 +20,7 @@ import CompareButton from '../components/ui/CompareButton';
 import { ZoomableProductPhoto } from '@/components/ui/ZoomableProductPhoto';
 import { AskOnWhatsAppButton } from '@/components/ui/AskOnWhatsAppButton';
 import { PageLayout, PageError } from '../components/layouts/PageLayout';
+import { titleFromSlug } from '../utils/slugTitle';
 import { Badge, Button, buttonVariants } from '../components/ui/StandardComponents';
 
 const LIST_CRUMB = { label: 'Equipamentos', path: '/equipamentos' };
@@ -120,7 +121,12 @@ export const EquipmentDetailPage = () => {
 
   if (loading) {
     return (
-      <PageLayout title="Equipamentos" hideTitle breadcrumbs={[LIST_CRUMB]}>
+      <PageLayout
+        title={titleFromSlug(slug) || 'Equipamentos'}
+        description={slug ? 'Equipamento para aluguel em Belo Horizonte e região: detalhes e preço. Peça seu orçamento.' : undefined}
+        hideTitle
+        breadcrumbs={[LIST_CRUMB]}
+      >
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
           <BrandLoader size={120} label="Carregando equipamento..." />
         </div>

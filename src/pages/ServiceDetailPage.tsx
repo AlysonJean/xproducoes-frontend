@@ -20,6 +20,7 @@ import { useRecommendations } from '../hooks/useRecommendations';
 import { ZoomableProductPhoto } from '@/components/ui/ZoomableProductPhoto';
 import { AskOnWhatsAppButton } from '@/components/ui/AskOnWhatsAppButton';
 import { PageLayout, PageError } from '../components/layouts/PageLayout';
+import { titleFromSlug } from '../utils/slugTitle';
 import { Badge, Button, buttonVariants } from '../components/ui/StandardComponents';
 
 const LIST_CRUMB = { label: 'Serviços', path: '/servicos' };
@@ -114,7 +115,12 @@ export const ServiceDetailPage = () => {
 
   if (loading) {
     return (
-      <PageLayout title="Serviços" hideTitle breadcrumbs={[LIST_CRUMB]}>
+      <PageLayout
+        title={titleFromSlug(slug) || 'Serviços'}
+        description={slug ? 'Serviço para eventos em Belo Horizonte e região: o que inclui e preço. Peça seu orçamento.' : undefined}
+        hideTitle
+        breadcrumbs={[LIST_CRUMB]}
+      >
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
           <BrandLoader size={120} label="Carregando serviço..." />
         </div>

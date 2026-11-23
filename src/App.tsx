@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { Suspense, lazy, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 
 // Service Worker and PWA hooks
@@ -20,6 +20,7 @@ import { PageLoadingSpinner } from './components/ui/PageLoadingSpinner';
 // grupos de rotas isolam o peso de admin/colaborador/cliente-autenticado (recharts, jsPDF,
 // html2canvas) da árvore de toda página, inclusive a home pública.
 import { ProtectedRoute, AuthRedirect, DashboardRedirect } from './routes/RouteGuards';
+import { keepsScrollPosition } from './utils/scrollToTopRule';
 const AdminRoutes = lazy(() => import('./routes/AdminRoutes'));
 const CollaboratorRoutes = lazy(() => import('./routes/CollaboratorRoutes'));
 const ClientRoutes = lazy(() => import('./routes/ClientRoutes'));
@@ -169,7 +170,12 @@ function OfflineNotification() {
 // Scroll to top em mudanças de rota
 function ScrollToTop() {
   const { pathname } = useLocation();
+  const previous = useRef(pathname);
   useEffect(() => {
+    const from = previous.current;
+    previous.current = pathname;
+    // Onda 2 da auditoria de 19/11 (F5-05): abrir e fechar um projeto do portfólio não rola ao topo.
+    if (keepsScrollPosition(from, pathname)) return;
     // Scroll instantâneo para o topo (sem smooth) para garantir que funcione em todas as trocas de rota
     window.scrollTo(0, 0);
   }, [pathname]);

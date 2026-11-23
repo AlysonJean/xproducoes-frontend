@@ -13,7 +13,6 @@ vi.mock('../../contexts/NotificationContext', () => ({ useNotifications: () => (
 vi.mock('@/contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification }) }));
 
 import { GoogleCalendarIntegration } from '../GoogleCalendarIntegration';
-import { PreferencesTab } from '../../pages/client/profile/PreferencesTab';
 import { BookingDetailsModal } from '../../pages/client/ClientCalendarPage';
 
 beforeEach(() => {
@@ -83,19 +82,8 @@ describe('Painel do admin — Google Agenda (D9)', () => {
 });
 
 describe('Cliente — sem conexão com a Google Agenda (D9)', () => {
-  it('preferências do cliente não oferecem conectar a Google Agenda', () => {
-    render(
-      <PreferencesTab
-        generalPreferences={{} as never}
-        setGeneralPreferences={vi.fn()}
-        saving={false}
-        handleSavePreferences={vi.fn()}
-      />,
-    );
-
-    expect(screen.queryByText('Google Agenda')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Conectar' })).toBeNull();
-  });
+  // Onda 2 da auditoria de 19/11 (F8-06): a aba Preferências do cliente saiu do perfil (com ela, o lugar onde a conexão
+  // com a Google Agenda ficava antes da D9).
 
   it('agenda do cliente: fica o link "Google Agenda", sai o botão de sincronizar', () => {
     const inicio = new Date('2027-01-10T21:00:00.000Z');

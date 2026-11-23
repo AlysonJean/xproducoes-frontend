@@ -201,15 +201,23 @@ describe('Portfólio — trilha de navegação com o título do projeto', () => 
     await screen.findByRole('dialog', { name: 'Camarote no Estádio Mineirão' });
     expect(within(trail()).getByText('Camarote no Estádio Mineirão')).toBeInTheDocument();
 
-    // Outro projeto, ainda carregando: o projeto aberto antes continua guardado, mas a trilha fica só em "Portfólio".
+    // Outro projeto: abre direto, e a trilha passa ao título dele, sem o do anterior. Onda 2 da auditoria de 19/11
+    // (F5-05): trocar de projeto não busca a lista de novo (antes: o carregando no lugar da página, e o modal sumia).
     act(() => {
       void router.navigate?.('/portfolio/festa-de-15-anos');
     });
-    expect(await screen.findByText('Carregando portfólio...')).toBeInTheDocument();
+    await screen.findByRole('dialog', { name: 'Festa de 15 anos' });
+    expect(calls).toBe(1);
     expect(within(trail()).getByRole('link', { name: 'Portfólio' })).toHaveAttribute('href', '/portfolio');
     expect(trail().textContent).not.toContain('Camarote no Estádio Mineirão');
-    expect(trail().textContent).not.toMatch(/festa/i);
-    await waitFor(() => expect(breadcrumbNames()).toEqual(['Início', 'Portfólio']));
+    await waitFor(() => expect(breadcrumbNames()).toEqual(['Início', 'Portfólio', 'Festa de 15 anos']));
+
+    // Endereço de um projeto que não está na lista: nada aberto e a trilha só em "Portfólio".
+    act(() => {
+      void router.navigate?.('/portfolio/projeto-que-nao-existe');
+    });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(trail().textContent).not.toMatch(/festa|camarote|projeto/i);
   });
 
   it('endereço de um projeto que não existe: fica só "Portfólio" (sem o texto do endereço)', async () => {

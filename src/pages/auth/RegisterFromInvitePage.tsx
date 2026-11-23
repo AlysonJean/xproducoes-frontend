@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Lock, Mail, User, UserPlus } from 'lucide-react';
 import { authAPI } from '../../services/api';
+import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { strongPasswordSchema } from '../../validators/userSchema';
@@ -69,7 +70,15 @@ export const RegisterFromInvitePage: React.FC = () => {
       });
       setTimeout(() => navigate('/login'), 1500);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Falha ao completar registro';
+      // Onda 2 da auditoria de 19/11 (F8-08): o axios põe em err.message a frase genérica em inglês ("Request failed with
+      // status code 400"); o motivo ("Token expirado", "Email não corresponde ao convite") vem na resposta.
+      // O servidor manda o motivo em `error` (globalErrorHandler) ou em `message`.
+      const body = axios.isAxiosError(err) ? (err.response?.data as { message?: string; error?: string } | undefined) : undefined;
+      const serverMessage = body?.message || body?.error;
+      const linkInvalid = /^Token (inválido|já utilizado|expirado)/i.test(String(serverMessage || ''));
+      const msg = linkInvalid
+        ? 'Este convite venceu ou não é mais válido. Peça um novo convite a quem te convidou.'
+        : serverMessage || (err instanceof Error && !axios.isAxiosError(err) ? err.message : 'Falha ao completar registro');
       setError(msg);
       addNotification({
         type: 'error',

@@ -12,14 +12,13 @@ import {
 } from '../../components/ui/StandardComponents';
 import { ClientPage, ClientPageError } from '../../components/client/ClientPage';
 import { strongPasswordSchema } from '../../validators/userSchema';
-import { ArrowLeft, Settings, User, Lock, Bell } from 'lucide-react';
+import { ArrowLeft, User, Lock, Bell } from 'lucide-react';
 
 import { 
   ClientProfile, 
   ProfileFormData, 
   ProfilePasswordForm, 
-  ProfileNotificationPreferences, 
-  ProfileGeneralPreferences 
+  ProfileNotificationPreferences,
 } from '@/types/types';
 
 import { isSafeWebsite, openWebsite } from '../../utils/url';
@@ -29,17 +28,19 @@ import { ProfileHeader } from './profile/ProfileHeader';
 import { PersonalInfoTab } from './profile/PersonalInfoTab';
 import { SecurityTab } from './profile/SecurityTab';
 import { NotificationsTab } from './profile/NotificationsTab';
-import { PreferencesTab } from './profile/PreferencesTab';
 import { ProfileSidebar } from './profile/ProfileSidebar';
 import { logger } from '../../utils/logger';
 
-type ProfileTab = 'profile' | 'security' | 'notifications' | 'preferences';
+// Onda 2 da auditoria de 19/11 (F8-06): a aba "Preferências" saiu. Idioma, moeda, fuso, tipo de perfil, logística e
+// "Faturamento automático" (notas fiscais) eram gravados, mas nada no site nem no servidor os lia; o único efeito era a
+// moeda escolhida trocar o símbolo do "Total Gasto" sem converter (R$ 1.500 virava US$ 1.500,00). O valor gravado fica
+// no perfil (o servidor mescla as preferências), sem uso.
+type ProfileTab = 'profile' | 'security' | 'notifications';
 
 const PROFILE_TABS: { id: ProfileTab; label: string; icon: typeof User }[] = [
   { id: 'profile', label: 'Informações Pessoais', icon: User },
   { id: 'security', label: 'Segurança', icon: Lock },
   { id: 'notifications', label: 'Notificações', icon: Bell },
-  { id: 'preferences', label: 'Preferências', icon: Settings },
 ];
 
 export const ProfilePage = () => {
@@ -49,7 +50,6 @@ export const ProfilePage = () => {
     profile: null,
     security: null,
     notifications: null,
-    preferences: null,
   });
 
   // Estados
@@ -85,15 +85,6 @@ export const ProfilePage = () => {
     bookingUpdatesPush: true
   });
 
-  const [generalPreferences, setGeneralPreferences] = useState<ProfileGeneralPreferences>({
-    language: 'pt',
-    timezone: 'America/Sao_Paulo',
-    currency: 'BRL',
-    profileType: 'individual',
-    defaultDeliveryMethod: 'delivery',
-    autoInvoice: false
-  });
-
   const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
@@ -117,7 +108,6 @@ export const ProfilePage = () => {
       const preferences = data.preferences;
       if (preferences) {
         setNotificationPreferences(prev => preferences.notifications || prev);
-        setGeneralPreferences(prev => preferences.general || prev);
       }
     } catch (error) {
       logger.error('Erro ao carregar perfil:', 'ProfilePage', error);
@@ -151,7 +141,6 @@ export const ProfilePage = () => {
       const updatedProfile = await saveProfile({
         preferences: {
           notifications: notificationPreferences,
-          general: generalPreferences
         }
       });
       setProfile(updatedProfile);
@@ -318,7 +307,7 @@ export const ProfilePage = () => {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: generalPreferences.currency || 'BRL'
+      currency: 'BRL'
     }).format(value);
   };
 
@@ -453,14 +442,6 @@ export const ProfilePage = () => {
               />
             )}
             
-            {activeTab === 'preferences' && (
-              <PreferencesTab 
-                generalPreferences={generalPreferences}
-                setGeneralPreferences={setGeneralPreferences}
-                saving={saving}
-                handleSavePreferences={handleSavePreferences}
-              />
-            )}
           </div>
           
           <ProfileSidebar />

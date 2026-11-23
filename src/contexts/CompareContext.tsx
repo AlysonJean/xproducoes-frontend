@@ -39,15 +39,29 @@ function readStoredCompare(): Equipment[] {
 }
 
 export const CompareProvider = ({ children }: { children: React.ReactNode }) => {
-  const [items, setItems] = useState<Equipment[]>(() => readStoredCompare());
+  // Onda 2 da auditoria de 19/11 (F1-04): começa vazia e lê o armazenamento depois da hidratação, como o
+  // CookieConsentContext. Lida no primeiro render, a lista do navegador não batia com o HTML do servidor (sempre vazia)
+  // no contador do cabeçalho, e o React descartava a página inteira e a desenhava de novo.
+  const [items, setItems] = useState<Equipment[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- carregar o armazenamento só depois da hidratação */
+  useEffect(() => {
+    const stored = readStoredCompare();
+    if (stored.length > 0) setItems(stored);
+    setLoaded(true);
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
+    // Antes da leitura, a lista vazia do primeiro render não apaga a salva.
+    if (!loaded) return;
     try {
       localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(items));
     } catch (e) {
       logger.warn('Não foi possível salvar a comparação no localStorage', 'CompareContext', e);
     }
-  }, [items]);
+  }, [items, loaded]);
 
   const addItem = (equipment: Equipment) => {
     setItems((prev) => {

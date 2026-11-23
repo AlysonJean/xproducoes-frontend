@@ -53,11 +53,6 @@ export const PortfolioPage: React.FC = () => {
       const portfolioData = await apiFetch('/portfolio');
       const items = asArray<PortfolioItem>(portfolioData);
       setPortfolio(items);
-
-      if (slug) {
-        const item = items.find(i => i.slug === slug);
-        if (item) setSelectedItem(item);
-      }
     } catch (err) {
       logger.error('Erro ao carregar portfolio:', 'PortfolioPage', err);
       setError('Erro ao carregar o portfólio. Tente novamente.');
@@ -65,11 +60,24 @@ export const PortfolioPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [slug]);
+  }, []);
 
+  // Onda 2 da auditoria de 19/11 (F5-05): a lista é buscada uma vez. Antes a busca dependia do slug: abrir ou fechar um
+  // projeto (que troca /portfolio por /portfolio/:slug) buscava tudo de novo e trocava a página pelo carregando, e o
+  // modal sumia. O projeto aberto sai do slug, num efeito à parte.
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // O projeto aberto acompanha o endereço (voltar/avançar do navegador).
+  useEffect(() => {
+    if (!slug) {
+      setSelectedItem(null);
+      return;
+    }
+    // Endereço de um projeto que não está na lista: nada aberto (o modal não fica com o projeto anterior).
+    setSelectedItem(portfolio.find((i) => i.slug === slug) ?? null);
+  }, [slug, portfolio]);
 
   // Filter logic
   const filteredPortfolio = useMemo(() => {

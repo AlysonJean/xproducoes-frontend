@@ -1,6 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
-import { SITE_NAME, buildPageTitle } from '../data/site';
+import { UNSAFE_LocationContext } from 'react-router-dom';
+import { SITE_NAME, SITE_URL, buildPageTitle } from '../data/site';
 import { generateLocalBusinessSchema } from '../utils/schemaGenerator';
 
 interface SEOProps {
@@ -21,7 +22,7 @@ export const SEO: React.FC<SEOProps> = ({
   description = "Aluguel de som, iluminação e estruturas para eventos em Belo Horizonte e região, com painel de LED sob consulta.",
   keywords = "aluguel de som, iluminação, painel de led, eventos, belo horizonte",
   image = "https://www.xproducoeseeventos.com.br/xproducoes-logo.png",
-  url = typeof window !== 'undefined' ? window.location.href : '',
+  url,
   type = 'website',
   jsonLd,
   noindex = false
@@ -30,10 +31,17 @@ export const SEO: React.FC<SEOProps> = ({
   // Achado: páginas que já passavam "… | X-Produções" ganhavam o sufixo duas vezes
   // ("Comparar Itens | X-Produções | X Produções"). buildPageTitle não duplica.
   const fullTitle = buildPageTitle(title);
-  const safeUrl = typeof url === 'string' ? url : '';
-  
-  // Canonical URL logic: remove query params to avoid duplicate content issues
-  const canonicalUrl = safeUrl.split('?')[0];
+  // Onda 2 da auditoria de 19/11 (F3-02/F5-03): o padrão era window.location.href, que não existe no SSR; o HTML do
+  // servidor (o único que WhatsApp e Facebook leem, e o primeiro que o Google lê) saía com canonical e og:url vazios, e
+  // depois da hidratação o Helmet trocava para outra URL. Agora o padrão é o domínio + o caminho do roteador (o
+  // StaticRouter do SSR também o fornece), sem busca nem âncora, igual no servidor e no navegador. O contexto do
+  // roteador é lido direto (e não com useLocation) para o SEO funcionar também fora de um roteador.
+  const routerPath = React.useContext(UNSAFE_LocationContext)?.location?.pathname;
+  const canonicalUrl = typeof url === 'string' && url
+    ? url.split('#')[0].split('?')[0]
+    : routerPath
+      ? `${SITE_URL}${routerPath}`
+      : '';
 
   // Schema.org LocalBusiness: o mesmo do PageLayout (utils/schemaGenerator), com o mesmo @id. Antes este arquivo tinha
   // uma cópia própria (outro @id, sem rua, horário de seg–sex) e as páginas mandavam ao Google duas empresas diferentes.
@@ -66,7 +74,7 @@ export const SEO: React.FC<SEOProps> = ({
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:url" content={safeUrl} />
+      <meta name="twitter:url" content={canonicalUrl} />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={image} />

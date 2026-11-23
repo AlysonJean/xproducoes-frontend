@@ -4,6 +4,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { revokeAnalytics } from '../utils/analyticsConsent';
+import { safeGetItem, safeRemoveItem, safeSetItem } from '../utils/safeStorage';
 
 // Achado (auditoria): o site inicializa Google Analytics (useGoogleAnalytics.ts) para todo
 // visitante, sem nenhum consentimento prévio — CookiesPage.tsx só dizia "gerencie via seu
@@ -45,14 +46,15 @@ export const CookieConsentProvider: React.FC<{ children: ReactNode }> = ({ child
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
+    // F1-05 (onda 2 da auditoria de 19/11): leitura e gravação que não lançam com os dados de sites bloqueados.
+    const saved = safeGetItem(STORAGE_KEY);
     if (saved === 'accepted' || saved === 'declined') setConsent(saved);
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (consent === 'unset') return;
-    window.localStorage.setItem(STORAGE_KEY, consent);
+    safeSetItem(STORAGE_KEY, consent);
   }, [consent]);
 
   // D7 (aprovada em 02/11/2026): quando a escolha deixa de ser "aceito" (Recusar, "Gerenciar preferências" em
@@ -86,7 +88,7 @@ export const CookieConsentProvider: React.FC<{ children: ReactNode }> = ({ child
   const accept = useCallback(() => setConsent('accepted'), []);
   const decline = useCallback(() => setConsent('declined'), []);
   const reset = useCallback(() => {
-    window.localStorage.removeItem(STORAGE_KEY);
+    safeRemoveItem(STORAGE_KEY);
     setConsent('unset');
   }, []);
 

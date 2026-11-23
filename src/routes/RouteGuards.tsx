@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getDashboardRoute } from '../utils/authUtils';
+import { getDashboardRoute, loginPathFor, safeNextPath } from '../utils/authUtils';
 import { PageLoadingSpinner } from '../components/ui/PageLoadingSpinner';
 
 // Extraído de App.tsx (achado: peso de bundle vazando pra home pública, ver
@@ -13,6 +13,7 @@ export const ProtectedRoute: React.FC<{
   role?: string; // Aceitar role específico
 }> = ({ children, adminOnly = false, role }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
+  const location = useLocation();
 
   // Mesmo loader de página do Suspense das rotas (PageLoadingSpinner): inline, abaixo do header.
   // Antes era `fullScreen size="xl"` cobrindo o header — 3 loaders diferentes em sequência ao abrir
@@ -21,8 +22,9 @@ export const ProtectedRoute: React.FC<{
     return <PageLoadingSpinner />;
   }
 
+  // Onda 2 da auditoria de 19/11 (F1-06): o login recebe o destino e volta para ele depois de entrar.
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={loginPathFor(`${location.pathname}${location.search}${location.hash}`)} replace />;
   }
 
   if (adminOnly && user?.role !== 'ADMIN') {
@@ -57,9 +59,10 @@ export const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Só redireciona se estiver na página de login ou de cadastro. Achado: comparava com '/register',
   // mas a rota do cadastro é '/cadastro' — usuário já logado via o formulário de cadastro.
+  // F1-06: no login, o destino pedido (?next=, só caminho interno) vem antes do painel.
   if (isAuthenticated && user && (location.pathname === '/login' || location.pathname === '/cadastro')) {
-    const dashboardRoute = getDashboardRoute(user.role);
-    return <Navigate to={dashboardRoute} replace />;
+    const next = location.pathname === '/login' ? safeNextPath(location.search) : null;
+    return <Navigate to={next ?? getDashboardRoute(user.role)} replace />;
   }
 
   return <>{children}</>;

@@ -20,6 +20,7 @@ import { useRecommendations } from '../hooks/useRecommendations';
 import { useEquipmentUnitOf } from '../hooks/usePricingRules';
 import { equipmentUnitSuffix, priceUnitOf } from '../utils/bookingPricing';
 import { PageLayout, PageError } from '../components/layouts/PageLayout';
+import { titleFromSlug } from '../utils/slugTitle';
 import { OptimizedImage } from '@/components/ui/OptimizedImage';
 import { ZoomableProductPhoto } from '@/components/ui/ZoomableProductPhoto';
 import { AskOnWhatsAppButton } from '@/components/ui/AskOnWhatsAppButton';
@@ -117,7 +118,12 @@ export const KitDetailPage = () => {
   // era esse o <h1>/<title> entregue a crawlers.
   if (loading) {
     return (
-      <PageLayout title="Kits" hideTitle breadcrumbs={[LIST_CRUMB]}>
+      <PageLayout
+        title={titleFromSlug(slug) || 'Kits'}
+        description={slug ? 'Kit para eventos em Belo Horizonte e região: itens incluídos, horas e preço. Peça seu orçamento.' : undefined}
+        hideTitle
+        breadcrumbs={[LIST_CRUMB]}
+      >
         <div className="flex flex-col items-center justify-center min-h-[400px]">
           <BrandLoader size={120} label="Carregando kit..." />
         </div>
@@ -339,9 +345,13 @@ export const KitDetailPage = () => {
               <div className="flex flex-wrap justify-between items-baseline gap-2 mb-4">
                 <span className="text-muted-foreground font-semibold">Valor da Locação</span>
                 <div className="text-right">
-                  <div className="text-sm text-muted-foreground line-through">
-                      {formatPrice(totalItemsPrice)}
-                  </div>
+                  {/* Onda 2 da auditoria de 19/11 (F5-06): o "de" riscado só com economia de verdade (a mesma condição do
+                      selo ECONOMIZE); aparecia sempre, até menor que o preço do kit ou zerado. */}
+                  {savings > 0 && (
+                    <div className="text-sm text-muted-foreground line-through">
+                        {formatPrice(totalItemsPrice)}
+                    </div>
+                  )}
                   <div className="text-4xl font-black text-foreground">
                       {formatPrice(Number(kit.price ?? 0))}
                       {/* Decisão do dono de 06/11: o preço do kit é por evento, nunca vezes as horas. */}
