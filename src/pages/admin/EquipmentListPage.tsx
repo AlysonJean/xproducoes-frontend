@@ -567,7 +567,7 @@ export const EquipmentListPage = () => {
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmDelete}
         title="Excluir equipamento?"
-        message="O equipamento sai da base de locação. Os kits que o incluem são afetados."
+        message="O equipamento sai da base de locação de vez. Se ele estiver em reservas ou em kits, a exclusão é recusada: nesse caso, torne-o inativo."
         variant="danger"
         isLoading={isDeleting}
         confirmText="Excluir"

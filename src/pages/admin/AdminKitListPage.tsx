@@ -441,7 +441,7 @@ export const AdminKitListPage = () => {
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmDelete}
         title="Excluir kit?"
-        message="O kit e as regras de preço vinculadas deixam de valer para novas locações. O histórico de locações passadas é mantido."
+        message="O kit e as regras de preço dele saem de vez. Se ele estiver em alguma reserva, a exclusão é recusada: nesse caso, torne-o inativo."
         variant="danger"
         isLoading={isDeleting}
         confirmText="Excluir"

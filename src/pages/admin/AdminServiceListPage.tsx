@@ -447,7 +447,7 @@ export const AdminServiceListPage = () => {
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmDelete}
         title="Excluir serviço?"
-        message="O serviço deixa de aparecer no catálogo para novos contratos. Os contratos anteriores não mudam."
+        message="O serviço sai do catálogo de vez. Se ele estiver em reservas ou em kits, a exclusão é recusada: nesse caso, torne-o inativo."
         variant="danger"
         isLoading={isDeleting}
         confirmText="Excluir"
