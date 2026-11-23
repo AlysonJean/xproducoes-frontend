@@ -80,7 +80,7 @@ describe('BookingCalendarPage — confirmar pela agenda não troca o preço da r
   beforeEach(() => {
     vi.clearAllMocks();
     useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
-    apiFetch.mockImplementation((url: string) => Promise.resolve(url === '/bookings/calendar' ? bookings : {}));
+    apiFetch.mockImplementation((url: string) => Promise.resolve(url.startsWith('/bookings/calendar?') ? bookings : {}));
     api.get.mockResolvedValue({ data: [] });
   });
 

@@ -93,7 +93,7 @@ const backend = (url: string, init?: { method?: string }) => {
   if (url === '/dashboard/summary') return Promise.resolve(RESUMO);
   if (url.startsWith('/admin/bookings?page=1')) return Promise.resolve([linha]);
   if (url === '/admin/contacts') return Promise.resolve(contatos);
-  if (url === '/bookings/calendar') return Promise.resolve([naAgenda]);
+  if (url.startsWith('/bookings/calendar?')) return Promise.resolve([naAgenda]);
   return Promise.resolve([]);
 };
 

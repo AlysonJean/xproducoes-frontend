@@ -43,7 +43,7 @@ describe('BookingCalendarPage — o valor da reserva é o totalPrice (D8a)', () 
     useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
     api.get.mockResolvedValue({ data: [] });
     apiFetch.mockImplementation((url: string) =>
-      Promise.resolve(url === '/bookings/calendar'
+      Promise.resolve(url.startsWith('/bookings/calendar?')
         ? [{ id: 'XP-7', status: 'PENDING', eventDate: '2026-12-05T21:00:00.000Z', duration: 4, serviceValue: 1800, totalPrice: 750, client: { name: 'Cliente Teste' } }]
         : {}),
     );

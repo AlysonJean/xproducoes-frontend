@@ -56,6 +56,8 @@ const abrirAgenda = async () => {
   );
   await screen.findByRole('button', { name: 'Cliente Teste' });
 };
+// Onda 2 da auditoria de 19/11 (F6P1-06): a reserva confirmada pede confirmação antes de mudar de data.
+const confirmarMudanca = async () => fireEvent.click(await screen.findByRole('button', { name: 'Mudar' }));
 const corpoDoPut = () => {
   const call = apiFetch.mock.calls.find(([url, init]) => url === '/bookings/XP-7' && init?.method === 'PUT');
   return call ? JSON.parse(call[1].body as string) : null;
@@ -71,7 +73,7 @@ describe('BookingCalendarPage — arrastar e esticar refazem o valor no servidor
       recalculation: { message: 'Valor da reserva: de R$ 1.300,00 para R$ 1.500,00.' },
     });
     apiFetch.mockImplementation((url: string, init?: { method?: string }) => {
-      if (url === '/bookings/calendar') return Promise.resolve([reserva]);
+      if (url.startsWith('/bookings/calendar?')) return Promise.resolve([reserva]);
       if (url === '/bookings/XP-7' && init?.method === 'PUT') return putResult();
       return Promise.resolve({});
     });
@@ -80,6 +82,7 @@ describe('BookingCalendarPage — arrastar e esticar refazem o valor no servidor
   it('arrastar manda só o início e o término (sem duration), avisa o valor novo e a agenda passa a mostrá-lo', async () => {
     await abrirAgenda();
     fireEvent.click(screen.getByRole('button', { name: 'Arrastar Cliente Teste' }));
+    await confirmarMudanca();
 
     await waitFor(() => expect(addNotification).toHaveBeenCalledWith({ type: 'info', title: 'Valor da reserva', message: 'Valor da reserva: de R$ 1.300,00 para R$ 1.500,00.' }));
     expect(corpoDoPut()).toEqual({ eventDate: NOVO_INICIO.toISOString(), eventEndDate: NOVO_FIM.toISOString() });
@@ -93,6 +96,7 @@ describe('BookingCalendarPage — arrastar e esticar refazem o valor no servidor
   it('esticar também: o mesmo corpo e o mesmo aviso', async () => {
     await abrirAgenda();
     fireEvent.click(screen.getByRole('button', { name: 'Esticar Cliente Teste' }));
+    await confirmarMudanca();
 
     await waitFor(() => expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'info', title: 'Valor da reserva' })));
     expect(corpoDoPut()).toEqual({ eventDate: NOVO_INICIO.toISOString(), eventEndDate: NOVO_FIM.toISOString() });
@@ -102,6 +106,7 @@ describe('BookingCalendarPage — arrastar e esticar refazem o valor no servidor
     putResult = () => Promise.reject(new Error('Não é possível mudar a data: equipamento(s) já reservado(s) para outro evento confirmado no mesmo período: "Casamento Silva" em 06/12/2026.'));
     await abrirAgenda();
     fireEvent.click(screen.getByRole('button', { name: 'Arrastar Cliente Teste' }));
+    await confirmarMudanca();
 
     await waitFor(() => expect(addNotification).toHaveBeenCalledWith({
       type: 'error',
@@ -122,7 +127,7 @@ describe('BookingCalendarPage — "Confirmar reserva" com valor final zero ou ne
     vi.clearAllMocks();
     useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
     api.get.mockResolvedValue({ data: [] });
-    apiFetch.mockImplementation((url: string) => Promise.resolve(url === '/bookings/calendar' ? [{ ...reserva, status: 'PENDING' }] : {}));
+    apiFetch.mockImplementation((url: string) => Promise.resolve(url.startsWith('/bookings/calendar?') ? [{ ...reserva, status: 'PENDING' }] : {}));
   });
 
   it.each(['0', '-50'])('valor final %s: aviso com o motivo, nada enviado', async (valor) => {

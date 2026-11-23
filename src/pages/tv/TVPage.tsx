@@ -339,6 +339,23 @@ const TVPage: React.FC = () => {
 
     // Refs for intervals/timeouts
     const nextSlideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Onda 2 da auditoria de 19/11 (F8-03): o rodízio avança por este tique, e o temporizador lê o resto do estado por
+    // um ref. Antes o efeito dependia do tamanho da lista, dos avisos e do ranking: cada foto nova (ou cada busca de
+    // avisos) reiniciava os 8 s, e com fotos chegando a menos de 8 s a foto da tela nunca saía.
+    const [slideTick, setSlideTick] = useState(0);
+    const activeIndexRef = useRef(0);
+    const slideState = useRef({
+        postsCount: 0,
+        showAnnouncement: null as SocialAnnouncement | null,
+        showMosaic: false,
+        showLeaderboard: false,
+        slidesSinceAnnouncement: 0,
+        slidesSinceMosaic: 0,
+        slidesSinceLeaderboard: 0,
+        announcements: [] as SocialAnnouncement[],
+        config: null as WallConfig | null,
+        leaderboard: [] as LeaderboardItem[],
+    });
 
     const fetchConfig = useCallback(async (): Promise<TVConfigResponse | null> => {
         try {
@@ -509,8 +526,30 @@ const TVPage: React.FC = () => {
             setWindowEnd(prev => Math.max(prev ?? 0, until));
         };
 
+        // Onda 2 da auditoria de 19/11 (F8-02): as fotos já aprovadas. A TV começava vazia e só mostrava o que chegava
+        // pelo socket depois de aberta: ao recarregar ou religar, ao parear depois das primeiras fotos ou ao sair da pausa
+        // (D22), as aprovadas antes sumiam. Busca ao abrir (e ao retomar, que remonta este efeito) e a cada reconexão;
+        // as fotos que já estão na tela ficam na ordem, e as que faltam entram no fim.
+        let cancelled = false;
+        const loadApprovedPosts = async () => {
+            try {
+                const list = await apiFetch<SocialPost[]>(`/public/social/posts?settingId=${encodeURIComponent(config.settingId!)}`);
+                if (cancelled || !Array.isArray(list)) return;
+                setPosts(prev => {
+                    const ids = new Set(prev.map(p => p.id));
+                    return [...prev, ...list.filter(p => !ids.has(p.id))].slice(0, 50);
+                });
+            } catch (err) {
+                logger.error('Erro ao buscar as fotos do mural', 'TVPage', err);
+            }
+        };
+        void loadApprovedPosts();
+        let connectedBefore = false;
+
         socket.on('connect', () => {
             socket.emit('join', roomId);
+            if (connectedBefore) void loadApprovedPosts(); // fotos aprovadas enquanto a conexão caiu
+            connectedBefore = true;
         });
 
         socket.on('connect_error', (error) => {
@@ -524,8 +563,10 @@ const TVPage: React.FC = () => {
                 // Preload
                 const img = new Image();
                 img.src = post.mediaUrl;
-                // Add new post to top/start
-                return [post, ...prev].slice(0, 50); // Cap at 50
+                // F8-03: a foto nova entra logo depois da que está na tela (no começo da lista, sem mudar o índice, a foto
+                // da tela era trocada pela anterior no instante em que a nova chegava). Cap at 50.
+                const at = Math.min(activeIndexRef.current + 1, prev.length);
+                return [...prev.slice(0, at), post, ...prev.slice(at)].slice(0, 50);
             });
         });
 
@@ -540,6 +581,7 @@ const TVPage: React.FC = () => {
         });
 
         return () => {
+            cancelled = true;
             socket.disconnect();
         };
     }, [config?.settingId, wallPaused, fetchConfig]);
@@ -592,69 +634,86 @@ const TVPage: React.FC = () => {
     }, [wallPaused, eventCancelled, fetchConfig]);
 
     // 3. Slideshow Rotation Logic (Dynamic Duration)
+    // F8-03: o estado que o temporizador lê fica num ref, atualizado depois de cada render (este efeito vem antes do
+    // temporizador, então ele sempre vê o valor novo).
     useEffect(() => {
-        if (posts.length === 0) return;
-
-        const scheduleNext = () => {
-            // Determine duration of current slide
-            let duration = 8000; // Default post duration
-
-            if (showAnnouncement) {
-                duration = (showAnnouncement.duration || 10) * 1000;
-            }
-
-            nextSlideTimeout.current = setTimeout(() => {
-                // If currently showing announcement, switch back to post
-                if (showAnnouncement) {
-                    setShowAnnouncement(null);
-                    setSlidesSinceAnnouncement(0);
-                    setActiveIndex(prev => (prev + 1) % posts.length);
-                }
-                else if (showMosaic) {
-                    setShowMosaic(false);
-                    setSlidesSinceMosaic(0);
-                    setActiveIndex(prev => (prev + 1) % posts.length);
-                }
-                else if (showLeaderboard) {
-                    setShowLeaderboard(false);
-                    setSlidesSinceLeaderboard(0);
-                    setActiveIndex(prev => (prev + 1) % posts.length);
-                }
-                else {
-                    // Currently showing post. Check triggers.
-                    const nextAnnounceCounter = slidesSinceAnnouncement + 1;
-                    const dueAnnouncement = announcements.find(a => nextAnnounceCounter >= (a.frequency || 10));
-
-                    const nextMosaicCounter = slidesSinceMosaic + 1;
-                    const mosaicFreq = config?.mosaicFrequency || 15;
-                    const dueMosaic = config?.enableMosaic && nextMosaicCounter >= mosaicFreq;
-
-                    const nextLeaderboardCounter = slidesSinceLeaderboard + 1;
-                    const leaderboardFreq = 25;
-                    const dueLeaderboard = config?.enableGamification && leaderboard.length > 0 && nextLeaderboardCounter >= leaderboardFreq;
-
-                    if (dueAnnouncement) {
-                        setShowAnnouncement(dueAnnouncement);
-                    } else if (dueMosaic) {
-                        setShowMosaic(true);
-                    } else if (dueLeaderboard) {
-                        setShowLeaderboard(true);
-                    } else {
-                        setSlidesSinceAnnouncement(nextAnnounceCounter);
-                        setSlidesSinceMosaic(nextMosaicCounter);
-                        setSlidesSinceLeaderboard(nextLeaderboardCounter);
-                        setActiveIndex(prev => (prev + 1) % posts.length);
-                    }
-                }
-            }, duration);
+        activeIndexRef.current = activeIndex;
+        slideState.current = {
+            postsCount: posts.length,
+            showAnnouncement,
+            showMosaic,
+            showLeaderboard,
+            slidesSinceAnnouncement,
+            slidesSinceMosaic,
+            slidesSinceLeaderboard,
+            announcements,
+            config,
+            leaderboard,
         };
+    });
 
-        scheduleNext();
+    const hasPosts = posts.length > 0;
+    useEffect(() => {
+        if (!hasPosts) return;
+
+        // Determine duration of current slide
+        const current = slideState.current;
+        const duration = current.showAnnouncement ? (current.showAnnouncement.duration || 10) * 1000 : 8000; // Default post duration
+
+        nextSlideTimeout.current = setTimeout(() => {
+            const st = slideState.current;
+            const count = Math.max(st.postsCount, 1);
+            const advance = () => setActiveIndex(prev => (prev + 1) % count);
+            // If currently showing announcement, switch back to post
+            if (st.showAnnouncement) {
+                setShowAnnouncement(null);
+                setSlidesSinceAnnouncement(0);
+                advance();
+            }
+            else if (st.showMosaic) {
+                setShowMosaic(false);
+                setSlidesSinceMosaic(0);
+                advance();
+            }
+            else if (st.showLeaderboard) {
+                setShowLeaderboard(false);
+                setSlidesSinceLeaderboard(0);
+                advance();
+            }
+            else {
+                // Currently showing post. Check triggers.
+                const nextAnnounceCounter = st.slidesSinceAnnouncement + 1;
+                const dueAnnouncement = st.announcements.find(a => nextAnnounceCounter >= (a.frequency || 10));
+
+                const nextMosaicCounter = st.slidesSinceMosaic + 1;
+                const mosaicFreq = st.config?.mosaicFrequency || 15;
+                const dueMosaic = st.config?.enableMosaic && nextMosaicCounter >= mosaicFreq;
+
+                const nextLeaderboardCounter = st.slidesSinceLeaderboard + 1;
+                const leaderboardFreq = 25;
+                const dueLeaderboard = st.config?.enableGamification && st.leaderboard.length > 0 && nextLeaderboardCounter >= leaderboardFreq;
+
+                if (dueAnnouncement) {
+                    setShowAnnouncement(dueAnnouncement);
+                } else if (dueMosaic) {
+                    setShowMosaic(true);
+                } else if (dueLeaderboard) {
+                    setShowLeaderboard(true);
+                } else {
+                    setSlidesSinceAnnouncement(nextAnnounceCounter);
+                    setSlidesSinceMosaic(nextMosaicCounter);
+                    setSlidesSinceLeaderboard(nextLeaderboardCounter);
+                    advance();
+                }
+            }
+            // O próximo slide é agendado pelo tique, não pelas mudanças da lista.
+            setSlideTick(t => t + 1);
+        }, duration);
 
         return () => {
             if (nextSlideTimeout.current) clearTimeout(nextSlideTimeout.current);
         };
-    }, [posts.length, showAnnouncement, slidesSinceAnnouncement, announcements, activeIndex, slidesSinceMosaic, showMosaic, config, leaderboard, showLeaderboard, slidesSinceLeaderboard]);
+    }, [slideTick, hasPosts]);
 
     // Estados de pareamento / carregamento — mesmo modo apresentação (fundo preto fixo).
     if (!config && pairingCode) {

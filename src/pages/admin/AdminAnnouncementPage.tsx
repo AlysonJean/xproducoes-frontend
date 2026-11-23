@@ -63,7 +63,7 @@ const AdminAnnouncementPage: React.FC = () => {
     if (!id) { setLoading(false); return; }
     try {
       setLoading(true);
-      const response = await socialService.getAnnouncements(id);
+      const response = await socialService.getAdminAnnouncements(id);
       setAnnouncements(Array.isArray(response) ? response : response.data || []);
       setLoadError(null);
     } catch (error) {

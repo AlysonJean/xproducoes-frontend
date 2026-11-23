@@ -43,7 +43,7 @@ describe('BookingCalendarPage — total zero sai "Em preparação" (O3)', () => 
 
   const abrir = async (totalPrice: number | string) => {
     apiFetch.mockImplementation((url: string) =>
-      Promise.resolve(url === '/bookings/calendar'
+      Promise.resolve(url.startsWith('/bookings/calendar?')
         ? [{ id: 'XP-8', status: 'PENDING', eventDate: '2026-12-05T21:00:00.000Z', duration: 4, totalPrice, client: { name: 'Cliente Briefing' } }]
         : {}),
     );

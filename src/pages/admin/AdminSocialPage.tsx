@@ -13,7 +13,9 @@ import {
   Layout,
   Globe,
   ArrowLeft,
-  XCircle
+  XCircle,
+  Megaphone,
+  ListRestart
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { SOCKET_URL } from '../../utils/apiConfig';
@@ -168,11 +170,19 @@ const AdminSocialPage: React.FC = () => {
         setPosts(prev => prev.filter(p => p.id !== postId));
     });
 
+    // Onda 2 da auditoria de 19/11 (F6P1-01): o servidor só avisava foto aprovada, e a aba "Aguardando moderação" não
+    // mudava com a foto nova. Agora vem um aviso sem conteúdo quando chega foto para moderar (o socket do painel não leva
+    // a sessão, então a foto em si nunca passa pela sala do mural); a lista é buscada pela API, que exige login.
+    socket.on('moderation:pending', () => {
+        addNotification({ type: 'info', title: 'Nova publicação', message: 'O mural recebeu uma nova foto para moderar.' });
+        if (tab === 'PENDING') void fetchPosts();
+    });
+
     return () => {
         socket.disconnect();
         setSocketConnected(false);
     };
-  }, [id, settingId, tab, addNotification]);
+  }, [id, settingId, tab, addNotification, fetchPosts]);
 
   const handlePair = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -327,6 +337,14 @@ const AdminSocialPage: React.FC = () => {
                     <div className="flex flex-wrap gap-2">
                         <Button variant="outline" size="sm" onClick={handleManualSync} leftIcon={<RefreshCw className="h-4 w-4" />}>
                             Sincronizar
+                        </Button>
+                        {/* F6P1-01: recarrega a lista da aba (o "Sincronizar" só dispara a busca no Instagram). */}
+                        <Button variant="outline" size="sm" onClick={() => void fetchPosts()} leftIcon={<ListRestart className="h-4 w-4" />}>
+                            Atualizar lista
+                        </Button>
+                        {/* Onda 2 da auditoria de 19/11 (F6P1-03): a tela de anúncios do telão não tinha nenhum link no painel. */}
+                        <Button variant="outline" size="sm" leftIcon={<Megaphone className="h-4 w-4" />} onClick={() => navigate(`/admin/events/${settingId}/social/announcements`)}>
+                            Anúncios
                         </Button>
                         <Button variant="outline" size="sm" leftIcon={<Tv className="h-4 w-4" />} onClick={() => {
                             const url = wall?.slug ? `/tv?slug=${wall.slug}` : `/tv?settingId=${id}`;

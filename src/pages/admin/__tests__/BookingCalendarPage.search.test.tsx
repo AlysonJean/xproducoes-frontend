@@ -58,7 +58,7 @@ describe('BookingCalendarPage — busca na observação interna e na observaçã
     api.get.mockResolvedValue({ data: [] });
     apiFetch.mockImplementation((url: string) =>
       Promise.resolve(
-        url === '/bookings/calendar'
+        url.startsWith('/bookings/calendar?')
           ? [
               reserva('XP-1', 'Cliente Nova', { internalNotes: 'negociar o frete', notes: 'levar extensão' }),
               reserva('XP-2', 'Cliente Antiga', { internalNotes: null, notes: 'pediu desconto no frete' }),

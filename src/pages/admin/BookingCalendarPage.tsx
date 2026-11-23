@@ -20,7 +20,8 @@ import {
   Modal, 
   Select, 
   Input,
-  Alert
+  Alert,
+  ConfirmModal
 } from '@/components/ui/StandardComponents';
 import { 
   Search, 
@@ -53,6 +54,13 @@ import { refreshAdminSummary } from '@/stores/adminSummary';
 import { logger } from '../../utils/logger';
 
 const locales = { 'pt-BR': ptBR };
+// Onda 2 da auditoria de 19/11 (F6P1-06): reserva confirmada ou em andamento pede confirmação para mudar de data; a
+// encerrada não arrasta nem estica.
+const MOVE_CONFIRM_STATUSES = new Set(['CONFIRMED', 'IN_PROGRESS']);
+const LOCKED_MOVE_STATUSES = new Set(['COMPLETED', 'CANCELLED', 'REFUNDED']);
+const canMoveEvent = (event: object) => !LOCKED_MOVE_STATUSES.has(String((event as { resource?: { status?: string } }).resource?.status));
+const moveDateLabel = (d: Date) => format(d, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
 
 interface CalendarEvent extends Event {
@@ -347,19 +355,33 @@ export const BookingCalendarPage = () => {
   // D11: "Avisar o cliente por e-mail" do modal "Confirmar reserva", marcada a cada abertura.
   const [confirmNotifyClient, setConfirmNotifyClient] = useState(true);
 
+  // Onda 2 da auditoria de 19/11 (F6P1-02): a agenda carrega só o período visível (o mês e os vizinhos), então os números
+  // do cabeçalho passam a ser do mês na tela (antes somavam todas as reservas de todos os anos).
   const calendarStats = useMemo(() => {
-    const total = events.length;
-    const withCollaborators = events.filter(e => (e.resource.collaborators?.length || 0) > 0).length;
-    const confirmed = events.filter(e => e.resource.status === 'CONFIRMED').length;
-    const pending = events.filter(e => e.resource.status === 'PENDING').length;
+    const inMonth = events.filter(e => e.start && e.start.getFullYear() === currentDate.getFullYear() && e.start.getMonth() === currentDate.getMonth());
+    const total = inMonth.length;
+    const withCollaborators = inMonth.filter(e => (e.resource.collaborators?.length || 0) > 0).length;
+    const confirmed = inMonth.filter(e => e.resource.status === 'CONFIRMED').length;
+    const pending = inMonth.filter(e => e.resource.status === 'PENDING').length;
     return { total, withCollaborators, confirmed, pending };
-  }, [events]);
+  }, [events, currentDate]);
+
+  // F6P1-02: o período pedido ao servidor, do 1º dia do mês anterior ao 1º dia de dois meses depois (a semana e a lista
+  // "Agenda" que passam da virada do mês continuam cobertas). Muda só quando o mês na tela muda.
+  const visibleYear = currentDate.getFullYear();
+  const visibleMonth = currentDate.getMonth();
+  const calendarRange = useMemo(() => ({
+    from: new Date(visibleYear, visibleMonth - 1, 1).toISOString(),
+    to: new Date(visibleYear, visibleMonth + 2, 1).toISOString(),
+  }), [visibleYear, visibleMonth]);
 
   const fetchCalendarBookings = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-        const data = await apiFetch<CalendarBooking[]>('/bookings/calendar');
+        // B5-06/F6P1-02: só o período visível (antes, todas as reservas de todos os anos, com todas as relações).
+        const params = new URLSearchParams({ from: calendarRange.from, to: calendarRange.to });
+        const data = await apiFetch<CalendarBooking[]>(`/bookings/calendar?${params.toString()}`);
         const bookings = asArray<CalendarBooking>(data);
         const calendarEvents: CalendarEvent[] = bookings
           .filter((b) => safeDate(b.eventDate))
@@ -392,7 +414,7 @@ export const BookingCalendarPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [addNotification]);
+  }, [addNotification, calendarRange]);
 
   useEffect(() => {
     fetchCalendarBookings();
@@ -522,7 +544,38 @@ export const BookingCalendarPage = () => {
   // O1: o conflito de equipamento da reserva confirmada (409) e o término antes do início (400) chegam com o motivo.
   const moveErrorMessage = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback);
 
-    const onEventDrop = async ({ event, start, end }: EventInteractionArgs<CalendarEvent>) => {
+  // Onda 2 da auditoria de 19/11 (F6P1-06, parte da tela): arrastar ou esticar uma reserva confirmada ou em andamento
+  // gravava na hora a data nova (e o valor recalculado), sem o cliente saber. Agora pede confirmação mostrando de → para.
+  // A reserva encerrada (concluída, cancelada, reembolsada) não arrasta. Atualizar o evento da Google Agenda na mudança
+  // de data é do servidor e fica para depois.
+  const [pendingMove, setPendingMove] = useState<{ kind: 'drop' | 'resize'; event: CalendarEvent; start: Date; end: Date } | null>(null);
+  const needsMoveConfirmation = (event: CalendarEvent) => MOVE_CONFIRM_STATUSES.has(String(event.resource.status));
+
+    const onEventDrop = async (args: EventInteractionArgs<CalendarEvent>) => {
+    if (needsMoveConfirmation(args.event)) {
+      setPendingMove({ kind: 'drop', event: args.event, start: new Date(args.start), end: new Date(args.end) });
+      return;
+    }
+    await applyDrop(args);
+  };
+
+  const onEventResize = async (args: EventInteractionArgs<CalendarEvent>) => {
+    if (needsMoveConfirmation(args.event)) {
+      setPendingMove({ kind: 'resize', event: args.event, start: new Date(args.start), end: new Date(args.end) });
+      return;
+    }
+    await applyResize(args);
+  };
+
+  const confirmPendingMove = async () => {
+    const move = pendingMove;
+    setPendingMove(null);
+    if (!move) return;
+    if (move.kind === 'drop') await applyDrop(move);
+    else await applyResize(move);
+  };
+
+    const applyDrop = async ({ event, start, end }: Pick<EventInteractionArgs<CalendarEvent>, 'event' | 'start' | 'end'>) => {
     const s = new Date(start);
     const e = new Date(end);
     const prev = events;
@@ -537,7 +590,7 @@ export const BookingCalendarPage = () => {
     }
   };
 
-    const onEventResize = async ({ event, start, end }: EventInteractionArgs<CalendarEvent>) => {
+    const applyResize = async ({ event, start, end }: Pick<EventInteractionArgs<CalendarEvent>, 'event' | 'start' | 'end'>) => {
     const s = new Date(start);
     const e = new Date(end);
     const prev = events;
@@ -751,6 +804,8 @@ export const BookingCalendarPage = () => {
               toolbar={false}
               onEventDrop={onEventDrop}
               onEventResize={onEventResize}
+              draggableAccessor={canMoveEvent}
+              resizableAccessor={canMoveEvent}
               resizable
             />
             {/* Resumo no hover (só informativo). As ações — Abrir, Confirmar — ficavam aqui e só
@@ -843,7 +898,23 @@ export const BookingCalendarPage = () => {
           </Modal>
         )}
 
-        <ManualBookingModal
+        <ConfirmModal
+        isOpen={pendingMove !== null}
+        onClose={() => setPendingMove(null)}
+        onConfirm={() => void confirmPendingMove()}
+        title={pendingMove?.kind === 'resize' ? 'Mudar a duração da reserva?' : 'Mudar a data da reserva?'}
+        message={pendingMove ? (
+          <div className="space-y-2 text-sm">
+            <p><strong>{pendingMove.event.resource.client?.name || 'Reserva'}</strong> ({bookingStatusLabel(pendingMove.event.resource.status as BookingStatus)})</p>
+            <p>De: {pendingMove.event.start ? moveDateLabel(new Date(pendingMove.event.start)) : '—'} até {pendingMove.event.end ? moveDateLabel(new Date(pendingMove.event.end)) : '—'}</p>
+            <p>Para: {moveDateLabel(pendingMove.start)} até {moveDateLabel(pendingMove.end)}</p>
+            <p className="text-muted-foreground">O valor pode ser recalculado pelas horas novas. O cliente não é avisado automaticamente, e o evento da Google Agenda não muda sozinho.</p>
+          </div>
+        ) : null}
+        confirmText="Mudar"
+        cancelText="Manter como está"
+      />
+      <ManualBookingModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSuccess={() => { setIsModalOpen(false); fetchCalendarBookings(); addNotification({ type: 'success', title: 'Reserva criada', message: 'A reserva manual foi criada.' }); }}

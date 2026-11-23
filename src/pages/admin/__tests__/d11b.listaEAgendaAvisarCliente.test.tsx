@@ -168,7 +168,7 @@ describe('agenda — modal "Confirmar reserva" (D11)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
-    apiFetch.mockImplementation((url: string) => Promise.resolve(url === '/bookings/calendar' ? [pendente] : {}));
+    apiFetch.mockImplementation((url: string) => Promise.resolve(url.startsWith('/bookings/calendar?') ? [pendente] : {}));
     api.get.mockResolvedValue({ data: [] });
     render(<MemoryRouter initialEntries={['/admin/reservas/calendario']}><BookingCalendarPage /></MemoryRouter>);
   });

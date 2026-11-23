@@ -78,6 +78,13 @@ export const socialService = {
     return response.data;
   },
 
+  // Onda 2 da auditoria de 19/11 (F6P1-03): a tela de anúncios do painel lê pela rota do admin, sem o cache público de
+  // 60 s da TV (o anúncio recém-criado, editado ou apagado podia demorar a mudar na lista).
+  getAdminAnnouncements: async (id: string) => {
+    const response = await api.get<{ data: SocialAnnouncement[] }>(`/events/${id}/social/announcements`);
+    return response.data;
+  },
+
   createAnnouncement: async (id: string, data: Partial<SocialAnnouncement>) => {
     const response = await api.post<{ data: SocialAnnouncement }>(`/events/${id}/social/announcements`, data);
     return response.data;

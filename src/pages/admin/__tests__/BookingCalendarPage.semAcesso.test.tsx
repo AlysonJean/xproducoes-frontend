@@ -61,7 +61,7 @@ describe('BookingCalendarPage — quem está sem acesso não aparece para escala
     vi.clearAllMocks();
     useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
     apiFetch.mockImplementation((url: string) =>
-      Promise.resolve(url === '/bookings/calendar' ? bookings : url === '/collaborators' ? collaborators : {}),
+      Promise.resolve(url.startsWith('/bookings/calendar?') ? bookings : url === '/collaborators' ? collaborators : {}),
     );
     api.get.mockImplementation((url: string) => Promise.resolve({ data: url === '/collaborators' ? collaborators : [] }));
   });

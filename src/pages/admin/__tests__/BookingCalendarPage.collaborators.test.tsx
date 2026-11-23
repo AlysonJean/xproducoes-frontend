@@ -64,7 +64,7 @@ describe('BookingCalendarPage — nome dos colaboradores nos seletores', () => {
     useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
     // A mesma lista pelos dois caminhos (apiFetch e api.get): o teste falha pelo nome, não pelo mock.
     apiFetch.mockImplementation((url: string) =>
-      Promise.resolve(url === '/bookings/calendar' ? bookings : url === '/collaborators' ? collaborators : {}),
+      Promise.resolve(url.startsWith('/bookings/calendar?') ? bookings : url === '/collaborators' ? collaborators : {}),
     );
     api.get.mockImplementation((url: string) => Promise.resolve({ data: url === '/collaborators' ? collaborators : [] }));
   });
