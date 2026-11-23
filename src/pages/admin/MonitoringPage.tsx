@@ -45,7 +45,6 @@ const monitoringService = MonitoringService.getInstance();
 
 const PAGE_TITLE = 'Monitoramento';
 const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Monitoramento' }];
-const REFRESH_INTERVAL_MS = 30000;
 
 // Mapas de classes completas: o Tailwind só gera classes escritas por inteiro. Antes o ponto de
 // status usava `text-emerald-500` numa div sem fundo (invisível) e `ring-${cor}-500/10` (nunca gerado).
@@ -117,19 +116,16 @@ const MonitoringPage: React.FC = () => {
 
   // Achado (auditoria ponta a ponta): o polling de 30 s seguia com a aba escondida — cada consulta
   // passa por authenticateWithDB (lê o banco), e uma aba esquecida mantinha o Neon (plano free)
-  // acordado. Pausa com a aba escondida e, ao voltar, atualiza na hora.
+  // acordado. Onda 2 da auditoria de 19/11 (F7admin2-06): com a aba visível (segundo monitor, notebook
+  // ligado) o Neon também não dormia, porque ele só suspende depois de ~5 min sem consultas. Agora não há
+  // atualização automática: a tela carrega ao abrir, ao voltar para a aba e pelo botão Atualizar.
   useEffect(() => {
     loadDashboardData(true);
-    const interval = setInterval(() => {
-      if (document.hidden) return;
-      loadDashboardData(false);
-    }, REFRESH_INTERVAL_MS);
     const onVisibilityChange = () => {
       if (!document.hidden) loadDashboardData(false);
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => {
-      clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [loadDashboardData]);
@@ -226,7 +222,7 @@ const MonitoringPage: React.FC = () => {
                         )}
                    </div>
                    <p className="text-sm text-muted-foreground">
-                     Atualizado às {lastUpdate.toLocaleTimeString('pt-BR')} · atualiza a cada 30 s
+                     Atualizado às {lastUpdate.toLocaleTimeString('pt-BR')} · use o botão para atualizar
                    </p>
                 </div>
             </div>

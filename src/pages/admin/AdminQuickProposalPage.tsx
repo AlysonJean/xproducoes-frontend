@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import type { Client, Equipment, Kit, Service } from '@/types/types';
 import { apiFetch } from '@/services/api';
+import { fetchAllAdminClients } from '@/services/pagedFetch';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { formatPrice } from '@/utils/formatPrice';
@@ -144,6 +145,9 @@ const kitIncludesText = (kitLine: ProposalItem, serviceName: string): string =>
 
 // E19: a busca do catálogo só lista serviço ativo (o "Em breve" e o inativo não podem ser vendidos).
 const isActiveService = (service: { status?: string | null }): boolean => (service.status ?? 'ACTIVE') === 'ACTIVE';
+// Onda 2 da auditoria de 19/11 (F6P1-05): o mesmo para kit e equipamento. Para o admin, GET /kits e /equipments trazem
+// todos os status, e a proposta era gravada com o item inativo, em manutenção ou "Em breve".
+const isActiveCatalogItem = isActiveService;
 
 // Auditoria do orçamento (12/11/2026), onda 2: a linha do frete sem valor ("Frete a combinar", "Pedágio à parte", do
 // botão Frete ou digitada) aparece como "a combinar"/"à parte", nunca "R$ 0,00", e Salvar avisa antes de gravar. É a
@@ -337,7 +341,8 @@ const AdminQuickProposalPage = () => {
         setCatalogError(null);
         if (bookingId) await loadBaseBooking(bookingId);
         const [clientsRes, equipsRes, kitsRes, servicesRes] = await Promise.all([
-          apiFetch<Client[]>('/admin/clients'),
+          // Onda 2 da auditoria de 19/11 (F6P1-04): todos os clientes, não só os 50 mais novos.
+          fetchAllAdminClients<Client>(),
           apiFetch<Equipment[]>('/equipments'),
           apiFetch<Kit[]>('/kits'),
           apiFetch<Service[]>('/services')
@@ -368,7 +373,7 @@ const AdminQuickProposalPage = () => {
 
   const filteredCatalogItems = useMemo(() => {
     // E19 (auditoria do orçamento, 12/11/2026): o GET /services do admin traz também os inativos e os "Em breve".
-    const source = searchType === 'EQUIPMENT' ? equipments : searchType === 'KIT' ? kits : services.filter(isActiveService);
+    const source = searchType === 'EQUIPMENT' ? equipments.filter(isActiveCatalogItem) : searchType === 'KIT' ? kits.filter(isActiveCatalogItem) : services.filter(isActiveService);
     if (!searchTerm.trim()) return source;
     const lower = searchTerm.toLowerCase();
     return source.filter((item: Equipment | Kit | Service) => item.name?.toLowerCase().includes(lower));
@@ -538,7 +543,7 @@ const AdminQuickProposalPage = () => {
     const observations = [...(suggestion?.observations ?? [])];
 
     if (suggestion?.kit) {
-      const kit = kits.find((k) => k.id === suggestion.kit?.id);
+      const kit = kits.find((k) => k.id === suggestion.kit?.id && isActiveCatalogItem(k));
       const currentKit = next.find((i) => i.type === 'KIT');
       if (!kit) skipped.push(`${suggestion.kit.name}: não está mais no catálogo.`);
       else if (currentKit) skipped.push(`${kit.name}: a proposta já tem o kit "${currentKit.description}" (um kit por reserva).`);
@@ -569,7 +574,7 @@ const AdminQuickProposalPage = () => {
       added.push({ name: line.quantity > 1 ? `${service.name} (${line.quantity})` : service.name, reason: line.reason });
     }
     for (const line of suggestion?.equipment ?? []) {
-      const equipment = equipments.find((e) => e.id === line.id);
+      const equipment = equipments.find((e) => e.id === line.id && isActiveCatalogItem(e));
       if (!equipment) {
         skipped.push(`${line.name}: não está mais no catálogo.`);
         continue;

@@ -112,6 +112,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
     watch,
     reset,
     setError,
+    setValue,
     formState: { errors, isSubmitting, isDirty: isFormDirty },
   } = useForm<KitFormData>({
     resolver: zodResolver(kitFormSchema),
@@ -535,8 +536,10 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                                 aria-label={`Diminuir quantidade de ${item.name}`}
                                 onClick={() => {
                                   const currentVal = watch(`items.${index}.quantity`);
+                                  // Onda 2 da auditoria de 19/11 (F4-14): o onChange do register só gravava o valor, sem
+                                  // mudar o número no campo; o kit era salvo com uma quantidade que a tela não mostrava.
                                   if (currentVal > 1) {
-                                    register(`items.${index}.quantity`).onChange({ target: { value: currentVal - 1, name: `items.${index}.quantity` } });
+                                    setValue(`items.${index}.quantity`, currentVal - 1, { shouldDirty: true, shouldValidate: true });
                                   }
                                 }}
                                 className="px-2 py-1 hover:bg-muted transition-colors border-r border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
@@ -554,7 +557,7 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                                 aria-label={`Aumentar quantidade de ${item.name}`}
                                 onClick={() => {
                                   const currentVal = watch(`items.${index}.quantity`);
-                                  register(`items.${index}.quantity`).onChange({ target: { value: currentVal + 1, name: `items.${index}.quantity` } });
+                                  setValue(`items.${index}.quantity`, (Number.isFinite(currentVal) ? currentVal : 0) + 1, { shouldDirty: true, shouldValidate: true });
                                 }}
                                 className="px-2 py-1 hover:bg-muted transition-colors border-l border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                               >+</button>

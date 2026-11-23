@@ -166,7 +166,9 @@ api.interceptors.response.use(
  * RequestInit com o tempo-limite próprio da requisição (o padrão é VITE_API_TIMEOUT ou 30 s). Semanas 2 e 3
  * (16/11/2026): o comprovante pela página da proposta usa 2 minutos (foto de até 10 MB em rede móvel lenta).
  */
-export type ApiRequestInit = RequestInit & { timeoutMs?: number };
+// envelope (onda 2 da auditoria de 19/11): devolve { data, meta } em vez de só o data, para as listas paginadas lerem o
+// total (services/pagedFetch.ts).
+export type ApiRequestInit = RequestInit & { timeoutMs?: number; envelope?: boolean };
 
 // Orçamento em PDF (13/11/2026): a requisição (cookies, CSRF, Idempotency-Key, renovação do login, repetição de falha
 // de rede e a mensagem de erro com o status) é a mesma para o JSON (apiFetch) e para o arquivo (downloadPdf); só a
@@ -375,7 +377,8 @@ export const apiFetch = async <T = unknown>(
   endpoint: string,
   options: ApiRequestInit = {}
 ): Promise<T> => {
-  const response = await apiResponse(endpoint, options);
+  const { envelope, ...requestInit } = options;
+  const response = await apiResponse(endpoint, requestInit);
 
   if (response.status === 204) {
     return {} as T;
@@ -385,7 +388,7 @@ export const apiFetch = async <T = unknown>(
 
   // Auto-unwrap standard backend envelope { success: true, data: ... }
   if (json && typeof json === 'object' && 'success' in json && 'data' in json) {
-    return json.data as T;
+    return (envelope ? { data: json.data, meta: json.meta } : json.data) as T;
   }
 
   return json as T;

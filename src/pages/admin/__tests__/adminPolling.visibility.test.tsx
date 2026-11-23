@@ -40,7 +40,9 @@ const telas = [
   { nome: 'Monitoramento (/monitoring/dashboard)', Tela: MonitoringPage, consulta: getDashboard },
 ];
 
-describe.each(telas)('$nome — polling de 30 s', ({ Tela, consulta }) => {
+// Onda 2 da auditoria de 19/11 (F7admin2-06): com a aba visível, a consulta a cada 30 s também mantinha o Neon acordado
+// (ele só suspende depois de ~5 min sem consultas). Saiu a atualização automática: carrega ao abrir e ao voltar à aba.
+describe.each(telas)('$nome — sem atualização automática', ({ Tela, consulta }) => {
   beforeAll(() => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => escondida });
     Object.defineProperty(document, 'visibilityState', {
@@ -67,7 +69,7 @@ describe.each(telas)('$nome — polling de 30 s', ({ Tela, consulta }) => {
     vi.useRealTimers();
   });
 
-  it('com a aba escondida não consulta; ao voltar, consulta na hora e retoma o ciclo', async () => {
+  it('com a aba escondida não consulta; ao voltar, consulta na hora (e só uma vez)', async () => {
     render(<Tela />);
     await avancar(0);
     expect(consulta).toHaveBeenCalledTimes(1); // carga inicial
@@ -78,16 +80,16 @@ describe.each(telas)('$nome — polling de 30 s', ({ Tela, consulta }) => {
 
     mudarVisibilidade(false);
     await avancar(0);
-    expect(consulta).toHaveBeenCalledTimes(2); // ao voltar, sem esperar o próximo ciclo
+    expect(consulta).toHaveBeenCalledTimes(2); // ao voltar, sem esperar
 
-    await avancar(30_000);
-    expect(consulta).toHaveBeenCalledTimes(3);
+    await avancar(10 * 60 * 1000);
+    expect(consulta).toHaveBeenCalledTimes(2);
   });
 
-  it('com a aba visível, continua atualizando a cada 30 s', async () => {
+  it('com a aba visível, 10 min aberta: só a carga inicial (antes: uma consulta a cada 30 s)', async () => {
     render(<Tela />);
     await avancar(0);
-    await avancar(90_000);
-    expect(consulta).toHaveBeenCalledTimes(4); // inicial + 3 ciclos
+    await avancar(10 * 60 * 1000);
+    expect(consulta).toHaveBeenCalledTimes(1);
   });
 });

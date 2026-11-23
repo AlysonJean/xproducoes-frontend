@@ -34,7 +34,8 @@ const bannerSchema = z.object({
   imageUrl: z.string().min(1, 'URL da imagem é obrigatória'),
   mobileImageUrl: z.string(),
   linkUrl: z.string(),
-  sortOrder: z.number(),
+  // F4-12: o campo em branco vira NaN (valueAsNumber); a mensagem fica em português.
+  sortOrder: z.number({ error: 'Informe a ordem de exibição (um número).' }),
   active: z.boolean(),
 });
 
@@ -287,10 +288,12 @@ export const BannerForm: React.FC<BannerFormProps> = ({ initialData, onSuccess, 
                 {...register('linkUrl')}
                 error={errors.linkUrl?.message}
              />
+             {/* Onda 2 da auditoria de 19/11 (F4-12): sem valueAsNumber o valor digitado virava texto e o schema recusava com
+                 erro em inglês. */}
              <Input
                 type="number"
                 label="Ordem de Exibição"
-                {...register('sortOrder')}
+                {...register('sortOrder', { valueAsNumber: true })}
                 error={errors.sortOrder?.message}
              />
              <div className="col-span-2 pt-4">

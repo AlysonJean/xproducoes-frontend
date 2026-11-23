@@ -156,7 +156,7 @@ describe('AdminBookingForm — reserva de cliente manual', () => {
   it('Nova Reserva (cliente cadastrado) sem escolher o cliente: pede a escolha e nada é enviado', async () => {
     apiFetch.mockImplementation((url: string, opts?: { method?: string }) => {
       if (opts?.method === 'POST' || opts?.method === 'PUT') return Promise.resolve({ id: 'XP-NOVA' });
-      if (url === '/admin/clients') return Promise.resolve([{ id: 'cli00000000000000000001', name: 'Alice Primeira', email: 'alice@cliente.test' }]);
+      if (url.startsWith('/admin/clients?')) return Promise.resolve([{ id: 'cli00000000000000000001', name: 'Alice Primeira', email: 'alice@cliente.test' }]);
       if (url === '/kits') return Promise.resolve([KIT]);
       return Promise.resolve([]);
     });

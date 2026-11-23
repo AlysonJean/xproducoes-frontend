@@ -174,10 +174,12 @@ export const ClientForm: React.FC<ClientFormProps> = ({ initialData, onSuccess, 
         } else {
            await apiFetch(`/admin/clients/${initialData.id}`, {
              method: 'PUT',
+             // Onda 2 da auditoria de 19/11 (F4-15): o telefone apagado ia como undefined (fora do corpo) e não era apagado;
+             // o texto vazio limpa, como já acontecia no envio com foto.
              body: JSON.stringify({
                name: name.trim(),
                email: email.trim(),
-               phone: phone.trim() || undefined,
+               phone: phone.trim(),
              })
            });
         }

@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { apiFetch } from '../../services/api';
+import { fetchAllAdminClients } from '../../services/pagedFetch';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Booking, Kit, Equipment } from '../../types/types';
@@ -130,9 +131,6 @@ interface ClientData {
   email?: string;
   phone?: string;
   user?: { id?: string; name?: string; email?: string };
-}
-interface ClientResponse {
-  data?: ClientData[];
 }
 
 // Reserva como a API devolve: cliente cadastrado em clientId/client (nome em client.user, ou em
@@ -274,6 +272,9 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
 
   const clientType = watch('clientType');
   const selectionType = watch('selectionType');
+  const selectedKitId = watch('kitId');
+  const watchedEquipmentIds = watch('equipmentIds');
+  const selectedEquipmentIds = Array.isArray(watchedEquipmentIds) ? watchedEquipmentIds : [];
 
   useEffect(() => {
     onDirtyChange?.(isDirty);
@@ -323,18 +324,13 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
       try {
         setLoading(true);
         // clientes
-        let clientsRes: ClientResponse | ClientData[] = { data: [] };
+        // Onda 2 da auditoria de 19/11 (F4-09): GET /admin/clients pagina (50 por padrão em produção) e o select só via os
+        // 50 cadastros mais novos. Agora vêm todos (services/pagedFetch.ts).
+        let list: ClientData[] = [];
         try {
-           clientsRes = await apiFetch<ClientResponse | ClientData[]>('/admin/clients');
+           list = await fetchAllAdminClients<ClientData>();
         } catch (e) {
            logger.warn("Could not load clients", 'AdminBookingForm', e);
-        }
-        
-        let list: ClientData[] = [];
-        if (Array.isArray(clientsRes)) {
-          list = clientsRes;
-        } else if (clientsRes && 'data' in clientsRes && Array.isArray(clientsRes.data)) {
-          list = clientsRes.data;
         }
 
         // Sort clients alphabetically
@@ -668,13 +664,15 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setKitSearch(e.target.value)}
                     placeholder="Filtrar kits..."
                   />
+                  {/* Onda 2 da auditoria de 19/11 (F4-08): o kit escolhido fica sempre entre as opções. Se o filtro o tirava, o
+                      navegador mostrava outro kit, mas o envio ia com o escolhido. */}
                   <Select
                     label="Kit"
                     placeholder="Selecione um kit"
                     {...register('kitId')}
                     error={errors.kitId?.message as string | undefined}
                     options={kits
-                      .filter(k => k.name.toLowerCase().includes(kitSearch.toLowerCase()))
+                      .filter(k => k.id === selectedKitId || k.name.toLowerCase().includes(kitSearch.toLowerCase()))
                       .map((k) => ({ value: k.id, label: k.name }))
                     }
                   />
@@ -689,19 +687,25 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEquipSearch(e.target.value)}
                     className="mb-2"
                   />
+                  {/* Onda 2 da auditoria de 19/11 (F4-07): todas as caixas ficam montadas e a busca só esconde as que não batem.
+                      Desmontar fazia o react-hook-form esquecer os equipamentos marcados que a busca escondia. */}
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-56 overflow-auto p-3 border border-border rounded-lg bg-background">
-                    {equipments
-                      .filter(eq => eq.name.toLowerCase().includes(equipSearch.toLowerCase()))
-                      .map((eq) => (
-                      <Checkbox
-                        key={eq.id}
-                        id={`admin-booking-eq-${eq.id}`}
-                        value={eq.id}
-                        label={eq.name}
-                        {...register('equipmentIds')}
-                      />
+                    {equipments.map((eq) => (
+                      <div key={eq.id} className={eq.name.toLowerCase().includes(equipSearch.toLowerCase()) ? undefined : 'hidden'}>
+                        <Checkbox
+                          id={`admin-booking-eq-${eq.id}`}
+                          value={eq.id}
+                          label={eq.name}
+                          {...register('equipmentIds')}
+                        />
+                      </div>
                     ))}
                   </div>
+                  {selectedEquipmentIds.length > 0 && (
+                    <p className="text-sm text-muted-foreground" aria-live="polite">
+                      {selectedEquipmentIds.length === 1 ? '1 equipamento selecionado' : `${selectedEquipmentIds.length} equipamentos selecionados`}
+                    </p>
+                  )}
                   {errors.equipmentIds && (
                     <p role="alert" className="text-sm text-destructive">Selecione pelo menos um equipamento</p>
                   )}

@@ -63,6 +63,9 @@ export const ContactSubmissionsListPage = () => {
   const fetchSubmissions = useCallback(async () => {
     try {
       setLoading(true);
+      // Onda 2 da auditoria de 19/11 (F7admin2-07): o erro antigo nunca saía, e o aviso escondia a caixa de entrada mesmo
+      // depois de "Tentar de novo" dar certo.
+      setError(null);
       const data = await apiFetch('/admin/contacts');
       setSubmissions(asArray<ContactSubmission>(data));
     } catch (err: unknown) {

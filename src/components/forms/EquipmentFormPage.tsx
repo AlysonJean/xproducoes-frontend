@@ -184,11 +184,10 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
 
       if (data.images && data.images.length > 0) {
         const files = Array.from((data.images as unknown) as FileList);
+        // Onda 2 da auditoria de 19/11 (F4-13): a rota guarda uma imagem só (multer.single('image')); as extras iam em
+        // 'images' e o envio inteiro falhava com "Unexpected field".
         if (files.length > 0) {
           formData.append('image', files[0]);
-        }
-        for (let i = 1; i < files.length; i++) {
-          formData.append('images', files[i]);
         }
       }
 
@@ -302,12 +301,11 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
               htmlFor="equipment-images"
               className="block text-sm font-medium text-foreground cursor-pointer"
             >
-              Imagens
+              Imagem
             </label>
             <input
               id="equipment-images"
               type="file"
-              multiple
               accept="image/*"
               className="block w-full text-sm text-muted-foreground
                 file:mr-4 file:py-2 file:px-4

@@ -6,6 +6,7 @@ import { z } from 'zod';
 // Zod já está corretamente importado
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { apiFetch } from '../../services/api';
+import { fetchAllAdminClients } from '../../services/pagedFetch';
 import type { Equipment, Kit } from '../../types/types';
 import { Button, Input, Textarea, FormActions, Alert, Select, Checkbox } from '../ui/StandardComponents';
 import { Modal } from '../ui/Modal';
@@ -69,9 +70,6 @@ interface RawClientRecord {
   user?: { id?: string; name?: string; email?: string };
 }
 
-interface RawClientsResponse {
-  data?: RawClientRecord[];
-}
 
 interface ManualBookingModalProps {
   isOpen: boolean;
@@ -85,7 +83,10 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
   const [serverError, setServerError] = useState<string | null>(null);
   const [selectedEquipments, setSelectedEquipments] = useState<string[]>([]);
   const [selectedKit, setSelectedKit] = useState<string>('');
-  const [clients, setClients] = useState<Array<{id: string, name: string, email?: string, phone?: string}>>([]);
+  const [clients, setClients] = useState<Array<{id: string, clientId?: string, name: string, email?: string, phone?: string}>>([]);
+  // Onda 2 da auditoria de 19/11 (F4-11): o cliente cadastrado escolhido. Antes o select só copiava nome e telefone: a reserva
+  // nascia "manual", fora da área do cliente, e o aviso por e-mail não saía (o servidor não tinha e-mail).
+  const [selectedClientOption, setSelectedClientOption] = useState('');
   const [kitSearch, setKitSearch] = useState('');
   const [equipSearch, setEquipSearch] = useState('');
   // D11 (aprovada em 02/11/2026): a reserva deste modal nasce Confirmada e avisa o cliente uma vez, com
@@ -97,6 +98,7 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
     handleSubmit,
     formState: { errors, isSubmitting },
     setValue,
+    reset,
   } = useForm<ManualBookingFormData>({
     resolver: zodResolver(manualBookingSchema),
     defaultValues: {
@@ -140,16 +142,16 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
         const [equipData, kitData, clientsRes] = await Promise.all([
           apiFetch('/equipments'),
           apiFetch('/kits'),
-                      apiFetch<RawClientsResponse | RawClientRecord[]>('/admin/clients').catch(() => ({ data: [] })),
+          // Onda 2 da auditoria de 19/11 (F4-09): todos os clientes, não só os 50 mais novos (services/pagedFetch.ts).
+          fetchAllAdminClients<RawClientRecord>().catch(() => [] as RawClientRecord[]),
         ]);
         setEquipments(equipData as Equipment[]);
         setKits(kitData as Kit[]);
 
-        const list: RawClientRecord[] = Array.isArray(clientsRes)
-          ? clientsRes
-          : (Array.isArray(clientsRes?.data) ? clientsRes.data : []);
+        const list: RawClientRecord[] = clientsRes;
                   const mappedClients = list.map((c) => ({
           id: c.id || c.user?.id || '',
+          clientId: c.id,
           name: c.user?.name || c.name || 'Cliente',
           email: c.user?.email || c.email,
           phone: c.phone || '',
@@ -172,11 +174,15 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
   const handleModalClose = () => {
     setSelectedEquipments([]);
     setSelectedKit('');
-    setValue('equipmentIds', []);
-    setValue('kitId', '');
+    // Onda 2 da auditoria de 19/11 (F4-10): o formulário continua montado na agenda; sem o reset, nome, contato, datas,
+    // endereço, valor e observações da reserva anterior voltavam na próxima abertura.
+    reset();
+    setSelectedClientOption('');
     setNotifyClient(true);
     onClose();
   };
+
+  const selectedClientId = clients.find((c) => c.id === selectedClientOption)?.clientId ?? '';
 
   const onSubmit: SubmitHandler<ManualBookingFormData> = async (data) => {
     setServerError(null);
@@ -194,6 +200,8 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
         status: 'CONFIRMED' as const,
         kitId: selectedKit || undefined,
         equipmentIds: selectedEquipments.length > 0 ? selectedEquipments : undefined,
+        // F4-11: com cliente cadastrado, a reserva fica na conta dele (o servidor lê o e-mail do cadastro).
+        ...(selectedClientId ? { clientId: selectedClientId } : {}),
       };
   await apiFetch('/bookings', {
         method: 'POST',
@@ -225,12 +233,15 @@ export const ManualBookingModal = ({ isOpen, onClose, onSuccess }: ManualBooking
                 value: c.id, 
                 label: `${c.name} ${c.phone ? `(${c.phone})` : ''}` 
               }))}
-                            onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+              value={selectedClientOption}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => {
                 const clientId = e.target.value;
                 const client = clients.find(c => c.id === clientId);
+                setSelectedClientOption(client ? client.id : '');
                 if (client) {
                    setValue('clientName', client.name);
                    if (client.phone) setValue('clientContact', client.phone);
+                   else if (client.email) setValue('clientContact', client.email);
                 }
               }}
             />

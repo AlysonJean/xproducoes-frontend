@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { apiFetch } from '../../services/api';
+import { fetchAllPages } from '../../services/pagedFetch';
 import { normalizeString } from '../../utils/string';
 import { 
   Button,
@@ -63,8 +64,12 @@ export default function ReviewManagementPage() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiFetch<AdminReview[]>(`/reviews${minRating ? `?rating=${minRating}` : ''}`);
-      const data = Array.isArray(res) ? res : [];
+      // Onda 2 da auditoria de 19/11 (F7admin2-04): o servidor devolvia só as 20 mais recentes, e a tela contava, fazia a
+      // média e moderava só sobre elas. Agora busca todas as páginas (até 100 por página, com o total).
+      const data = await fetchAllPages<AdminReview>(
+        (p) => `/reviews?page=${p}&limit=100${minRating ? `&rating=${minRating}` : ''}`,
+        100,
+      );
       setItems(data);
       setError(null);
         } catch (e: unknown) {
