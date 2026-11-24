@@ -54,11 +54,7 @@ export const socialService = {
     return response.data;
   },
 
-  syncNow: async (id: string, type: 'event' | 'setting' = 'event') => {
-    const payload = type === 'event' ? { eventId: id } : { settingId: id };
-    const response = await api.post('/admin/social/sync', payload);
-    return response.data;
-  },
+  // Onda 2 da auditoria de 19/11 (B4-12): saiu syncNow (POST /admin/social/sync; o mural por hashtag nunca funcionou).
 
   // Standalone Features
   createWall: async (data: { name: string; hashtag: string; slug?: string; autoApprove?: boolean }) => {

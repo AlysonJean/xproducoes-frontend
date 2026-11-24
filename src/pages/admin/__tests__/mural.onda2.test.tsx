@@ -7,7 +7,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 // (a tela de anúncios do telão não tinha nenhum link no painel e lia pela rota pública com cache).
 const { social, apiFetch, addNotification, io, handlers } = vi.hoisted(() => ({
   social: {
-    listWalls: vi.fn(), getPosts: vi.fn(), getAdminWall: vi.fn(), updateWall: vi.fn(), moderatePost: vi.fn(), syncNow: vi.fn(), pairDevice: vi.fn(),
+    listWalls: vi.fn(), getPosts: vi.fn(), getAdminWall: vi.fn(), updateWall: vi.fn(), moderatePost: vi.fn(), pairDevice: vi.fn(),
     getAnnouncements: vi.fn(), getAdminAnnouncements: vi.fn(), createAnnouncement: vi.fn(), updateAnnouncement: vi.fn(), deleteAnnouncement: vi.fn(),
   },
   apiFetch: vi.fn(),
@@ -71,6 +71,13 @@ describe('Moderação do mural — onda 2', () => {
     const antes = social.getPosts.mock.calls.length;
     fireEvent.click(screen.getByRole('button', { name: 'Atualizar lista' }));
     await waitFor(() => expect(social.getPosts.mock.calls.length).toBe(antes + 1));
+  });
+
+  it('B4-12 (auditoria de 19/11): o "Sincronizar" com o Instagram saiu; a hashtag aparece como a do evento', async () => {
+    await abrir();
+    expect(await screen.findByRole('button', { name: 'Atualizar lista' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Sincronizar/ })).toBeNull();
+    expect(screen.queryByText(/Hashtag monitorada/)).toBeNull();
   });
 
   it('F6P1-03: o botão "Anúncios" leva à tela de anúncios do telão deste mural', async () => {

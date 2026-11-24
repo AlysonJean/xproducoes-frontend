@@ -4,7 +4,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { socialService, SocialPost } from '../../services/socialService';
 import { ModerationGrid } from '../../components/social/ModerationGrid';
 import {
-  RefreshCw,
   Settings,
   Check,
   Tv,
@@ -227,16 +226,6 @@ const AdminSocialPage: React.FC = () => {
     }
   };
 
-  const handleManualSync = async () => {
-    if (!id) return;
-    try {
-        await socialService.syncNow(id, 'setting');
-        addNotification({ type: 'info', title: 'Sincronização iniciada', message: 'Buscando novas publicações. Aguarde.' });
-    } catch {
-        addNotification({ type: 'error', title: 'Erro na sincronização', message: 'Não foi possível atualizar o feed.' });
-    }
-  };
-
   const handleUpdateSettings = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!wall?.id) return;
@@ -307,7 +296,7 @@ const AdminSocialPage: React.FC = () => {
                         </div>
                         {stats.hashtag && (
                           <p className="text-sm text-muted-foreground mt-0.5">
-                              Hashtag monitorada: <span className="text-primary font-bold">#{stats.hashtag}</span>
+                              Hashtag do evento: <span className="text-primary font-bold">#{stats.hashtag}</span>
                           </p>
                         )}
                     </div>
@@ -335,10 +324,8 @@ const AdminSocialPage: React.FC = () => {
                     <div className="h-8 w-px bg-border hidden sm:block mx-1" />
 
                     <div className="flex flex-wrap gap-2">
-                        <Button variant="outline" size="sm" onClick={handleManualSync} leftIcon={<RefreshCw className="h-4 w-4" />}>
-                            Sincronizar
-                        </Button>
-                        {/* F6P1-01: recarrega a lista da aba (o "Sincronizar" só dispara a busca no Instagram). */}
+                        {/* Onda 2 da auditoria de 19/11: o "Sincronizar" (busca por hashtag no Instagram, que nunca funcionou) saiu
+                            (B4-12); "Atualizar lista" recarrega a lista da aba (F6P1-01). */}
                         <Button variant="outline" size="sm" onClick={() => void fetchPosts()} leftIcon={<ListRestart className="h-4 w-4" />}>
                             Atualizar lista
                         </Button>

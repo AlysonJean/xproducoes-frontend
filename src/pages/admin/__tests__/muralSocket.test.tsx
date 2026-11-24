@@ -15,7 +15,6 @@ const { social, apiFetch, addNotification, io } = vi.hoisted(() => ({
     getAdminWall: vi.fn(),
     updateWall: vi.fn(),
     moderatePost: vi.fn(),
-    syncNow: vi.fn(),
     pairDevice: vi.fn(),
   },
   apiFetch: vi.fn(),
