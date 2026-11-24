@@ -43,9 +43,10 @@ describe('ClientListPage — exportar clientes', () => {
       'E-mail': 'ana@t.com',
       'Telefone': '31988887777',
       'Empresa': 'Ana Eventos',
-      'CPF/CNPJ': '12.345.678/0001-90',
+      // Onda 4 da auditoria de 19/11 (F2-05): sem a coluna CPF/CNPJ (a API não manda o documento) e o VIP pela regra do cartão
+      // (gasto acima de R$ 5.000; o isVip não é gravado por nada).
       'Status': 'Ativo',
-      'VIP': 'Sim',
+      'VIP': 'Não',
       'Reservas': 3,
       'Total gasto (R$)': 4500.5,
       'Cadastrado em': '10/08/2026 12:00',

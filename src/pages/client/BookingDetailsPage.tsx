@@ -12,7 +12,6 @@ import { ClientPage, ClientPageError, ClientPageLoading } from '../../components
 import { logger } from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
-import { BookingChatPanel } from '../../components/client/BookingChatPanel';
 import { ClientContractCard } from '../../components/proposal/ClientContractCard';
 import { ClientBookingJourney } from '../../components/bookings/ClientBookingJourney';
 import { bookingEmail, bookingPhone } from '../../utils/bookingContact';
@@ -28,6 +27,12 @@ import {
   openBookingAttachment,
   uploadBookingAttachment,
 } from '../../utils/bookingAttachments';
+import { bookingAddressText } from '../../utils/clientBookingItems';
+
+// F8-17: dia e hora do evento no horário de Brasília.
+const BRASILIA_DATE_TIME = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+});
 
 export const BookingDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -185,9 +190,17 @@ export const BookingDetailsPage = () => {
     }
   };
 
+  // Onda 4 da auditoria de 19/11 (F8-17): dia e hora no horário de Brasília (antes só o dia, no fuso do aparelho).
   const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    const date = new Date(dateString);
+    return Number.isNaN(date.getTime()) ? '' : BRASILIA_DATE_TIME.format(date);
   };
+  const deliveryAddress = booking
+    ? bookingAddressText({
+        street: booking.street, addressNumber: booking.addressNumber, neighborhood: booking.neighborhood,
+        city: booking.city, state: booking.state, zipCode: booking.zipCode,
+      })
+    : '';
 
   if (loading) {
     return (
@@ -274,18 +287,23 @@ export const BookingDetailsPage = () => {
             <h2 className="text-xl font-semibold mb-4 text-foreground">Detalhes do Evento</h2>
             <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <dt className="text-sm text-muted-foreground">Data do Evento</dt>
+                <dt className="text-sm text-muted-foreground">Início do Evento</dt>
                 <dd className="font-medium text-foreground">{formatDate(booking.eventDate)}</dd>
               </div>
               {booking.eventEndDate && (
                 <div>
-                  <dt className="text-sm text-muted-foreground">Data de Término</dt>
+                  <dt className="text-sm text-muted-foreground">Término</dt>
                   <dd className="font-medium text-foreground">{formatDate(booking.eventEndDate)}</dd>
                 </div>
               )}
               <div>
                 <dt className="text-sm text-muted-foreground">Local</dt>
                 <dd className="font-medium text-foreground">{booking.location || booking.eventLocation || 'Não informado'}</dd>
+              </div>
+              {/* F8-17: o endereço de entrega (rua, número, bairro, cidade e CEP), que não aparecia. */}
+              <div>
+                <dt className="text-sm text-muted-foreground">Endereço de entrega</dt>
+                <dd className="font-medium text-foreground">{deliveryAddress || 'Não informado'}</dd>
               </div>
               <div>
                 <dt className="text-sm text-muted-foreground">Status</dt>
@@ -548,8 +566,8 @@ export const BookingDetailsPage = () => {
 
           {/* D20 (aprovada em 02/11/2026): "Mensagens sobre esta reserva" virou "Fale com a equipe". O
               cliente escrevia num chat que ninguém lia (o painel não tem tela de chat). Agora: WhatsApp com
-              nome, código e data já escritos, e o e-mail como alternativa. O chat continua no código e só
-              aparece com VITE_CLIENT_BOOKING_CHAT_ENABLED=true (no servidor, CLIENT_BOOKING_CHAT_ENABLED). */}
+              nome, código e data já escritos, e o e-mail como alternativa. Onda 4 da auditoria de 19/11 (F3-14, decisão de
+              Alyson de 24/11): o código do chat do cliente saiu do site. */}
           <Card padding>
             <h2 className="text-xl font-semibold mb-2 text-foreground">Fale com a equipe sobre esta reserva</h2>
             <p className="text-sm text-muted-foreground mb-4">
@@ -577,9 +595,6 @@ export const BookingDetailsPage = () => {
             <p className="mt-3 text-xs text-muted-foreground break-all">E-mail da equipe: {SUPPORT_EMAIL}</p>
           </Card>
 
-          {id && import.meta.env.VITE_CLIENT_BOOKING_CHAT_ENABLED === 'true' && (
-            <BookingChatPanel bookingId={id} currentUserId={user?.id} />
-          )}
         </div>
       </div>
 

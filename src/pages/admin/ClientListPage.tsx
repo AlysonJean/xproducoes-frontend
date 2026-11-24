@@ -7,7 +7,6 @@ import {
   Download,
   Filter,
   CheckCircle2,
-  Clock,
   XCircle,
   Mail,
   Phone,
@@ -47,7 +46,7 @@ const STATUS_OPTIONS = [
   { value: 'all', label: 'Todos os status' },
   { value: 'ACTIVE', label: 'Ativo' },
   { value: 'INACTIVE', label: 'Inativo' },
-  { value: 'PENDING', label: 'Pendente' },
+  // Onda 4 da auditoria de 19/11 (F7admin2-10): saiu "Pendente" (o servidor só devolve Ativo ou Inativo).
 ];
 
 const SORT_OPTIONS = [
@@ -208,7 +207,6 @@ const ClientListPage: React.FC = () => {
     switch (status) {
       case 'ACTIVE': return { variant: 'success', label: 'Ativo', icon: CheckCircle2 };
       case 'INACTIVE': return { variant: 'destructive', label: 'Inativo', icon: XCircle };
-      case 'PENDING': return { variant: 'warning', label: 'Pendente', icon: Clock };
       default: return { variant: 'outline', label: 'Desconhecido', icon: Users };
     }
   };
@@ -400,7 +398,8 @@ const ClientListPage: React.FC = () => {
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <p className="text-sm font-bold text-foreground truncate">{clientName}</p>
-                                {client.isVip && <Star size={12} className="text-warning fill-warning" aria-label="Cliente VIP" />}
+                                {/* F7admin2-10: a estrela segue a regra do cartão VIP (isVip não é gravado por nada). */}
+                                {(client.totalSpent || 0) > VIP_SPENT_THRESHOLD && <Star size={12} className="text-warning fill-warning" aria-label="Cliente VIP" />}
                               </div>
                               <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
                                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -421,9 +420,6 @@ const ClientListPage: React.FC = () => {
                                 <Building2 size={14} className="text-muted-foreground" aria-hidden="true" />
                                 <span className="text-sm font-medium text-foreground">{client.companyName || 'Pessoa física'}</span>
                              </div>
-                             {client.taxId && (
-                                <span className="text-xs text-muted-foreground">CPF/CNPJ: {client.taxId}</span>
-                             )}
                           </div>
                         </td>
                         <td className="px-6 py-4">

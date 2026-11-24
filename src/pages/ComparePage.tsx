@@ -23,7 +23,9 @@ const PAGE_DESCRIPTION = 'Compare equipamentos, kits e serviços lado a lado par
 // Miniatura com fallback neutro (antes: imagem do placehold.co com cores fixas).
 const CompareThumb = ({ src, alt }: { src?: string | null; alt: string }) => {
   const [failed, setFailed] = useState(false);
-  if (!src || failed) {
+  // Onda 4 da auditoria de 19/11 (F2-04): URL sem foto válida volta vazia; aí vale o ícone.
+  const url = normalizeImageUrl(src);
+  if (!src || !url || failed) {
     return (
       <div className="w-32 h-24 rounded-lg mx-auto mb-3 bg-muted flex items-center justify-center" role="img" aria-label={`${alt} (sem foto)`}>
         <Package className="w-8 h-8 text-muted-foreground" aria-hidden="true" />
@@ -32,7 +34,7 @@ const CompareThumb = ({ src, alt }: { src?: string | null; alt: string }) => {
   }
   return (
     <img
-      src={normalizeImageUrl(src)}
+      src={url}
       alt={alt}
       onError={() => setFailed(true)}
       className="w-32 h-24 object-cover rounded-lg mx-auto mb-3"

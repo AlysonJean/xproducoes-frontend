@@ -75,13 +75,28 @@ const AdminSponsorPage = () => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             setNewFile(file);
+            // Onda 4 da auditoria de 19/11 (F6P1-15): a prévia anterior é liberada ao trocar o arquivo.
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
             setPreviewUrl(URL.createObjectURL(file));
         }
     };
 
+    // F6P1-15: fechar a janela libera a prévia e esquece o arquivo escolhido.
+    const closeFormModal = () => {
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+        setNewFile(null);
+        setIsFormModalOpen(false);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newFile || !newName) return;
+        // F6P1-15: sem o logotipo, avisa (antes não acontecia nada).
+        if (!newFile) {
+            addNotification({ type: 'warning', title: 'Escolha o logotipo', message: 'Selecione a imagem do patrocinador antes de cadastrar.' });
+            return;
+        }
+        if (!newName) return;
 
         try {
             setUploading(true);
@@ -95,10 +110,8 @@ const AdminSponsorPage = () => {
             });
 
             addNotification({ type: 'success', title: 'Patrocinador cadastrado', message: 'O logotipo foi adicionado.' });
-            setIsFormModalOpen(false);
+            closeFormModal();
             setNewName('');
-            setNewFile(null);
-            setPreviewUrl(null);
             fetchSponsors();
         } catch (err) {
             logger.error('Erro', 'AdminSponsorPage', err);
@@ -256,7 +269,7 @@ const AdminSponsorPage = () => {
 
             <Modal
               isOpen={isFormModalOpen}
-              onClose={() => setIsFormModalOpen(false)}
+              onClose={closeFormModal}
               title="Novo patrocinador"
               size="md"
             >
@@ -306,7 +319,7 @@ const AdminSponsorPage = () => {
                     </div>
 
                     <div className="flex justify-end gap-3 pt-6 border-t border-border">
-                        <Button type="button" variant="outline" onClick={() => setIsFormModalOpen(false)}>Cancelar</Button>
+                        <Button type="button" variant="outline" onClick={closeFormModal}>Cancelar</Button>
                         <Button type="submit" isLoading={uploading}>
                             Cadastrar
                         </Button>

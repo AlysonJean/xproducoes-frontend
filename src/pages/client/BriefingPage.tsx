@@ -225,6 +225,11 @@ export const BriefingPage: React.FC = () => {
   }, [step]);
 
   const cep = answers.zipCode;
+  // F2-10: as respostas atuais para a busca do CEP comparar (atualizado antes do efeito do CEP, que vem depois).
+  const answersRef = useRef(answers);
+  useEffect(() => {
+    answersRef.current = answers;
+  });
   useEffect(() => {
     if (!isCompleteCep(cep)) {
       setCepStatus('idle');
@@ -232,7 +237,17 @@ export const BriefingPage: React.FC = () => {
     }
     const controller = new AbortController();
     setCepStatus('loading');
+    // Onda 4 da auditoria de 19/11 (F2-10), como no passo do contrato (ContractPartyStep): sem resposta em 8 s, a pessoa preenche à
+    // mão; e a resposta só preenche o campo que ninguém mexeu enquanto ela vinha (antes sobrescrevia o digitado).
+    const typed = answersRef.current;
+    const before = { street: typed.street, neighborhood: typed.neighborhood, city: typed.city, state: typed.state };
+    const timer = window.setTimeout(() => {
+      controller.abort();
+      setManualAddress(true);
+      setCepStatus('notFound');
+    }, 8000);
     void lookupCep(cep, controller.signal).then((address) => {
+      window.clearTimeout(timer);
       if (controller.signal.aborted) return;
       setManualAddress(true);
       if (!address) {
@@ -240,15 +255,21 @@ export const BriefingPage: React.FC = () => {
         return;
       }
       setCepStatus('idle');
-      setAnswers((current) => ({
-        ...current,
-        street: address.street || current.street,
-        neighborhood: address.neighborhood || current.neighborhood,
-        city: address.city || current.city,
-        state: address.state || current.state,
-      }));
+      setAnswers((current) => {
+        const keep = (field: keyof typeof before, value: string) => (value && current[field] === before[field] ? value : current[field]);
+        return {
+          ...current,
+          street: keep('street', address.street),
+          neighborhood: keep('neighborhood', address.neighborhood),
+          city: keep('city', address.city),
+          state: keep('state', address.state),
+        };
+      });
     });
-    return () => controller.abort();
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [cep]);
 
   const startOver = () => {
@@ -284,7 +305,7 @@ export const BriefingPage: React.FC = () => {
       const booking = data?.booking ?? data ?? null;
       if (!user?.id && data?.user) setAuthenticatedUser(data.user);
       clearDraft();
-      addNotification({ type: 'success', title: 'Pedido enviado!', message: quoteSuccessMessage(data) });
+      addNotification({ type: 'success', title: 'Pedido enviado!', message: quoteSuccessMessage(data, !user?.id) });
       navigate(booking?.id ? `/orcamento-sucesso/${booking.id}` : '/orcamento-sucesso', {
         state: {
           booking,

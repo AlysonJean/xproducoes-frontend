@@ -17,7 +17,8 @@ describe('apiFetch — falha de rede só repete em GET/HEAD', () => {
   it.each(['POST', 'PUT', 'PATCH', 'DELETE'])('%s: falha de rede sobe na hora, depois de um fetch só', async (method) => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
 
-    await expect(apiFetch('/bookings', { method, body: '{}' })).rejects.toThrow('Failed to fetch');
+    // Onda 4 da auditoria de 19/11 (F1-16): a queda de rede chega em português (o TypeError original vai em `cause`).
+    await expect(apiFetch('/bookings', { method, body: '{}' })).rejects.toThrow('Sem conexão com o servidor. Confira a internet e tente de novo.');
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -43,7 +44,7 @@ describe('apiFetch — falha de rede só repete em GET/HEAD', () => {
   it('GET: a rede que não volta para nas 3 tentativas e sobe o erro', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
 
-    await expect(apiFetch('/kits')).rejects.toThrow('Failed to fetch');
+    await expect(apiFetch('/kits')).rejects.toThrow('Sem conexão com o servidor. Confira a internet e tente de novo.');
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });

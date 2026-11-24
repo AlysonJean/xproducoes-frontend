@@ -34,6 +34,9 @@ import { BrandLoader } from '../../components/ui/BrandLoader';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { logger } from '../../utils/logger';
 
+// F6P1-17: o tamanho da página de fotos (o servidor também limita a 100).
+const POSTS_PAGE_SIZE = 100;
+
 interface SponsorLogo {
     id: string;
     name: string;
@@ -91,6 +94,10 @@ const AdminSocialPage: React.FC = () => {
   const [savingSettings, setSavingSettings] = useState(false);
   // Estado real da conexão em tempo real (antes um rodapé fixo dizia "Socket.io Conectado" sempre).
   const [socketConnected, setSocketConnected] = useState(false);
+  // F6P1-17: "Carregar mais" pede a próxima página e acrescenta sem repetir.
+  const [postsPage, setPostsPage] = useState(1);
+  const [hasMorePosts, setHasMorePosts] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -99,9 +106,14 @@ const AdminSocialPage: React.FC = () => {
         const response = await socialService.getPosts({
             settingId: settingId,
             status: tab,
-            limit: 100
+            limit: POSTS_PAGE_SIZE,
+            page: 1,
         });
-        setPosts(withoutEnvelope<SocialPost[]>(response) || []);
+        const firstPage = withoutEnvelope<SocialPost[]>(response) || [];
+        setPosts(firstPage);
+        // Onda 4 da auditoria de 19/11 (F6P1-17): página cheia indica que há mais (antes só as 100 primeiras, sem aviso).
+        setPostsPage(1);
+        setHasMorePosts(firstPage.length === POSTS_PAGE_SIZE);
 
         // O settingId do envelope só vinha no contexto de reserva (sem rota no painel); o do endereço vale.
         const targetId = (Array.isArray(response) ? undefined : response?.settingId) || settingId;
@@ -123,6 +135,24 @@ const AdminSocialPage: React.FC = () => {
   useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
+
+  const loadMorePosts = async () => {
+    if (!id) return;
+    try {
+      setLoadingMore(true);
+      const next = postsPage + 1;
+      const response = await socialService.getPosts({ settingId, status: tab, limit: POSTS_PAGE_SIZE, page: next });
+      const more = withoutEnvelope<SocialPost[]>(response) || [];
+      setPosts((prev) => [...prev, ...more.filter((p) => !prev.some((q) => q.id === p.id))]);
+      setPostsPage(next);
+      setHasMorePosts(more.length === POSTS_PAGE_SIZE);
+    } catch (error) {
+      logger.error('Failed to fetch more posts', 'AdminSocialPage', error);
+      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível carregar mais publicações.' });
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const fetchSponsors = async () => {
      try {
@@ -257,7 +287,10 @@ const AdminSocialPage: React.FC = () => {
         addNotification({
           type: 'error',
           title: 'Erro ao salvar',
-          message: (err as {response?: {data?: {error?: string}}})?.response?.data?.error || 'Verifique se o endereço (slug) ou a hashtag já estão em uso.'
+          // Onda 4 da auditoria de 19/11 (F6P1-14): o motivo vem em `message` (ex.: "Este link (slug) já está em uso").
+          message: (err as {response?: {data?: {message?: string; error?: string}}})?.response?.data?.message
+            || (err as {response?: {data?: {error?: string}}})?.response?.data?.error
+            || 'Não foi possível salvar o mural. Tente de novo.'
         });
     } finally {
         setSavingSettings(false);
@@ -399,12 +432,19 @@ const AdminSocialPage: React.FC = () => {
                             <BrandLoader size={80} label="Carregando publicações…" />
                         </div>
                     ) : loadError && posts.length === 0 ? null : (
-                        <ModerationGrid
-                            posts={posts}
-                            onApprove={(postId) => handleModerate(postId, 'APPROVED')}
-                            onReject={(postId) => handleModerate(postId, 'REJECTED')}
-                            processingIds={processing}
-                        />
+                        <>
+                          <ModerationGrid
+                              posts={posts}
+                              onApprove={(postId) => handleModerate(postId, 'APPROVED')}
+                              onReject={(postId) => handleModerate(postId, 'REJECTED')}
+                              processingIds={processing}
+                          />
+                          {hasMorePosts && (
+                            <div className="mt-6 flex justify-center">
+                              <Button variant="outline" onClick={() => void loadMorePosts()} isLoading={loadingMore}>Carregar mais</Button>
+                            </div>
+                          )}
+                        </>
                     )}
                 </div>
             </Card>

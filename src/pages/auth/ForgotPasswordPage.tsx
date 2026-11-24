@@ -13,6 +13,8 @@ import {
 import { AuthLayout, BackToLoginLink } from '../../components/layouts/AuthLayout';
 import { KeyRound, Mail } from 'lucide-react';
 
+const FORGOT_PASSWORD_SENT = 'Se houver uma conta com este e-mail, enviamos o link. Confira também o spam e se o e-mail está certo.';
+
 const forgotPasswordSchema = z.object({
   email: z.string().email('E-mail inválido'),
 });
@@ -44,11 +46,9 @@ const ForgotPasswordPage: React.FC = () => {
       await api.post('/auth/request-password-reset', { email: data.email });
 
       setSuccess(true);
-      addNotification({ 
-        type: 'success', 
-        title: 'E-mail enviado', 
-        message: 'Instruções enviadas para seu e-mail.' 
-      });
+      // Onda 4 da auditoria de 19/11 (F8-14): o servidor responde igual com ou sem conta (contra a descoberta de contas); a tela
+      // não afirma mais que o e-mail foi enviado.
+      addNotification({ type: 'success', title: 'Pedido recebido', message: FORGOT_PASSWORD_SENT });
     } catch (err: unknown) {
       const errorResponse = err as { response?: { data?: { message?: string } } };
       const msg = errorResponse.response?.data?.message || 'Erro ao enviar instruções. Verifique sua conexão e tente novamente.';
@@ -72,7 +72,7 @@ const ForgotPasswordPage: React.FC = () => {
     >
       {success && (
         <Alert variant="success">
-          E-mail enviado com sucesso! Verifique sua caixa de entrada (e spam) para redefinir sua senha.
+          {FORGOT_PASSWORD_SENT}
         </Alert>
       )}
 

@@ -137,7 +137,10 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // Onda 4 da auditoria de 19/11 (F1-19): sem mapas de código no site publicado. Os .map iam para dist/client e a Vercel os servia
+    // a qualquer um, com o código e os comentários (que descrevem as defesas); nada os mandava ao Sentry. Pilha
+    // legível no Sentry exige o @sentry/vite-plugin (dependência nova, com os mapas apagados depois do envio).
+    sourcemap: false,
     rollupOptions: {
       output: {
         // 2026 Strategic code-splitting: vendor + feature chunks for optimal caching

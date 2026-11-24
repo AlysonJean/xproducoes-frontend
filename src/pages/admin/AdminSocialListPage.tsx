@@ -93,9 +93,10 @@ const AdminSocialListPage: React.FC = () => {
             setNewWall({ name: '', hashtag: '', slug: '' });
             fetchWalls();
         } catch (err: unknown) {
-            const message = axios.isAxiosError(err)
-              ? err.response?.data?.error || err.message
-              : err instanceof Error ? err.message : 'Erro desconhecido';
+            // Onda 4 da auditoria de 19/11 (F6P1-14): o servidor manda o motivo em `message` (só `error` era lido e aparecia
+            // "Request failed with status code 500"); nunca o texto do axios.
+            const message = (axios.isAxiosError(err) && (err.response?.data?.message || err.response?.data?.error))
+              || 'Não foi possível salvar o mural. Tente de novo.';
             addNotification({
               type: 'error',
               title: 'Erro ao criar mural',

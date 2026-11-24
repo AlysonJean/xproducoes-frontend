@@ -181,9 +181,11 @@ const RecentActivityList = ({ activities, loading }: { activities: DashboardActi
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-1">{activity.description}</p>
-                  {activity.amount && (
-                    <p className="text-sm text-success font-semibold mt-1">
-                      +{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(activity.amount)}
+                  {/* Onda 4 da auditoria de 19/11 (F6P1-10): só com valor (o 0 saía solto na tela) e sem o "+" verde: é o valor do
+                      pedido, não um recebimento. */}
+                  {Number(activity.amount) > 0 && (
+                    <p className="text-sm text-foreground font-semibold mt-1">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(activity.amount))}
                     </p>
                   )}
                 </div>

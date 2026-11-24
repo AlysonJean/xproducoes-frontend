@@ -11,6 +11,7 @@ import { logger } from '../../utils/logger';
 import { MessageCircle } from 'lucide-react';
 import { Button, buttonVariants } from '../../components/ui/StandardComponents';
 import { SuccessCard } from '../../components/client/SuccessCard';
+import { GUEST_QUOTE_MESSAGE } from '../../utils/quoteSubmission';
 
 // Achado (auditoria do design system): havia duas telas de sucesso para o mesmo fluxo. O pedido de
 // orçamento caía em /reserva-sucesso ("Reserva realizada com sucesso!" — o pedido ainda está
@@ -226,14 +227,11 @@ export const QuoteSuccessPage = () => {
           Número do pedido: <strong className="break-all text-foreground">{bookingId}</strong>
         </p>
       )}
-      {briefingAccount === 'created' && (
+      {/* Onda 4 da auditoria de 19/11 (F8-13): o mesmo texto com ou sem cadastro. */}
+      {(briefingAccount === 'created' || briefingAccount === 'existing') && (
         <p>
-          Criamos seu acesso com o e-mail informado. Em "Ver meus pedidos" você acompanha tudo. Para entrar
-          de outro aparelho, use "Esqueceu sua senha?" na tela de login.
+          {GUEST_QUOTE_MESSAGE} Para entrar de outro aparelho, use "Esqueceu sua senha?" na tela de login.
         </p>
-      )}
-      {briefingAccount === 'existing' && (
-        <p>Este e-mail já tem cadastro: o pedido entrou na sua conta. Entre para acompanhar.</p>
       )}
       {openedNow && (
         <p role="status" className="text-sm font-semibold text-success">

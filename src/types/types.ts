@@ -69,7 +69,7 @@ export interface Client {
   companyName?: string;
   industry?: string;
   companySize?: string;
-  taxId?: string;
+  // Onda 4 da auditoria de 19/11 (F2-05): sem taxId (a API nunca manda o documento do cliente).
   isVip?: boolean;
   /** D8c: data do pedido de exclusão adiado (reserva futura ou pagamento pendente); null sem pedido. */
   deletionScheduledAt?: string | null;
@@ -145,7 +145,7 @@ export interface Service {
   updatedAt?: Date | string;
 }
 
-interface KitItem {
+export interface KitItem {
   id: string;
   kitId: string;
   equipmentId?: string;

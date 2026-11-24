@@ -26,7 +26,8 @@ export const bookingEmail = (booking: BookingContactSource): string | undefined 
 // Número para o wa.me, que exige o DDI: o telefone é digitado sem ele ("(31) 98888-7777"), e 31 é o DDI
 // da Holanda. 10 ou 11 dígitos ganham o 55, como no envio do servidor (whatsappService.sendMessage).
 export const toWhatsAppNumber = (phone?: string | null): string | null => {
-  const digits = (phone || '').replace(/\D/g, '');
+  // Onda 4 da auditoria de 19/11 (F2-09): sem os zeros da frente ("(031) 98888-7777" virava 031988887777, um número inválido).
+  const digits = (phone || '').replace(/\D/g, '').replace(/^0+/, '');
   if (digits.length === 10 || digits.length === 11) return `55${digits}`;
   return digits.length >= 12 ? digits : null;
 };

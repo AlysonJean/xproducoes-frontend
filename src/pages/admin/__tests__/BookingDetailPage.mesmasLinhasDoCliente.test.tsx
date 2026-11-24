@@ -19,7 +19,6 @@ vi.mock('@/components/forms/AdminBookingForm', () => ({ AdminBookingForm: () => 
 vi.mock('@/components/bookings/BookingCollaborators', () => ({ BookingCollaborators: () => null }));
 vi.mock('@/components/bookings/BookingFinancialSummary', () => ({ BookingFinancialSummary: () => null }));
 vi.mock('../../../components/modals/EventManagement', () => ({ EventManagement: () => null }));
-vi.mock('../../../components/client/BookingChatPanel', () => ({ BookingChatPanel: () => null }));
 vi.mock('react-ga4', () => ({ default: { event: vi.fn() } }));
 
 import BookingDetailPage from '../BookingDetailPage';

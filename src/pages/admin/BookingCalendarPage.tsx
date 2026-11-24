@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect, type ChangeEvent, type ComponentType } from 'react';
 import { Calendar, dateFnsLocalizer, type Event, type SlotInfo, Views, type View, type CalendarProps } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, isValid } from 'date-fns';
+import { STEP_LABELS, brasiliaHour, modalEventEnd, periodTitle, stepDate } from '../../utils/calendarNavigation';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { apiFetch } from '@/services/api';
 import { asArray } from '@/utils/normalize';
@@ -135,11 +136,12 @@ const BookingDetailsModal = ({
               </div>
               <div>
                 <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Data e horário</h4>
-                <p className="text-sm font-bold text-foreground">{new Date(booking.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                {/* Onda 4 da auditoria de 19/11 (F6P1-16): o término é o eventEndDate (o servidor arredonda a duração: 20:00–22:30
+                    aparecia como 20:00–23:00) e as horas são as de Brasília, como no resto do painel. */}
+                <p className="text-sm font-bold text-foreground">{new Date(booking.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' })}</p>
                 <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                   <Clock className="h-3 w-3" />
-                  {new Date(booking.eventDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} — 
-                  {new Date(new Date(booking.eventDate).getTime() + (booking.duration || 4) * 3600000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  {brasiliaHour(new Date(booking.eventDate))} — {brasiliaHour(modalEventEnd(booking))}
                 </div>
               </div>
             </div>
@@ -317,6 +319,7 @@ export const BookingCalendarPage = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<View>(Views.MONTH);
+  const stepLabels = STEP_LABELS[view === Views.WEEK ? 'week' : view === Views.DAY ? 'day' : 'month'];
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [selectedDayEvents, setSelectedDayEvents] = useState<CalendarEvent[] | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -655,15 +658,16 @@ export const BookingCalendarPage = () => {
         <Card className="border-border/50 bg-card/30 backdrop-blur-sm p-4 overflow-visible z-30 relative">
             <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <Button variant="outline" size="icon" aria-label="Mês anterior" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="h-9 w-9">
+                  {/* Onda 4 da auditoria de 19/11 (F6P1-13): as setas andam pela visão (semana, dia ou mês); antes, sempre um mês. */}
+                  <Button variant="outline" size="icon" aria-label={stepLabels.prev} onClick={() => setCurrentDate(stepDate(currentDate, view, -1))} className="h-9 w-9">
                      <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <Button variant="outline" size="xs" className="h-9" onClick={() => setCurrentDate(new Date())}>Hoje</Button>
-                  <Button variant="outline" size="icon" aria-label="Próximo mês" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="h-9 w-9">
+                  <Button variant="outline" size="icon" aria-label={stepLabels.next} onClick={() => setCurrentDate(stepDate(currentDate, view, 1))} className="h-9 w-9">
                      <ChevronRight className="h-4 w-4" />
                   </Button>
                   <h3 className="text-sm font-bold text-foreground capitalize ml-2 min-w-[140px] text-center" aria-live="polite">
-                     {format(currentDate, 'MMMM yyyy', { locale: ptBR })}
+                     {periodTitle(currentDate, view)}
                   </h3>
                </div>
 

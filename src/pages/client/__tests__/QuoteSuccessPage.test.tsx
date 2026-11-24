@@ -137,18 +137,19 @@ describe('QuoteSuccessPage', () => {
     expect(openWhatsApp.mock.calls[0][1]).toContain('- Escadas no acesso: Não sei\n- Local coberto: Sim\n- Estacionamento ou carga e descarga: Não sei');
   });
 
-  it('vindo do briefing: conta que o acesso foi criado ou que o e-mail já tinha cadastro', async () => {
+  // Onda 4 da auditoria de 19/11 (F8-13, decisão de 24/11): acesso criado ou e-mail já cadastrado, o mesmo texto.
+  it('vindo do briefing sem login: o mesmo texto com ou sem cadastro', async () => {
     const first = renderAt({ pathname: '/orcamento-sucesso/XP-1', state: { ...FORM_STATE, briefingAccount: 'created' } });
-    expect(await screen.findByText(/Criamos seu acesso com o e-mail informado/)).toBeInTheDocument();
+    const textoCriado = (await screen.findByText(/Se este e-mail ainda não tinha cadastro/)).textContent;
     first.unmount();
 
     const second = renderAt({ pathname: '/orcamento-sucesso/XP-1', state: { ...FORM_STATE, briefingAccount: 'existing' } });
-    expect(await screen.findByText(/Este e-mail já tem cadastro/)).toBeInTheDocument();
+    expect((await screen.findByText(/Se este e-mail ainda não tinha cadastro/)).textContent).toBe(textoCriado);
+    expect(screen.queryByText(/Este e-mail já tem cadastro/)).toBeNull();
     second.unmount();
 
     renderAt({ pathname: '/orcamento-sucesso/XP-1', state: FORM_STATE });
     await screen.findByText(/Recebemos seu pedido/);
-    expect(screen.queryByText(/Criamos seu acesso/)).toBeNull();
-    expect(screen.queryByText(/Este e-mail já tem cadastro/)).toBeNull();
+    expect(screen.queryByText(/Se este e-mail ainda não tinha cadastro/)).toBeNull();
   });
 });

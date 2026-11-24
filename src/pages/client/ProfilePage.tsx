@@ -31,6 +31,21 @@ import { NotificationsTab } from './profile/NotificationsTab';
 import { ProfileSidebar } from './profile/ProfileSidebar';
 import { logger } from '../../utils/logger';
 
+// F8-11: o formulário do perfil a partir do perfil gravado.
+function formFromProfile(data: ClientProfile): ProfileFormData {
+  return {
+    name: data.name || '',
+    email: data.email || '',
+    phone: data.phone || '',
+    bio: data.bio || '',
+    location: data.location || '',
+    website: data.website || '',
+    companyName: data.companyName || '',
+    jobTitle: data.jobTitle || '',
+    industry: data.industry || ''
+  };
+}
+
 // Onda 2 da auditoria de 19/11 (F8-06): a aba "Preferências" saiu. Idioma, moeda, fuso, tipo de perfil, logística e
 // "Faturamento automático" (notas fiscais) eram gravados, mas nada no site nem no servidor os lia; o único efeito era a
 // moeda escolhida trocar o símbolo do "Total Gasto" sem converter (R$ 1.500 virava US$ 1.500,00). O valor gravado fica
@@ -67,6 +82,11 @@ export const ProfilePage = () => {
   });
   
   const [editMode, setEditMode] = useState(false);
+  // Onda 4 da auditoria de 19/11 (F8-11): "Cancelar" desfaz o que foi digitado (o formulário volta ao perfil gravado).
+  const changeEditMode = (mode: boolean) => {
+    if (!mode && profile) setFormData(formFromProfile(profile));
+    setEditMode(mode);
+  };
   const [activeTab, setActiveTab] = useState<ProfileTab>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -92,17 +112,7 @@ export const ProfilePage = () => {
       setProfile(data);
 
       // Inicializar formulário
-      setFormData({
-        name: data.name || '',
-        email: data.email || '',
-        phone: data.phone || '',
-        bio: data.bio || '',
-        location: data.location || '',
-        website: data.website || '',
-        companyName: data.companyName || '',
-        jobTitle: data.jobTitle || '',
-        industry: data.industry || ''
-      });
+      setFormData(formFromProfile(data));
 
       // Se o backend retornar preferências, inicializar aqui
       const preferences = data.preferences;
@@ -366,7 +376,7 @@ export const ProfilePage = () => {
         <ProfileHeader
           profile={profile}
           editMode={editMode}
-          setEditMode={setEditMode}
+          setEditMode={changeEditMode}
           uploadingAvatar={uploadingAvatar}
           handleAvatarChange={handleAvatarChange}
           formatCurrency={formatCurrency}

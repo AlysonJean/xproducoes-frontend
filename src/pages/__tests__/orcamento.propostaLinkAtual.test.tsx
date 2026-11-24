@@ -15,7 +15,6 @@ vi.mock('react-ga4', () => ({ default: { event: vi.fn(), initialize: vi.fn(), se
 vi.mock('../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1', role: 'CLIENT' } }) }));
 vi.mock('../../contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification: vi.fn() }) }));
 vi.mock('@/contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification: vi.fn() }) }));
-vi.mock('../../components/client/BookingChatPanel', () => ({ BookingChatPanel: () => null }));
 
 import PublicProposalPage from '../PublicProposalPage';
 import { BookingDetailsPage } from '../client/BookingDetailsPage';

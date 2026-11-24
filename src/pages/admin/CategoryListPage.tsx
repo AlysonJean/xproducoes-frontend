@@ -304,7 +304,7 @@ export const CategoryListPage = () => {
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmDelete}
         title="Excluir categoria?"
-        message="Esta ação é definitiva. Os itens desta categoria perdem a classificação principal."
+        message="Só categorias sem equipamentos podem ser excluídas. Esta ação é definitiva."
         variant="danger"
         isLoading={isDeleting}
         confirmText="Excluir"

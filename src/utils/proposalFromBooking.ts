@@ -76,7 +76,8 @@ export function proposalBaseFromBooking(booking: BookingSource): ProposalBaseBoo
   return {
     id,
     code: id.startsWith('XP-') ? id : `#${formatBookingCode(id)}`,
-    clientName: booking.client?.name || booking.client?.user?.name || booking.clientName || 'Cliente sem nome',
+    // Onda 4 da auditoria de 19/11 (F2-02): o nome informado na reserva vem antes do da conta (client.name não existe na API).
+    clientName: booking.clientName || booking.client?.user?.name || 'Cliente sem nome',
     clientPhone: bookingPhone(booking) || '',
     clientEmail: bookingEmail(booking) || '',
     briefing: booking.specialRequests?.trim() || '',

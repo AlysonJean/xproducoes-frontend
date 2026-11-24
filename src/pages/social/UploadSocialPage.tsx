@@ -10,6 +10,7 @@ import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
 import { cn } from '../../utils/cn';
 import { SUPPORT_EMAIL } from '../../data/site';
+import { GUEST_PHOTO_MAX_BYTES, GUEST_PHOTO_TOO_BIG, GUEST_PHOTO_TYPES, GUEST_PHOTO_TYPE_MESSAGE, prepareGuestPhoto, shouldResizeGuestPhoto } from '../../utils/guestPhoto';
 
 interface WallConfig {
     name: string;
@@ -60,7 +61,8 @@ const UploadSocialPage = () => {
             setLoading(true);
             setLoadError(false);
             if (slug) {
-                const res = await apiFetch<TvConfigResponse>(`/tv/config?slug=${slug}`);
+                // Onda 4 da auditoria de 19/11 (F8-09): o slug vai codificado na busca.
+                const res = await apiFetch<TvConfigResponse>(`/tv/config?slug=${encodeURIComponent(slug)}`);
                 setEventCancelled(res.eventCancelled === true);
                 if (res.linked) {
                     setConfig({
@@ -71,8 +73,13 @@ const UploadSocialPage = () => {
                 }
             }
         } catch (err) {
-            logger.error("Erro ao carregar configuração", 'UploadSocialPage', err);
-            setLoadError(true);
+            // F8-09: 404 é mural que não existe (cai em "Mural não encontrado"), não falta de conexão.
+            if ((err as { status?: number } | null)?.status === 404) {
+                setConfig(null);
+            } else {
+                logger.error("Erro ao carregar configuração", 'UploadSocialPage', err);
+                setLoadError(true);
+            }
         } finally {
             setLoading(false);
         }
@@ -94,13 +101,24 @@ const UploadSocialPage = () => {
         return () => clearTimeout(timer);
     }, [success, navigate, slug]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Onda 4 da auditoria de 19/11 (F8-20): o tipo é conferido ao escolher e a foto grande é reduzida no aparelho (antes, só o
+    // servidor conferia, depois do envio inteiro).
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
-        if (selectedFile) {
-            setFile(selectedFile);
-            setPreviewUrl(URL.createObjectURL(selectedFile));
-            setSubmitError(null);
+        if (!selectedFile) return;
+        if (!GUEST_PHOTO_TYPES.test(selectedFile.type)) {
+            setSubmitError(GUEST_PHOTO_TYPE_MESSAGE);
+            return;
         }
+        // A foto pequena entra na hora; só a grande espera a redução.
+        const prepared = shouldResizeGuestPhoto(selectedFile) ? await prepareGuestPhoto(selectedFile) : selectedFile;
+        if (prepared.size > GUEST_PHOTO_MAX_BYTES) {
+            setSubmitError(GUEST_PHOTO_TOO_BIG);
+            return;
+        }
+        setFile(prepared);
+        setPreviewUrl(URL.createObjectURL(prepared));
+        setSubmitError(null);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -115,7 +133,7 @@ const UploadSocialPage = () => {
             formData.append('author', author || 'Convidado');
             formData.append('caption', caption);
 
-            const post = await apiFetch<UploadedPost>(`/public/social/upload/${slug}`, {
+            const post = await apiFetch<UploadedPost>(`/public/social/upload/${encodeURIComponent(slug)}`, {
                 method: 'POST',
                 body: formData
             });

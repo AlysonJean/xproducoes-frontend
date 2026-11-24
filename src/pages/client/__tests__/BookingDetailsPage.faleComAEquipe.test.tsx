@@ -7,7 +7,6 @@ vi.mock('../../../services/api', () => ({ apiFetch }));
 vi.mock('@/services/api', () => ({ apiFetch }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1', role: 'CLIENT', name: 'Ana da Conta' } }) }));
 vi.mock('../../../contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification: vi.fn() }) }));
-vi.mock('../../../components/client/BookingChatPanel', () => ({ BookingChatPanel: () => <p>Chat antigo da reserva</p> }));
 vi.mock('react-ga4', () => ({ default: { event: gaEvent } }));
 
 import { BookingDetailsPage } from '../BookingDetailsPage';
@@ -110,12 +109,13 @@ describe('BookingDetailsPage (cliente) — D20: "Fale com a equipe sobre esta re
     expect(screen.queryByText('Chat antigo da reserva')).toBeNull();
   });
 
-  it('com VITE_CLIENT_BOOKING_CHAT_ENABLED=true o chat volta a aparecer, junto do cartão', async () => {
+  // Onda 4 da auditoria de 19/11 (F3-14, decisão de 24/11): o código do chat do cliente saiu; a chave antiga não o traz de volta.
+  it('com a chave antiga VITE_CLIENT_BOOKING_CHAT_ENABLED=true, segue só o cartão (o chat saiu do site)', async () => {
     vi.stubEnv('VITE_CLIENT_BOOKING_CHAT_ENABLED', 'true');
 
     await renderPage();
 
-    expect(screen.getByText('Chat antigo da reserva')).toBeInTheDocument();
+    expect(screen.queryByText(/Mensagens sobre esta reserva/)).toBeNull();
     expect(screen.getByText('Fale com a equipe sobre esta reserva')).toBeInTheDocument();
   });
 });

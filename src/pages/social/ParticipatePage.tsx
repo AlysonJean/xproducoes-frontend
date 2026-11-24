@@ -36,7 +36,8 @@ const ParticipatePage = () => {
             setLoading(true);
             setLoadError(false);
             if (slug) {
-                const res = await apiFetch<TvConfigResponse>(`/tv/config?slug=${slug}`);
+                // Onda 4 da auditoria de 19/11 (F8-09): o slug vai codificado na busca.
+                const res = await apiFetch<TvConfigResponse>(`/tv/config?slug=${encodeURIComponent(slug)}`);
                 setEventCancelled(res.eventCancelled === true);
                 if (res.linked) {
                     setConfig({
@@ -46,8 +47,13 @@ const ParticipatePage = () => {
                 }
             }
         } catch (err) {
-            logger.error("Erro ao carregar configuração", 'ParticipatePage', err);
-            setLoadError(true);
+            // F8-09: 404 é mural que não existe (cai em "Mural não encontrado"), não falta de conexão.
+            if ((err as { status?: number } | null)?.status === 404) {
+                setConfig(null);
+            } else {
+                logger.error("Erro ao carregar configuração", 'ParticipatePage', err);
+                setLoadError(true);
+            }
         } finally {
             setLoading(false);
         }

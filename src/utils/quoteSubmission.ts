@@ -3,10 +3,14 @@ import { brasiliaDateISO, brasiliaDateTime, brasiliaParts, nextDateISO } from '.
 // Mensagem de sucesso do envio de orçamento (QuoteRequestPage). No checkout de convidado
 // com e-mail que já tem conta, o backend aceita o pedido nessa conta mas não autentica
 // ninguém (`existingAccount: true`) — a pessoa precisa entrar para acompanhar o pedido.
-export function quoteSuccessMessage(responseData: { existingAccount?: boolean; [key: string]: unknown } | null | undefined): string {
-  return responseData?.existingAccount
-    ? 'Seu pedido de orçamento foi enviado! Este e-mail já tem cadastro: entre na sua conta para acompanhar o pedido.'
-    : 'Seu pedido de orçamento foi enviado com sucesso.';
+// Onda 4 da auditoria de 19/11 (F8-13, decisão de Alyson de 24/11): sem login, o texto é o mesmo com ou sem cadastro (antes, "Este
+// e-mail já tem cadastro" contra "Criamos seu acesso" dizia a quem digitasse um e-mail se ele tinha conta). A sessão
+// automática do convidado novo (N1) continua.
+export const GUEST_QUOTE_MESSAGE =
+  'Pedido recebido. Se este e-mail ainda não tinha cadastro, já criamos seu acesso; se já tinha, o pedido entrou na sua conta. Confira seu e-mail.';
+
+export function quoteSuccessMessage(responseData: { existingAccount?: boolean; [key: string]: unknown } | null | undefined, guest = false): string {
+  return guest || responseData?.existingAccount ? GUEST_QUOTE_MESSAGE : 'Seu pedido de orçamento foi enviado com sucesso.';
 }
 
 // Auditoria do orçamento (12/11/2026), O6: o /orcamento pede o início e o término do evento, como o briefing, e a hora

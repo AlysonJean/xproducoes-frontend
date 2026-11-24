@@ -2,10 +2,13 @@
 // ENUMS
 // ================================
 
+// Onda 4 da auditoria de 19/11 (F2-15): os mesmos papéis do servidor (faltavam MANAGER e OPERATOR).
 export enum UserRole {
   CLIENT = 'CLIENT',
   ADMIN = 'ADMIN',
-  COLLABORATOR = 'COLLABORATOR'
+  COLLABORATOR = 'COLLABORATOR',
+  MANAGER = 'MANAGER',
+  OPERATOR = 'OPERATOR'
 }
 
 export enum BookingStatus {

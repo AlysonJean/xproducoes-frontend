@@ -1,7 +1,7 @@
 import { formatBrasiliaDate } from './whatsapp';
 import { clientEventTitle } from './eventTitle';
 import { formatBookingCode } from './bookingCode';
-import { bookingPricing, formatBRL, type PricedBookingLike } from './bookingPricing';
+import { bookingPricing, formatBRL, toArrangeNote, type PricedBookingLike } from './bookingPricing';
 
 // P14 e D11 (aprovadas em 02/11/2026): "o WhatsApp ao cliente vira botões 'Enviar no WhatsApp' com texto pronto em
 // cada etapa". Os textos que o painel manda ao cliente ficam aqui, um por etapa: recebimento, proposta, confirmação,
@@ -90,6 +90,8 @@ export const bookingConfirmedWhatsAppText = (b: StageBooking): string => {
     `${greeting(b)} Sua reserva ${formatBookingCode(b.id)} está confirmada.`,
     when && `Evento${quotedTitle(b)} no dia ${when}.`,
     total && `Valor total: ${total}.`,
+    // Onda 4 da auditoria de 19/11 (F2-03): o frete a combinar e o pedágio à parte, como na área do cliente.
+    toArrangeNote(bookingPricing(b).lines),
     ANSWER_HERE,
   ].filter(Boolean).join('\n');
 };

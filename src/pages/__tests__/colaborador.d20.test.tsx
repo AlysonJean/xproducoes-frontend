@@ -169,13 +169,15 @@ describe('Configurações — D20: aba Privacidade', () => {
     expect(screen.getByText(/O chat do evento é só da equipe/)).toBeInTheDocument();
   });
 
-  it('com o chat do cliente religado (VITE_CLIENT_BOOKING_CHAT_ENABLED=true), diz que o cliente também participa', async () => {
+  // Onda 4 da auditoria de 19/11 (F3-14): o chat do cliente saiu do site; a chave antiga não muda mais a frase.
+  it('a chave antiga do chat do cliente não muda a frase', async () => {
     vi.stubEnv('VITE_CLIENT_BOOKING_CHAT_ENABLED', 'true');
     render(<MemoryRouter><CollaboratorSettingsPage /></MemoryRouter>);
 
     fireEvent.click(await screen.findByRole('tab', { name: /Privacidade/ }));
 
-    expect(screen.getByText(/o cliente da reserva também lê e escreve/)).toBeInTheDocument();
-    expect(screen.queryByText(/O chat do evento é só da equipe/)).toBeNull();
+    expect(screen.getByText(/O chat do evento é só da equipe/)).toBeInTheDocument();
+    expect(screen.queryByText(/o cliente da reserva também lê e escreve/)).toBeNull();
+    vi.unstubAllEnvs();
   });
 });

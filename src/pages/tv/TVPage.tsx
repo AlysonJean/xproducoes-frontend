@@ -9,6 +9,7 @@ import { AnnouncementSlide } from '../../components/social/AnnouncementSlide';
 import { MosaicSlide } from '../../components/social/MosaicSlide';
 import { LeaderboardSlide } from '../../components/social/LeaderboardSlide';
 import { logger } from '../../utils/logger';
+import { randomPairingCode } from '../../utils/pairingCode';
 
 // URL pública para o QR Code: em produção, VITE_PUBLIC_URL (com protocolo); senão, a origem atual.
 // Achado (auditoria): um dos QR Codes usava window.location.origin direto e os outros esta função.
@@ -306,7 +307,7 @@ const PausedNotice: React.FC<{ eventCancelled?: boolean }> = ({ eventCancelled =
 );
 
 const TVPage: React.FC = () => {
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [config, setConfig] = useState<WallConfig | null>(() => TV_DEV_FALLBACK_ENABLED ? TV_DEV_FALLBACK_CONFIG : null);
     const [posts, setPosts] = useState<SocialPost[]>([]);
     const [activeIndex, setActiveIndex] = useState(0);
@@ -323,11 +324,15 @@ const TVPage: React.FC = () => {
     const [showLeaderboard, setShowLeaderboard] = useState(false);
     const [slidesSinceLeaderboard, setSlidesSinceLeaderboard] = useState(0);
 
-    const [pairingCode] = useState<string>(() => {
-        const code = searchParams.get('code');
-        if (code) return code;
-        return Math.floor(1000 + Math.random() * 9000).toString();
-    });
+    // Onda 4 da auditoria de 19/11 (F8-10): o código de 6 dígitos é sorteado no navegador (crypto), depois da montagem. Antes eram 4
+    // dígitos com Math.random no useState, que roda também no SSR: o HTML trazia um código e a hidratação, outro.
+    const [pairingCode, setPairingCode] = useState<string>(() => searchParams.get('code') || '');
+    const [notFound, setNotFound] = useState(false);
+    useEffect(() => {
+        if (pairingCode) return;
+        const timer = setTimeout(() => setPairingCode(randomPairingCode()), 0);
+        return () => clearTimeout(timer);
+    }, [pairingCode]);
     const [pairingPaused, setPairingPaused] = useState(false);
     // D22: fim da janela ativa no relógio desta TV (null até a primeira configuração) e a pausa.
     const [windowEnd, setWindowEnd] = useState<number | null>(null);
@@ -362,7 +367,8 @@ const TVPage: React.FC = () => {
             const slug = searchParams.get('slug');
             let url = '';
             if (slug) {
-                url = `/tv/config?slug=${slug}`;
+                // F8-09: o slug vai codificado.
+                url = `/tv/config?slug=${encodeURIComponent(slug)}`;
             } else if (pairingCode) {
                 url = `/tv/config?pairingCode=${pairingCode}`;
             }
@@ -370,6 +376,9 @@ const TVPage: React.FC = () => {
             if (!url) return null;
 
             const res = await apiFetch<TVConfigResponse>(url);
+            // F8-18: pareada pelo código, a TV passa a ser endereçada pelo slug (recarregar não pede outro pareamento).
+            // O setter do roteador, não history.replaceState: o fetchConfig lê searchParams.
+            if (res.linked && res.slug && !slug) setSearchParams({ slug: res.slug }, { replace: true });
             if (res.linked) {
                 setConfig({
                     id: res.settingId,
@@ -402,13 +411,19 @@ const TVPage: React.FC = () => {
             }
             return res;
         } catch (error) {
+            // F8-09: slug que não existe vira "Mural não encontrado" (antes mostrava um código que nunca seria lido).
+            if (searchParams.get('slug') && (error as { status?: number } | null)?.status === 404) {
+                setNotFound(true);
+                return null;
+            }
             logger.error("Failed to load config", 'TVPage', error);
             return null;
         }
-    }, [searchParams, pairingCode]); // fetchConfig não lê `config` — a checagem "só busca se ainda não tem" é feita pelo chamador
+    }, [searchParams, pairingCode, setSearchParams]); // fetchConfig não lê `config` — a checagem "só busca se ainda não tem" é feita pelo chamador
 
     useEffect(() => {
-        if (config || pairingPaused) return;
+        if (config || pairingPaused || notFound) return;
+        if (!searchParams.get('slug') && !pairingCode) return; // F8-10: o polling só começa com o código sorteado
         const startedAt = Date.now();
         const tick = () => {
             if (Date.now() - startedAt >= PAIRING_WINDOW_MS) {
@@ -429,7 +444,7 @@ const TVPage: React.FC = () => {
             clearTimeout(initial);
             clearInterval(interval);
         };
-    }, [fetchConfig, config, pairingPaused]);
+    }, [fetchConfig, config, pairingPaused, notFound, searchParams, pairingCode]);
 
     // Pareamento pausado: um toque, uma tecla (controle remoto) ou a aba voltar a ficar visível
     // retomam a busca, com o mesmo código.
@@ -716,11 +731,19 @@ const TVPage: React.FC = () => {
     }, [slideTick, hasPosts]);
 
     // Estados de pareamento / carregamento — mesmo modo apresentação (fundo preto fixo).
-    if (!config && pairingCode) {
+    if (!config && notFound) {
+        return (
+            <div className="w-screen h-screen bg-black text-white flex items-center justify-center p-8 text-center text-3xl" role="alert">
+                Mural não encontrado. Confira o endereço do telão.
+            </div>
+        );
+    }
+
+    if (!config && !searchParams.get('slug')) {
         return (
             <div className="w-screen h-screen bg-black text-white flex flex-col items-center justify-center gap-6 p-8 text-center">
                 <p className="text-2xl uppercase tracking-widest text-white/70">Código de pareamento</p>
-                <h1 className="text-8xl font-bold tracking-widest">{pairingCode}</h1>
+                <h1 className="text-8xl font-bold tracking-widest">{pairingCode || 'Gerando código…'}</h1>
                 <p className="text-3xl text-white/70">No painel, entre em Admin › Social para parear esta TV</p>
                 {pairingPaused && (
                     <div role="status" className="flex flex-col items-center gap-4 mt-6">

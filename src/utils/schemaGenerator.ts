@@ -8,6 +8,7 @@ import {
   OPENING_HOURS_SCHEMA,
   SITE_NAME,
 } from '../data/site';
+import { TARGET_CITIES } from './localSeoConfig';
 
 export const COMPANY_INFO = {
   // O nome do Perfil da Empresa no Google e do rodapé (o Perfil dizia "X produçõe e Eventos"; o dono corrige lá); a
@@ -31,17 +32,16 @@ export const COMPANY_INFO = {
     // Achado: era +55 31 99852-2380, diferente do WhatsApp do site. Mesma fonte do botão de WhatsApp.
     telephone: `+${getWhatsAppPhone()}`,
     contactType: 'customer service',
-    areaServed: ['BR', 'Belo Horizonte', 'Nova Lima', 'Contagem', 'Betim'],
+    // F2-07: as cidades atendidas são as das landings (TARGET_CITIES), com Lagoa Santa.
+    areaServed: ['BR', ...TARGET_CITIES.map((c) => c.name)],
     availableLanguage: 'Portuguese'
   },
   // Achado: listava instagram.com/xproducoes, facebook.com/xproducoes e linkedin.com/company/xproducoes,
   // perfis não confirmados (o Instagram oficial é @x_producoeseventos). Fica só o perfil confirmado.
   // + o Perfil da Empresa no Google (Maps), conferido em 09/11/2026.
   sameAs: [INSTAGRAM_URL, GOOGLE_MAPS_URL],
-  geo: {
-    latitude: -19.9167, // BH coordinates
-    longitude: -43.9345
-  },
+  // Onda 4 da auditoria de 19/11 (F2-07): sem `geo` até ter a coordenada certa do Perfil da Empresa no Google (era o centro de BH,
+  // longe da Rua Flor d'Água); o campo é opcional e coordenada errada é pior que nenhuma.
   priceRange: '$$'
 };
 
@@ -74,31 +74,9 @@ export function generateLocalBusinessSchema() {
       '@type': 'PostalAddress',
       ...COMPANY_INFO.address
     },
-    geo: {
-      '@type': 'GeoCoordinates',
-      ...COMPANY_INFO.geo
-    },
     openingHoursSpecification: [OPENING_HOURS_SCHEMA],
     priceRange: COMPANY_INFO.priceRange,
-    areaServed: [
-      {
-        '@type': 'City',
-        name: 'Belo Horizonte',
-        sameAs: 'https://en.wikipedia.org/wiki/Belo_Horizonte'
-      },
-      {
-        '@type': 'City',
-        name: 'Nova Lima'
-      },
-      {
-        '@type': 'City',
-        name: 'Contagem'
-      },
-      {
-        '@type': 'City',
-        name: 'Betim'
-      }
-    ]
+    areaServed: TARGET_CITIES.map((c) => ({ '@type': 'City', name: c.name }))
   };
 }
 
@@ -111,6 +89,8 @@ export interface ProductSchemaProps {
   price?: number;
   currency?: string;
   availability?: 'InStock' | 'OutOfStock' | 'PreOrder';
+  /** F2-07: o endereço canônico da página do produto (window.location ficava vazio no SSR e divergia na hidratação). */
+  url?: string;
 }
 
 export function generateProductSchema({
@@ -121,7 +101,8 @@ export function generateProductSchema({
   brand = COMPANY_INFO.name,
   price,
   currency = 'BRL',
-  availability = 'InStock'
+  availability = 'InStock',
+  url,
 }: ProductSchemaProps) {
   return {
     '@context': 'https://schema.org',
@@ -134,18 +115,21 @@ export function generateProductSchema({
       '@type': 'Brand',
       name: brand
     },
-    offers: {
-      '@type': 'Offer',
-      url: typeof window !== 'undefined' ? window.location.href : '',
-      priceCurrency: currency,
-      price: price || '0',
-      availability: `https://schema.org/${availability}`,
-      itemCondition: 'https://schema.org/NewCondition',
-      seller: {
-        '@type': 'Organization',
-        name: COMPANY_INFO.name
-      }
-    },
+    // F2-07: a oferta só com preço (antes "0" no item sob consulta) e com o endereço canônico.
+    ...(Number(price) > 0 ? {
+      offers: {
+        '@type': 'Offer',
+        ...(url ? { url } : {}),
+        priceCurrency: currency,
+        price: Number(price),
+        availability: `https://schema.org/${availability}`,
+        itemCondition: 'https://schema.org/NewCondition',
+        seller: {
+          '@type': 'Organization',
+          name: COMPANY_INFO.name
+        }
+      },
+    } : {}),
     // Achado (auditoria): havia um aggregateRating fixo ("5.0" / 10 avaliações) em TODO produto —
     // avaliação inventada nos dados estruturados (o Google trata como spam de review). Removido; só
     // deve voltar com a média real das avaliações.

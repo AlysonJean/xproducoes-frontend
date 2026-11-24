@@ -119,8 +119,14 @@ api.interceptors.response.use(
     const errorObj = error as { config?: InternalAxiosRequestConfig & { _retry?: boolean; _csrf_retry?: boolean }; response?: { status?: number } };
     const originalRequest = errorObj.config;
 
-    // Handle CSRF token validation error (403)
-    if (errorObj.response?.status === 403 && originalRequest && !originalRequest._csrf_retry) {
+    // Handle CSRF token validation error (403). Onda 4 da auditoria de 19/11 (F1-12): só gravação (POST/PUT/PATCH/DELETE) e só
+    // quando o 403 é do CSRF, como o apiFetch; antes qualquer 403 (GET incluído) era repetido.
+    const errorData = (error as { response?: { data?: unknown } }).response?.data;
+    if (
+      errorObj.response?.status === 403 && originalRequest && !originalRequest._csrf_retry
+      && ['post', 'put', 'patch', 'delete'].includes(String(originalRequest.method).toLowerCase())
+      && /csrf/i.test(typeof errorData === 'string' ? errorData : JSON.stringify(errorData ?? ''))
+    ) {
       originalRequest._csrf_retry = true;
       
       try {
@@ -173,6 +179,18 @@ export type ApiRequestInit = RequestInit & { timeoutMs?: number; envelope?: bool
 // Orçamento em PDF (13/11/2026): a requisição (cookies, CSRF, Idempotency-Key, renovação do login, repetição de falha
 // de rede e a mensagem de erro com o status) é a mesma para o JSON (apiFetch) e para o arquivo (downloadPdf); só a
 // leitura da resposta muda.
+// Onda 4 da auditoria de 19/11 (F1-16): tempo esgotado e queda de rede chegam em português ("signal is aborted without reason" e
+// "Failed to fetch" iam para a tela). O AbortError mantém o nome (a tela do Instagram o separa) e status 0.
+export function friendlyNetworkError(err: unknown): unknown {
+  if ((err as { name?: string } | null)?.name === 'AbortError') {
+    return Object.assign(new Error('A conexão demorou demais. Confira a internet e tente de novo.'), { name: 'AbortError', status: 0, cause: err });
+  }
+  if (err instanceof TypeError) {
+    return Object.assign(new Error('Sem conexão com o servidor. Confira a internet e tente de novo.'), { status: 0, cause: err });
+  }
+  return err;
+}
+
 async function apiResponse(endpoint: string, requestInit: ApiRequestInit = {}): Promise<Response> {
   const { timeoutMs, ...options } = requestInit;
   const makeRequest = async (url: string, config: RequestInit): Promise<Response> => {
@@ -300,13 +318,13 @@ async function apiResponse(endpoint: string, requestInit: ApiRequestInit = {}): 
         continue;
       }
       // Erro não-retryável
-      throw err;
+      throw friendlyNetworkError(err);
     }
   }
 
   if (!response) {
     // Rejeta com última mensagem
-    throw lastError || new Error('Network request failed');
+    throw friendlyNetworkError(lastError || new Error('Network request failed'));
   }
 
   // Achado (produção): o cookie CSRF do backend expira após 1h sem uso e a próxima requisição

@@ -9,7 +9,8 @@ import { MarkPaymentCheckbox } from '../../components/bookings/CancelChoices';
 import { RefundModal, type RefundInput } from '../../components/bookings/RefundModal';
 import { logger } from '../../utils/logger';
 import { formatBookingTotal, hasBookingTotal } from '../../utils/formatPrice';
-import { normalizeString } from '../../utils/string';
+import { bookingMatchesSearch } from '../../utils/bookingSearch';
+
 import { bookingEmail } from '../../utils/bookingContact';
 import { notifyClientPayload } from '../../utils/notifyClient';
 import { NotifyClientCheckbox } from '../../components/bookings/NotifyClientCheckbox';
@@ -407,10 +408,9 @@ export const BookingListPage = () => {
   const filteredBookings = useMemo(() => {
     const now = Date.now();
     const list = bookings.filter(booking => {
-      const q = normalizeString(searchTerm);
-      const clientName = normalizeString(booking.client?.user?.name || booking.clientName || '');
-      const bookingId = normalizeString(booking.id || '');
-      const matchesSearch = clientName.includes(q) || bookingId.includes(q);
+      // Onda 4 da auditoria de 19/11 (F7admin2-11): a busca olha nome, empresa, e-mail, local e código; com 4 dígitos ou mais,
+      // também o telefone (antes só nome e código, embora o campo prometesse "empresa").
+      const matchesSearch = bookingMatchesSearch(booking, searchTerm);
       const matchesStatus = filterStatus === 'all' || booking.status === filterStatus;
       const matchesPayment = filterPayment === 'all'
         || (filterPayment === 'NONE' ? !booking.paymentStatus : booking.paymentStatus === filterPayment);
@@ -588,7 +588,7 @@ export const BookingListPage = () => {
               <Input
                 leftIcon={<Search className="h-4 w-4" />}
                 aria-label="Buscar reservas"
-                placeholder="Buscar por cliente, empresa ou ID da reserva..."
+                placeholder="Buscar por cliente, empresa, e-mail, telefone ou código..."
                 className="h-10 border-border bg-card"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}

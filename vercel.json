@@ -2,7 +2,7 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist/client",
-  "installCommand": "npm install --include=dev",
+  "installCommand": "npm ci --include=dev",
   "regions": ["gru1"],
   "rewrites": [
     { "source": "/api/v1/:path*", "destination": "https://xproducoes-backend.onrender.com/api/v1/:path*" },

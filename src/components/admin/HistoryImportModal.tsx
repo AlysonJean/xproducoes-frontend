@@ -61,6 +61,8 @@ export const HistoryImportModal = ({ isOpen, onClose, onImported }: HistoryImpor
 
   const valid = parsed?.rows.filter((r) => r.row) ?? [];
   const sheetErrors = parsed?.rows.filter((r) => !r.row) ?? [];
+  // Onda 4 da auditoria de 19/11 (F2-13): as linhas válidas com algo a conferir (ex.: "1,15" que talvez fosse "1.150").
+  const sheetWarnings = valid.filter((r) => r.warnings?.length);
   const byAction = (a: RowResult['action']) => preview?.filter((r) => r.action === a) ?? [];
   const sameDay = preview?.filter((r) => r.action === 'create' && r.sameDay?.length) ?? [];
   const toSend = preview
@@ -174,6 +176,16 @@ export const HistoryImportModal = ({ isOpen, onClose, onImported }: HistoryImpor
           <div className="rounded-xl border border-border p-4 space-y-1">
             <p><strong>{valid.length}</strong> eventos prontos para conferir</p>
             {parsed.skipped > 0 && <p>{parsed.skipped} linhas marcadas “Não” (ignoradas)</p>}
+            {sheetWarnings.length > 0 && (
+              <div className="pt-2">
+                <p className="text-warning font-medium">{sheetWarnings.length} linhas para conferir:</p>
+                <ul className="mt-1 max-h-40 overflow-y-auto text-xs list-disc pl-5">
+                  {sheetWarnings.slice(0, LIST_LIMIT).map((r) => (
+                    <li key={r.line}>Linha {r.line} ({r.key}): {r.warnings?.join('; ')}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {sheetErrors.length > 0 && (
               <div className="pt-2">
                 <p className="text-destructive font-medium">{sheetErrors.length} linhas com erro na planilha (corrija e envie de novo, ou elas ficam de fora):</p>

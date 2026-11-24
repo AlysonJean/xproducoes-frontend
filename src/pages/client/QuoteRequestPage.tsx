@@ -561,7 +561,7 @@ export const QuoteRequestPage: React.FC = () => {
       addNotification({
         type: 'success',
         title: 'Sucesso!',
-        message: quoteSuccessMessage(responseData)
+        message: quoteSuccessMessage(responseData, !user?.id)
       });
 
       const statePayload = {

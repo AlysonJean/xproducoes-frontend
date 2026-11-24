@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { bookingAPI, authAPI, kitAPI } from '../../services/api';
 import { asArray } from '../../utils/normalize';
@@ -42,6 +43,12 @@ import { RecommendationSection } from '../../components/ui/RecommendationSection
 import { useMultipleRecommendations } from '../../hooks/useRecommendations';
 import { ReferralCard } from '../../components/ui/ReferralCard';
 
+// F8-15: as reservas mais recentes primeiro (pela criação; sem ela, pela data do evento).
+function mostRecentBookings<T extends { createdAt?: string | null; eventDate?: string | null }>(list: T[], count: number): T[] {
+  const time = (b: T) => new Date(b.createdAt || b.eventDate || 0).getTime() || 0;
+  return [...list].sort((a, b) => time(b) - time(a)).slice(0, count);
+}
+
 
 export const ClientDashboardPage = () => {
   const { user } = useAuth();
@@ -55,6 +62,7 @@ export const ClientDashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reviewBookingId, setReviewBookingId] = useState<string | null>(null);
+  const { addNotification } = useNotifications();
 
   // Recommendations hook
   const { personalized, trending, newItems } = useMultipleRecommendations();
@@ -161,7 +169,8 @@ export const ClientDashboardPage = () => {
         let allBookings: SafeBooking[] = [];
         if (bookingsResponse.status === 'fulfilled') {
                     allBookings = asArray<SafeBooking>(bookingsResponse.value?.data || bookingsResponse.value);
-          setRecentBookings(allBookings.slice(0, 3));
+          // Onda 4 da auditoria de 19/11 (F8-15): as 3 mais recentes (a lista vem pela data do evento, das mais antigas).
+          setRecentBookings(mostRecentBookings(allBookings, 3));
         }
 
         // Processar próximas reservas
@@ -606,7 +615,11 @@ export const ClientDashboardPage = () => {
           bookingId={reviewBookingId}
           onClose={() => setReviewBookingId(null)}
           onSuccess={() => {
+            // F8-16: a reserva avaliada sai com a avaliação (o botão "Avaliar" sumia só depois de recarregar).
+            const reviewed = reviewBookingId;
             setReviewBookingId(null);
+            setRecentBookings((list) => list.map((b) => (b.id === reviewed ? { ...b, review: b.review ?? { id: 'nova' } } as SafeBooking : b)));
+            addNotification({ type: 'success', title: 'Obrigado!', message: 'Sua avaliação foi registrada.' });
           }}
         />
       )}

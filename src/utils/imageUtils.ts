@@ -16,8 +16,9 @@ import { logger } from './logger';
  * // retorna: 'https://res.cloudinary.com/mycloud/image/upload/v123/photo.jpg'
  */
 export function normalizeImageUrl(url: string | undefined | null): string {
+  // Onda 4 da auditoria de 19/11 (F2-04): sem foto, '' (os cartões caem no placeholder com o nome). /uploads não existe no site.
   if (!url) {
-    return '/uploads/default-equipment.png';
+    return '';
   }
 
   // Se for URL do Cloudinary com cloud "demo" (inválido)
@@ -30,11 +31,11 @@ export function normalizeImageUrl(url: string | undefined | null): string {
       // Pega a última parte do path (nome do arquivo)
       const filename = pathname.split('/').pop() || 'default-equipment.png';
       
-      logger.warn(`[imageUtils] Cloudinary demo URL detected, using local fallback: ${filename}`, 'imageUtils');
-      return `/uploads/${filename}`;
+      logger.warn(`[imageUtils] Cloudinary demo URL detected, no image: ${filename}`, 'imageUtils');
+      return '';
     } catch (error) {
       logger.error(`[imageUtils] Failed to parse Cloudinary URL: ${url}`, 'imageUtils', error);
-      return '/uploads/default-equipment.png';
+      return '';
     }
   }
 

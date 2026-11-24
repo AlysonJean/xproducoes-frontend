@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart } from 'lucide-react';
 import { EquipmentCard } from '../../components/ui/EquipmentCard';
@@ -12,6 +12,23 @@ import type { Equipment, Kit, Service } from '../../types/types';
 import { RecommendationSection } from '../../components/ui/RecommendationSection';
 import { useRecommendations } from '../../hooks/useRecommendations';
 
+type FavoriteItem = Equipment | Kit | Service;
+
+// F8-19: a rota e a chave de cada tipo de favorito (a resposta vem direta ou dentro de { equipment | kit | service }).
+const FAVORITE_ENDPOINTS: Record<string, { path: string; key: 'equipment' | 'kit' | 'service' }> = {
+  equipment: { path: '/equipments/', key: 'equipment' },
+  kit: { path: '/kits/', key: 'kit' },
+  service: { path: '/services/', key: 'service' },
+};
+
+async function fetchFavoriteItem(type: string, id: string): Promise<FavoriteItem | null> {
+  const endpoint = FAVORITE_ENDPOINTS[type];
+  if (!endpoint) return null;
+  const value = await apiFetch<Record<string, unknown>>(`${endpoint.path}${encodeURIComponent(id)}`);
+  const item = (value && 'id' in value ? value : value?.[endpoint.key]) as FavoriteItem | undefined;
+  return item && item.id ? item : null;
+}
+
 export const FavoritesPage = () => {
   const { favorites } = useFavorites();
   const [equipments, setEquipments] = useState<Equipment[]>([]);
@@ -22,94 +39,41 @@ export const FavoritesPage = () => {
   // Incrementado pelo "Tentar de novo" do estado de erro para refazer a busca.
   const [reloadKey, setReloadKey] = useState(0);
 
+  // Onda 4 da auditoria de 19/11 (F8-19): os itens já carregados ficam guardados. Quando a lista de favoritos muda, sai da tela o
+  // que foi desfavoritado (sem rede) e só os novos são buscados; o "carregando" aparece só na primeira vez. Antes,
+  // desfavoritar um item refazia a busca de todos os outros, com a tela trocada pelo carregando.
+  const loadedItems = useRef(new Map<string, FavoriteItem>());
+  const firstLoad = useRef(true);
+
   useEffect(() => {
-    const fetchFavorites = async () => {
-      setError(null);
-      if (favorites.length === 0) {
-        setEquipments([]);
-        setKits([]);
-        setServices([]);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-
-        const equipmentIds = favorites.filter(f => f.type === 'equipment').map(f => f.id);
-        const kitIds = favorites.filter(f => f.type === 'kit').map(f => f.id);
-        const serviceIds = favorites.filter(f => f.type === 'service').map(f => f.id);
-
-        const promises = [];
-
-        if (equipmentIds.length > 0) {
-           promises.push(
-               Promise.allSettled(equipmentIds.map(id => apiFetch<{ equipment?: Equipment } | Equipment>(`/equipments/${encodeURIComponent(id)}`)))
-               .then(results => {
-                   const valid: Equipment[] = [];
-                   results.forEach(res => {
-                       if (res.status === 'fulfilled') {
-                           const val = res.value;
-                           const item = 'id' in val ? val : val.equipment;
-                           if (item && item.id) valid.push(item);
-                       }
-                   });
-                   setEquipments(valid);
-               })
-           );
-        } else {
-            setEquipments([]);
-        }
-
-        if (kitIds.length > 0) {
-            promises.push(
-                Promise.allSettled(kitIds.map(id => apiFetch<{ kit?: Kit } | Kit>(`/kits/${encodeURIComponent(id)}`)))
-                .then(results => {
-                    const valid: Kit[] = [];
-                    results.forEach(res => {
-                        if (res.status === 'fulfilled') {
-                            const val = res.value;
-                            const item = 'id' in val ? val : val.kit;
-                            if (item && item.id) valid.push(item);
-                        }
-                    });
-                    setKits(valid);
-                })
-            );
-         } else {
-             setKits([]);
-         }
-
-         if (serviceIds.length > 0) {
-            promises.push(
-                Promise.allSettled(serviceIds.map(id => apiFetch<{ service?: Service } | Service>(`/services/${encodeURIComponent(id)}`)))
-                .then(results => {
-                    const valid: Service[] = [];
-                    results.forEach(res => {
-                        if (res.status === 'fulfilled') {
-                            const val = res.value;
-                            // Assuming backend returns { service } or direct object
-                            const item = 'id' in val ? val : val.service;
-                            if (item && item.id) valid.push(item);
-                        }
-                    });
-                    setServices(valid);
-                })
-            );
-         } else {
-             setServices([]);
-         }
-
-        await Promise.all(promises);
-
-            } catch {
-        setError('Não foi possível carregar alguns favoritos.');
-      } finally {
-        setLoading(false);
-      }
+    let cancelled = false;
+    const keyOf = (f: { type: string; id: string }) => `${f.type}:${f.id}`;
+    const publish = () => {
+      const pick = <T,>(type: string) =>
+        favorites.filter((f) => f.type === type).map((f) => loadedItems.current.get(keyOf(f)) as T | undefined).filter((x): x is T => Boolean(x));
+      setEquipments(pick<Equipment>('equipment'));
+      setKits(pick<Kit>('kit'));
+      setServices(pick<Service>('service'));
     };
-
-    fetchFavorites();
+    const run = async () => {
+      setError(null);
+      const keys = new Set(favorites.map(keyOf));
+      for (const key of [...loadedItems.current.keys()]) if (!keys.has(key)) loadedItems.current.delete(key);
+      const missing = favorites.filter((f) => FAVORITE_ENDPOINTS[f.type] && !loadedItems.current.has(keyOf(f)));
+      if (missing.length > 0) {
+        if (firstLoad.current) setLoading(true);
+        const results = await Promise.allSettled(missing.map((f) => fetchFavoriteItem(f.type, f.id)));
+        if (cancelled) return;
+        results.forEach((res, index) => {
+          if (res.status === 'fulfilled' && res.value) loadedItems.current.set(keyOf(missing[index]), res.value);
+        });
+      }
+      publish();
+      firstLoad.current = false;
+      setLoading(false);
+    };
+    void run();
+    return () => { cancelled = true; };
   }, [favorites, reloadKey]);
 
   // Get trending recommendations when no favorites

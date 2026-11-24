@@ -1,5 +1,6 @@
 import React from 'react';
 import { Lock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Card, Input, Button, Form } from '../../../components/ui/StandardComponents';
 import { PASSWORD_HINT } from '../../../components/layouts/AuthLayout';
 import { ProfilePasswordForm } from '../../../types/types';
@@ -80,6 +81,10 @@ export const SecurityTab: React.FC<SecurityTabProps> = ({
             >
               Alterar Senha
             </Button>
+            {/* Onda 4 da auditoria de 19/11 (F8-12): quem entrou pelo pedido, pelo convite ou pelo Google não tem senha atual. */}
+            <p className="text-sm text-muted-foreground">
+              Não tem senha ou esqueceu a atual? <Link to="/recuperar-senha" className="underline">Defina pelo e-mail</Link>.
+            </p>
           </Form>
         </div>
       </div>

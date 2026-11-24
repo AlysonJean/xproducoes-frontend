@@ -12,7 +12,6 @@ vi.mock('@/services/api', () => ({ apiFetch }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1', role: 'CLIENT' } }) }));
 vi.mock('../../../contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification: vi.fn() }) }));
 vi.mock('@/contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification: vi.fn() }) }));
-vi.mock('../../../components/client/BookingChatPanel', () => ({ BookingChatPanel: () => null }));
 vi.mock('react-ga4', () => ({ default: { event: vi.fn() } }));
 
 import { BookingListItem } from '../../../components/ui/BookingListItem';

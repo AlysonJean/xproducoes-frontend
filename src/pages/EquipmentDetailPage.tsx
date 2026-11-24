@@ -14,7 +14,7 @@ import { RecommendationSection } from '../components/ui/RecommendationSection';
 import { useRecommendations } from '../hooks/useRecommendations';
 import { useEquipmentUnitOf } from '../hooks/usePricingRules';
 import { useNotifications } from '../contexts/NotificationContext';
-import { generateProductSchema } from '../utils/schemaGenerator';
+import { COMPANY_INFO, generateProductSchema } from '../utils/schemaGenerator';
 import { FavoriteButton } from '../components/ui/FavoriteButton';
 import CompareButton from '../components/ui/CompareButton';
 import { ZoomableProductPhoto } from '@/components/ui/ZoomableProductPhoto';
@@ -162,7 +162,9 @@ export const EquipmentDetailPage = () => {
     image: equipment.imageUrl || '',
     sku: equipment.id,
     price: equipment.pricePerHour,
-    availability: equipment.isAvailable ? 'InStock' : 'OutOfStock'
+    availability: equipment.isAvailable ? 'InStock' : 'OutOfStock',
+    // Onda 4 da auditoria de 19/11 (F2-07): o endereço canônico da página.
+    url: `${COMPANY_INFO.url}/equipamentos/${equipment.slug || equipment.id}`,
   });
 
   const availability =

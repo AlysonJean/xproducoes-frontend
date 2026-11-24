@@ -31,6 +31,8 @@ export interface ParsedHistoryRow {
   client: string;
   row?: HistoryImportRow;
   errors: string[];
+  /** Onda 4 da auditoria de 19/11 (F2-13): o que vale conferir antes de importar (ex.: valor abaixo de R$ 10). */
+  warnings?: string[];
 }
 
 export const HISTORY_SHEET = 'Eventos';
@@ -82,7 +84,10 @@ export function parseSheetMoney(v: unknown): number | null {
   if (typeof v === 'number') return Number.isFinite(v) ? v : null;
   const s = text(v).replace(/r\$\s*/i, '');
   if (!s) return null;
-  const normalized = s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s;
+  // Onda 4 da auditoria de 19/11 (F2-13): "1.150" sem vírgula é mil cento e cinquenta (antes virava 1,15).
+  const normalized = s.includes(',')
+    ? s.replace(/\./g, '').replace(',', '.')
+    : /^\d{1,3}(\.\d{3})+$/.test(s) ? s.replace(/\./g, '') : s;
   const n = Number(normalized);
   return Number.isFinite(n) ? n : null;
 }
@@ -179,6 +184,7 @@ export function parseHistoryRows(rows: HistorySheetRow[]): { rows: ParsedHistory
     parsed.push({
       ...display,
       errors: [],
+      ...(value !== null && value > 0 && value < 10 ? { warnings: ['Valor abaixo de R$ 10: confira'] } : {}),
       row: {
         key,
         eventDate: eventDate.toISOString(),

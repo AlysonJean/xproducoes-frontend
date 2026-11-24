@@ -1,7 +1,7 @@
 // Caminho: frontend/src/pages/admin/ClientEditPage.tsx
 
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../services/api';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { Button } from '../../components/ui/Button';
@@ -11,6 +11,15 @@ import type { User } from '../../types/types';
 import { useNotifications } from '@/contexts/NotificationContext';
 
 import AdminLayout from '@/components/admin/AdminLayout';
+import { asArray } from '../../utils/normalize';
+import { bookingStatusLabel } from '../../utils/bookingStatus';
+import { formatPrice } from '../../utils/formatPrice';
+import { formatBrasiliaDate } from '../../utils/whatsapp';
+
+// Onda 4 da auditoria de 19/11 (F7admin2-14): a ficha do cliente mostra as reservas dele e o total gasto (a mesma regra da tela de
+// Clientes: confirmadas, em andamento e concluídas).
+const SPENT_STATUSES = ['CONFIRMED', 'IN_PROGRESS', 'COMPLETED'];
+interface ClientBookingRow { id: string; eventDate?: string; status?: string; totalPrice?: number | string | null; eventTitle?: string | null }
 
 const PAGE_TITLE = 'Editar cliente';
 const BREADCRUMBS = [
@@ -31,6 +40,20 @@ export const ClientEditPage = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [bookings, setBookings] = useState<ClientBookingRow[] | null>(null);
+  const location = useLocation();
+  // Depois de salvar, volta para onde a pessoa estava (a lista de Clientes quando a ficha foi aberta direto).
+  const goBack = () => (location.key !== 'default' ? navigate(-1) : navigate('/admin/clientes'));
+
+  useEffect(() => {
+    if (!id) return;
+    let active = true;
+    apiFetch(`/admin/bookings?userId=${encodeURIComponent(id)}&limit=100`)
+      .then((data) => { if (active) setBookings(asArray<ClientBookingRow>(data)); })
+      .catch(() => { if (active) setBookings([]); });
+    return () => { active = false; };
+  }, [id]);
+  const totalSpent = (bookings ?? []).filter((b) => SPENT_STATUSES.includes(String(b.status))).reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
 
   useEffect(() => {
     if (!id) return;
@@ -76,7 +99,7 @@ export const ClientEditPage = () => {
         title: 'Sucesso',
         message: 'Dados do cliente atualizados com sucesso!'
       });
-      setTimeout(() => navigate('/admin/clientes'), 1500);
+      setTimeout(goBack, 1500);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Falha ao atualizar os dados.';
       setError(msg);
@@ -138,12 +161,38 @@ export const ClientEditPage = () => {
             <Button type="submit" variant="primary" size="md">
               Salvar Alterações
             </Button>
-            <Button type="button" variant="outline" size="md" onClick={() => navigate('/admin/clientes')}>
+            <Button type="button" variant="outline" size="md" onClick={goBack}>
               Voltar
             </Button>
           </div>
         </form>
       </div>
+
+      <section aria-labelledby="reservas-do-cliente" className="w-full max-w-xl mx-auto mt-6 bg-card p-8 rounded-2xl shadow-lg border border-border">
+        <div className="flex items-baseline justify-between gap-4 mb-4">
+          <h2 id="reservas-do-cliente" className="text-lg font-bold text-foreground">Reservas deste cliente</h2>
+          {bookings && bookings.length > 0 && (
+            <p className="text-sm text-muted-foreground">Total gasto: <strong className="text-foreground">{formatPrice(totalSpent)}</strong></p>
+          )}
+        </div>
+        {bookings === null ? (
+          <p className="text-sm text-muted-foreground">Carregando reservas…</p>
+        ) : bookings.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma reserva deste cliente.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {bookings.map((b) => (
+              <li key={b.id} className="py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <Link to={`/admin/reservas/${b.id}`} className="font-medium text-primary hover:underline break-all">{b.eventTitle || b.id}</Link>
+                  <p className="text-xs text-muted-foreground">{formatBrasiliaDate(b.eventDate)} · {bookingStatusLabel(b.status)}</p>
+                </div>
+                <span className="text-sm font-semibold text-foreground shrink-0">{formatPrice(b.totalPrice)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </AdminLayout>
   );
 };
