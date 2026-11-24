@@ -3,6 +3,7 @@ import {
   Calendar,
   Plus,
   Clock,
+  Trash2,
 } from 'lucide-react';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
 import { CollaboratorError } from '../../components/collaborator/CollaboratorStates';
@@ -63,6 +64,10 @@ const todayLocal = () => {
 const formatAvailabilityDate = (value: string) =>
   new Date(value).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 
+// Onda 3 da auditoria de 19/11 (F9-18): "Próximas" mostra só de hoje em diante (a data vem como meia-noite UTC do dia
+// escrito: compara pelo AAAA-MM-DD).
+const isUpcoming = (value: string) => String(value).slice(0, 10) >= todayLocal();
+
 const CollaboratorAvailabilityPage: React.FC = () => {
   const { addNotification } = useNotifications();
   const [availabilities, setAvailabilities] = useState<Availability[]>([]);
@@ -70,6 +75,23 @@ const CollaboratorAvailabilityPage: React.FC = () => {
   const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const upcoming = availabilities.filter((item) => isUpcoming(item.date));
+
+  // F9-18: dava para cadastrar, mas não apagar nem corrigir (para corrigir: apagar e cadastrar de novo).
+  const handleRemove = async (item: Availability) => {
+    try {
+      setRemovingId(item.id);
+      await collaboratorProfileAPI.deleteAvailability(item.id);
+      setAvailabilities((prev) => prev.filter((a) => a.id !== item.id));
+      addNotification({ type: 'success', title: 'Disponibilidade removida', message: `${formatAvailabilityDate(item.date)} saiu da sua agenda.` });
+    } catch (error) {
+      logger.error('Erro ao remover disponibilidade:', 'CollaboratorAvailabilityPage', error);
+      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível remover a disponibilidade.' });
+    } finally {
+      setRemovingId(null);
+    }
+  };
   const [newAvailability, setNewAvailability] = useState({
     date: todayLocal(),
     startTime: '09:00',
@@ -216,8 +238,8 @@ const CollaboratorAvailabilityPage: React.FC = () => {
               message="Não conseguimos carregar suas disponibilidades."
               onRetry={loadAvailabilities}
             />
-          ) : availabilities.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">Nenhuma disponibilidade cadastrada.</div>
+          ) : upcoming.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">Nenhuma disponibilidade de hoje em diante.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[480px]">
@@ -227,10 +249,11 @@ const CollaboratorAvailabilityPage: React.FC = () => {
                     <th scope="col" className="py-3 px-4">Horário</th>
                     <th scope="col" className="py-3 px-4">Status</th>
                     <th scope="col" className="py-3 px-4">Observações</th>
+                    <th scope="col" className="py-3 px-4"><span className="sr-only">Ações</span></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {availabilities.map((item) => (
+                  {upcoming.map((item) => (
                     <tr key={item.id} className="border-b border-border last:border-0 hover:bg-muted/50">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2 text-sm text-foreground">
@@ -250,6 +273,18 @@ const CollaboratorAvailabilityPage: React.FC = () => {
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-sm text-muted-foreground">{item.notes || '—'}</td>
+                      <td className="py-3 px-4 text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => void handleRemove(item)}
+                          isLoading={removingId === item.id}
+                          disabled={removingId !== null}
+                          aria-label={`Remover a disponibilidade de ${formatAvailabilityDate(item.date)}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -683,6 +683,9 @@ export const collaboratorProfileAPI = {
   // Atualizar disponibilidade
   updateAvailability: (data: Record<string, unknown>) => api.put('/collaborators/me/availability', data),
 
+  // Onda 3 da auditoria de 19/11 (F9-18): apagar a própria disponibilidade
+  deleteAvailability: (id: string) => api.delete(`/collaborators/me/availability/${id}`),
+
   // Alternar status de tarefa (Checklist)
   toggleTask: (taskId: string, isCompleted: boolean) =>
     api.put(`/bookings/tasks/${taskId}/toggle`, { isCompleted }),

@@ -8,7 +8,6 @@ import {
   Calendar,
   Clock,
   MessageSquare,
-  Bell,
   Settings,
   Menu,
   X,
@@ -102,12 +101,8 @@ const menuGroups: MenuGroup[] = [
         icon: MessageSquare,
         description: 'Conversas com a produção',
       },
-      {
-        name: 'Notificações',
-        href: '/colaborador/notificacoes',
-        icon: Bell,
-        description: 'Alertas e avisos',
-      },
+      // Onda 3 da auditoria de 19/11 (F9-11): "Notificações" saiu do menu: nada no sistema avisa a equipe por aqui (os
+      // avisos de escala vão por e-mail), e a página ficava sempre vazia. Volta quando houver aviso para a equipe.
     ],
   },
   {

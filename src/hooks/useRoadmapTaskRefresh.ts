@@ -11,11 +11,16 @@ import { logger } from '../utils/logger';
 export const TASKS_REFRESH_MS = 60_000;
 export const TASKS_AFTER_EVENT_END_MS = 4 * 60 * 60 * 1000;
 export const TASKS_RESUME_MS = 2 * 60 * 60 * 1000;
+// Onda 3 da auditoria de 19/11 (F9-14): a recarga a cada 60 s só começa 6 h antes da montagem (ou do início do evento).
+// Antes, o Roteiro aberto dias antes do evento recarregava sem parar até 4 h depois do fim, e mantinha o banco
+// acordado por dias. Antes da janela, só recarrega quando a aba volta a ficar visível.
+export const TASKS_BEFORE_START_MS = 6 * 60 * 60 * 1000;
 
 export function useRoadmapTaskRefresh<T>(
   bookingId: string | undefined,
   eventEnd: string | null | undefined,
   onTasks: (tasks: T[]) => void,
+  eventStart?: string | null,
 ) {
   const onTasksRef = useRef(onTasks);
   useEffect(() => {
@@ -27,6 +32,9 @@ export function useRoadmapTaskRefresh<T>(
     const end = eventEnd ? Date.parse(eventEnd) : NaN;
     // Sem horário de fim conhecido, vale a janela da retomada (2 h a partir de agora).
     let activeUntil = Number.isFinite(end) ? end + TASKS_AFTER_EVENT_END_MS : Date.now() + TASKS_RESUME_MS;
+    const start = eventStart ? Date.parse(eventStart) : NaN;
+    const activeFrom = Number.isFinite(start) ? start - TASKS_BEFORE_START_MS : -Infinity;
+    const beforeWindow = () => Date.now() < activeFrom;
     let interval: ReturnType<typeof setInterval> | null = null;
     let disposed = false;
 
@@ -52,16 +60,16 @@ export function useRoadmapTaskRefresh<T>(
         stop();
         return;
       }
-      if (document.hidden) return;
+      if (document.hidden || beforeWindow()) return;
       void refresh();
     };
-    const start = () => {
+    const startInterval = () => {
       if (!interval) interval = setInterval(tick, TASKS_REFRESH_MS);
     };
     // Passado o prazo, uma nova interação (ou a aba voltando) reabre a recarga por 2 h.
     const resume = () => {
       activeUntil = Date.now() + TASKS_RESUME_MS;
-      start();
+      startInterval();
       void refresh();
     };
     const onVisibilityChange = () => {
@@ -73,7 +81,7 @@ export function useRoadmapTaskRefresh<T>(
       if (expired()) resume();
     };
 
-    if (!expired()) start();
+    if (!expired()) startInterval();
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('pointerdown', onInteraction);
     window.addEventListener('keydown', onInteraction);
@@ -84,5 +92,5 @@ export function useRoadmapTaskRefresh<T>(
       window.removeEventListener('pointerdown', onInteraction);
       window.removeEventListener('keydown', onInteraction);
     };
-  }, [bookingId, eventEnd]);
+  }, [bookingId, eventEnd, eventStart]);
 }

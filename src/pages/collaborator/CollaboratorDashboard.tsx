@@ -151,14 +151,8 @@ const activityIcon = (type?: string) => {
 
 // Componente de Atividades Recentes
 const RecentActivities: React.FC<{ activities: CollaboratorActivity[] }> = ({ activities }) => (
-  <SimpleCard
-    title="Atividades Recentes"
-    headerRight={
-      <Link to="/colaborador/notificacoes" className="text-sm text-primary hover:text-primary/80 font-medium transition-colors inline-flex items-center min-h-10">
-        Ver todas
-      </Link>
-    }
-  >
+  // F9-11: sem o "Ver todas" (levava à página de Notificações, sempre vazia).
+  <SimpleCard title="Atividades Recentes">
     {activities.length === 0 ? (
       <div className="text-center py-8">
         <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">

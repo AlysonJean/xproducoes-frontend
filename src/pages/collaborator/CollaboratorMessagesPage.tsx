@@ -77,6 +77,10 @@ const CollaboratorMessagesPage: React.FC = () => {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messagesError, setMessagesError] = useState(false);
   const [sending, setSending] = useState(false);
+  // Onda 3 da auditoria de 19/11 (F9-16): a conversa mostrava só as 20 últimas, sem "carregar mais".
+  const [messagesPage, setMessagesPage] = useState(1);
+  const [hasOlder, setHasOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [creatingSupport, setCreatingSupport] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -101,6 +105,10 @@ const CollaboratorMessagesPage: React.FC = () => {
       setMessagesError(false);
       const response = await collaboratorMessagesAPI.getChatMessages(chatId);
       setMessages(response.data?.messages ?? []);
+      setMessagesPage(1);
+      setHasOlder(response.data?.pagination?.hasMore === true);
+      // F9-16: as mensagens abertas ficam lidas (o servidor já marca); o contador da lista zera na hora.
+      setChats((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, unreadCount: 0 } : chat)));
     } catch (error) {
       logger.error('Erro ao carregar mensagens:', 'CollaboratorMessagesPage', error);
       setMessagesError(true);
@@ -122,6 +130,27 @@ const CollaboratorMessagesPage: React.FC = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const loadOlderMessages = async () => {
+    if (!selectedChat || loadingOlder) return;
+    try {
+      setLoadingOlder(true);
+      const next = messagesPage + 1;
+      const response = await collaboratorMessagesAPI.getChatMessages(selectedChat.id, next);
+      const older: Message[] = response.data?.messages ?? [];
+      setMessages((prev) => {
+        const known = new Set(prev.map((m) => m.id));
+        return [...older.filter((m) => !known.has(m.id)), ...prev];
+      });
+      setMessagesPage(next);
+      setHasOlder(response.data?.pagination?.hasMore === true);
+    } catch (error) {
+      logger.error('Erro ao carregar mensagens anteriores:', 'CollaboratorMessagesPage', error);
+      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível carregar as mensagens anteriores.' });
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
 
   const sendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -338,7 +367,15 @@ const CollaboratorMessagesPage: React.FC = () => {
                   ) : messages.length === 0 ? (
                     <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma mensagem ainda. Envie a primeira.</p>
                   ) : (
-                    messages.map((message) => (
+                    <>
+                    {hasOlder && (
+                      <div className="flex justify-center">
+                        <Button variant="outline" size="sm" onClick={() => void loadOlderMessages()} isLoading={loadingOlder}>
+                          Mensagens anteriores
+                        </Button>
+                      </div>
+                    )}
+                    {messages.map((message) => (
                       <div key={message.id} className="flex gap-3">
                         <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                           <span className="text-xs font-medium text-primary" aria-hidden="true">
@@ -362,7 +399,8 @@ const CollaboratorMessagesPage: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                    ))
+                    ))}
+                    </>
                   )}
                   <div ref={messagesEndRef} />
                 </div>

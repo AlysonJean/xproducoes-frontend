@@ -33,6 +33,14 @@ describe('portal do colaborador (/colaborador/*)', () => {
     expect(hrefs.filter((h) => !h?.startsWith('/colaborador/'))).toEqual([]);
   });
 
+  // Onda 3 da auditoria de 19/11 (F9-11): "Notificações" saiu do menu (a página ficava sempre vazia).
+  it('o menu não tem mais "Notificações"; Mensagens continua', () => {
+    render(<MemoryRouter initialEntries={['/colaborador/painel']}><CollaboratorSidebar /></MemoryRouter>);
+    const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
+    expect(hrefs).not.toContain('/colaborador/notificacoes');
+    expect(hrefs).toContain('/colaborador/mensagens');
+  });
+
   it('o rodapé público não aparece no portal (como no admin)', () => {
     const { container } = render(<MemoryRouter initialEntries={['/colaborador/painel']}><Footer /></MemoryRouter>);
     expect(container).toBeEmptyDOMElement();

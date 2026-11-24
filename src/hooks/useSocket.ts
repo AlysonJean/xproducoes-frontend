@@ -3,12 +3,16 @@ import { io, Socket } from 'socket.io-client';
 import { SOCKET_URL } from '../utils/apiConfig';
 import { logDebug } from '../utils/logger';
 
-export const useSocket = (room?: string) => {
+// Onda 3 da auditoria de 19/11 (F9-19): `enabled: false` não abre conexão nenhuma (o Roteiro abria uma conexão que em
+// produção nunca entra na sala do evento, porque o cookie do site não vai para o endereço do servidor).
+export const useSocket = (room?: string, options: { enabled?: boolean } = {}) => {
+  const enabled = options.enabled !== false;
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   // Create socket ONCE — not on every room change
   useEffect(() => {
+    if (!enabled) return;
     if (!socketRef.current) {
       // Autenticação via cookie httpOnly (withCredentials envia o cookie
       // automaticamente); o backend lê o cookie no handshake — ver
@@ -44,7 +48,7 @@ export const useSocket = (room?: string) => {
         setIsConnected(false);
       }
     };
-  }, []);
+  }, [enabled]);
 
   // Join/leave room when it changes — no reconnect needed
   useEffect(() => {

@@ -13,6 +13,7 @@ import {
   XCircle,
   Briefcase,
   KeyRound,
+  Banknote,
 } from 'lucide-react';
 import { useCollaborators } from '../../hooks';
 import { BrandLoader } from '@/components/ui/BrandLoader';
@@ -43,6 +44,15 @@ import { isCollaboratorDeactivated } from '@/utils/collaboratorAccess';
 import { formatDateTimeBR } from '@/utils/spreadsheet';
 
 const ITEMS_PER_PAGE = 10;
+
+// F9-13: o que GET /collaborators/:id/payment-info devolve.
+interface PaymentInfo {
+  name: string | null;
+  pixKey: string | null;
+  preferredMethod: string | null;
+  bankAccount: { bank: string | null; agency: string | null; account: string | null; accountType: string | null } | null;
+}
+const PREFERRED_METHOD: Record<string, string> = { pix: 'PIX', bank_transfer: 'Transferência bancária', both: 'PIX ou transferência' };
 
 // Título e breadcrumb constantes (antes trocavam de "Capital Humano" para "Gestão de Talentos"
 // quando os dados chegavam).
@@ -123,6 +133,22 @@ export const AdminCollaboratorsPage: React.FC = () => {
   const [futureAssignments, setFutureAssignments] = useState<FutureAssignment[] | null>(null);
   const [toReactivate, setToReactivate] = useState<CollaboratorDashboard | null>(null);
   const [accessBusy, setAccessBusy] = useState(false);
+
+  // Onda 3 da auditoria de 19/11 (F9-13): a chave PIX e os dados bancários que o colaborador grava nas Configurações não
+  // apareciam em lugar nenhum. O dono os vê aqui, para pagar a equipe (GET /collaborators/:id/payment-info, só admin).
+  const [paymentInfoFor, setPaymentInfoFor] = useState<CollaboratorDashboard | null>(null);
+  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
+  const [paymentInfoError, setPaymentInfoError] = useState(false);
+  const openPaymentInfo = async (collaborator: CollaboratorDashboard) => {
+    setPaymentInfoFor(collaborator);
+    setPaymentInfo(null);
+    setPaymentInfoError(false);
+    try {
+      setPaymentInfo(await apiFetch<PaymentInfo>(`/collaborators/${collaborator.id}/payment-info`));
+    } catch {
+      setPaymentInfoError(true);
+    }
+  };
 
   const {
     collaborators: rawCollaborators,
@@ -559,6 +585,16 @@ export const AdminCollaboratorsPage: React.FC = () => {
                             variant="outline"
                             size="icon"
                             className="h-9 w-9"
+                            onClick={() => void openPaymentInfo(c)}
+                            title="Dados para pagamento"
+                            aria-label={`Dados para pagamento de ${c.name}`}
+                          >
+                            <Banknote className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9"
                             onClick={() => handleEdit(c)}
                             title="Editar"
                             aria-label={`Editar ${c.name}`}
@@ -612,6 +648,38 @@ export const AdminCollaboratorsPage: React.FC = () => {
         </Card>
         )}
       </div>
+
+      <Modal
+        isOpen={paymentInfoFor !== null}
+        onClose={() => setPaymentInfoFor(null)}
+        title={paymentInfoFor ? `Dados para pagamento: ${paymentInfoFor.name}` : 'Dados para pagamento'}
+        size="sm"
+      >
+        {paymentInfoError ? (
+          <Alert variant="error">Não foi possível carregar os dados agora. Tente de novo.</Alert>
+        ) : !paymentInfo ? (
+          <p className="text-sm text-muted-foreground" role="status">Carregando…</p>
+        ) : !paymentInfo.pixKey && !paymentInfo.bankAccount ? (
+          <p className="text-sm text-muted-foreground">O colaborador ainda não informou PIX nem conta (Configurações → Pagamento, na área dele).</p>
+        ) : (
+          <dl className="space-y-3 text-sm">
+            {paymentInfo.preferredMethod && (
+              <div><dt className="font-medium text-muted-foreground">Prefere receber por</dt><dd className="text-foreground">{PREFERRED_METHOD[paymentInfo.preferredMethod] ?? paymentInfo.preferredMethod}</dd></div>
+            )}
+            {paymentInfo.pixKey && (
+              <div><dt className="font-medium text-muted-foreground">Chave PIX</dt><dd className="text-foreground break-all">{paymentInfo.pixKey}</dd></div>
+            )}
+            {paymentInfo.bankAccount && (
+              <div>
+                <dt className="font-medium text-muted-foreground">Conta bancária</dt>
+                <dd className="text-foreground">
+                  {[paymentInfo.bankAccount.bank, paymentInfo.bankAccount.agency && `agência ${paymentInfo.bankAccount.agency}`, paymentInfo.bankAccount.account && `conta ${paymentInfo.bankAccount.account}`, paymentInfo.bankAccount.accountType && (paymentInfo.bankAccount.accountType === 'poupanca' ? 'poupança' : 'corrente')].filter(Boolean).join(' · ')}
+                </dd>
+              </div>
+            )}
+          </dl>
+        )}
+      </Modal>
 
       <Modal
         isOpen={isFormModalOpen}

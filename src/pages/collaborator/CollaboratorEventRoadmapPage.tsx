@@ -39,6 +39,9 @@ import { useNotifications } from '../../contexts/NotificationContext';
 import { logger } from '../../utils/logger';
 import { cn } from '../../utils/cn';
 import { formatBookingCode } from '../../utils/bookingCode';
+
+// F9-19: tempo real do Roteiro só com a chave ligada no build (desligado por padrão).
+const REALTIME_ENABLED = import.meta.env.VITE_REALTIME_ENABLED === 'true';
 import { buildUrgentAlertText, buildWhatsAppUrl, getWhatsAppPhone } from '../../utils/whatsapp';
 import { formatPhoneDisplay } from '../../data/site';
 
@@ -172,8 +175,10 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Socket.IO Integration
-  const { on, emit, isConnected } = useSocket(id ? `event:${id}` : undefined);
+  // Socket.IO Integration. Onda 3 da auditoria de 19/11 (F9-19): só com VITE_REALTIME_ENABLED=true (desligado por
+  // padrão). Em produção a conexão abria sem login e nunca entrava na sala do evento; as tarefas se atualizam pela
+  // recarga (useRoadmapTaskRefresh) e o chat ao abrir a aba.
+  const { on, emit, isConnected } = useSocket(id ? `event:${id}` : undefined, { enabled: REALTIME_ENABLED });
 
   // D5 (aprovada em 02/11/2026): "Tempo real ativo" só depois que o servidor confirma a entrada na sala do
   // evento (room_joined). Antes bastava a conexão abrir; em produção ela abre sem login, o servidor não deixa
@@ -260,7 +265,13 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
   const applyRefreshedTasks = React.useCallback((tasks: RoadmapTask[]) => {
     setBooking((prev) => (prev ? { ...prev, tasks } : prev));
   }, []);
-  useRoadmapTaskRefresh<RoadmapTask>(booking ? id : undefined, booking?.eventEndDate ?? booking?.eventDate, applyRefreshedTasks);
+  useRoadmapTaskRefresh<RoadmapTask>(
+    booking ? id : undefined,
+    booking?.eventEndDate ?? booking?.eventDate,
+    applyRefreshedTasks,
+    // F9-14: a recarga automática começa 6 h antes da montagem (ou do início do evento).
+    booking?.setupTime ?? booking?.eventDate,
+  );
 
   // Onda 3 da auditoria de 19/11 (F9-03): o Roteiro recebe só a lista de chats (sem mensagens) e o tempo real não chega
   // em produção, então a aba Chat ficava sempre vazia, até com o que a própria pessoa mandava. As mensagens vêm da API
@@ -332,7 +343,13 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
     push(atEventDay(myCollaboratorData?.startTime), 'Seu horário de início', 'Início da sua escala');
     push(booking.eventDate, 'Início do evento', booking.eventTitle || 'Evento');
     push(booking.eventEndDate, 'Término do evento', 'Encerramento previsto');
-    push(atEventDay(myCollaboratorData?.endTime), 'Seu horário de término', 'Fim da sua escala');
+    // Onda 3 da auditoria de 19/11 (F9-21): término antes do início (escala que vira a noite) é no dia seguinte.
+    const myStart = atEventDay(myCollaboratorData?.startTime);
+    const myEnd = atEventDay(myCollaboratorData?.endTime);
+    const myEndFixed = myStart && myEnd && new Date(myEnd).getTime() <= new Date(myStart).getTime()
+      ? new Date(new Date(myEnd).getTime() + 24 * 60 * 60 * 1000).toISOString()
+      : myEnd;
+    push(myEndFixed, 'Seu horário de término', 'Fim da sua escala');
     push(booking.pickupTime, 'Desmontagem', 'Recolhimento do equipamento');
 
     return items.sort((a, b) => a.date.getTime() - b.date.getTime());
