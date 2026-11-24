@@ -207,16 +207,20 @@ const CollaboratorWorkSchedule: React.FC = () => {
     try {
       setLoading(true);
       setError(false);
-      // Buscar dados do dashboard (ganhos)
-      const dashboardResponse = await collaboratorsAPI.getMyDashboard();
-      const dashboardData = dashboardResponse.data?.data ?? dashboardResponse.data;
-
-      if (dashboardData?.monthlyEarnings) {
-        setMonthlyEarnings(dashboardData.monthlyEarnings);
+      // Onda 3 da auditoria de 19/11 (F9-17): as duas buscas juntas; a agenda aparece mesmo se a do painel (só o gráfico
+      // de ganhos) falhar. Antes eram em série e qualquer falha derrubava a tela inteira.
+      const [dashboardResult, eventsResult] = await Promise.allSettled([
+        collaboratorsAPI.getMyDashboard(),
+        collaboratorProfileAPI.getMyEvents(),
+      ]);
+      if (dashboardResult.status === 'fulfilled') {
+        const dashboardData = dashboardResult.value.data?.data ?? dashboardResult.value.data;
+        if (dashboardData?.monthlyEarnings) setMonthlyEarnings(dashboardData.monthlyEarnings);
+      } else {
+        logger.warn('Gráfico de ganhos da agenda indisponível', 'CollaboratorWorkSchedule', dashboardResult.reason);
       }
-
-      // Buscar todos os eventos (agenda) via endpoint específico
-      const eventsResponse = await collaboratorProfileAPI.getMyEvents();
+      if (eventsResult.status === 'rejected') throw eventsResult.reason;
+      const eventsResponse = eventsResult.value;
       const eventsData = eventsResponse.data?.data ?? eventsResponse.data;
 
       if (Array.isArray(eventsData)) {

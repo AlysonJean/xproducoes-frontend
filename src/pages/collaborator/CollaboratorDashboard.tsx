@@ -13,11 +13,9 @@ import { logger } from '../../utils/logger';
 import {
   Calendar,
   DollarSign,
-  Star,
   ArrowUpRight,
   CheckCircle,
   User,
-  Target,
   Clock,
   MessageSquare,
   FileText,
@@ -35,6 +33,7 @@ interface DashboardMetrics {
   totalEvents?: number;
   completionRate?: number;
   averageRating?: number;
+  stats?: { currentMonthEvents?: number; upcomingEvents?: number };
   upcomingEvents?: DashboardEvent[];
   recentActivities?: CollaboratorActivity[];
 }
@@ -44,46 +43,40 @@ const BREADCRUMBS = [
   { name: 'Dashboard' },
 ];
 
-// Componente de Métricas Profissionais com Dados Reais
+// Onda 3 da auditoria de 19/11 (F9-09): os quatro números saem do mesmo cálculo da tela de Ganhos (eventos que já
+// aconteceram). Saíram a "Taxa de Conclusão" (contava só o status da reserva e repetia o valor como "tendência") e a
+// "Avaliação Média" (ninguém avalia a equipe hoje); no lugar, o mês e os próximos 30 dias.
 const ProfessionalMetrics: React.FC<{ data: DashboardMetrics | null }> = ({ data }) => {
   if (!data) return null;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       <StatsCard
-        title="Receita Total"
+        title="Cachês dos eventos realizados"
         value={formatPrice(data.totalEarnings || 0)}
-        description="Ganhos acumulados"
+        description="Soma dos cachês dos eventos que já aconteceram"
         icon={<DollarSign className="h-5 w-5" />}
       />
 
       <StatsCard
-        title="Eventos Realizados"
+        title="Eventos realizados"
         value={data.totalEvents || 0}
-        description="Total de eventos concluídos"
+        description="Eventos que já aconteceram"
+        icon={<CheckCircle className="h-5 w-5" />}
+      />
+
+      <StatsCard
+        title="Eventos este mês"
+        value={data.stats?.currentMonthEvents ?? 0}
+        description="No calendário deste mês"
         icon={<Calendar className="h-5 w-5" />}
       />
 
       <StatsCard
-        title="Taxa de Conclusão"
-        value={data.completionRate ? `${data.completionRate}%` : '0%'}
-        description="Eventos finalizados com sucesso"
-        icon={<Target className="h-5 w-5" />}
-        trend={data.completionRate !== undefined && data.completionRate > 90 ? {
-          value: data.completionRate,
-          type: 'positive'
-        } : undefined}
-      />
-
-      <StatsCard
-        title="Avaliação Média"
-        value={data.averageRating ? `${data.averageRating.toFixed(1)} / 5` : 'Sem avaliações'}
-        description="Feedback dos clientes"
-        icon={<Star className="h-5 w-5" />}
-        trend={data.averageRating !== undefined && data.averageRating > 4.5 ? {
-          value: data.averageRating,
-          type: 'positive'
-        } : undefined}
+        title="Próximos 30 dias"
+        value={data.stats?.upcomingEvents ?? 0}
+        description="Eventos em que você está na equipe"
+        icon={<Clock className="h-5 w-5" />}
       />
     </div>
   );
@@ -139,7 +132,8 @@ const UpcomingEvents: React.FC<{ events: DashboardEvent[] }> = ({ events }) => (
             <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
               <Badge variant={bookingStatusVariant(event.status)}>{bookingStatusLabel(event.status)}</Badge>
               <p className="text-sm font-medium text-primary">
-                {formatPrice(event.totalPayment || 0)}
+                {/* F9-06: sem cachê definido, "A combinar" (era R$ 0,00). */}
+                {event.totalPayment ? formatPrice(event.totalPayment) : 'A combinar'}
               </p>
             </div>
           </Link>

@@ -27,6 +27,7 @@ interface EarningsData {
   monthlyEarnings: number;
   yearlyEarnings: number;
   pendingPayments: number;
+  receivedPayments: number;
   averagePerEvent: number;
   eventsCompleted: number;
   monthlyData: Array<{
@@ -161,25 +162,29 @@ const CollaboratorEarningsPage: React.FC = () => {
       const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`; // "YYYY-MM"
       const currentMonthData = monthlyData.find((d) => d.month === currentMonth);
 
-      // Mapear pagamentos recentes
+      // Onda 3 da auditoria de 19/11 (F9-10): a data do pagamento pago é a do pagamento (antes, o vencimento).
       const recentPayments = Array.isArray(payments) ? payments.slice(0, 10).map((p) => ({
         id: p.id,
         eventTitle: p.description || 'Pagamento',
         amount: Number(p.amount),
-        date: p.dueDate || p.paymentDate || '',
+        date: (p.status === 'PAID' ? p.paymentDate || p.dueDate : p.dueDate || p.paymentDate) || '',
         status: p.status
       })) : [];
 
-      // Calcular pendentes
-      const pendingTotal = Array.isArray(payments)
-        ? payments.filter((p) => p.status === 'PENDING').reduce((acc, p) => acc + Number(p.amount), 0)
+      // F9-10: "Total recebido" é a soma do que a produção registrou como pago (antes: ganhos menos pendentes), e
+      // "Aguardando", o pendente e o atrasado.
+      const sumOf = (statuses: PaymentStatus[]) => Array.isArray(payments)
+        ? payments.filter((p) => statuses.includes(p.status)).reduce((acc, p) => acc + Number(p.amount), 0)
         : 0;
+      const pendingTotal = sumOf(['PENDING', 'OVERDUE']);
+      const receivedTotal = sumOf(['PAID']);
 
       setEarnings({
         totalEarnings: Number(stats?.totalEarnings || 0),
         monthlyEarnings: currentMonthData ? currentMonthData.earnings : 0,
         yearlyEarnings,
         pendingPayments: pendingTotal,
+        receivedPayments: receivedTotal,
         averagePerEvent: stats && stats.totalEvents && stats.totalEvents > 0 ? Number(stats.totalEarnings) / Number(stats.totalEvents) : 0,
         eventsCompleted: Number(stats?.totalEvents || 0),
         monthlyData,
@@ -219,9 +224,9 @@ const CollaboratorEarningsPage: React.FC = () => {
           {/* Métricas Principais */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatsCard
-              title="Total Geral"
+              title="Cachês dos eventos realizados"
               value={formatPrice(earnings.totalEarnings || 0)}
-              description="Ganhos acumulados"
+              description="Eventos que já aconteceram"
               icon={<DollarSign className="h-5 w-5" />}
             />
 
@@ -235,14 +240,14 @@ const CollaboratorEarningsPage: React.FC = () => {
             <StatsCard
               title="Média por Evento"
               value={formatPrice(earnings.averagePerEvent || 0)}
-              description="Valor médio recebido"
+              description="Cachê médio por evento realizado"
               icon={<TrendingUp className="h-5 w-5" />}
             />
 
             <StatsCard
               title="Pagamentos Pendentes"
               value={formatPrice(earnings.pendingPayments || 0)}
-              description="Aguardando processamento"
+              description="Pendentes ou atrasados"
               icon={<Clock className="h-5 w-5" />}
             />
           </div>
@@ -359,11 +364,11 @@ const CollaboratorEarningsPage: React.FC = () => {
                     </div>
                     <div>
                       <p className="font-medium text-foreground">Total Recebido</p>
-                      <p className="text-sm text-muted-foreground">Pagamentos confirmados</p>
+                      <p className="text-sm text-muted-foreground">Pagamentos registrados como pagos pela produção</p>
                     </div>
                   </div>
                   <p className="text-xl font-bold text-foreground">
-                    {formatPrice(((earnings.totalEarnings || 0) - (earnings.pendingPayments || 0)))}
+                    {formatPrice(earnings.receivedPayments || 0)}
                   </p>
                 </div>
 
@@ -374,7 +379,7 @@ const CollaboratorEarningsPage: React.FC = () => {
                     </div>
                     <div>
                       <p className="font-medium text-foreground">Aguardando</p>
-                      <p className="text-sm text-muted-foreground">Pagamentos pendentes</p>
+                      <p className="text-sm text-muted-foreground">Pagamentos pendentes ou atrasados</p>
                     </div>
                   </div>
                   <p className="text-xl font-bold text-foreground">

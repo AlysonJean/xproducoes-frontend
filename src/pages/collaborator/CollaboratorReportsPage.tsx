@@ -152,17 +152,19 @@ const CollaboratorReportsPage: React.FC = () => {
         <div className="space-y-8">
           {/* Métricas de Performance */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Onda 3 da auditoria de 19/11 (F9-07): eventos que já aconteceram e a presença (as escalas "não
+                compareceu" contam contra); antes contava só a escala marcada à mão como concluída. */}
             <StatsCard
-              title="Eventos Concluídos"
+              title="Eventos realizados"
               value={reportData.performance?.eventsCompleted || 0}
-              description="Total de eventos finalizados"
+              description="Eventos que já aconteceram"
               icon={<Calendar className="h-5 w-5" />}
             />
 
             <StatsCard
-              title="Taxa de Conclusão"
+              title="Presença"
               value={`${reportData.performance?.completionRate || 0}%`}
-              description="Eventos finalizados com sucesso"
+              description="Eventos realizados sem falta"
               icon={<Target className="h-5 w-5" />}
             />
 
@@ -190,7 +192,7 @@ const CollaboratorReportsPage: React.FC = () => {
             }
           >
             {monthly.length === 0 ? (
-              <p className="py-12 text-center text-muted-foreground">Nenhum evento concluído neste período.</p>
+              <p className="py-12 text-center text-muted-foreground">Nenhum evento realizado neste período.</p>
             ) : (
               <div className="h-80">
                 {/* Achado: era um <LineChart> com <Bar> dentro — o Recharts não desenha barras num
