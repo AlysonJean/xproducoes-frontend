@@ -41,6 +41,8 @@ import { proposalBaseFromBooking, type ProposalBaseBooking } from '@/utils/propo
 import type { BookingDetails } from '@/types/types';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useLeaveGuard } from '@/hooks/useLeaveGuard';
+import { distributeTargetTotal, parseMoneyInput, proposalAlerts, type SameDayBooking } from '@/utils/proposalReview';
+import { asArray } from '@/utils/normalize';
 
 const ITEM_TYPE_LABELS: Record<string, string> = {
   EQUIPMENT: 'Equipamento',
@@ -370,6 +372,58 @@ const AdminQuickProposalPage = () => {
     return pricedItems.reduce((sum, item) => sum + toNumber(item.totalPrice), 0);
   }, [pricedItems]);
   const pendingNotes = pendingFreightNotes(pricedItems);
+
+  // Pedido de Alyson de 24/11/2026: "Fechar no valor". A equipe digita o total que quer cobrar e o desconto é dividido entre os itens
+  // pelo preço de tabela (utils/proposalReview), com a soma batendo no centavo. Frete e pedágio ficam como estão.
+  const [targetDraft, setTargetDraft] = useState('');
+  const [closedTarget, setClosedTarget] = useState<number | null>(null);
+  const hasDiscount = pricedItems.some((item) => item.discount > 0);
+  const closeAtTarget = () => {
+    const target = parseMoneyInput(targetDraft);
+    if (target === null) {
+      addNotification({ type: 'error', title: 'Valor inválido', message: 'Digite o total, por exemplo 1.000 ou 1.000,00.' });
+      return;
+    }
+    const result = distributeTargetTotal(pricedItems, target);
+    if (!result.ok) {
+      addNotification({ type: 'warning', title: 'Não deu para fechar nesse valor', message: result.reason });
+      return;
+    }
+    setItems((prev) => prev.map((item) => {
+      const discount = result.discounts[item.id];
+      const priced = pricedItems.find((p) => p.id === item.id);
+      if (discount === undefined || !priced) return item;
+      return { ...item, discount, totalPrice: Math.max(0, Math.round((priced.unitPrice * priced.quantity - discount) * 100) / 100) };
+    }));
+    setClosedTarget(target);
+    addNotification({ type: 'success', title: 'Total fechado', message: `Total em ${formatPrice(target / 100)}: o desconto ficou dividido entre os itens.` });
+  };
+  const clearDiscounts = () => {
+    setItems((prev) => prev.map((item) => ({ ...item, discount: 0, totalPrice: Math.max(0, Math.round(item.unitPrice * item.quantity * 100) / 100) })));
+    setClosedTarget(null);
+  };
+
+  // Pedido de Alyson de 24/11/2026: outras reservas no(s) dia(s) do evento, para a conferência (a lista do painel filtra pelo dia de
+  // Brasília). Canceladas e reembolsadas ficam de fora, e a própria reserva também.
+  const eventDay = eventDate.slice(0, 10);
+  const eventEndDay = eventEndDate.slice(0, 10);
+  const dayKey = /^\d{4}-\d{2}-\d{2}$/.test(eventDay)
+    ? `${eventDay}|${/^\d{4}-\d{2}-\d{2}$/.test(eventEndDay) && eventEndDay >= eventDay ? eventEndDay : eventDay}`
+    : '';
+  const [sameDayState, setSameDayState] = useState<{ key: string; list: SameDayBooking[] }>({ key: '', list: [] });
+  useEffect(() => {
+    if (!dayKey) return;
+    let active = true;
+    const [from, to] = dayKey.split('|');
+    Promise.resolve()
+      .then(() => apiFetch(`/bookings?startDate=${from}&endDate=${to}&limit=50`))
+      .then((data) => { if (active) setSameDayState({ key: dayKey, list: asArray<SameDayBooking>(data) }); })
+      .catch(() => { if (active) setSameDayState({ key: dayKey, list: [] }); });
+    return () => { active = false; };
+  }, [dayKey]);
+  const sameDay = sameDayState.key === dayKey && dayKey
+    ? sameDayState.list.filter((b) => b.id !== bookingId && !['CANCELLED', 'REFUNDED'].includes(String(b.status)))
+    : [];
 
   const filteredCatalogItems = useMemo(() => {
     // E19 (auditoria do orçamento, 12/11/2026): o GET /services do admin traz também os inativos e os "Em breve".
@@ -894,6 +948,22 @@ const AdminQuickProposalPage = () => {
   const breadcrumbs = bookingId ? [...BREADCRUMBS.slice(0, 2), { name: 'Orçamento da reserva' }] : BREADCRUMBS;
   const saveBlocked = Boolean(bookingId) && (!baseBooking || Boolean(baseBooking.lockedReason));
 
+  // Pedido de Alyson de 24/11/2026: a conferência antes de enviar (dado que falta no briefing, outra reserva no dia, valor que parece
+  // erro). Só avisa: quem decide é a equipe.
+  const reviewClientName = bookingId
+    ? (baseBooking?.clientName && baseBooking.clientName !== 'Cliente sem nome' ? baseBooking.clientName : '')
+    : clientType === 'registered' ? (selectedClientId ? 'cadastrado' : '') : clientName;
+  const reviewAlerts = proposalAlerts({
+    briefing: baseBooking?.briefing,
+    clientName: reviewClientName,
+    lines: pricedItems,
+    subtotal,
+    closedTargetCents: closedTarget,
+    eventStart: eventDate,
+    eventEnd: eventEndDate,
+    sameDay,
+  });
+
   // Carregando dentro do layout (antes: BrandLoader em tela cheia, sem menu nem título).
   if (loading) {
     return (
@@ -1192,6 +1262,11 @@ const AdminQuickProposalPage = () => {
                                onChange={e => updateItem(item.id, 'unitPrice', Number(e.target.value))}
                              />
                            </div>
+                           {item.discount > 0 && (
+                             <p className="text-xs font-medium text-success pb-2">
+                               Desconto {formatPrice(item.discount)} · item {formatPrice(item.totalPrice)}
+                             </p>
+                           )}
                            <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)} className="text-destructive hover:bg-destructive/10 h-8 w-8" aria-label={`Remover ${item.description || 'item'}`}>
                              <Trash2 className="h-4 w-4" />
                            </Button>
@@ -1210,7 +1285,44 @@ const AdminQuickProposalPage = () => {
                   {pendingNotes.length > 0 && (
                     <p className="text-right text-xs font-medium text-foreground">+ {pendingNotes.join(' + ')}</p>
                   )}
+                  {/* Pedido de Alyson de 24/11/2026: "Fechar no valor". */}
+                  <div className="flex flex-wrap items-end justify-end gap-2 pt-2">
+                    <div className="w-40">
+                      <Input
+                        label="Fechar no valor"
+                        size="xs"
+                        inputMode="decimal"
+                        leftIcon={<span className="text-xs font-semibold">R$</span>}
+                        placeholder="Ex.: 1.000"
+                        value={targetDraft}
+                        onChange={(e) => setTargetDraft(e.target.value)}
+                      />
+                    </div>
+                    <Button size="xs" variant="outline" onClick={closeAtTarget} disabled={pricedItems.length === 0}>Aplicar</Button>
+                    {hasDiscount && <Button size="xs" variant="ghost" onClick={clearDiscounts}>Tirar desconto</Button>}
+                  </div>
+                  <p className="text-right text-xs text-muted-foreground">
+                    O desconto é dividido entre os itens pelo preço de tabela (frete e pedágio ficam como estão). O PDF mostra o preço de tabela riscado e o desconto de cada item.
+                  </p>
                </div>
+            </Card>
+
+            <Card className="p-6">
+               <h3 className="flex items-center gap-2 mb-4 text-primary font-semibold uppercase text-xs tracking-wider" id="conferencia-titulo">
+                 <AlertCircle className="h-4 w-4" aria-hidden="true" /> Conferência antes de enviar
+               </h3>
+               {reviewAlerts.length === 0 ? (
+                 <p className="text-sm text-muted-foreground">Nada a conferir.</p>
+               ) : (
+                 <ul className="space-y-2" aria-labelledby="conferencia-titulo">
+                   {reviewAlerts.map((alert) => (
+                     <li key={alert} className="flex gap-2 text-sm text-foreground">
+                       <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-warning" aria-hidden="true" />
+                       <span>{alert}</span>
+                     </li>
+                   ))}
+                 </ul>
+               )}
             </Card>
 
             <Card className="p-6">
