@@ -239,7 +239,7 @@ export const BookingListPage = () => {
             ? `/admin/bookings/${bookingId}/status`
             : `/admin/bookings/${bookingId}/delivery-status`;
 
-      const updated = await apiFetch<{ conflictWarning?: string; confirmationNoticeSkipped?: boolean; paymentStatus?: BookingPaymentStatus | null } | null>(endpoint, {
+      const updated = await apiFetch<{ conflictWarning?: string; stockWarning?: string; confirmationNoticeSkipped?: boolean; paymentStatus?: BookingPaymentStatus | null } | null>(endpoint, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: value, ...extra }),
@@ -247,6 +247,10 @@ export const BookingListPage = () => {
       // Onda 2 (D1): a confirmação avisa a pré-reserva de outra reserva com contrato aceito no mesmo equipamento.
       if (typeof updated?.conflictWarning === 'string' && updated.conflictWarning) {
         addNotification({ type: 'warning', title: 'Pré-reserva no mesmo equipamento', message: updated.conflictWarning });
+      }
+      // Onda 2 da auditoria de 19/11 (B5-05): o estoque do período, contando o conteúdo dos kits (só aviso).
+      if (typeof updated?.stockWarning === 'string' && updated.stockWarning) {
+        addNotification({ type: 'warning', title: 'Estoque no mesmo período', message: updated.stockWarning });
       }
       // Onda 2b (B3): confirmar de novo na mesma data não repete o aviso ao cliente.
       if (updated?.confirmationNoticeSkipped) {

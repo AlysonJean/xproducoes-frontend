@@ -399,6 +399,9 @@ export const BookingDetailPage = () => {
   const warnPreReservation = (data: unknown) => {
     const warning = (data as { conflictWarning?: unknown } | null | undefined)?.conflictWarning;
     if (typeof warning === 'string' && warning) addNotification({ type: 'warning', title: 'Pré-reserva no mesmo equipamento', message: warning });
+    // Onda 2 da auditoria de 19/11 (B5-05): o estoque do período, contando o conteúdo dos kits (só aviso).
+    const stock = (data as { stockWarning?: unknown } | null | undefined)?.stockWarning;
+    if (typeof stock === 'string' && stock) addNotification({ type: 'warning', title: 'Estoque no mesmo período', message: stock });
     // Onda 2b (B3): confirmar de novo na mesma data não repete o aviso ao cliente.
     if ((data as { confirmationNoticeSkipped?: unknown } | null | undefined)?.confirmationNoticeSkipped === true) {
       addNotification({ type: 'info', title: 'Aviso não repetido', message: 'O cliente já tinha recebido a confirmação desta data: o e-mail e o aviso no site não foram repetidos.' });

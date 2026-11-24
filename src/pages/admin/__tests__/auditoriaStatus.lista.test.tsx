@@ -237,6 +237,19 @@ describe('lista de Reservas — trocas de status (auditoria do status)', () => {
     expect(JSON.parse(String(chamadas('PATCH')[0][1].body))).toEqual({ status: 'CONFIRMED' });
   });
 
+  it('B5-05 (auditoria de 19/11): o aviso de estoque que o PATCH devolve aparece com o próprio título', async () => {
+    apiFetch.mockImplementation((url: string, init?: { method?: string }) =>
+      init?.method === 'PATCH' ? Promise.resolve({ stockWarning: 'Atenção ao estoque: "Mesa X": 2 pedido(s) para 1.' }) : backend(url, init));
+    await abrir(linha('PENDING'));
+
+    fireEvent.change(screen.getByLabelText('Status da reserva XP-1'), { target: { value: 'CONFIRMED' } });
+    const janela = await screen.findByRole('dialog', { name: 'Confirmar a reserva?' });
+    fireEvent.click(within(janela).getByRole('button', { name: 'Confirmar' }));
+
+    await waitFor(() => expect(addNotification).toHaveBeenCalledWith({ type: 'warning', title: 'Estoque no mesmo período', message: 'Atenção ao estoque: "Mesa X": 2 pedido(s) para 1.' }));
+    expect(addNotification).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Pré-reserva no mesmo equipamento' }));
+  });
+
   it('onda 2b (D8): "Reembolsada" pede o valor e o dia; sem valor ou acima do valor da reserva, não grava', async () => {
     await abrir(linha('CANCELLED', 'XP-1', { paymentStatus: 'PAID' }));
 

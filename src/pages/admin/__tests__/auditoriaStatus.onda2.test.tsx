@@ -242,6 +242,17 @@ describe('ficha — onda 2 da auditoria do status', () => {
     await waitFor(() => expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'warning', message: 'Atenção: o mesmo equipamento está pré-reservado.' })));
   });
 
+  it('B5-05 (auditoria de 19/11): o aviso de estoque que a confirmação devolve aparece junto com o da pré-reserva', async () => {
+    bookingAPI.confirmWithDetails.mockResolvedValue({ data: { conflictWarning: 'Atenção: pré-reservado.', stockWarning: 'Atenção ao estoque: "Mesa X".' } });
+    await renderFicha(base);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
+    const janela = await screen.findByRole('dialog', { name: 'Confirmar reserva' });
+    fireEvent.click(within(janela).getByRole('button', { name: 'Confirmar reserva' }));
+
+    await waitFor(() => expect(addNotification).toHaveBeenCalledWith({ type: 'warning', title: 'Estoque no mesmo período', message: 'Atenção ao estoque: "Mesa X".' }));
+    expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({ title: 'Pré-reserva no mesmo equipamento', message: 'Atenção: pré-reservado.' }));
+  });
+
   it('D5: "Iniciar evento" a partir do dia do evento, só na confirmada; pergunta antes e grava Em andamento', async () => {
     const hoje = new Date(Date.now() + 60 * 60 * 1000);
     await renderFicha({ ...base, status: 'CONFIRMED', eventDate: hoje.toISOString(), eventEndDate: new Date(hoje.getTime() + 4 * 3600 * 1000).toISOString() });
