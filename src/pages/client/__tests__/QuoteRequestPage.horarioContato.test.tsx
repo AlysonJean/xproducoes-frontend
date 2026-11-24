@@ -20,6 +20,12 @@ vi.mock('../../../components/ui/TrustStrip', () => ({ TrustStrip: () => null }))
 vi.mock('react-ga4', () => ({ default: { event: vi.fn() } }));
 
 import { QuoteRequestPage } from '../QuoteRequestPage';
+
+// Onda 2 da auditoria de 19/11 (F8-07): o pedido só sai com a caixa de ciência marcada (como no /briefing).
+const marcarCiencia = () => {
+  const caixa = screen.getByRole('checkbox', { name: /Estou ciente/ }) as HTMLInputElement;
+  if (!caixa.checked) fireEvent.click(caixa);
+};
 import { todayISO } from '../../../utils/quoteSubmission';
 
 const TECNICO = { id: 'sv-tec', name: 'Técnico de Som e Operação Profissional', description: 'Som', price: '300.00', duration: 180, coversWholeEvent: true, status: 'ACTIVE' };
@@ -64,7 +70,10 @@ const responder = (escadas = 'Não', coberto = 'Sim', estacionamento = 'Sim') =>
   fireEvent.click(within(screen.getByRole('group', { name: 'Tem estacionamento? *' })).getByLabelText(estacionamento));
 };
 
-const confirmar = () => fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pedido de Orçamento' }));
+const confirmar = () => {
+  marcarCiencia();
+  fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pedido de Orçamento' }));
+};
 
 const corpoEnviado = async (rota = '/bookings') => {
   await waitFor(() => expect(post.mock.calls.some((c) => c[0] === rota)).toBe(true));
@@ -190,13 +199,16 @@ describe('QuoteRequestPage — início e término do evento, montagem à parte, 
     confirmar();
     const corpo = await corpoEnviado();
     expect(corpo).toMatchObject({ requiresStairs: false, isCovered: true, hasParking: false });
-    expect(corpo.specialRequests).toBe([
+    // Onda 2 da auditoria de 19/11 (F8-07): depois das respostas, a ciência marcada (com a hora e a versão do texto).
+    expect(String(corpo.specialRequests).startsWith([
       '— Pedido de orçamento pelo site —',
       'Liberado para montar a partir de: 16:30',
       'Escadas no acesso: Não sei',
       'Local coberto: Não sei',
       'Estacionamento ou carga e descarga: Não',
-    ].join('\n'));
+      '',
+      '— Ciência marcada em ',
+    ].join('\n'))).toBe(true);
     // A tela de sucesso recebe o mesmo texto, para a mensagem do WhatsApp levar o "Não sei" (e não o sim/não do cadastro).
     await screen.findByText('Pedido enviado');
     expect(screen.getByTestId('texto-para-o-whatsapp').textContent).toBe(corpo.specialRequests);

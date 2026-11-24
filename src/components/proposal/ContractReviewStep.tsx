@@ -13,8 +13,10 @@ import {
   contractTime,
   currentTime,
   limitingClauses,
+  limitingClausesFromDocument,
   reopensProposal,
 } from './contractHelpers';
+import { RESERVATION_POLICY_VERSION } from '@/data/reservationPolicy';
 
 // Aceite online (13/11/2026), passo 2: antes do "Aceito" o cliente vê o RESUMO da contratação (do servidor) e o
 // CONTRATO INTEGRAL (o PDF exato que o servidor preparou e guardou, com a impressão digital SHA-256 à vista), marca a
@@ -215,7 +217,17 @@ export function ContractReviewStep({
     }
   };
 
-  const notes = cancellationNotes(purpose);
+  // Onda 2 da auditoria de 19/11 (F5-07): os destaques vêm do contrato que o servidor preparou (o mesmo do PDF); a cópia
+  // da política no site fica só para quando a resposta não traz o texto. Se o modelo do servidor não é a versão que o site
+  // conhece, os textos da cópia local (notas do cancelamento e destaques) saem do resumo, e vale o contrato completo.
+  const sameTemplate = prepared.templateVersion === RESERVATION_POLICY_VERSION;
+  const localNotes = cancellationNotes(purpose);
+  const notes = sameTemplate ? localNotes : { highlight: [], plain: [] };
+  const highlightedClauses = prepared.document
+    ? limitingClausesFromDocument(prepared.document, notes.highlight)
+    : sameTemplate
+      ? limitingClauses()
+      : [];
 
   return (
     <div className="space-y-8 text-base">
@@ -293,7 +305,7 @@ export function ContractReviewStep({
         <div className="space-y-3">
           <h4 className="font-bold text-foreground">Outras cláusulas em destaque</h4>
           <ul className="space-y-3">
-            {limitingClauses().map((clause) => (
+            {highlightedClauses.map((clause) => (
               <li key={clause.title} className="rounded-lg border-l-4 border-warning bg-warning/10 p-4">
                 <p className="font-semibold text-foreground">{clause.title}</p>
                 {clause.texts.map((text) => (
@@ -305,6 +317,9 @@ export function ContractReviewStep({
             ))}
           </ul>
         </div>
+        {!sameTemplate && (
+          <p className="font-semibold">Leia as cláusulas em destaque no contrato completo, logo abaixo: é ele que vale.</p>
+        )}
         <p className="text-muted-foreground">Este é um resumo. Vale o texto do contrato completo, logo abaixo.</p>
       </section>
 

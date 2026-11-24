@@ -40,6 +40,17 @@ export const BRIEFING_TERMS_VERSION = '2026-11-13';
 export const BRIEFING_TERMS =
   'Estou ciente de que o orçamento considera as informações acima e que mudanças no local, no horário, no público ou na energia podem alterar o valor. Energia adequada no local, licenças (como ECAD e prefeitura) e danos causados por convidados são de responsabilidade do contratante. Este pedido ainda não é uma reserva: a equipe confere a disponibilidade e manda a proposta num link, com o frete e o pedágio, quando houver, e a data só fica confirmada depois que eu aceitar a proposta e pagar a parcela inicial.';
 
+/**
+ * Onda 2 da auditoria de 19/11 (F8-07): o registro da ciência que vai no texto do pedido, com a hora em que a caixa foi
+ * marcada e a versão do texto. O mesmo do /briefing; o pedido pelo carrinho (/orcamento) passa a gravá-lo também.
+ */
+export function termsAcceptanceText(acceptedAt: Date): string {
+  return [
+    `— Ciência marcada em ${acceptedAt.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} (texto ${BRIEFING_TERMS_VERSION}) —`,
+    BRIEFING_TERMS,
+  ].join('\n');
+}
+
 export interface BriefingAnswers {
   eventType: string;
   eventDate: string;

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
+import { BRIEFING_TERMS, termsAcceptanceText } from '../../utils/briefing';
 import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
 import ReactGA from 'react-ga4';
@@ -152,6 +153,11 @@ export const QuoteRequestPage: React.FC = () => {
   // /briefing. Antes era nova a cada clique: se a resposta se perdia (timeout com o Neon acordando), o novo envio criava
   // outra reserva e outro e-mail.
   const submission = useRef<{ payload: string; key: string } | null>(null);
+  // Onda 2 da auditoria de 19/11 (F8-07): o pedido pelo carrinho cria a conta do convidado e não tinha o link da Política
+  // de Privacidade nem a ciência das condições que o /briefing registra. A caixa é obrigatória, e a ciência (com a hora em
+  // que foi marcada, fixa entre tentativas para não trocar a chave de idempotência) vai no texto do pedido.
+  const [termsAcceptedAt, setTermsAcceptedAt] = useState<Date | null>(null);
+  const [termsError, setTermsError] = useState<string | null>(null);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
@@ -419,6 +425,12 @@ export const QuoteRequestPage: React.FC = () => {
       return;
     }
 
+    // F8-07: sem a ciência marcada, o pedido não sai (como no /briefing).
+    if (!termsAcceptedAt) {
+      setTermsError('Marque a caixa de ciência para enviar o pedido.');
+      return;
+    }
+
     // O23: a recusa diz qual item.
     if (unavailableNames.length > 0) {
       const msg = `Não dá para enviar com item indisponível: ${unavailableNames.join(', ')}. Tire do carrinho e envie de novo.`;
@@ -475,7 +487,7 @@ export const QuoteRequestPage: React.FC = () => {
         addressComplement: data.addressComplement || undefined,
         // O25: "Não sei" grava o caso comum; a resposta como a pessoa marcou vai no texto do pedido.
         ...logisticsFlags(data),
-        specialRequests: quoteRequestText({ ...data, setupTime: range.setup ? data.setupTime : null }),
+        specialRequests: [quoteRequestText({ ...data, setupTime: range.setup ? data.setupTime : null }), termsAcceptanceText(termsAcceptedAt)].join('\n\n'),
         notes: data.notes || undefined,
         status: 'PENDING',
         ...(range.setup ? { setupTime: range.setup.toISOString() } : {}),
@@ -1097,6 +1109,23 @@ export const QuoteRequestPage: React.FC = () => {
                 </div>
               </Alert>
             )}
+            <div className="mb-6">
+              <label className="flex items-start gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                  checked={termsAcceptedAt !== null}
+                  onChange={(event) => {
+                    setTermsAcceptedAt(event.target.checked ? new Date() : null);
+                    if (event.target.checked) setTermsError(null);
+                  }}
+                />
+                <span>
+                  {BRIEFING_TERMS} Veja os <Link to="/termos" target="_blank" className="font-medium text-primary underline underline-offset-2">Termos</Link> e a <Link to="/privacidade" target="_blank" className="font-medium text-primary underline underline-offset-2">Política de Privacidade</Link>.
+                </span>
+              </label>
+              {termsError && <p role="alert" className="mt-1 text-sm text-destructive">{termsError}</p>}
+            </div>
             <Button
               type="submit"
               size="lg"

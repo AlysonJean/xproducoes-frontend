@@ -267,4 +267,9 @@ export interface AdminContract {
   initialPayment: ContractInstallment | null;
   balance: ContractInstallment | null;
   events: AdminContractEvent[];
+  // Onda 2 da auditoria de 19/11 (F5-08): o servidor confere a cadeia de hashes da trilha (verifyContractTrail); false =
+  // algum registro foi alterado ou apagado depois. null quando a resposta não traz a conferência.
+  eventsIntact: boolean | null;
+  // Por onde a desistência chegou (área do cliente, link da proposta...), quando houve.
+  withdrawChannel: string | null;
 }

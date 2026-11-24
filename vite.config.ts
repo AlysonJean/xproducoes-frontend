@@ -80,8 +80,12 @@ export default defineConfig({
         // Sem 'html' aqui: esta é uma app SSR (Vike) — não existe um index.html estático
         // para pré-cachear, o HTML é gerado pelo servidor a cada requisição.
         globPatterns: ['**/*.{js,css,ico,png,svg}'],
-        // Excluir arquivos de análise de bundle do cache PWA
-        globIgnores: ['stats.html'],
+        // Excluir arquivos de análise de bundle do cache PWA.
+        // Onda 2 da auditoria de 19/11 (F1-08): o precache pegava todo o JS do build (~5 MB: painel, área do colaborador,
+        // recharts, xlsx) sem trazer modo offline (navigateFallback é null e o HTML vem sempre do servidor); só gastava
+        // dados de quem abre o site, e cada deploy baixava de novo o que mudou. Os chunks e as entradas do Vike ficam de
+        // fora (já têm cache imutável no vercel.json); o precache fica com ícones e CSS.
+        globIgnores: ['stats.html', 'assets/chunks/**', 'assets/entries/**'],
         // Achado: por padrão o vite-plugin-pwa registra uma NavigationRoute apontando
         // para "index.html" como app-shell (padrão de SPA) via
         // createHandlerBoundToURL("index.html") — mas essa URL nunca existe no precache

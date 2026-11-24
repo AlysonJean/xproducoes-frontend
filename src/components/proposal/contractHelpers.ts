@@ -10,6 +10,8 @@ import type {
   ContractPurpose,
   ContractState,
   ProposalPrefill,
+  ContractDocument,
+  ContractTextBlock,
 } from '@/types/contract';
 
 // Aceite online (13/11/2026): o que o fluxo de aceite da página da proposta, o cartão "Contrato" da área do cliente e o
@@ -181,6 +183,25 @@ export function limitingClauses(): Array<{ title: string; texts: string[] }> {
     title: RESERVATION_POLICY_SECTIONS.find((section) => section.id === id)?.title ?? '',
     texts: highlightsOf(id),
   })).filter((clause) => clause.title && clause.texts.length > 0);
+}
+
+/**
+ * Onda 2 da auditoria de 19/11 (F5-07): as cláusulas em destaque a partir do texto que o servidor preparou (o mesmo modelo
+ * do PDF aceito), os blocos marcados com highlight. A cópia da política no site (limitingClauses) é mantida à mão e
+ * publicada à parte; qualquer ajuste num sem o outro fazia o resumo divergir do contrato. `exclude`: textos já mostrados
+ * em outro lugar do resumo (as notas do cancelamento), para não repetir.
+ */
+export function limitingClausesFromDocument(document: ContractDocument, exclude: string[] = []): Array<{ title: string; texts: string[] }> {
+  const shown = new Set(exclude);
+  return document.clauses
+    .map((clause) => ({
+      title: clause.title,
+      texts: clause.blocks
+        .filter((block): block is Extract<ContractTextBlock, { kind: 'item' | 'sub' }> => (block.kind === 'item' || block.kind === 'sub') && Boolean(block.highlight))
+        .map((block) => block.text)
+        .filter((text) => !shown.has(text)),
+    }))
+    .filter((clause) => clause.texts.length > 0);
 }
 
 /**
@@ -430,6 +451,9 @@ export function normalizeAdminContract(raw: unknown): AdminContract {
     initialPayment: installment(r.initialPayment),
     balance: installment(r.balance),
     events,
+    // F5-08: a ficha descartava a conferência da trilha; agora o cartão avisa quando ela não bate.
+    eventsIntact: typeof r.eventsIntact === 'boolean' ? r.eventsIntact : null,
+    withdrawChannel: str(r.withdrawChannel),
   };
 }
 

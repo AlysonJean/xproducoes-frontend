@@ -185,6 +185,14 @@ export function AdminContractCard({ bookingId, summary }: AdminContractCardProps
         </div>
       )}
 
+      {/* Onda 2 da auditoria de 19/11 (F5-08): a cadeia de hashes da trilha não bate (registro alterado ou apagado). */}
+      {contract && contract.eventsIntact === false && (
+        <div role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+          <p className="font-semibold">Trilha do aceite com divergência</p>
+          <p>A conferência dos registros do aceite não bate: algum registro foi alterado ou apagado depois. Guarde o PDF aceito e fale com quem cuida do sistema antes de usar este contrato como prova.</p>
+        </div>
+      )}
+
       {contract && contract.events.length > 0 && (
         <section aria-labelledby="ficha-contrato-trilha" className="space-y-2">
           <h4 id="ficha-contrato-trilha" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">

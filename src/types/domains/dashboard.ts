@@ -37,6 +37,8 @@ export interface AdminDashboardStats {
   receivables?: DashboardReceivables;
   totalRevenue: number;
   revenueGrowth: number;
+  // Receita do mês corrente (concluídas, pela data do evento), a base da seta do Faturamento.
+  currentMonthRevenue?: number;
   newBookingsThisMonth: number;
   bookingsGrowth: number;
   totalClients: number;

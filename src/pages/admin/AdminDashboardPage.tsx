@@ -408,11 +408,13 @@ export const AdminDashboardPage = () => {
                 tone="primary"
                 onClick={() => navigate('/admin/clientes')}
               />
+              {/* Onda 2 da auditoria de 19/11 (F6P1-09): a seta das confirmadas comparava reservas CRIADAS no mês (as 591 do
+                  histórico entraram em nov/2026 e davam alta de milhares de %); saiu. A do Faturamento compara a receita do
+                  mês com a do mês passado, e o número do mês aparece junto (no começo do mês, sem receita, não há seta). */}
               <StatItem
                 title="Reservas confirmadas"
                 value={stats?.confirmedBookings || 0}
                 icon={Calendar}
-                trend={stats?.bookingsGrowth ? { value: stats.bookingsGrowth, type: stats.bookingsGrowth > 0 ? 'positive' : 'negative' } : undefined}
                 description="Com status Confirmada"
                 tone="success"
                 onClick={() => navigate('/admin/reservas')}
@@ -421,7 +423,8 @@ export const AdminDashboardPage = () => {
                 title="Faturamento"
                 value={formatCurrency(stats?.totalRevenue || 0)}
                 icon={DollarSign}
-                trend={stats?.revenueGrowth ? { value: stats.revenueGrowth, type: stats.revenueGrowth > 0 ? 'positive' : 'negative' } : undefined}
+                trend={stats?.revenueGrowth && (stats.currentMonthRevenue ?? 0) > 0 ? { value: stats.revenueGrowth, type: stats.revenueGrowth > 0 ? 'positive' : 'negative' } : undefined}
+                description={typeof stats?.currentMonthRevenue === 'number' ? `Neste mês: ${formatCurrency(stats.currentMonthRevenue)} (a seta compara com o mês passado)` : undefined}
                 tone="info"
               />
               {/* Onda 3 da auditoria do status (M10): o que falta receber das confirmadas (ou depois). Só com o número na

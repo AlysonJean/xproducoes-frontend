@@ -20,6 +20,12 @@ vi.mock('react-ga4', () => ({ default: { event: vi.fn() } }));
 
 import { QuoteRequestPage } from '../QuoteRequestPage';
 
+// Onda 2 da auditoria de 19/11 (F8-07): o pedido só sai com a caixa de ciência marcada (como no /briefing).
+const marcarCiencia = () => {
+  const caixa = screen.getByRole('checkbox', { name: /Estou ciente/ }) as HTMLInputElement;
+  if (!caixa.checked) fireEvent.click(caixa);
+};
+
 const USUARIO = { id: 'u-ana', name: 'Ana Souza', phone: '31988887777', email: 'ana@cliente.test' };
 const CAIXA = { id: 'eq1', name: 'Caixa de som', pricePerHour: 10, status: 'ACTIVE' };
 // A resposta nova da validação: a regra (tipo, valor, teto, mínimo), não o registro do cupom.
@@ -132,6 +138,7 @@ describe('QuoteRequestPage — cupom que acompanha o pedido', { timeout: 30000 }
     await aplicar();
     horario('19:00', '23:00');
     preencherResto(true);
+    marcarCiencia();
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pedido de Orçamento' }));
 
     await waitFor(() => expect(post.mock.calls.some((c) => c[0] === '/bookings/guest')).toBe(true));
@@ -153,6 +160,7 @@ describe('QuoteRequestPage — cupom que acompanha o pedido', { timeout: 30000 }
     await aplicar();
     horario('19:00', '23:00');
     preencherResto(true);
+    marcarCiencia();
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pedido de Orçamento' }));
 
     expect(await screen.findByText('O cupom BEMVINDO10 não vale para este pedido: Você já utilizou este cupom o número máximo de vezes.')).toBeInTheDocument();

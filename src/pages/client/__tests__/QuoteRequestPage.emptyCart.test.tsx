@@ -119,6 +119,8 @@ describe('QuoteRequestPage: carrinho vazio', () => {
     for (const grupo of ['Local com escadas? *', 'Local coberto? *', 'Tem estacionamento? *']) {
       fireEvent.click(within(screen.getByRole('group', { name: grupo })).getByLabelText('Não sei'));
     }
+    // Onda 2 da auditoria de 19/11 (F8-07): o pedido só sai com a caixa de ciência marcada.
+    fireEvent.click(screen.getByRole('checkbox', { name: /Estou ciente/ }));
     fireEvent.submit(container.querySelector('form') as HTMLFormElement);
 
     await waitFor(() => expect(cleared).toBe(true));

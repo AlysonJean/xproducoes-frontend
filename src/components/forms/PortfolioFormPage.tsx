@@ -52,6 +52,9 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
   const [description, setDescription] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [isPinned, setIsPinned] = useState(false);
+  // Onda 2 da auditoria de 19/11 (F4-04): as mídias já gravadas que a pessoa tirou; vão ao servidor no salvar (antes nada
+  // ia, e a foto voltava ao reabrir).
+  const [removedMediaIds, setRemovedMediaIds] = useState<string[]>([]);
   const [isDirty, setIsDirty] = useState(false);
 
   // Media State
@@ -134,6 +137,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
         });
       }
       setMediaItems(existingMedia);
+      setRemovedMediaIds([]);
 
     } else {
       setTitle('');
@@ -178,6 +182,8 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
       if (!item.isExisting && item.url) {
         URL.revokeObjectURL(item.url);
       }
+      const removedId = item.isExisting && item.id && item.id !== 'legacy' ? item.id : null;
+      if (removedId) setRemovedMediaIds((ids) => (ids.includes(removedId) ? ids : [...ids, removedId]));
       const updated = prev.filter((_, i) => i !== index);
       
       // If we removed the cover, set new cover to the first item
@@ -248,6 +254,10 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
                   formData.append('coverIndex', newFileIndex.toString());
               }
           }
+      }
+
+      if (isEditing && removedMediaIds.length > 0) {
+        formData.append('removedMediaIds', JSON.stringify(removedMediaIds));
       }
 
       if (isEditing && initialData) {

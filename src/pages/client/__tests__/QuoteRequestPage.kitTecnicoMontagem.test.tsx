@@ -20,6 +20,12 @@ vi.mock('react-ga4', () => ({ default: { event: vi.fn() } }));
 
 import { QuoteRequestPage } from '../QuoteRequestPage';
 
+// Onda 2 da auditoria de 19/11 (F8-07): o pedido só sai com a caixa de ciência marcada (como no /briefing).
+const marcarCiencia = () => {
+  const caixa = screen.getByRole('checkbox', { name: /Estou ciente/ }) as HTMLInputElement;
+  if (!caixa.checked) fireEvent.click(caixa);
+};
+
 // O catálogo de serviços como GET /services devolve.
 const TECNICO = { id: 'sv-tec', name: 'Técnico de Som e Operação Profissional', description: 'Som', price: '300.00', duration: 180, coversWholeEvent: true, status: 'ACTIVE' };
 const ROADIE = { id: 'sv-roadie', name: 'Roadie / Auxiliar de Montagem', description: 'Montagem', price: '100.00', duration: 180, coversWholeEvent: false, status: 'ACTIVE' };
@@ -75,6 +81,7 @@ const enviar = async () => {
   for (const grupo of ['Local com escadas? *', 'Local coberto? *', 'Tem estacionamento? *']) {
     fireEvent.click(within(screen.getByRole('group', { name: grupo })).getByLabelText('Sim'));
   }
+  marcarCiencia();
   fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pedido de Orçamento' }));
   await waitFor(() => expect(post.mock.calls.some((c) => c[0] === '/bookings')).toBe(true));
   return post.mock.calls.find((c) => c[0] === '/bookings')![1] as { serviceIds?: string[] };

@@ -75,9 +75,11 @@ const resumo = (withdrawalDays: 7 | null) => ({
   forum: withdrawalDays === 7 ? 'Foro do seu domicílio' : 'Foro de Belo Horizonte - MG',
 });
 
-const preparado = (over: Partial<{ contractId: string; sha256: string; withdrawalDays: 7 | null }> = {}) => ({
+// Onda 2 da auditoria de 19/11 (F5-07): a versão do modelo é a mesma que o site conhece (RESERVATION_POLICY_VERSION); com
+// outra, o resumo tira os textos da cópia local (ver o caso "modelo de outra versão").
+const preparado = (over: Partial<{ contractId: string; sha256: string; withdrawalDays: 7 | null; templateVersion: string }> = {}) => ({
   contractId: over.contractId ?? 'ct1',
-  templateVersion: '2026-11-13',
+  templateVersion: over.templateVersion ?? '2026-11-16',
   sha256: over.sha256 ?? SHA,
   summary: resumo(over.withdrawalDays === undefined ? 7 : over.withdrawalDays),
   otp: { sentTo: 'a***@cliente.test', expiresAt: '2027-11-30T13:10:00.000Z' },
@@ -445,6 +447,17 @@ describe('aceite online — fluxo completo', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('A proposta ainda está sem valor. Fale com a equipe antes de aceitar.');
     expect(screen.getByRole('heading', { name: 'Passo 1 de 3: seus dados' })).toBeInTheDocument();
+  });
+});
+
+describe('aceite online — destaques do resumo (onda 2 da auditoria de 19/11, F5-07)', () => {
+  it('modelo de outra versão que a do site: o resumo tira os textos da cópia local e manda ler o contrato completo', async () => {
+    contractAPI.prepare.mockResolvedValue(preparado({ templateVersion: '2027-01-01' }));
+    await chegarAoPasso2();
+    const resumo = document.body.textContent ?? '';
+    expect(resumo).toContain('Leia as cláusulas em destaque no contrato completo, logo abaixo: é ele que vale.');
+    expect(resumo).not.toContain('A retenção fica limitada ao valor que você já pagou');
+    expect(resumo).not.toContain('Quem contrata responde por dano, perda, furto ou extravio');
   });
 });
 

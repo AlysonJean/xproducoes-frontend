@@ -19,6 +19,12 @@ vi.mock('../../../components/ui/TrustStrip', () => ({ TrustStrip: () => null }))
 vi.mock('react-ga4', () => ({ default: { event: vi.fn() } }));
 
 import { QuoteRequestPage } from '../QuoteRequestPage';
+
+// Onda 2 da auditoria de 19/11 (F8-07): o pedido só sai com a caixa de ciência marcada (como no /briefing).
+const marcarCiencia = () => {
+  const caixa = screen.getByRole('checkbox', { name: /Estou ciente/ }) as HTMLInputElement;
+  if (!caixa.checked) fireEvent.click(caixa);
+};
 import { resetStructureCatalogCache } from '../../../utils/cartCatalog';
 
 // Palco (13/11/2026): os Kits 06 e 08 deixam de trazer o conjunto de palco, vendido à parte. No pedido com kit de entrega
@@ -113,6 +119,7 @@ const enviar = async () => {
   for (const grupo of ['Local com escadas? *', 'Local coberto? *', 'Tem estacionamento? *']) {
     fireEvent.click(within(screen.getByRole('group', { name: grupo })).getByLabelText('Sim'));
   }
+  marcarCiencia();
   fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pedido de Orçamento' }));
   await waitFor(() => expect(post.mock.calls.some((c) => c[0] === '/bookings')).toBe(true));
   return post.mock.calls.find((c) => c[0] === '/bookings')![1] as { kitId?: string; equipmentIds?: string[] };
@@ -214,6 +221,7 @@ describe('QuoteRequestPage — palco e estruturas à parte (13/11/2026)', { time
 
     // O reenvio vai sem o Tablado; o aviso sai a cada envio (aqui o servidor falha por outro motivo).
     post.mockImplementationOnce(() => Promise.reject(new Error('Erro ao salvar pedido.')));
+    marcarCiencia();
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pedido de Orçamento' }));
     await waitFor(() => expect(post.mock.calls.filter((call) => call[0] === '/bookings')).toHaveLength(2));
     expect((post.mock.calls.filter((call) => call[0] === '/bookings')[1][1] as { equipmentIds?: string[] }).equipmentIds).toEqual(['eq-trave']);

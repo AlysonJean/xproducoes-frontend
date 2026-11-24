@@ -19,6 +19,12 @@ vi.mock('react-ga4', () => ({ default: { event: vi.fn() } }));
 
 import { QuoteRequestPage } from '../QuoteRequestPage';
 
+// Onda 2 da auditoria de 19/11 (F8-07): o pedido só sai com a caixa de ciência marcada (como no /briefing).
+const marcarCiencia = () => {
+  const caixa = screen.getByRole('checkbox', { name: /Estou ciente/ }) as HTMLInputElement;
+  if (!caixa.checked) fireEvent.click(caixa);
+};
+
 const KIT = { id: 'kit-1', name: 'Kit Festa', price: 1200, minimumRentalDuration: 4, extraHourPrice: 50, fulfillment: 'DELIVERY_SETUP', status: 'ACTIVE', items: [] };
 const USUARIO = { id: 'u-ana', name: 'Ana Souza', phone: '31988887777', email: 'ana@cliente.test' };
 
@@ -47,7 +53,10 @@ const preencher = () => {
     fireEvent.click(within(screen.getByRole('group', { name: grupo })).getByLabelText(grupo === 'Local com escadas? *' ? 'Não' : 'Sim'));
   }
 };
-const confirmar = () => fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pedido de Orçamento' }));
+const confirmar = () => {
+  marcarCiencia();
+  fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pedido de Orçamento' }));
+};
 const chaves = () => post.mock.calls.filter((c) => c[0] === '/bookings').map((c) => (c[2] as { headers: Record<string, string> }).headers['Idempotency-Key']);
 
 describe('QuoteRequestPage — onda 2 (F8-05)', { timeout: 30000 }, () => {
@@ -87,6 +96,27 @@ describe('QuoteRequestPage — onda 2 (F8-05)', { timeout: 30000 }, () => {
     await screen.findByText('Pedido enviado');
     const [primeira, segunda] = chaves();
     expect(segunda).not.toBe(primeira);
+  });
+
+  it('F8-07: sem a caixa de ciência marcada, o pedido não sai e a tela pede a ciência', async () => {
+    post.mockResolvedValue({ data: { id: 'XP-NOVA' } });
+    await abrir();
+    preencher();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pedido de Orçamento' }));
+    expect(await screen.findByText('Marque a caixa de ciência para enviar o pedido.')).toBeInTheDocument();
+    expect(post).not.toHaveBeenCalled();
+    expect(screen.getByRole('link', { name: 'Política de Privacidade' })).toHaveAttribute('href', '/privacidade');
+  });
+
+  it('F8-07: com a ciência marcada, o texto dela (com a versão) vai no pedido', async () => {
+    post.mockResolvedValue({ data: { id: 'XP-NOVA' } });
+    await abrir();
+    preencher();
+    confirmar();
+    await screen.findByText('Pedido enviado');
+    const corpo = post.mock.calls.find((c) => c[0] === '/bookings')![1] as { specialRequests: string };
+    expect(corpo.specialRequests).toMatch(/— Ciência marcada em .+ \(texto 2026-11-13\) —/);
+    expect(corpo.specialRequests).toContain('Este pedido ainda não é uma reserva');
   });
 
   it('o carrinho não esvaziou depois do pedido criado: segue para a tela de sucesso, sem "Falha no envio"', async () => {
