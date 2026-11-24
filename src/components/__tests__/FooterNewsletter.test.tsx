@@ -10,7 +10,6 @@ vi.mock('../ui/ThemedLogo', () => ({ default: () => <span>logo</span> }));
 vi.mock('../modals/ModalContext', () => ({ useModal: () => ({ openModal: vi.fn() }) }));
 
 import { Footer } from '../Footer';
-import { newsletterService } from '../../services/newsletterService';
 
 // D8c (aprovada em 02/11/2026), pergunta 5 (ninguém envia newsletter): o formulário "Fique por dentro das novidades"
 // saiu do rodapé, junto com a inscrição no servidor. Antes o rodapé pedia o e-mail ("Receba ofertas exclusivas...") e
@@ -32,10 +31,9 @@ describe('Footer — sem o formulário de newsletter', () => {
     expect(screen.getByRole('button', { name: 'Abrir WhatsApp' })).toBeInTheDocument();
   });
 
-  it('o site não tem mais como inscrever: newsletterService só lê a lista do painel', async () => {
-    expect(Object.keys(newsletterService)).toEqual(['getAllSubscribers']);
-    apiFetch.mockResolvedValue([]);
-    await newsletterService.getAllSubscribers();
-    expect(apiFetch).toHaveBeenCalledWith('/newsletter/subscribers');
+  // Onda 4 da auditoria de 19/11 (decisão de Alyson de 24/11): o newsletterService saiu junto com a tela do painel.
+  it('o site não tem mais o serviço da newsletter', () => {
+    const modules = import.meta.glob('../../services/newsletterService.ts');
+    expect(Object.keys(modules)).toEqual([]);
   });
 });

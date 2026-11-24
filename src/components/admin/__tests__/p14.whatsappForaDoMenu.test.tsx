@@ -25,7 +25,6 @@ describe('P14 — WhatsApp fora do menu do painel', () => {
     expect(screen.queryByRole('link', { name: /WhatsApp/ })).not.toBeInTheDocument();
     expect(container.querySelector('a[href="/admin/whatsapp"]')).toBeNull();
     expect(screen.getByRole('link', { name: /Contatos/ })).toHaveAttribute('href', '/admin/contatos');
-    expect(screen.getByRole('link', { name: /Newsletter/ })).toHaveAttribute('href', '/admin/newsletter');
   });
 
   it('o endereço antigo /admin/whatsapp leva ao painel (a tela do QR saiu na parte 3)', async () => {

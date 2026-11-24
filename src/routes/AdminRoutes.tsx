@@ -61,9 +61,7 @@ const AdminCollaboratorFunctionsPage = lazy(() =>
   }))
 );
 const MonitoringPage = lazy(() => import('../pages/admin/MonitoringPage'));
-const NewsletterSubscribersPage = lazy(() =>
-  import('../pages/admin/NewsletterSubscribersPage').then((m) => ({ default: m.NewsletterSubscribersPage }))
-);
+// Onda 4 da auditoria de 19/11 (decisão de 24/11): saiu a tela da newsletter.
 const AdminSocialListPage = lazy(() => import('../pages/admin/AdminSocialListPage'));
 const AdminSocialPage = lazy(() =>
   import('../pages/admin/AdminSocialPage').then((m) => ({ default: m.default }))
@@ -205,14 +203,6 @@ export default function AdminRoutes() {
           element={
             <ProtectedRoute adminOnly>
               <ContactSubmissionsListPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="newsletter"
-          element={
-            <ProtectedRoute adminOnly>
-              <NewsletterSubscribersPage />
             </ProtectedRoute>
           }
         />

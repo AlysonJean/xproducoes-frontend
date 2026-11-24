@@ -12,18 +12,17 @@ import { AdminSidebar } from '../AdminSidebar';
 
 // D8c (aprovada em 02/11/2026), pergunta 5: o formulário de newsletter saiu do site e nada é enviado à lista. O item
 // do menu do painel dizia "Inscritos para novidades"; a tela agora só mostra as inscrições antigas, para consulta.
+// Onda 4 da auditoria de 19/11 (decisão de Alyson de 24/11): o item saiu do menu (as inscrições antigas são apagadas).
 describe('D8c — Newsletter no menu do painel', () => {
-  it('o item continua levando à tela, sem prometer novidades', () => {
+  it('o menu não tem mais o item Newsletter nem o link /admin/newsletter', () => {
     apiFetch.mockResolvedValue({ total: 0 });
-    render(
+    const { container } = render(
       <MemoryRouter initialEntries={['/admin/painel']}>
         <AdminSidebar />
       </MemoryRouter>,
     );
 
-    const link = screen.getByRole('link', { name: /Newsletter/ });
-    expect(link).toHaveAttribute('href', '/admin/newsletter');
-    expect(link).toHaveTextContent('Inscrições antigas, só consulta');
-    expect(link).not.toHaveTextContent(/novidades/i);
+    expect(screen.queryByRole('link', { name: /Newsletter/ })).not.toBeInTheDocument();
+    expect(container.querySelector('a[href="/admin/newsletter"]')).toBeNull();
   });
 });

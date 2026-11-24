@@ -4,6 +4,14 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Onda 4 da auditoria de 19/11 (B1-20): minor e patch juntos num PR só (antes, um PR e um CI completo por pacote);
+    # os majors continuam um por PR. No máximo 3 PRs abertos.
+    open-pull-requests-limit: 3
+    groups:
+      minor-e-patch:
+        update-types:
+          - "minor"
+          - "patch"
     ignore:
       - dependency-name: "@eslint/js"
         update-types:

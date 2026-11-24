@@ -24,7 +24,8 @@ const abrir = (todayBookings: number) => {
   apiFetch.mockImplementation((url: string) => {
     const path = new URL(url, 'http://x').pathname;
     if (path === '/dashboard/stats') return Promise.resolve(STATS);
-    if (path === '/dashboard/live-stats') return Promise.resolve({ todayBookings, todayRevenue: 0, activeUsers: 0 });
+    // activeUsers vem só para provar que a tela não o mostra mais (o servidor deixou de mandar; B4-19).
+    if (path === '/dashboard/live-stats') return Promise.resolve({ todayBookings, activeUsers: 7 });
     return Promise.resolve([]);
   });
   render(<MemoryRouter><AdminDashboardPage /></MemoryRouter>);
@@ -43,5 +44,18 @@ describe('AdminDashboardPage — frase dos pedidos de hoje', () => {
     abrir(n);
     expect(await screen.findByText((_, el) => el?.tagName === 'P' && el.textContent === frase)).toBeInTheDocument();
     expect(screen.queryByText(/programados para hoje/)).not.toBeInTheDocument();
+  });
+});
+
+// Onda 4 da auditoria de 19/11 (B4-19, F6P1-11): saiu o selo "usuários ativos agora" do botão Monitoramento (contava
+// contas alteradas nas últimas 24 h, não quem está usando o site).
+describe('AdminDashboardPage — sem o selo de "usuários ativos"', () => {
+  beforeEach(() => apiFetch.mockReset());
+
+  it('mesmo que o servidor mande activeUsers, o selo não aparece', async () => {
+    abrir(1);
+    expect(await screen.findByText((_, el) => el?.tagName === 'P' && el.textContent === 'Você recebeu 1 pedido novo hoje.')).toBeInTheDocument();
+    expect(screen.queryByText(/usuários ativos/)).not.toBeInTheDocument();
+    expect(screen.queryByText('7')).not.toBeInTheDocument();
   });
 });

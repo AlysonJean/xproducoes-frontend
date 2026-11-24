@@ -255,7 +255,9 @@ export const AdminDashboardPage = () => {
   const [activities, setActivities] = useState<DashboardActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [liveStats, setLiveStats] = useState<{ todayBookings: number; todayRevenue: number; activeUsers: number } | null>(null);
+  // Onda 4 da auditoria de 19/11 (B4-19, F6P1-11): só os pedidos de hoje; o servidor não manda mais "usuários ativos"
+  // (contava contas alteradas em 24 h) nem "receita de hoje".
+  const [liveStats, setLiveStats] = useState<{ todayBookings: number } | null>(null);
   // const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
   const [nextBookings, setNextBookings] = useState<BookingListItem[]>([]);
   const [topEquipment, setTopEquipment] = useState<{ name: string; bookings: number }[]>([]);
@@ -274,7 +276,7 @@ export const AdminDashboardPage = () => {
       const [statsRes, actsRes, liveRes, equipRes, collabRes] = await Promise.allSettled([
         apiFetch<AdminDashboardStats>('/dashboard/stats'),
         apiFetch<DashboardActivity[]>('/dashboard/recent-activities'),
-        apiFetch<{ todayBookings: number; todayRevenue: number; activeUsers: number }>('/dashboard/live-stats'),
+        apiFetch<{ todayBookings: number }>('/dashboard/live-stats'),
         apiFetch<{ name: string; bookings: number }[]>('/dashboard/top-equipment'),
         apiFetch<{ collaborator: { id: string; name: string; role: string }; rating: number; eventCount: number }[]>('/dashboard/top-collaborators')
       ]);
@@ -358,15 +360,6 @@ export const AdminDashboardPage = () => {
                 >
                     Monitoramento
                 </Button>
-                {liveStats && liveStats.activeUsers > 0 && (
-                  <span
-                    className="absolute -top-2 -right-2 inline-flex min-w-5 h-5 px-1 rounded-full bg-destructive text-destructive-foreground border-2 border-primary text-xs font-bold items-center justify-center"
-                    title={`${liveStats.activeUsers} usuários ativos agora`}
-                  >
-                    {liveStats.activeUsers}
-                    <span className="sr-only"> usuários ativos agora</span>
-                  </span>
-                )}
               </div>
             </div>
           </div>
