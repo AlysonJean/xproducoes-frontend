@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { CollaboratorLayout } from '../../components/collaborator/CollaboratorLayout';
 import { CollaboratorLoading, CollaboratorError } from '../../components/collaborator/CollaboratorStates';
 import { CollaboratorTabs, CollaboratorTabPanel } from '../../components/collaborator/CollaboratorTabs';
-import { collaboratorProfileAPI, collaboratorMessagesAPI, uploadAPI } from '../../services/api';
+import { collaboratorProfileAPI, collaboratorMessagesAPI } from '../../services/api';
 import { SimpleCard } from '../../components/ui/Cards';
 import { Badge } from '../../components/ui/Badge';
 import { Button, buttonVariants } from '../../components/ui/Button';
@@ -28,8 +28,6 @@ import {
   Navigation,
   Receipt,
   Plus,
-  Camera,
-  X,
   AlertTriangle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -81,7 +79,8 @@ interface RoadmapEventCollaborator {
     };
   };
   function?: { name?: string };
-  totalPayment?: number;
+  totalPayment?: number | null;
+  fixedRate?: number | null;
   status?: string;
   startTime?: string;
   endTime?: string;
@@ -169,12 +168,9 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseDesc, setExpenseDesc] = useState('');
-  const [receiptUrl, setReceiptUrl] = useState('');
-  const [uploadingReceipt, setUploadingReceipt] = useState(false);
   const [submittingExpense, setSubmittingExpense] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Socket.IO Integration
   const { on, emit, isConnected } = useSocket(id ? `event:${id}` : undefined);
@@ -266,6 +262,40 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
   }, []);
   useRoadmapTaskRefresh<RoadmapTask>(booking ? id : undefined, booking?.eventEndDate ?? booking?.eventDate, applyRefreshedTasks);
 
+  // Onda 3 da auditoria de 19/11 (F9-03): o Roteiro recebe só a lista de chats (sem mensagens) e o tempo real não chega
+  // em produção, então a aba Chat ficava sempre vazia, até com o que a própria pessoa mandava. As mensagens vêm da API
+  // ao abrir a aba (sem recarga periódica, para não manter o banco acordado); o que a pessoa envia entra na hora.
+  const chatId = booking?.chats?.[0]?.id;
+  const [chatLoadFailed, setChatLoadFailed] = useState(false);
+  const mergeChatMessages = React.useCallback((incoming: RoadmapChatMessage[], replace: boolean) => {
+    setBooking((prev) => {
+      const chat = prev?.chats?.[0];
+      if (!prev || !chat) return prev;
+      const base = replace ? [] : chat.messages ?? [];
+      const known = new Set(base.map((m) => m.id));
+      const merged = [...base, ...incoming.filter((m) => !known.has(m.id))];
+      return { ...prev, chats: [{ ...chat, messages: merged }, ...(prev.chats ?? []).slice(1)] };
+    });
+  }, []);
+  useEffect(() => {
+    if (activeTab !== 'chat' || !chatId) return;
+    let cancelled = false;
+    setChatLoadFailed(false);
+    collaboratorMessagesAPI
+      .getChatMessages(chatId)
+      .then((resp) => {
+        const payload = resp.data as { messages?: RoadmapChatMessage[] } | undefined;
+        if (!cancelled && Array.isArray(payload?.messages)) mergeChatMessages(payload.messages, true);
+      })
+      .catch((error) => {
+        logger.error('Erro ao carregar o chat do evento:', 'CollaboratorEventRoadmapPage', error);
+        if (!cancelled) setChatLoadFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, chatId, mergeChatMessages]);
+
   useEffect(() => {
     if (activeTab === 'chat') {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -314,9 +344,11 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
 
     setSending(true);
     try {
-      const chatId = booking.chats[0].id;
-      // Enviamos via API mas o Socket.IO vai emitir para todos na sala
-      await collaboratorMessagesAPI.sendMessage(chatId, message);
+      const targetChatId = booking.chats[0].id;
+      const resp = await collaboratorMessagesAPI.sendMessage(targetChatId, message);
+      // F9-03: a mensagem enviada entra na lista na hora (antes só pelo tempo real, que não chega em produção).
+      const sent = resp.data as RoadmapChatMessage | undefined;
+      if (sent?.id) mergeChatMessages([sent], false);
       setMessage('');
     } catch (error) {
       logger.error('Erro ao enviar mensagem:', 'CollaboratorEventRoadmapPage', error);
@@ -365,25 +397,6 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-
-    setUploadingReceipt(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const resp = await uploadAPI.uploadFile(formData);
-      setReceiptUrl(resp.data?.url || resp.data);
-    } catch (error) {
-      logger.error('Erro no upload do recibo:', 'CollaboratorEventRoadmapPage', error);
-      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível enviar a foto do recibo.' });
-    } finally {
-      setUploadingReceipt(false);
-    }
-  };
-
   const handleSubmitExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !expenseAmount || !expenseDesc) return;
@@ -391,19 +404,19 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
     setSubmittingExpense(true);
     try {
       await collaboratorProfileAPI.addExpense(id, {
-        amount: parseFloat(expenseAmount),
-        description: expenseDesc,
-        receiptUrl
+        amount: parseFloat(expenseAmount.replace(',', '.')),
+        description: expenseDesc.trim(),
       });
       setExpenseAmount('');
       setExpenseDesc('');
-      setReceiptUrl('');
       setShowExpenseForm(false);
-      addNotification({ type: 'success', title: 'Reembolso solicitado', message: 'A produção vai analisar sua despesa.' });
+      addNotification({ type: 'success', title: 'Reembolso solicitado', message: 'A produção recebeu o pedido por e-mail e responde aqui (Aprovado ou Recusado).' });
       await fetchRoadmap();
     } catch (error) {
       logger.error('Erro ao enviar despesa:', 'CollaboratorEventRoadmapPage', error);
-      addNotification({ type: 'error', title: 'Erro', message: 'Não foi possível enviar a despesa.' });
+      // B3-03: o servidor diz o motivo (valor acima do teto, centavos, descrição longa).
+      const reason = (error as { response?: { data?: { message?: unknown } } })?.response?.data?.message;
+      addNotification({ type: 'error', title: 'Erro', message: typeof reason === 'string' && reason ? reason : 'Não foi possível enviar a despesa.' });
     } finally {
       setSubmittingExpense(false);
     }
@@ -441,6 +454,7 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
   }
 
   const eventDate = new Date(booking.eventDate);
+  const myPay = Number(myCollaboratorData?.totalPayment ?? myCollaboratorData?.fixedRate ?? 0) || 0;
   const pendingTasks = booking.tasks?.filter((t) => !t.isCompleted).length ?? 0;
   // Auditoria do status (21/11/2026), B9: a reserva cancelada (ou reembolsada) diz isso no lugar do status da escala
   // (antes, "Sua escala: Confirmado" num evento cancelado, para quem abria o Roteiro por um link antigo).
@@ -497,7 +511,8 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
             <div className="flex flex-col items-start md:items-end gap-2 shrink-0">
               <div className="bg-primary-foreground/10 px-5 py-3 rounded-2xl border border-primary-foreground/20 md:text-right">
                 <p className="text-xs uppercase opacity-80 font-bold tracking-wider">Cachê estimado</p>
-                <p className="text-2xl sm:text-3xl font-black">{formatPrice(myCollaboratorData?.totalPayment || 0)}</p>
+                {/* Onda 3 da auditoria de 19/11 (F9-06): o total, ou o cachê fixo; sem nenhum, "A combinar" (era R$ 0,00). */}
+                <p className="text-2xl sm:text-3xl font-black">{myPay ? formatPrice(myPay) : 'A combinar'}</p>
               </div>
               {/* Achado: era "Status: Confirmado" fixo para todo evento. */}
               <span className="text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full bg-primary-foreground/15 border border-primary-foreground/20">
@@ -682,44 +697,11 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
                               />
                             </div>
 
-                            <div className="space-y-2">
-                              <p className="text-sm font-medium text-foreground">Recibo</p>
-                              {receiptUrl ? (
-                                <div className="flex items-center justify-between gap-2 p-2 bg-success/10 border border-success/30 rounded-xl">
-                                  <span className="text-sm font-medium text-success ml-2">Recibo anexado</span>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setReceiptUrl('')}
-                                    aria-label="Remover recibo anexado"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  fullWidth
-                                  onClick={() => fileInputRef.current?.click()}
-                                  isLoading={uploadingReceipt}
-                                  leftIcon={<Camera className="w-4 h-4" />}
-                                >
-                                  Tirar foto ou enviar arquivo
-                                </Button>
-                              )}
-                              <input
-                                type="file"
-                                className="sr-only"
-                                ref={fileInputRef}
-                                accept="image/*"
-                                onChange={handleFileUpload}
-                                tabIndex={-1}
-                                aria-hidden="true"
-                              />
-                            </div>
+                            {/* Onda 3 da auditoria de 19/11 (F9-04): a foto do recibo ia para uma rota que não existe (404).
+                                Até existir um envio privado de comprovante para a escala, ela vai pelo WhatsApp da produção. */}
+                            <p className="text-sm text-muted-foreground">
+                              Recibo: mande a foto pelo WhatsApp da produção (aba Logística). O pedido chega à produção por e-mail.
+                            </p>
 
                             <div className="flex flex-wrap gap-2 pt-2">
                               <Button
@@ -727,7 +709,6 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
                                 size="sm"
                                 className="flex-1"
                                 isLoading={submittingExpense}
-                                disabled={uploadingReceipt}
                               >
                                 Pedir reembolso
                               </Button>
@@ -873,6 +854,9 @@ const CollaboratorEventRoadmapPage: React.FC = () => {
                   </div>
 
                   <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-muted/30" aria-live="polite">
+                    {chatLoadFailed && (
+                      <p className="text-sm text-destructive text-center" role="alert">Não conseguimos carregar as mensagens. Abra a aba de novo para tentar.</p>
+                    )}
                     {chatMessages.length > 0 ? (
                       chatMessages.map((msg, i) => {
                         const isMe = msg.senderId === user?.id;

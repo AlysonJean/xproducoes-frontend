@@ -62,7 +62,9 @@ const BREADCRUMBS = [
   { name: 'Mensagens' },
 ];
 
-const chatTitle = (chat: Chat) => chat.name || chat.participants.map(p => p.user.name).join(', ');
+// Onda 3 da auditoria de 19/11 (F9-01): leitura protegida (o chat de Suporte chegava sem participantes nem mensagens e
+// a página caía); o servidor agora manda o mesmo formato da lista.
+const chatTitle = (chat: Chat) => chat.name || (chat.participants ?? []).map(p => p.user.name).join(', ');
 
 const CollaboratorMessagesPage: React.FC = () => {
   const { addNotification } = useNotifications();
@@ -175,7 +177,7 @@ const CollaboratorMessagesPage: React.FC = () => {
 
   const filteredChats = chats.filter(chat =>
     (chat.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    chat.participants.some(p =>
+    (chat.participants ?? []).some(p =>
       p.user.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
   );
@@ -267,7 +269,7 @@ const CollaboratorMessagesPage: React.FC = () => {
                                 )}
                               </div>
 
-                              {chat.messages.length > 0 && (
+                              {(chat.messages?.length ?? 0) > 0 && (
                                 <p className="text-sm text-muted-foreground truncate">
                                   {chat.messages[0].sender.name}: {chat.messages[0].content}
                                 </p>
@@ -314,7 +316,11 @@ const CollaboratorMessagesPage: React.FC = () => {
                     <div className="min-w-0">
                       <h2 className="font-medium text-foreground truncate">{chatTitle(selectedChat)}</h2>
                       <p className="text-sm text-muted-foreground">
-                        {selectedChat.participants.length} participante{selectedChat.participants.length !== 1 ? 's' : ''}
+                        {selectedChat.type === 'SUPPORT'
+                          // Onda 3 da auditoria de 19/11 (F9-02): o painel da produção não tem tela de chat; a mensagem chega
+                          // por e-mail e a resposta vem por fora.
+                          ? 'Sua mensagem chega à produção por e-mail; a resposta vem por WhatsApp ou telefone.'
+                          : `${selectedChat.participants?.length ?? 0} participante${(selectedChat.participants?.length ?? 0) !== 1 ? 's' : ''}`}
                       </p>
                     </div>
                   </div>

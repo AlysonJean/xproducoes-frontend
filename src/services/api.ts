@@ -688,7 +688,8 @@ export const collaboratorProfileAPI = {
     api.put(`/bookings/tasks/${taskId}/toggle`, { isCompleted }),
 
   // Adicionar despesa para reembolso
-  addExpense: (bookingId: string, data: { amount: number, description: string, receiptUrl?: string }) =>
+  // Onda 3 da auditoria de 19/11 (B3-03): sem recibo (ia para uma rota que não existe); o servidor valida valor e texto.
+  addExpense: (bookingId: string, data: { amount: number, description: string }) =>
     api.post(`/bookings/${bookingId}/expenses`, data),
 
   // P19: "Alertar produção" no Roteiro — e-mail ao dono a cada alerta; responde { emailQueued, deduplicated }
@@ -743,9 +744,5 @@ export const collaboratorMessagesAPI = {
     api.post(`/collaborator/messages/chats/booking/${bookingId}`),
 };
 
-// ✅ API DE UPLOAD (Cloudinary)
-export const uploadAPI = {
-  uploadFile: (formData: FormData) => api.post('/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
-};
+// Onda 3 da auditoria de 19/11 (F9-04): saiu uploadAPI.uploadFile (POST /upload, rota que não existe; só o recibo do
+// Roteiro usava).

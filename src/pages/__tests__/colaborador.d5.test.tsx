@@ -31,8 +31,8 @@ const { getEventRoadmap, getEventTasks, socket } = vi.hoisted(() => {
 });
 vi.mock('../../services/api', () => ({
   collaboratorProfileAPI: { getEventRoadmap, getEventTasks, toggleTask: vi.fn(), addExpense: vi.fn(), sendUrgentAlert: vi.fn() },
-  collaboratorMessagesAPI: { sendMessage: vi.fn() },
-  uploadAPI: { uploadFile: vi.fn() },
+  // Onda 3 da auditoria de 19/11 (F9-03): a aba Chat busca as mensagens ao abrir.
+  collaboratorMessagesAPI: { sendMessage: vi.fn(), getChatMessages: vi.fn(async () => ({ data: { messages: [] } })) },
 }));
 vi.mock('../../hooks/useSocket', () => ({
   useSocket: () => ({ on: socket.on, emit: socket.emit, isConnected: socket.isConnected }),

@@ -74,6 +74,7 @@ import { ProposalHistory } from '../../components/bookings/ProposalHistory';
 import { StageWhatsAppPanel } from '../../components/bookings/StageWhatsAppPanel';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { BookingCollaborators } from '../../components/bookings/BookingCollaborators';
+import { BookingExpenses, type BookingExpenseRow } from '../../components/bookings/BookingExpenses';
 import { BookingFinancialSummary } from '../../components/bookings/BookingFinancialSummary';
 import { AdminContractCard } from '../../components/proposal/AdminContractCard';
 import { 
@@ -1107,6 +1108,10 @@ export const BookingDetailPage = () => {
                   eventDate={booking.eventDate}
                   requiredServices={requiredServices}
                 />
+                {/* Onda 3 da auditoria de 19/11 (F9-05): os pedidos de reembolso da equipe (só aparece quando há). */}
+                <div className="mt-8 empty:hidden">
+                  <BookingExpenses bookingId={booking.id!} expenses={(booking as { expenses?: BookingExpenseRow[] }).expenses} />
+                </div>
               </div>
             </Card>
 
