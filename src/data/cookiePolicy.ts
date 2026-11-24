@@ -111,6 +111,12 @@ export const BROWSER_STORAGE: readonly BrowserDataEntry[] = [
     purpose: 'Evita tentar reabrir a sessão mais de uma vez.',
     duration: UNTIL_TAB_CLOSED,
   },
+  // Onda 4 da auditoria de 19/11 (F2-11): a chave que avisa da sessão encerrada (services/authservice.ts, SESSION_EXPIRED_KEY).
+  {
+    name: 'xp_session_expired',
+    purpose: 'Avisa que a sessão acabou, para mostrar o aviso na tela de entrar.',
+    duration: UNTIL_TAB_CLOSED,
+  },
   {
     name: 'xp-chunk-reload-attempted',
     purpose: 'Evita recarregar a página sem parar depois de uma atualização do site.',

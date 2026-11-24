@@ -83,10 +83,10 @@ export const CollaboratorLayout: React.FC<CollaboratorLayoutProps> = ({
           </div>
         )}
 
-        {/* Main content */}
-        <main className="flex-1 p-4 sm:p-6 bg-background">
+        {/* Main content. Onda 4 da auditoria de 19/11 (F3-11): <div>, porque o App já põe a página dentro de um <main>. */}
+        <div className="flex-1 p-4 sm:p-6 bg-background">
           {children}
-        </main>
+        </div>
       </div>
     </div>
   );

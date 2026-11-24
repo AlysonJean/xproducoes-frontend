@@ -70,8 +70,11 @@ const CityLandingContent = ({ city, service }: CityServiceCombo) => {
   const quoteHref = service.briefingNeed ? briefingHref({ needs: [service.briefingNeed] }) : '/briefing';
   const whatsAppPhone = getWhatsAppPhone();
 
-  // Base FAQ Schema
-  const faqSchema = service.faq ? {
+  // Onda 4 da auditoria de 19/11 (F5-09): a página manda só o FAQPage. O LocalBusiness oficial (com endereço) já vem do <SEO>; o
+  // daqui era um segundo, sem endereço, e o espalhamento do FAQ trocava o @type dele para FAQPage com name, image e
+  // aggregateRating soltos.
+  const faqJsonLd = service.faq ? {
+    "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": service.faq.map(item => ({
       "@type": "Question",
@@ -81,28 +84,7 @@ const CityLandingContent = ({ city, service }: CityServiceCombo) => {
         "text": item.answer
       }
     }))
-  } : {};
-
-  // Aggregate Rating Schema (números reais de /reviews/stats)
-  const reviewSchema = reviewStats && reviewStats.total > 0 ? {
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": reviewStats.averageRating.toFixed(1),
-      "reviewCount": reviewStats.total,
-      "bestRating": "5",
-      "worstRating": "1"
-    }
-  } : {};
-
-  // Combine Schemas (LocalBusiness + FAQ + Reviews)
-  const combinedJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "LocalBusiness",
-    "name": "X Produções",
-    "image": "https://www.xproducoeseeventos.com.br/xproducoes-logo.png", // Absolute URL preferred
-    ...faqSchema,
-    ...reviewSchema
-  };
+  } : undefined;
 
   return (
     // hideTitle: o hero abaixo tem o h1 da página (antes saíam dois h1).
@@ -111,7 +93,7 @@ const CityLandingContent = ({ city, service }: CityServiceCombo) => {
         title={title}
         description={description}
         keywords={`${service.keywords.join(', ')}, ${service.name} ${city.name}, eventos ${city.name}`}
-        jsonLd={combinedJsonLd}
+        jsonLd={faqJsonLd}
       />
 
       {/* Hero Section */}

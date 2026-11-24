@@ -61,6 +61,7 @@ function initialConfirmation(contract: ProposalContractStatus): ContractConfirma
     pixKey: contract.pix?.key,
     pixCopyPaste: contract.pix?.copyPaste,
     initialPaymentReceived: contract.initialPaymentReceived,
+    balanceReceived: contract.balanceReceived,
     bookingConfirmed: contract.bookingConfirmed,
     proofs: contract.proofs ?? [],
   };

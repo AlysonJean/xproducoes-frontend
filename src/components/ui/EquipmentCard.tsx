@@ -186,10 +186,15 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({
         )}
 
   <div className="flex justify-between items-center mt-4">
-          <span className="text-lg font-semibold text-primary">
-            <span className="text-xs font-normal mr-1">a partir de</span>
-            {formatPrice(equipment.pricePerHour || 0)} {priceUnit === 'day' ? '/ diária' : '/ hora'}
-          </span>
+          {/* Onda 4 da auditoria de 19/11 (F3-16): sem preço, "Sob consulta" (era "a partir de R$ 0,00"). */}
+          {Number(equipment.pricePerHour) > 0 ? (
+            <span className="text-lg font-semibold text-primary">
+              <span className="text-xs font-normal mr-1">a partir de</span>
+              {formatPrice(equipment.pricePerHour)} {priceUnit === 'day' ? '/ diária' : '/ hora'}
+            </span>
+          ) : (
+            <span className="text-lg font-semibold text-primary">Sob consulta</span>
+          )}
           {/* Achado (auditoria mobile-first): tinha aria-label="Adicionar ao carrinho", mas
               este é um <div> decorativo dentro do <Link> do card inteiro — clicar aqui não
               adiciona nada ao carrinho, só navega para os detalhes (onde o carrinho de

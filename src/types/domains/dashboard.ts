@@ -122,4 +122,9 @@ export interface ReferralStats {
   discountPercent: number;
   timesUsed: number;
   rewardsEarned: number;
+  /** Onda 4 da auditoria de 19/11 (F3-21): o teto do código (null = sem teto) e os números da recompensa. */
+  maxDiscount?: number | null;
+  rewardDiscountPercent?: number;
+  rewardMaxDiscount?: number;
+  rewardValidityDays?: number;
 }

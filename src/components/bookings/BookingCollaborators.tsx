@@ -51,6 +51,8 @@ interface CollaboratorOption {
 interface BookingCollaboratorsProps {
   bookingId: string;
   eventDate: string; // ISO string
+  /** F4-22: o fim do evento, para a escala abrir no horário dele. */
+  eventEndDate?: string;
   requiredServices?: string[]; // List of service names required (e.g., "DJ", "Fotógrafo")
 }
 
@@ -70,6 +72,7 @@ type AssignmentFormData = z.infer<typeof assignmentSchema>;
 export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({ 
   bookingId, 
   eventDate, // Descomentado
+  eventEndDate,
   requiredServices = []
 }) => {
   const { addNotification } = useNotifications();
@@ -208,11 +211,18 @@ export const BookingCollaborators: React.FC<BookingCollaboratorsProps> = ({
     });
   }, [availableCollaborators, requiredServices, busyCollaboratorIds]);
 
+  // Onda 4 da auditoria de 19/11 (F4-22): a escala abre no horário do evento (Brasília), não mais em 14:00–18:00 fixo.
   const handleOpenModal = () => {
     setIsModalOpen(true);
+    const hm = (iso?: string) => {
+      const d = iso ? new Date(iso) : null;
+      return d && !Number.isNaN(d.getTime())
+        ? new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d)
+        : undefined;
+    };
     reset({
-        startTime: '14:00', // Default placeholder
-        endTime: '18:00'
+        startTime: hm(eventDate) ?? '19:00',
+        endTime: hm(eventEndDate) ?? '23:00'
     });
   };
 

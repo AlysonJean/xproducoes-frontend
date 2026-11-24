@@ -163,7 +163,10 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
       <div className="flex justify-between items-center px-4 pb-4 mt-4">
         {/* Auditoria do orçamento (12/11/2026), O5 e E6: o serviço que acompanha o evento todo cobra pelas horas do
             evento (serviceLine), não um valor fixo: o cartão diz as horas cobertas e que a hora a mais é proporcional. */}
-        {coversWholeEvent ? (
+        {/* Onda 4 da auditoria de 19/11 (F3-16): sem preço, "Sob consulta" (era "a partir de R$ 0,00"). */}
+        {!(Number(service.price) > 0) ? (
+          <span className="text-lg font-semibold text-primary">Sob consulta</span>
+        ) : coversWholeEvent ? (
           <span className="text-lg font-semibold text-primary">
             {formatPrice(service.price || 0)}
             <span className="block text-xs font-normal text-muted-foreground">

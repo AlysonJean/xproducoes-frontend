@@ -48,7 +48,8 @@ describe('Termos de Uso — coerentes com o contrato e as políticas', () => {
   it('contratação: pedido não é reserva, proposta de 7 dias, aceite e parcela inicial (sem "sinal")', () => {
     renderPage(<TermsPage />, '/termos');
     const text = sectionText('contratacao');
-    expect(text).toContain('O pedido de orçamento não é uma reserva: a equipe responde com uma proposta, que vale por 7 dias.');
+    // Onda 4 da auditoria de 19/11 (F5-16): a validade como a do sistema (até 7 dias, nunca depois da véspera do evento).
+    expect(text).toContain('O pedido de orçamento não é uma reserva: a equipe responde com uma proposta, que vale por até 7 dias e nunca depois da véspera do evento; a data de validade aparece na proposta.');
     expect(text).toContain('A contratação acontece quando você aceita a proposta.');
     expect(text).toContain('A data só fica reservada depois do pagamento da parcela inicial do preço, no prazo da proposta.');
     expect(norm(document.body.textContent ?? '')).not.toMatch(/\bsinal\b/i);

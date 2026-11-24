@@ -6,6 +6,7 @@ import {
   Card, 
   Grid, 
   Button,
+  buttonVariants,
   Badge 
 } from './StandardComponents';
 import { 
@@ -21,6 +22,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { optimizeCloudinaryUrl } from '../../utils/imageUtils';
 import { toNumber } from '../../utils/typeSafeFormatters';
 
 export type RecommendationType = 
@@ -245,7 +247,9 @@ export const RecommendationSection = ({
               >
 
               <Link 
-                to={viewAllLink ? `${viewAllLink}/${item.id}` : `/${item.type === 'kit' ? 'kits' : 'equipamentos'}/${item.id}`}
+                // Onda 4 da auditoria de 19/11 (F3-09): o endereço do item pelo tipo dele (o viewAllLink de uma seção misturada levava o kit para
+                // /equipamentos/<id>).
+                to={`/${item.type === 'kit' ? 'kits' : 'equipamentos'}/${item.id}`}
                 className="block"
               >
                 <div className="border border-border rounded-lg overflow-hidden hover:border-primary/50 transition-all duration-200 hover:shadow-md">
@@ -253,7 +257,8 @@ export const RecommendationSection = ({
                   <div className="relative aspect-video bg-muted">
                     {item.imageUrl ? (
                       <img
-                        src={item.imageUrl}
+                        // Onda 4 da auditoria de 19/11 (F3-22): a foto do Cloudinary em 500 px (vinha no tamanho original).
+                        src={optimizeCloudinaryUrl(item.imageUrl, 500)}
                         alt={item.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                         loading="lazy"
@@ -369,11 +374,10 @@ export const RecommendationSection = ({
         {(onViewAll || viewAllLink) && items.length > maxItems && (
           <div className="mt-6 text-center">
             {viewAllLink ? (
-              <Link to={viewAllLink}>
-                <Button variant="outline" size="lg">
-                  {viewAllText}
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
+              // F3-09: o link com a cara do botão (antes, um <button> dentro de um <a>).
+              <Link to={viewAllLink} className={buttonVariants({ variant: 'outline', size: 'lg' })}>
+                {viewAllText}
+                <ArrowRight className="h-4 w-4 ml-2" />
               </Link>
             ) : (
               <Button variant="outline" size="lg" onClick={onViewAll}>

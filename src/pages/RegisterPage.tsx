@@ -111,14 +111,9 @@ export const RegisterPage = () => {
       >
         {/* Mesma ordem do login: social primeiro, depois o formulário por e-mail. Fora do <form>
             para o botão social nunca disparar o envio do cadastro. */}
-        <GoogleAuthButton onSuccess={() => {
-          addNotification({
-            type: 'success',
-            title: 'Sucesso',
-            message: 'Autenticação realizada!'
-          });
-          navigate('/login');
-        }} />
+        {/* Onda 4 da auditoria de 19/11 (F5-12): o botão já avisa e leva ao painel (ou a completar o perfil); a página mandava para
+            /login antes. */}
+        <GoogleAuthButton />
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center">

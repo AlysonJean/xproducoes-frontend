@@ -45,10 +45,15 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
     return 'system';
   });
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light'); // Default seguro para SSR
+  // Onda 4 da auditoria de 19/11 (F1-22): null até o efeito de baixo resolver o tema; para fora vale 'light' (o do SSR), como antes.
+  const [resolvedState, setResolvedTheme] = useState<'light' | 'dark' | null>(null);
+  const resolvedTheme = resolvedState ?? 'light'; // Default seguro para SSR
 
   // Aplica classe dark no HTML e data-theme sempre que resolvedTheme mudar
+  // Onda 4 da auditoria de 19/11 (F1-22): só depois de o tema ser resolvido. Antes, a primeira execução aplicava o 'light' do SSR e
+  // tirava o "dark" que o script do <head> (renderer/+onRenderHtml.tsx) tinha posto, e o site escuro piscava claro.
   useEffect(() => {
+    if (resolvedState === null) return;
     const root = document.documentElement;
     
     logger.debug('Applying theme', 'ThemeContext', { theme: resolvedTheme });
@@ -66,7 +71,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     root.style.setProperty('color-scheme', resolvedTheme);
     
     logger.debug('Theme applied successfully', 'ThemeContext', { htmlClasses: root.className });
-  }, [resolvedTheme]);
+  }, [resolvedState, resolvedTheme]);
 
   // Deriva resolvedTheme a partir de theme e assina mudanças de preferência do SO enquanto
   // theme === 'system'.

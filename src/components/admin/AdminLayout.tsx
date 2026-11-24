@@ -64,9 +64,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         )}
 
         {/* Main content — 16px de margem no celular, 24px a partir de sm. */}
-        <main className={`flex-1 p-4 sm:p-6 bg-background ${!title && !breadcrumbs ? 'mt-16' : ''}`}>
+        {/* Onda 4 da auditoria de 19/11 (F3-11): <div>, porque o App já põe a página dentro de um <main>. */}
+        <div className={`flex-1 p-4 sm:p-6 bg-background ${!title && !breadcrumbs ? 'mt-16' : ''}`}>
           {children}
-        </main>
+        </div>
       </div>
     </div>
   );

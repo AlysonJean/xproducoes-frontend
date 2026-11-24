@@ -91,7 +91,8 @@ export const HomePage = () => {
 
       setCategories(asArray<Category>(catsData));
 
-      const transformedKits = asArray<Kit>(kitsData).map(kit => transformKit(kit));
+      // Onda 4 da auditoria de 19/11 (F5-13): a home não mostra kit inativo, nem para o admin logado.
+      const transformedKits = asArray<Kit>(kitsData).map(kit => transformKit(kit)).filter((kit) => kit.status !== 'INACTIVE');
       setKits(transformedKits);
 
       setPortfolio(asArray<PortfolioItem>(portfolioData));

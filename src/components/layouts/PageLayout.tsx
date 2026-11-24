@@ -5,7 +5,10 @@ import { generateLocalBusinessSchema, generateOrganizationSchema } from '../../u
 import { Breadcrumbs } from '../ui/Breadcrumbs';
 import { Alert } from '../ui/Alert';
 import { Button } from '../ui/Button';
-import { buildPageTitle } from '../../data/site';
+import { SITE_NAME, SITE_URL, buildPageTitle } from '../../data/site';
+import { UNSAFE_LocationContext } from 'react-router-dom';
+
+const DEFAULT_OG_IMAGE = 'https://www.xproducoeseeventos.com.br/xproducoes-logo.png';
 
 interface PageLayoutProps {
   children: React.ReactNode;
@@ -43,6 +46,11 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
   // Achado: o <title> daqui não tinha o sufixo da marca que o <SEO> põe — páginas que só usam o
   // PageLayout (legais, carreiras, ajuda…) ficavam com a aba "Termos de Uso" sem "| X Produções".
   const fullTitle = buildPageTitle(title);
+  // Onda 4 da auditoria de 19/11 (F3-19): as páginas só com PageLayout saíam sem canonical, og:image e og:site_name. O padrão é o do
+  // <SEO> (domínio + caminho do roteador e a logo); a página que também usa <SEO> continua mandando.
+  const routerPath = React.useContext(UNSAFE_LocationContext)?.location?.pathname;
+  const canonical = url ? url.split('#')[0].split('?')[0] : routerPath ? `${SITE_URL}${routerPath}` : '';
+  const ogImage = image || DEFAULT_OG_IMAGE;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -52,21 +60,22 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
         <title>{fullTitle}</title>
         {description && <meta name="description" content={description} />}
         {keywords && <meta name="keywords" content={keywords} />}
-        {url && <link rel="canonical" href={url} />}
+        {canonical && <link rel="canonical" href={canonical} />}
 
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        {url && <meta property="og:url" content={url} />}
+        <meta property="og:site_name" content={SITE_NAME} />
+        {canonical && <meta property="og:url" content={canonical} />}
         <meta property="og:title" content={fullTitle} />
         {description && <meta property="og:description" content={description} />}
-        {image && <meta property="og:image" content={image} />}
+        <meta property="og:image" content={ogImage} />
 
         {/* Twitter — usa `name` (o <SEO> também usa; com `property` as duas tags não se sobrepunham) */}
         <meta name="twitter:card" content="summary_large_image" />
-        {url && <meta name="twitter:url" content={url} />}
+        {canonical && <meta name="twitter:url" content={canonical} />}
         <meta name="twitter:title" content={fullTitle} />
         {description && <meta name="twitter:description" content={description} />}
-        {image && <meta name="twitter:image" content={image} />}
+        <meta name="twitter:image" content={ogImage} />
       </Helmet>
 
       <div className={`flex-grow ${fullWidth ? '' : 'container mx-auto px-4 md:px-6 lg:px-8'} py-8 ${className}`}>

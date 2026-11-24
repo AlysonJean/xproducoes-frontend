@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import GoogleAuthButton from '../components/ui/GoogleAuthButton';
-import { getDashboardRoute, safeNextPath } from '../utils/authUtils';
+import { safeNextPath } from '../utils/authUtils';
 import {
   Button,
   Input,
@@ -123,33 +123,6 @@ export const LoginPage = () => {
     }
   };
 
-  // ✅ REFACTORED: Social success - rely on cookie, not localStorage
-  const handleSocialSuccess = async () => {
-    try {
-      const { API_BASE_URL } = await import('../utils/apiConfig');
-
-      // Backend has already set httpOnly cookie
-      // Just fetch profile to confirm auth
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        credentials: 'include', // Include cookies
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (response.ok) {
-        const userData = await response.json();
-        const dashboardRoute = getDashboardRoute(userData.role);
-        navigate(nextPath ?? dashboardRoute);
-      } else {
-        navigate('/painel');
-      }
-    } catch (error) {
-      logger.error('Erro ao buscar dados do usuário:', 'LoginPage', error);
-      navigate('/painel');
-    }
-  };
-
   const userTypes = [
     { id: 'client' as const, label: 'Cliente', icon: UserIcon },
     { id: 'collaborator' as const, label: 'Colaborador', icon: Users },
@@ -204,7 +177,9 @@ export const LoginPage = () => {
 
       {userType === 'client' && (
         <div className="space-y-3">
-          <GoogleAuthButton onSuccess={handleSocialSuccess} />
+          {/* Onda 4 da auditoria de 19/11 (F5-12): o botão faz a única navegação, já com o "next" (antes a página buscava /auth/me
+              e navegava, e o botão navegava de novo meio segundo depois, perdendo o "next"). */}
+          <GoogleAuthButton redirectTo={nextPath ?? undefined} />
         </div>
       )}
 

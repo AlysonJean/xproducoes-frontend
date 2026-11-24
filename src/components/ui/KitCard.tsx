@@ -168,11 +168,18 @@ export const KitCard: React.FC<KitCardProps> = ({
 
       <div className="flex justify-between items-center px-4 pb-4 mt-4">
         <div className="flex flex-col">
-            <span className="text-xs text-muted-foreground">a partir de</span>
-            <span className="text-lg font-bold text-primary">
-              {/* Decisão do dono de 06/11: o preço do kit é por evento, nunca por hora. */}
-              {formatPrice(kit.price || 0)} <span className="text-xs font-normal">por evento</span>
-            </span>
+            {/* Onda 4 da auditoria de 19/11 (F3-16): sem preço, "Sob consulta" (era "a partir de R$ 0,00"). */}
+            {Number(kit.price) > 0 ? (
+              <>
+                <span className="text-xs text-muted-foreground">a partir de</span>
+                <span className="text-lg font-bold text-primary">
+                  {/* Decisão do dono de 06/11: o preço do kit é por evento, nunca por hora. */}
+                  {formatPrice(kit.price)} <span className="text-xs font-normal">por evento</span>
+                </span>
+              </>
+            ) : (
+              <span className="text-lg font-bold text-primary">Sob consulta</span>
+            )}
             {/* Lote 13 (06/11/2026): o tipo do kit e as horas incluídas, em poucas palavras. */}
             <span className="text-xs text-muted-foreground">{kitCompactInfo(kit)}</span>
         </div>

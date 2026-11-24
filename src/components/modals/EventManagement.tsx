@@ -17,6 +17,8 @@ interface EventManagementProps {
   onClose: () => void;
   /** Conteúdo extra no rodapé, ao lado de "Salvar" (D11: "Avisar o cliente por e-mail" quando salvar confirma). */
   footerExtra?: React.ReactNode;
+  /** Onda 4 da auditoria de 19/11 (F4-18): enquanto a ficha grava, o botão trava (o clique duplo dava erro depois do sucesso). */
+  isSaving?: boolean;
 }
 
 // Achado (auditoria do design system):
@@ -32,6 +34,7 @@ export const EventManagement: React.FC<EventManagementProps> = ({
   onSave,
   onClose,
   footerExtra,
+  isSaving = false,
 }) => {
   const [selectedCollaborators, setSelectedCollaborators] = useState<
     Record<string, SelectedCollaboratorAssignment>
@@ -353,7 +356,8 @@ export const EventManagement: React.FC<EventManagementProps> = ({
             type="button"
             size="sm"
             onClick={handleSave}
-            disabled={selectedCount === 0 || missingRole}
+            isLoading={isSaving}
+            disabled={isSaving || selectedCount === 0 || missingRole}
           >
             Salvar Equipe ({selectedCount})
           </Button>

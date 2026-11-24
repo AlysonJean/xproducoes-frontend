@@ -10,10 +10,12 @@ interface StarsProps {
 
 const Stars = ({ rating }: StarsProps) => {
   return (
-    <div className="flex">
+    // Onda 4 da auditoria de 19/11 (F3-12): a nota é lida pelo leitor de tela (as estrelas eram só visuais).
+    <div className="flex" role="img" aria-label={`Nota ${rating} de 5`}>
       {[...Array(5)].map((_, i) => (
         <svg
           key={i}
+          aria-hidden="true"
           className={`w-5 h-5 ${i < rating ? 'text-warning' : 'text-muted-foreground'}`}
           fill="currentColor"
           viewBox="0 0 20 20"

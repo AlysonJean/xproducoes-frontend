@@ -68,7 +68,7 @@ export const TermsPage = () => {
           <section id="contratacao">
             <h2 className={titleClass}>3. Pedido, proposta e contratação</h2>
             <ul className={listClass}>
-              <li>O pedido de orçamento não é uma reserva: a equipe responde com uma proposta, que vale por 7 dias.</li>
+              <li>O pedido de orçamento não é uma reserva: a equipe responde com uma proposta, que vale por até 7 dias e nunca depois da véspera do evento; a data de validade aparece na proposta.</li>
               <li>A contratação acontece quando você aceita a proposta.</li>
               <li>A data só fica reservada depois do pagamento da parcela inicial do preço, no prazo da proposta.</li>
               <li>Valores, prazos de pagamento, cancelamento e remarcação são os da proposta e do contrato da reserva.</li>

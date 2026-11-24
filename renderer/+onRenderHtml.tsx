@@ -149,10 +149,15 @@ export const onRenderHtml: OnRenderHtmlAsync = async (pageContextServer: PageCon
         <meta name="twitter:image" content="${image}" />
       `
 
+  // Onda 4 da auditoria de 19/11 (F1-22): o <script> logo depois do charset aplica o tema salvo (ou o do aparelho) antes da primeira
+  // pintura; a classe "dark" só chegava depois da hidratação e o site escuro piscava claro. Mesma chave ('theme') e
+  // regra do ThemeContext. A CSP (hoje só Report-Only) aceita 'unsafe-inline'; se um dia valer com hash, incluir o
+  // deste script.
   const documentHtml = escapeInject`<!DOCTYPE html>
     <html lang="pt-BR">
       <head>
         <meta charset="UTF-8" />
+        <script>try{var t=localStorage.getItem('theme');var d=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);var r=document.documentElement;r.classList.add(d?'dark':'light');r.setAttribute('data-theme',d?'dark':'light');r.style.colorScheme=d?'dark':'light'}catch(e){}</script>
         <link rel="icon" href="/favicon.svg" />
 
         <!-- PWA: vite-plugin-pwa injeta estas tags automaticamente via transformIndexHtml,

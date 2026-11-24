@@ -199,6 +199,8 @@ export interface ProposalContractStatus {
   pix?: ContractPix | null;
   /** Semanas 2 e 3: a equipe já registrou a parcela inicial (a página tira o QR Code). */
   initialPaymentReceived?: boolean;
+  /** Onda 4 da auditoria de 19/11 (F5-15): a equipe registrou o pagamento total. */
+  balanceReceived?: boolean;
   /** Onda 2 da auditoria do status (D6): a equipe já confirmou a reserva (o sinal é a situação do pagamento). */
   bookingConfirmed?: boolean;
   /** Semanas 2 e 3: os comprovantes enviados pela página (só a data). */

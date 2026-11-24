@@ -4,7 +4,7 @@ import type { PageContextServer } from 'vike/types';
 import { onRenderHtml } from '../../renderer/+onRenderHtml';
 import { Page } from '../../pages/all/+Page';
 import { GUIDES } from '../data/guides';
-import { STATIC_ROUTES } from '../utils/sitemapGenerator';
+import { GUIDE_ROUTES, STATIC_ROUTES } from '../utils/sitemapGenerator';
 import { TARGET_CITIES, TARGET_SERVICES } from '../utils/localSeoConfig';
 
 // No Vitest, react-router e react-router-dom carregam como duas cópias separadas (em produção são a
@@ -43,12 +43,13 @@ describe('SSR — endereço inexistente é informado para responder 404', () => 
 
   // Todo endereço publicado no sitemap.xml (rotas fixas + as 20 landings serviço×cidade) continua 200.
   it('nenhum endereço do sitemap mostra a página 404', async () => {
-    const urls = [...STATIC_ROUTES, ...TARGET_SERVICES.flatMap((s) => TARGET_CITIES.map((c) => `/${s.slug}-${c.slug}`))];
+    // Onda 4 da auditoria de 19/11 (F1-20): mais as páginas dos guias, que entraram no sitemap.
+    const urls = [...STATIC_ROUTES, ...GUIDE_ROUTES, ...TARGET_SERVICES.flatMap((s) => TARGET_CITIES.map((c) => `/${s.slug}-${c.slug}`))];
     const notOk: string[] = [];
     for (const url of urls) {
       if ((await notFoundRenderedAt(url)) !== false) notOk.push(url);
     }
-    expect(urls).toHaveLength(STATIC_ROUTES.length + TARGET_SERVICES.length * TARGET_CITIES.length);
+    expect(urls).toHaveLength(STATIC_ROUTES.length + GUIDE_ROUTES.length + TARGET_SERVICES.length * TARGET_CITIES.length);
     expect(notOk).toEqual([]);
   }, 30_000);
 

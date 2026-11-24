@@ -100,7 +100,8 @@ export const useAppSettings = () => {
     error,
     loadSettings,
     saveSettings,
-    companyName: settings?.companyName || 'X Produçoes e Eventos',
+    // Onda 4 da auditoria de 19/11 (F1-17): com til, como nos outros pontos.
+    companyName: settings?.companyName || 'X Produções e Eventos',
     googleReviewUrl: settings?.googleReviewUrl ?? null
   };
 };

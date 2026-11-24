@@ -34,8 +34,10 @@ export const GuideListPage = () => {
                className="block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
              >
                <div className="relative h-48 overflow-hidden">
+                 {/* Onda 4 da auditoria de 19/11 (F5-19): no cartão, a capa em 640 px e carregada só ao aparecer (era 1920 px). */}
                  <img
-                   src={guide.coverImage}
+                   src={guide.coverImage.replace('w=1920', 'w=640')}
+                   loading="lazy"
                    alt={guide.title}
                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                  />

@@ -1106,6 +1106,7 @@ export const BookingDetailPage = () => {
                 <BookingCollaborators
                   bookingId={booking.id!}
                   eventDate={booking.eventDate}
+                  eventEndDate={booking.eventEndDate ?? undefined}
                   requiredServices={requiredServices}
                 />
                 {/* Onda 3 da auditoria de 19/11 (F9-05): os pedidos de reembolso da equipe (só aparece quando há). */}
@@ -1422,6 +1423,7 @@ export const BookingDetailPage = () => {
             location: booking.location || booking.eventLocation || '',
           }}
           collaborators={availableCollaborators}
+          isSaving={actionLoading}
           // Salvar aqui também confirma a reserva pendente (/confirm-details): as caixas aparecem só nesse caso (a do sinal,
           // com contrato aceito, como em "Confirmar reserva": revisão da onda 2).
           footerExtra={

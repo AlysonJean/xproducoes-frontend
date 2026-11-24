@@ -16,7 +16,7 @@ const isConfigured = !!googleClientId && googleClientId !== 'your-google-client-
 // tem nenhum botão de login). GoogleAuthButton é o único consumidor de useGoogleLogin no app
 // (confirmado via grep) e só é renderizado em LoginPage/RegisterPage — então o provider foi
 // movido para cá, montando só quando o botão realmente aparece na árvore.
-const GoogleAuthButtonInner: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) => {
+const GoogleAuthButtonInner: React.FC<GoogleAuthButtonProps> = ({ onSuccess, redirectTo }) => {
   const [loading, setLoading] = useState(false);
   const { addNotification } = useNotifications();
 
@@ -47,10 +47,11 @@ const GoogleAuthButtonInner: React.FC<GoogleAuthButtonProps> = ({ onSuccess }) =
         
         // Aguardar um pouco para o AuthContext detectar o novo cookie antes de redirecionar
         setTimeout(() => {
+          // Onda 4 da auditoria de 19/11 (F5-12): uma navegação só, esta (as páginas também navegavam no onSuccess) e com o "next".
           if (response.data.shouldCompleteProfile) {
             window.location.href = '/completar-perfil';
           } else {
-            window.location.href = response.data.redirectTo || '/painel';
+            window.location.href = redirectTo || response.data.redirectTo || '/painel';
           }
         }, 500);
       } catch (error) {

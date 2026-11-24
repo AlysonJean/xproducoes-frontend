@@ -33,11 +33,17 @@ const couponSchema = z.object({
   // O erro da união fica para o que nem é número.
   minOrderValue: z.union([z.literal(''), z.coerce.number().positive(MIN_ORDER_ERROR)], { error: MIN_ORDER_ERROR }),
   maxDiscountAmount: z.union([z.literal(''), z.coerce.number().positive(MAX_DISCOUNT_ERROR)], { error: MAX_DISCOUNT_ERROR }),
+  // Onda 4 da auditoria de 19/11 (F4-19): o percentual vai até 100% (o servidor também recusa).
   maxUses: z.coerce.number().int().positive().optional().or(z.literal('')),
   maxUsesPerClient: z.coerce.number().int().positive().optional().or(z.literal('')),
   validFrom: z.string().optional(),
   validUntil: z.string().optional(),
   active: z.boolean(),
+}).superRefine((value, ctx) => {
+  if (value.discountType === 'PERCENTAGE' && Number(value.discountValue) > 100) {
+    ctx.addIssue({ code: 'custom', path: ['discountValue'], message: 'O percentual vai até 100%.' });
+  }
+
 });
 
 type CouponFormInput = z.input<typeof couponSchema>;

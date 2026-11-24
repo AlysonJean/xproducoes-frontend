@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Mail, Phone, MapPin, Send, HelpCircle, CheckCircle2, MessageSquare } from 'lucide-react';
 import { clsx } from 'clsx';
+import { Link } from 'react-router-dom';
 import { apiFetch } from '../services/api';
 import { getWhatsAppPhone } from '../utils/whatsapp';
 import {
@@ -32,7 +33,8 @@ import {
 import { SEO } from '../components/SEO';
 
 const contactSchema = z.object({
-  name: z.string().min(1, 'Nome é obrigatório'),
+  // Onda 4 da auditoria de 19/11 (F5-18): ao menos 2 caracteres, como o servidor (1 passava aqui e voltava 400).
+  name: z.string().trim().min(2, 'Nome deve ter ao menos 2 caracteres'),
   email: z.string().email('Email inválido'),
   phone: z.string().optional(),
   subject: z.string().min(1, 'Selecione um assunto'),
@@ -310,6 +312,10 @@ export const ContactPage = () => {
                 </div>
               </div>
 
+              {/* Onda 4 da auditoria de 19/11 (F5-18): o aviso de privacidade de quem manda nome, e-mail e telefone. */}
+              <p className="text-xs text-muted-foreground">
+                Usamos seus dados só para responder ao contato. Veja a <Link to="/privacidade" className="underline">Política de Privacidade</Link>.
+              </p>
               <div className="flex justify-end pt-4">
                 <Button
                   type="submit"

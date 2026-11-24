@@ -1,5 +1,5 @@
 
-import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { logDebug } from '../utils/logger';
 import { normalizeString } from '../utils/string';
 import { API_BASE_URL, API_URL } from '../utils/apiConfig';
@@ -615,7 +615,8 @@ export const authAPI = {
   registerFromInvite: (data: { token: string; email: string; name: string; password: string }) =>
     api.post('/auth/register-from-invite', data),
   logout: () => api.post('/auth/logout'),
-  getProfile: () => api.get('/auth/profile'),
+  // Onda 4 da auditoria de 19/11 (F1-13): aceita config (o AuthContext abre a sessão com um prazo de 8 s, não os 30 s padrão).
+  getProfile: (config?: AxiosRequestConfig) => api.get('/auth/profile', config),
   getStats: () => api.get('/user/stats'),
   getFavorites: () => api.get('/user/favorites'),
   getReferral: () => api.get('/user/referral'),

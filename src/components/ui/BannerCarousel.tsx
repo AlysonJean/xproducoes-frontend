@@ -22,13 +22,17 @@ export const BannerCarousel = () => {
       .finally(() => setLoaded(true));
   }, []);
 
+  // Onda 4 da auditoria de 19/11 (F3-07): o rodízio para com o mouse ou o foco do teclado sobre o banner e não roda com "reduzir
+  // movimento" ligado no aparelho.
+  const [paused, setPaused] = useState(false);
   useEffect(() => {
-    if (banners.length <= 1) return;
+    if (banners.length <= 1 || paused) return;
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % banners.length);
     }, 6000);
     return () => clearInterval(interval);
-  }, [banners.length]);
+  }, [banners.length, paused]);
 
   if (!loaded) {
     return <div className="w-full bg-muted h-[min(500px,60vh)]" aria-hidden="true" data-testid="banner-placeholder" />;
@@ -41,10 +45,19 @@ export const BannerCarousel = () => {
   const prev = () => setCurrentIndex((prev) => (prev - 1 + banners.length) % banners.length);
 
   return (
-    <div className="relative w-full overflow-hidden group bg-muted h-[min(500px,60vh)]">
+    <div
+      className="relative w-full overflow-hidden group bg-muted h-[min(500px,60vh)]"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPaused(false); }}
+      data-testid="banner-carousel"
+    >
       {/* Images */}
       <div className="relative w-full h-full">
-         <Link to={current.linkUrl || '#'} className={`block w-full h-full ${!current.linkUrl ? 'pointer-events-none' : ''}`}>
+         {/* Onda 4 da auditoria de 19/11 (F3-07): banner sem link é um <div> (o link "#" continuava focável e anunciado). */}
+         {(() => {
+           const content = (<>
            <picture>
              {current.mobileImageUrl && (
                <source 
@@ -70,7 +83,11 @@ export const BannerCarousel = () => {
                )}
              </div>
            </div>
-         </Link>
+         </>);
+           return current.linkUrl
+             ? <Link to={current.linkUrl} className="block w-full h-full">{content}</Link>
+             : <div className="block w-full h-full">{content}</div>;
+         })()}
       </div>
 
       {/* Navigation */}

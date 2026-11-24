@@ -47,7 +47,8 @@ describe('BookingCollaborators — "Cachê Fixo" opcional (auditoria de 19/11/20
     fireEvent.click(within(janela).getByRole('button', { name: 'Confirmar' }));
 
     await waitFor(() => expect(corpoDoPost()).toBeDefined());
-    expect(corpoDoPost()).toEqual({ bookingId: 'b1', collaboratorId: 'c1', role: 'DJ', startTime: '14:00', endTime: '18:00' });
+    // Onda 4 da auditoria de 19/11 (F4-22): a escala abre no horário do evento (20:00 UTC = 17:00 em Brasília; sem o fim, 23:00).
+    expect(corpoDoPost()).toEqual({ bookingId: 'b1', collaboratorId: 'c1', role: 'DJ', startTime: '17:00', endTime: '23:00' });
     expect(within(janela).queryByText(/expected number|nan/i)).not.toBeInTheDocument();
     await waitFor(() => expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' })));
   });
@@ -59,6 +60,6 @@ describe('BookingCollaborators — "Cachê Fixo" opcional (auditoria de 19/11/20
     fireEvent.click(within(janela).getByRole('button', { name: 'Confirmar' }));
 
     await waitFor(() => expect(corpoDoPost()).toBeDefined());
-    expect(corpoDoPost()).toEqual({ bookingId: 'b1', collaboratorId: 'c1', role: 'DJ', startTime: '14:00', endTime: '18:00', fixedRate: 150.5 });
+    expect(corpoDoPost()).toEqual({ bookingId: 'b1', collaboratorId: 'c1', role: 'DJ', startTime: '17:00', endTime: '23:00', fixedRate: 150.5 });
   });
 });

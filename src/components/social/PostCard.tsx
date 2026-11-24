@@ -2,6 +2,7 @@ import React from 'react';
 import { SocialPost } from '../../services/socialService';
 import { Check, X, Instagram, User, Clock } from 'lucide-react';
 import { Button, Badge, Card } from '../ui/StandardComponents';
+import { optimizeCloudinaryUrl } from '../../utils/imageUtils';
 
 interface PostCardProps {
   post: SocialPost;
@@ -33,8 +34,9 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onApprove, onReject, i
   return (
     <Card className={`group overflow-hidden flex flex-col border-border bg-card transition-all duration-500 hover:shadow-xl hover:-translate-y-1 ${isProcessing ? 'opacity-40 pointer-events-none' : ''}`}>
       <div className="relative aspect-square w-full bg-muted overflow-hidden">
+        {/* Onda 4 da auditoria de 19/11 (F3-22): a foto do Cloudinary em 500 px (vinha no tamanho original). */}
         <img
-          src={post.mediaUrl}
+          src={optimizeCloudinaryUrl(post.mediaUrl, 500)}
           alt={post.caption || `Foto de @${post.author}`}
           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
           loading="lazy"

@@ -160,7 +160,7 @@ export const Header = () => {
             {/* Comparar (primário) */}
             <Link
               to="/comparar"
-              aria-label="Comparar"
+              aria-label={compareItems.length > 0 ? `Comparar, ${compareItems.length} ${compareItems.length === 1 ? 'item' : 'itens'}` : 'Comparar'}
               className="group relative icon-btn hidden sm:inline-grid"
               title="Comparar"
             >
@@ -173,7 +173,7 @@ export const Header = () => {
             {/* Carrinho */}
             <Link
               to="/carrinho"
-              aria-label="Carrinho"
+              aria-label={itemCount > 0 ? `Carrinho, ${itemCount} ${itemCount === 1 ? 'item' : 'itens'}` : 'Carrinho'}
               className="group relative icon-btn"
               title="Carrinho"
             >

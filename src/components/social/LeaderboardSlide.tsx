@@ -44,7 +44,8 @@ export const LeaderboardSlide = memo(({ items }: LeaderboardSlideProps) => {
                     {rest.map((item, idx) => (
                         <div key={item.username} className="flex items-center bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/5 mx-4">
                             <span className="text-2xl font-bold w-12 text-center text-white/50">#{idx + 4}</span>
-                            <Avatar url={item.avatarUrl} />
+                            {/* Onda 4 da auditoria de 19/11 (F3-10): caixa de tamanho fixo (a foto do 4º e 5º saía no tamanho original). */}
+                            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full"><Avatar url={item.avatarUrl} /></div>
                             <div className="ml-4 flex-1">
                                 <p className="text-xl font-bold">{item.username}</p>
                             </div>

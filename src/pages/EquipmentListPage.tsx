@@ -35,7 +35,8 @@ export const EquipmentListPage: React.FC = () => {
         apiFetch('/categories')
       ]);
 
-      setEquipments(asArray<Equipment>(equipmentsData).map(transformEquipment));
+      // Onda 4 da auditoria de 19/11 (F5-13): o catálogo público não mostra item inativo, nem para o admin logado.
+      setEquipments(asArray<Equipment>(equipmentsData).map(transformEquipment).filter((e) => e.status !== 'INACTIVE'));
       setCategories(asArray<Category>(categoriesData));
     } catch (err) {
       logger.error('Erro ao carregar dados:', 'EquipmentListPage', err);

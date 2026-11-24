@@ -2,6 +2,8 @@ import type { SafeBooking } from '../../types/types';
 import { formatBookingTotal } from '../../utils/formatPrice';
 import { clientBookingStatusLabel } from '../../utils/bookingStatus';
 import { bookingAddressText, bookingEquipmentNames, bookingKitNames } from '../../utils/clientBookingItems';
+import { formatBookingCode } from '../../utils/bookingCode';
+import { formatBrasiliaDate } from '../../utils/whatsapp';
 
 interface BookingListItemProps {
   booking: SafeBooking;
@@ -9,10 +11,6 @@ interface BookingListItemProps {
   onViewDetails?: (bookingId: string) => void;
 }
 
-// Função para formatar data simples
-const formatDate = (dateString: string): string => {
-  return new Date(dateString).toLocaleDateString('pt-BR');
-};
 
 // Cor do selo por status. Achado (mapeamento do lote 13): faltava REFUNDED, e "Minhas Reservas" e o painel do
 // cliente quebravam (config undefined) com uma reserva reembolsada. D11 (aprovada em 02/11/2026): o texto vem de
@@ -43,9 +41,10 @@ export const BookingListItem = ({ booking, onReviewClick, onViewDetails }: Booki
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
         <div className="mb-4 sm:mb-0">
           <p className="text-sm text-muted-foreground">
-            Reserva ID: <span className="font-mono text-foreground">{booking.id}</span>
+            {/* Onda 4 da auditoria de 19/11 (F3-17): o código curto da reserva e a data de Brasília (antes, o id interno e o fuso do aparelho). */}
+            Reserva: <span className="font-mono text-foreground">{formatBookingCode(booking.id)}</span>
           </p>
-          <p className="text-lg font-bold text-foreground">Data: {formatDate(booking.eventDate)}</p>
+          <p className="text-lg font-bold text-foreground">Data: {formatBrasiliaDate(booking.eventDate)}</p>
           {booking.eventTitle && (
             <p className="text-base text-foreground">Evento: {booking.eventTitle}</p>
           )}

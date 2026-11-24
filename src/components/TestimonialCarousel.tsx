@@ -3,6 +3,7 @@ import { apiFetch } from '../services/api';
 import { StarIcon } from '@heroicons/react/24/solid';
 import { UserCircleIcon } from '@heroicons/react/24/outline';
 import { logger } from '../utils/logger';
+import { optimizeCloudinaryUrl } from '../utils/imageUtils';
 import { Skeleton } from './ui/StandardComponents';
 
 interface PublicReview {
@@ -71,7 +72,9 @@ export const TestimonialCarousel = () => {
                   <div className="flex items-center gap-3">
                     {review.reviewer.avatarUrl ? (
                       <img
-                        src={review.reviewer.avatarUrl}
+                        // Onda 4 da auditoria de 19/11 (F3-22): o avatar do Cloudinary em 80 px (vinha no tamanho original).
+                        src={optimizeCloudinaryUrl(review.reviewer.avatarUrl, 80)}
+                        loading="lazy"
                         alt=""
                         className="w-10 h-10 rounded-full object-cover"
                       />

@@ -1,20 +1,15 @@
 // src/components/SentryTestButton.tsx
 import React from 'react';
-import { captureMessage, captureException, addBreadcrumb } from '@sentry/react';
+import { captureMessage, addBreadcrumb } from '@sentry/react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { logger } from '../utils/logger';
 
 /**
- * Componente de teste do Sentry
- * 
- * **USO:**
- * - Apenas para desenvolvimento/teste
- * - Adicione temporariamente em qualquer página
- * - Clique no botão para forçar um erro e testar integração Sentry
- * 
- * **IMPORTANTE:**
- * - NÃO deixe este componente em produção
- * - Use apenas para validar configuração
+ * Teste da integração com o Sentry, na aba "Sentry" do Monitoramento (tela só do admin).
+ *
+ * Onda 4 da auditoria de 19/11 (F3-13): fica também em produção (é onde o teste vale), sem o filtro de ambiente que escondia os
+ * botões, e cada clique manda um evento só (eram quatro: o envio direto e o logger.error, duas vezes; o logger.error
+ * já manda ao Sentry).
  */
 
 interface SentryTestButtonProps {
@@ -29,11 +24,6 @@ export const SentryTestButton: React.FC<SentryTestButtonProps> = ({
   position = 'fixed' 
 }) => {
   const { addNotification } = useNotifications();
-
-  // Apenas mostrar em desenvolvimento
-  if (import.meta.env.VITE_NODE_ENV === 'production') {
-    return null;
-  }
 
   const handleTestError = () => {
     console.log('🐛 Testando Sentry - Erro será capturado...');
@@ -54,9 +44,6 @@ export const SentryTestButton: React.FC<SentryTestButtonProps> = ({
       // Simular erro de parsing JSON
       JSON.parse('{ invalid json }');
     } catch (error) {
-      captureException(error);
-      logger.error('Erro capturado e enviado para Sentry:', 'SentryTestButton', error);
-      captureException(error);
       logger.error('Erro capturado e enviado para Sentry:', 'SentryTestButton', error);
       addNotification({
         type: 'success',
@@ -135,9 +122,6 @@ export const SentryTestButton: React.FC<SentryTestButtonProps> = ({
             📝 Enviar Mensagem
           </button>
 
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
-            ⚠️ Remover antes do deploy em produção
-          </p>
         </div>
       </details>
     </div>

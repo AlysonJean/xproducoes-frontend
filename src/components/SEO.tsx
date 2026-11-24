@@ -81,7 +81,8 @@ export const SEO: React.FC<SEOProps> = ({
 
       {/* Structured Data (JSON-LD) Array-Based for rich hybrid snippets */}
       <script type="application/ld+json">
-        {JSON.stringify(jsonLdArray)}
+        {/* Onda 4 da auditoria de 19/11 (F3-15): "<" escapado; um texto com "</script>" fecharia o bloco no HTML do servidor. */}
+        {JSON.stringify(jsonLdArray).replace(/</g, '\\u003c')}
       </script>
     </Helmet>
   );

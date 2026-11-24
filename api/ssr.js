@@ -41,8 +41,8 @@ export default async function handler(request, response) {
       response.setHeader('x-ssr-has-render-error', renderError ? '1' : '0')
 
       if (renderError) {
+        // Onda 4 da auditoria de 19/11 (F1-15): a mensagem interna do erro não vai mais num cabeçalho público; fica no log.
         const message = String(renderError?.message || '').slice(0, 200)
-        response.setHeader('x-ssr-error-message', message || 'unknown')
         console.error('[SSR_RENDER_ERROR]', {
           url,
           message,

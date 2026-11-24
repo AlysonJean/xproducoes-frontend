@@ -49,6 +49,8 @@ export interface ContractConfirmationData {
   pixCopyPaste?: string;
   /** Semanas 2 e 3: a equipe já registrou a parcela inicial. */
   initialPaymentReceived?: boolean;
+  /** Onda 4 da auditoria de 19/11 (F5-15): a equipe registrou o pagamento total (sem PIX, saldo nem comprovante). */
+  balanceReceived?: boolean;
   /** Onda 2 da auditoria do status (D6): a equipe já confirmou a reserva (com ou sem o sinal registrado). */
   bookingConfirmed?: boolean;
   /** Semanas 2 e 3: os comprovantes já enviados pela página (só a data). */
@@ -100,6 +102,7 @@ export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: Con
   // A chave PIX do CNPJ da empresa (a da resposta do aceite; ao reabrir o link, a do site).
   const pixKey = data.pixKey || COMPANY_CNPJ;
   const received = Boolean(data.initialPaymentReceived);
+  const paidInFull = Boolean(data.balanceReceived);
   const canWithdraw = !withdrawalClosed && withdrawalOpen(data.withdrawUntil, data.canWithdraw);
 
   // A contagem do "Enviar outro código" (o servidor pede 60 s entre pedidos).
@@ -285,9 +288,13 @@ export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: Con
 
       <section aria-labelledby="contrato-pagamento" className="space-y-3 rounded-lg border-2 border-primary/40 bg-primary/5 p-4">
         <h3 id="contrato-pagamento" className="text-lg font-bold text-foreground">
-          {received ? 'Pagamento por PIX' : 'Parcela inicial por PIX'}
+          {paidInFull ? 'Pagamento' : received ? 'Pagamento por PIX' : 'Parcela inicial por PIX'}
         </h3>
-        {received ? (
+        {paidInFull ? (
+          <p>
+            <strong>Pagamento concluído.</strong> A equipe registrou o pagamento total.
+          </p>
+        ) : received ? (
           <>
             <p>
               <strong>Parcela inicial recebida.</strong> A equipe já registrou o pagamento.
@@ -303,18 +310,22 @@ export function ContractConfirmation({ token, data, onWithdrawn, onReopen }: Con
             proofSent={proofCount > 0}
           />
         )}
-        <p>Pague só na chave PIX do CNPJ da empresa. Depois de pagar, envie o comprovante logo abaixo.</p>
-        {data.balance && (
+        {!paidInFull && (
+          <p>Pague só na chave PIX do CNPJ da empresa. Depois de pagar, envie o comprovante logo abaixo.</p>
+        )}
+        {!paidInFull && data.balance && (
           <p>
             Saldo: <strong>{formatPrice(data.balance.amount)}</strong>, até {contractDateTime(data.balance.dueDate)}.
           </p>
         )}
-        {!data.initialPayment && !data.balance && (
+        {!paidInFull && !data.initialPayment && !data.balance && (
           <p className="text-muted-foreground">Os valores e os vencimentos estão no e-mail do contrato.</p>
         )}
       </section>
 
-      <ContractProofUpload token={token} proofs={data.proofs ?? []} received={received} onProofsChange={(list) => setProofCount(list.length)} />
+      {!paidInFull && (
+        <ContractProofUpload token={token} proofs={data.proofs ?? []} received={received} onProofsChange={(list) => setProofCount(list.length)} />
+      )}
 
       <div className="space-y-3">
         <p>

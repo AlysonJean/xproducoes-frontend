@@ -16,12 +16,19 @@ describe('layouts com barra lateral — conteúdo cabe na tela do celular', () =
   it('AdminLayout: área de conteúdo com min-w-0', () => {
     useAuth.mockReturnValue({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } });
     render(<MemoryRouter initialEntries={['/admin/painel']}><AdminLayout><p>conteúdo admin</p></AdminLayout></MemoryRouter>);
-    expect(screen.getByText('conteúdo admin').closest('main')?.parentElement).toHaveClass('flex-1', 'min-w-0');
+    // Onda 4 da auditoria de 19/11 (F3-11): o conteúdo fica num <div> (o App já tem o <main>); a classe continua no pai dele.
+    const content = screen.getByText('conteúdo admin').parentElement;
+    expect(content?.tagName).toBe('DIV');
+    expect(content?.closest('main')).toBeNull();
+    expect(content?.parentElement).toHaveClass('flex-1', 'min-w-0');
   });
 
   it('CollaboratorLayout: área de conteúdo com min-w-0', () => {
     useAuth.mockReturnValue({ user: { id: 'c1', name: 'Colab', role: 'COLLABORATOR' } });
     render(<MemoryRouter initialEntries={['/colaborador/ganhos']}><CollaboratorLayout><p>conteúdo colab</p></CollaboratorLayout></MemoryRouter>);
-    expect(screen.getByText('conteúdo colab').closest('main')?.parentElement).toHaveClass('flex-1', 'min-w-0');
+    const content = screen.getByText('conteúdo colab').parentElement;
+    expect(content?.tagName).toBe('DIV');
+    expect(content?.closest('main')).toBeNull();
+    expect(content?.parentElement).toHaveClass('flex-1', 'min-w-0');
   });
 });

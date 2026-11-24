@@ -15,10 +15,11 @@ npm run dev
 
 # Build para produção
 npm run build
-
-# Preview do build
-npm run preview
 ```
+
+> **Desenvolvimento x produção.** `npm run dev` sobe o `server.ts` (Express + Vike), que serve só para desenvolver.
+> Na Vercel, a produção roda o `api/ssr.js`. Testar o SSR pelo `server.ts` **não** valida a produção: confira o
+> `api/ssr.js` (e a prévia da Vercel) antes de publicar qualquer mudança no SSR.
 
 ---
 
@@ -26,10 +27,9 @@ npm run preview
 
 | Script | Descrição |
 |--------|-----------|
-| `npm run dev` | Inicia servidor de desenvolvimento (porta 5173) |
+| `npm run dev` | Inicia o servidor de desenvolvimento (`server.ts`, porta 3000; só desenvolvimento) |
 | `npm run build` | Build de produção com TypeScript check |
 | `npm run build:analyze` | Build com análise de bundle (gera stats.html) |
-| `npm run preview` | Preview do build de produção |
 | `npm run type-check` | Verifica tipos TypeScript sem build |
 | `npm run lint` | Verifica código com ESLint |
 | `npm run test` | Executa testes unitários (Vitest) |
@@ -40,7 +40,8 @@ npm run preview
 ## 🏗️ Tech Stack
 
 ### Core
-- **React 18.2.0** - UI library
+- **React 19.2** - UI library
+- **Vike** - SSR (produção: `api/ssr.js` na Vercel)
 - **TypeScript 5.0.2** - Type safety
 - **Vite 7.1.5** - Build tool & dev server
 - **React Router 6.14.2** - Routing
@@ -102,7 +103,7 @@ VITE_NODE_ENV=development
 
 ## 🚀 Deploy Automático na Vercel
 
-Este projeto está configurado para deploy automático na Vercel. Veja o **[Guia Completo de Deploy](./VERCEL_DEPLOY_GUIDE.md)** para instruções detalhadas.
+Este projeto está configurado para deploy automático na Vercel. A renderização no servidor da produção é o `api/ssr.js` (não o `server.ts`).
 
 ### Deploy Rápido
 
@@ -127,7 +128,6 @@ Este projeto está configurado para deploy automático na Vercel. Veja o **[Guia
 
 - ✅ `vercel.json` - Configuração da Vercel (região, headers, rewrites)
 - ✅ `.vercelignore` - Arquivos excluídos do deploy
-- ✅ `.env.production` - Template de variáveis de produção
 
 ### Deploy Automático
 
@@ -138,8 +138,6 @@ git push origin main
 # Preview deploy (outras branches)
 git push origin feature/nova-funcionalidade
 ```
-
-📖 **[Ver guia completo de deployment](./VERCEL_DEPLOY_GUIDE.md)**
 
 ---
 
@@ -195,8 +193,6 @@ import { Button } from '../../../components/ui/Button';
 - `@/types` → `src/types`
 - `@/utils` → `src/utils`
 - `@/validators` → `src/validators`
-
-📖 **[Ver guia completo de imports](./IMPORT_STANDARDS.md)**
 
 ### Componentes
 
@@ -265,10 +261,6 @@ Analise:
 
 ## 📚 Documentação
 
-- 📖 [Guia de Deploy Vercel](./VERCEL_DEPLOY_GUIDE.md) - Deploy automático na Vercel
-- 📖 [Padrões de Imports](./IMPORT_STANDARDS.md) - Convenções de imports
-- 📖 [Resumo de Refatoração](./REFACTORING_SUMMARY.md) - Histórico de mudanças
-- 📖 [Checklist de Validação](./VALIDATION_CHECKLIST.md) - Validações pós-deploy
 - 📖 [Design System](./src/docs/DESIGN_SYSTEM_GUIDE.md) - Guia de UI/UX
 
 ---

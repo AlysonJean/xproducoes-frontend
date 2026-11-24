@@ -285,7 +285,13 @@ export const AdminCollaboratorsPage: React.FC = () => {
       const inviteUrl = data.inviteUrl || '';
 
       if (inviteUrl) {
-        openModal('invite', { inviteUrl });
+        // Onda 4 da auditoria de 19/11 (F6P1-12): sem o e-mail, a janela diz para mandar o link (como no "Reenviar link de acesso").
+        openModal('invite', {
+          inviteUrl,
+          notice: data.emailSent === false
+            ? 'O e-mail não foi enviado: copie este link e mande ao colaborador, por WhatsApp por exemplo.'
+            : undefined,
+        });
       } else {
         addNotification({
           type: 'success',
@@ -295,8 +301,9 @@ export const AdminCollaboratorsPage: React.FC = () => {
       }
       setInviteEmail('');
       setIsInviteModalOpen(false);
-    } catch {
-      addNotification({ type: 'error', title: 'Convite não enviado', message: 'Não foi possível enviar o convite. Tente de novo.' });
+    } catch (err: unknown) {
+      // F6P1-12: o motivo do servidor (ex.: e-mail já cadastrado), quando houver.
+      addNotification({ type: 'error', title: 'Convite não enviado', message: accessErrorMessage(err, 'Não foi possível enviar o convite. Tente de novo.') });
     } finally {
       setInviteLoading(false);
     }

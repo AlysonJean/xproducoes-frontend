@@ -9,6 +9,10 @@ import { authService } from '../services/authservice';
 import { authAPI } from '../services/api';
 import { shouldTrySessionRestore } from '../utils/sessionHint';
 
+// Onda 4 da auditoria de 19/11 (F1-13): prazo de cada tentativa de abrir a sessão e a espera antes da segunda.
+export const PROFILE_TIMEOUT_MS = 8000;
+export const PROFILE_RETRY_DELAY_MS = 1500;
+
 // Lazy sentry getter to avoid circular dependency with main.tsx
 
 
@@ -103,7 +107,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // If cookie is valid, backend will recognize it
         // If not, we'll get 401 and stay logged out
         try {
-          const profileResp = await authAPI.getProfile();
+          // Onda 4 da auditoria de 19/11 (F1-13): até 8 s por tentativa e, numa falha que não é 401 (502 do proxy, rede), uma
+          // segunda tentativa 1,5 s depois. Antes, a primeira falha deixava a pessoa deslogada e a rota protegida a
+          // mandava para /login. Só repete quando falha, então não acorda o banco à toa.
+          const fetchProfile = () => authAPI.getProfile({ timeout: PROFILE_TIMEOUT_MS });
+          const profileResp = await fetchProfile().catch(async (firstError: unknown) => {
+            if ((firstError as { response?: { status?: number } } | null)?.response?.status === 401) throw firstError;
+            await new Promise((resolve) => setTimeout(resolve, PROFILE_RETRY_DELAY_MS));
+            return fetchProfile();
+          });
           const userData = profileResp.data;
           if (isMounted && userData) {
             setUser(userData);

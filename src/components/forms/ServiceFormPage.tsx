@@ -174,6 +174,9 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
 
       if (imageFile) {
         formData.append('image', imageFile);
+      } else if (isEditing && initialData?.imageUrl && !imagePreview) {
+        // Onda 4 da auditoria de 19/11 (F4-17): "Remover imagem de capa" na edição tira a capa de verdade.
+        formData.append('imageUrl', '');
       }
 
       if (isEditing && initialData) {
@@ -200,7 +203,8 @@ export const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSuccess
       addNotification({
         type: 'error',
         title: 'Erro',
-        message: 'Erro ao salvar serviço. Tente novamente.'
+        // Onda 4 da auditoria de 19/11 (F4-16): o motivo do servidor, quando houver.
+        message: err instanceof Error && err.message ? err.message : 'Erro ao salvar serviço. Tente novamente.'
       });
       logger.error('Erro', 'ServiceFormPage', err);
     } finally {

@@ -196,7 +196,8 @@ export const BannerForm: React.FC<BannerFormProps> = ({ initialData, onSuccess, 
       onSuccess();
     } catch (error) {
       logger.error('Erro', 'BannerForm', error);
-      addNotification({ type: 'error', title: 'Erro', message: 'Falha ao salvar banner.' });
+      // Onda 4 da auditoria de 19/11 (F4-16): o motivo do servidor, quando houver.
+      addNotification({ type: 'error', title: 'Erro', message: error instanceof Error && error.message ? error.message : 'Falha ao salvar banner.' });
     } finally {
       setLoading(false);
     }
@@ -306,7 +307,8 @@ export const BannerForm: React.FC<BannerFormProps> = ({ initialData, onSuccess, 
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit" variant="primary">
+        {/* Onda 4 da auditoria de 19/11 (F4-20): não salva com a imagem ainda subindo (o banner saía sem ela). */}
+        <Button type="submit" variant="primary" disabled={uploadingDesktop || uploadingMobile}>
           {isEditing ? 'Salvar Alterações' : 'Criar Banner'}
         </Button>
       </FormActions>

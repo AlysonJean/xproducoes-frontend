@@ -9,17 +9,12 @@
     "prebuild": "npm run generate:sitemap",
     "build": "tsc && vike build",
     "build:analyze": "tsc && vite build --mode analyze",
-    "server": "node server",
-    "preview": "npm run build && npm run server",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "type-check": "tsc --noEmit",
-    "seed": "ts-node --esm src/services/seedBackend.ts",
-    "optimize:images": "node scripts/imageOptimization.js analyze",
-    "analyze:bundle": "node scripts/performanceAnalysis.js"
+    "type-check": "tsc --noEmit"
   },
   "overrides": {
     "postcss-selector-parser": "^6.1.5",
