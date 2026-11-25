@@ -206,8 +206,11 @@ export function parseHistoryRows(rows: HistorySheetRow[]): { rows: ParsedHistory
 
 // Lê a aba "Eventos" do .xlsx (biblioteca carregada só aqui). raw: datas/horas redigitadas no
 // Excel chegam como número de série — o texto formatado dependeria do formato da célula.
+// Revisão de 25/11/2026: a leitura usa o SheetJS oficial 0.20.3 (frontend/vendor, baixado de cdn.sheetjs.com; o
+// pacote "xlsx" do npm parou na 0.18.5). O xlsx-js-style traz por dentro o SheetJS 0.18.5, com falhas conhecidas ao
+// LER arquivos (CVE-2023-30533 e CVE-2024-22363); ele continua só na exportação com cores (utils/spreadsheet.ts).
 export async function readHistoryWorkbook(file: File): Promise<HistorySheetRow[]> {
-  const XLSX = await import('xlsx-js-style');
+  const XLSX = await import('xlsx');
   const book = XLSX.read(await file.arrayBuffer(), { type: 'array' });
   const sheet = book.Sheets[HISTORY_SHEET];
   if (!sheet) throw new Error(`A planilha não tem a aba "${HISTORY_SHEET}".`);
