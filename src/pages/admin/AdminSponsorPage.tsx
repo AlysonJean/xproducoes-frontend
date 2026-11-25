@@ -21,6 +21,7 @@ import {
   XCircle,
   CloudUpload
 } from 'lucide-react';
+import { searchText } from '../../utils/string';
 
 interface SponsorLogo {
     id: string;
@@ -143,7 +144,7 @@ const AdminSponsorPage = () => {
     };
 
     const filteredSponsors = useMemo(() => {
-        return sponsors.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        return sponsors.filter(s => searchText(s.name).includes(searchText(searchTerm)));
     }, [sponsors, searchTerm]);
 
     if (loading && sponsors.length === 0) {

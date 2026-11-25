@@ -51,6 +51,8 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
+  // A-07: a imagem que falta no cadastro novo, ao lado do campo.
+  const [imageError, setImageError] = useState<string | null>(null);
   const isEditing = Boolean(initialData);
   const { addNotification } = useNotifications();
 
@@ -160,6 +162,15 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
   };
 
   const onSubmit: SubmitHandler<EquipmentFormData> = async (data) => {
+    // Teste do painel de 25/11/2026 (A-07): sem imagem, o servidor recusava o cadastro novo e a janela ficava parada (o
+    // aviso de erro sumia em 5 s). A imagem é obrigatória no cadastro novo; na edição, sem arquivo, fica a atual.
+    const chosen = data.images ? Array.from((data.images as unknown) as FileList) : [];
+    if (!isEditing && chosen.length === 0) {
+      setImageError('Escolha uma imagem do equipamento: ela é obrigatória no cadastro.');
+      document.getElementById('equipment-images')?.focus();
+      return;
+    }
+    setImageError(null);
     try {
       setSubmitLoading(true);
 
@@ -301,7 +312,7 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
               htmlFor="equipment-images"
               className="block text-sm font-medium text-foreground cursor-pointer"
             >
-              Imagem
+              {isEditing ? 'Imagem' : 'Imagem *'}
             </label>
             <input
               id="equipment-images"
@@ -313,8 +324,13 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({ initialData, onSuc
                 file:text-sm file:font-semibold
                 file:bg-primary file:text-primary-foreground
                 hover:file:bg-primary/90"
-              {...register('images')}
+              {...register('images', { onChange: () => setImageError(null) })}
+              aria-invalid={imageError ? true : undefined}
+              aria-describedby={imageError ? 'equipment-images-error' : undefined}
             />
+            {imageError && (
+              <p id="equipment-images-error" role="alert" className="text-sm text-destructive">{imageError}</p>
+            )}
             {initialData?.imageUrl && (
               <div className="mt-2">
                 <p className="text-xs text-muted-foreground mb-1">Imagem atual:</p>

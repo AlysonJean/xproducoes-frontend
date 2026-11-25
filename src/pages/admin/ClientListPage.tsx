@@ -239,7 +239,14 @@ const ClientListPage: React.FC = () => {
                 <h2 className="text-xl font-bold text-foreground">Base de clientes</h2>
                 <Badge variant="primary">{stats.total} cadastrados</Badge>
               </div>
-              <p className="text-sm text-muted-foreground">Clientes, empresas e dados de contato.</p>
+              <p className="text-sm text-muted-foreground">Clientes com conta no site: empresas e dados de contato.</p>
+              {/* Teste do painel de 25/11/2026 (A-17): a reserva feita pela Proposta rápida não aparecia aqui, e a tela tinha
+                  13 clientes contra mais de 600 reservas. Aqui só entra quem criou conta no site; o cliente digitado na
+                  Proposta rápida fica guardado na própria reserva (a busca da lista de Reservas acha pelo nome e telefone). */}
+              <p className="text-xs text-muted-foreground mt-1 max-w-2xl" data-testid="clients-explainer">
+                Aqui aparecem só os clientes que criaram conta no site. Quem você atende pela Proposta rápida, sem conta, fica
+                guardado na própria reserva: para achar, use a busca da lista de Reservas (nome, e-mail ou telefone).
+              </p>
             </div>
           </div>
 

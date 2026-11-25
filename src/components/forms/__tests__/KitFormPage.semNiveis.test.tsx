@@ -41,7 +41,7 @@ const enviado = async (method: 'POST' | 'PUT') => {
   return { url: call[0] as string, body: call[1].body as FormData };
 };
 
-const salvar = () => fireEvent.click(screen.getByRole('button', { name: 'Salvar Alterações' }));
+const salvar = () => fireEvent.click(screen.getByRole('button', { name: /^(Salvar Alterações|Criar Kit)$/ }));
 
 const semNiveisNaTela = () => {
   expect(screen.queryByText('Níveis de Experiência')).not.toBeInTheDocument();

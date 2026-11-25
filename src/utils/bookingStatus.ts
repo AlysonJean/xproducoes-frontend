@@ -1,4 +1,5 @@
 import type { StandardVariant } from '../components/ui/StandardTypes';
+import { formatPrice } from './formatPrice';
 
 // Fonte única de rótulos, opções de seletor e cor de selo para status de reserva, entrega e
 // pagamento. Achado (auditoria do design system): cada tela tinha a sua lista — filtro, tabela,
@@ -196,13 +197,29 @@ export const clientProposalValidityText = (booking: ClientProposalBooking, now: 
   return day ? `Proposta válida até ${day}.` : null;
 };
 
-/** Onda 3 da auditoria do status (M10): o resumo do card "A receber" do painel. */
+/**
+ * Onda 3 da auditoria do status (M10): o resumo do card "A receber" do painel. Teste do painel de 25/11/2026 (A-02): o
+ * card dizia "R$ 0,00 · 1 só com o sinal" com R$ 2.160 em aberto. A parcial sem o valor recebido (e sem contrato aceito)
+ * não entra no valor do card, porque ninguém disse quanto entrou: o resumo diz quantas são e até quanto falta, e onde
+ * lançar.
+ */
 export const receivablesText = (
-  receivables?: { noPaymentCount: number; partialCount: number; overdueBalanceCount: number } | null,
+  receivables?: {
+    noPaymentCount: number;
+    partialCount: number;
+    overdueBalanceCount: number;
+    partialUnknownCount?: number;
+    partialUnknownTotal?: number;
+  } | null,
 ): string => {
   if (!receivables) return 'Reservas confirmadas com pagamento em aberto';
   const parts = [`${receivables.noPaymentCount} sem pagamento registrado`, `${receivables.partialCount} só com o sinal`];
   if (receivables.overdueBalanceCount > 0) parts.push(`${receivables.overdueBalanceCount} com o saldo vencido`);
+  const unknown = receivables.partialUnknownCount ?? 0;
+  if (unknown > 0) {
+    const upTo = receivables.partialUnknownTotal ? ` (até ${formatPrice(receivables.partialUnknownTotal)})` : '';
+    parts.push(`${unknown === 1 ? '1 parcial' : `${unknown} parciais`} sem o valor recebido${upTo}: lance em Editar`);
+  }
   return parts.join(' · ');
 };
 

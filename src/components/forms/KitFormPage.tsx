@@ -739,7 +739,8 @@ export const KitForm: React.FC<KitFormProps> = ({ initialData, onSuccess, onCanc
                     className="w-full py-6 font-bold shadow-lg"
                     isLoading={isSubmitting}
                   >
-                    Salvar Alterações
+                    {/* Teste do painel de 25/11/2026 (A-20): o kit novo dizia "Salvar Alterações". */}
+                    {isEditing ? 'Salvar Alterações' : 'Criar Kit'}
                   </Button>
                   <Button
                     type="button"

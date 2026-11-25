@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/StandardComponents';
 import CategoryForm from '../../components/forms/CategoryFormPage';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { searchText } from '../../utils/string';
 
 const PAGE_TITLE = 'Categorias';
 const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Categorias' }];
@@ -103,8 +104,8 @@ export const CategoryListPage = () => {
 
   const filteredCategories = useMemo(() => {
     return categories.filter(c =>
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (c.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+      searchText(c.name).includes(searchText(searchTerm)) ||
+      searchText(c.description).includes(searchText(searchTerm))
     );
   }, [categories, searchTerm]);
 

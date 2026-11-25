@@ -145,6 +145,8 @@ type BookingDetails = BaseBookingDetails & {
   clientContact?: string;
   clientEmail?: string;
   paymentStatus?: string;
+  // Teste do painel de 25/11/2026 (A-02): quanto já entrou do pagamento Parcial (null: não informado).
+  paidAmount?: number | string | null;
   internalNotes?: string;
   // D21: sem url. O arquivo é privado e abre por um link de 5 minutos (openBookingAttachment).
   attachments?: Array<{
@@ -355,19 +357,49 @@ export const BookingDetailPage = () => {
   // "Alocar equipe e confirmar"); o servidor também recusa.
   const availableCollaborators = useMemo(() => schedulableCollaborators(teamCollaborators), [teamCollaborators]);
 
+  // Teste do painel de 25/11/2026 (A-04): depois de confirmar, a ficha seguia "Pendente" até recarregar. Com o servidor
+  // lento, uma leitura anterior que voltasse depois da leitura feita pela confirmação gravava por cima a reserva antiga.
+  // Agora só a leitura mais recente vale (as anteriores são ignoradas), e a confirmação já aplica o que o servidor gravou.
+  const fetchSeq = useRef(0);
+  const [notFound, setNotFound] = useState(false);
   const fetchBooking = useCallback(async () => {
     if (!id) return;
+    const seq = ++fetchSeq.current;
     try {
       setLoading(true);
       setError(null);
       const res = await bookingAPI.getById(id);
-            setBooking(res.data as BookingDetails);
+      if (seq !== fetchSeq.current) return;
+      setNotFound(false);
+      setBooking(res.data as BookingDetails);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Não foi possível carregar a reserva.');
+      if (seq !== fetchSeq.current) return;
+      // A-15: "Request failed with status code 404" e um "Tentar de novo" que não adiantava. O 404 diz que o código não
+      // existe; os outros erros dizem o motivo do servidor (ou uma frase em português) e oferecem tentar de novo.
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      setNotFound(status === 404);
+      setError(status === 404
+        ? 'Não existe reserva com este código. Confira o endereço ou volte para a lista de reservas.'
+        : serverMessage(err, 'Não foi possível carregar a reserva. Confira a internet e tente de novo.'));
     } finally {
-      setLoading(false);
+      if (seq === fetchSeq.current) setLoading(false);
     }
   }, [id]);
+
+  // A-04: o que a confirmação gravou (status, pagamento, valor) aparece na hora, antes da releitura completa.
+  const applySaved = (data: unknown) => {
+    if (!data || typeof data !== 'object' || !('status' in data)) return;
+    const saved = data as Partial<BookingDetails>;
+    setBooking((current) => (current ? {
+      ...current,
+      status: saved.status ?? current.status,
+      paymentStatus: 'paymentStatus' in saved ? saved.paymentStatus : current.paymentStatus,
+      paidAmount: 'paidAmount' in saved ? saved.paidAmount : current.paidAmount,
+      totalPrice: saved.totalPrice ?? current.totalPrice,
+      // A-01: a hora da gravação nova, que o Editar manda de volta (sem ela, abrir o Editar logo depois daria "alterada").
+      ...(saved.updatedAt ? { updatedAt: saved.updatedAt } : {}),
+    } : current));
+  };
 
   useEffect(() => {
     fetchBooking();
@@ -389,8 +421,10 @@ export const BookingDetailPage = () => {
       // P3: a reserva excluída pode ser um pedido contado no menu e no cartão do painel.
       void refreshAdminSummary({ force: true });
       navigate('/admin/reservas');
-        } catch {
-      addNotification({ type: 'error', title: 'Erro ao excluir', message: 'Não foi possível excluir a reserva.' });
+    } catch (e: unknown) {
+      // Teste do painel de 25/11/2026 (A-05): a recusa do servidor (pagamento registrado, contrato aceito, reembolso da
+      // equipe em aberto) dizia só "Não foi possível excluir"; agora diz o motivo.
+      addNotification({ type: 'error', title: 'A reserva não foi excluída', message: serverMessage(e, 'Não foi possível excluir a reserva. Tente de novo.') });
     } finally {
       setActionLoading(false);
       setDeleteModalOpen(false);
@@ -428,6 +462,7 @@ export const BookingDetailPage = () => {
           value === 'CONFIRMED' ? { ...notifyClientPayload(notifyClient), ...(askPayment && markPayment ? { markInitialPaymentReceived: true as const } : {}) } : undefined,
         );
         warnPreReservation(res?.data);
+        applySaved(res?.data); // A-04
       }
       // P3: confirmar ou cancelar tira o pedido do número do menu e do cartão do painel na hora ("a caminho" é entrega).
       if (value !== 'ON_THE_WAY') void refreshAdminSummary({ force: true });
@@ -481,10 +516,12 @@ export const BookingDetailPage = () => {
         ...(askPayment && markPayment ? { markInitialPaymentReceived: true } : {}),
       });
       warnPreReservation(res?.data);
+      // A-04: a janela fecha e a ficha mostra Confirmada já com a resposta; a releitura completa vem em seguida.
+      applySaved(res?.data);
+      setConfirmModalOpen(false);
+      addNotification({ type: 'success', title: 'Reserva confirmada', message: 'A reserva ficou como Confirmada. Valor e equipe salvos.' });
       void refreshAdminSummary({ force: true }); // P3: a reserva saiu de Pendente.
       await fetchBooking();
-      setConfirmModalOpen(false);
-      addNotification({ type: 'success', title: 'Reserva confirmada', message: 'Valor e equipe salvos.' });
         } catch (e: unknown) {
       // O motivo do servidor (409 de equipamento em uso, colaborador sem acesso, 400) em vez do genérico.
       addNotification({ type: 'error', title: 'Erro ao confirmar', message: serverMessage(e, 'Não foi possível confirmar a reserva.') });
@@ -680,9 +717,9 @@ export const BookingDetailPage = () => {
         <div className="max-w-xl mx-auto space-y-4 py-10">
           <Alert
             variant="error"
-            title="Reserva não encontrada"
+            title={notFound || !error ? 'Reserva não encontrada' : 'Não foi possível abrir a reserva'}
             description={error || 'Não existe reserva com este código.'}
-            action={<Button variant="outline" size="sm" onClick={fetchBooking}>Tentar de novo</Button>}
+            action={notFound ? undefined : <Button variant="outline" size="sm" onClick={fetchBooking}>Tentar de novo</Button>}
           />
           <Button variant="outline" size="sm" onClick={() => navigate('/admin/reservas')} leftIcon={<ArrowLeft className="h-4 w-4" />}>
             Voltar para reservas
@@ -703,6 +740,10 @@ export const BookingDetailPage = () => {
   // Onda 2 (D6): com o contrato aceito e o pagamento ainda não registrado, confirmar pergunta "registrar o sinal".
   const contractAccepted = booking.contractSummary?.state === 'ACCEPTED';
   const askPayment = contractAccepted && booking.paymentStatus !== 'PARTIAL' && booking.paymentStatus !== 'PAID';
+  // A-02: o valor já recebido do pagamento Parcial (null: não informado).
+  const paidAmount = booking.paidAmount !== null && booking.paidAmount !== undefined && Number(booking.paidAmount) > 0 ? Number(booking.paidAmount) : null;
+  // M-07 (teste do painel): confirmar sem nenhum pagamento registrado avisa na janela (não impede).
+  const noPaymentYet = !booking.paymentStatus || booking.paymentStatus === 'PENDING';
   const isClosed = status === 'CANCELLED' || status === 'REFUNDED';
   const deliveryIndex = DELIVERY_STATUS_OPTIONS.findIndex((o) => o.value === (booking.deliveryStatus || 'PENDING'));
   const eventDate = booking.eventDate ? new Date(booking.eventDate) : null;
@@ -751,6 +792,16 @@ export const BookingDetailPage = () => {
                 <Badge variant="outline">Entrega: {deliveryStatusLabel(booking.deliveryStatus || 'PENDING')}</Badge>
                 <Badge variant="ghost">Pagamento: {formatBookingPaymentStatus(booking.paymentStatus)}</Badge>
               </div>
+              {/* Teste do painel de 25/11/2026 (A-02): quanto já entrou e quanto falta, no pagamento Parcial. */}
+              {booking.paymentStatus === 'PARTIAL' && (
+                <p className="text-sm text-muted-foreground" data-testid="partial-payment">
+                  {paidAmount !== null
+                    ? `Recebido: ${formatPrice(paidAmount)} · Falta receber: ${formatPrice(Math.max(0, Number(booking.totalPrice || 0) - paidAmount))}`
+                    : contractAccepted
+                      ? 'Recebido: o sinal do contrato. Para registrar outro valor, use Editar.'
+                      : 'Valor recebido não informado: use Editar para lançar quanto já entrou.'}
+                </p>
+              )}
 
               {/* Andamento da entrega. Antes era uma "linha do tempo" de booking.status que misturava
                   status de entrega (A caminho, No local) com o da reserva e não tinha Rascunho/Em andamento. */}
@@ -1017,7 +1068,8 @@ export const BookingDetailPage = () => {
                 </div>
                 {canBuildQuote && (
                   <Button size="sm" variant={hasItems ? 'outline' : 'primary'} onClick={openQuoteBuilder} leftIcon={<Plus className="h-4 w-4" />}>
-                    {hasItems ? 'Refazer orçamento' : 'Montar orçamento'}
+                    {/* Teste do painel de 25/11/2026 (A-06 e A-20): o orçamento abre com os itens atuais (antes abria vazio). */}
+                    {hasItems ? 'Editar itens do orçamento' : 'Montar orçamento'}
                   </Button>
                 )}
               </div>
@@ -1382,6 +1434,10 @@ export const BookingDetailPage = () => {
       >
         <div className="space-y-6 pt-4">
           <Alert variant="info" title="Confira o valor" description="Revise o valor final do serviço antes de confirmar e alocar a equipe." />
+          {/* M-07 (teste do painel de 25/11/2026): confirmar sem nenhum pagamento registrado avisa (não impede). */}
+          {noPaymentYet && !askPayment && (
+            <Alert variant="warning" title="Nenhum pagamento registrado" description="Esta reserva ainda não tem sinal nem pagamento registrado. Dá para confirmar assim mesmo; registre o pagamento em Editar quando ele entrar." />
+          )}
           <div className="space-y-4">
             <Input
               label="Valor final, com frete e pedágio (R$)"
@@ -1463,6 +1519,7 @@ export const BookingDetailPage = () => {
                 ...(canConfirm && askPayment && markPayment ? { markInitialPaymentReceived: true } : {}),
               });
               warnPreReservation(res?.data);
+              applySaved(res?.data); // A-04
               void refreshAdminSummary({ force: true }); // P3: salvar a equipe confirma a reserva pendente.
               await fetchBooking();
               setEventModalOpen(false);

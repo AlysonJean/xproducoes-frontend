@@ -93,6 +93,8 @@ const bookingFormSchema = (isEditing: boolean) => z
     finalValue: z.number().positive('O valor dos itens deve ser maior que zero.').optional(),
     paymentProof: z.unknown(), // FileList será tratado no submit
     paymentStatus: z.string(), // '' = não informado
+    // Teste do painel de 25/11/2026 (A-02): quanto já entrou, com o pagamento Parcial (em branco: não informado).
+    paidAmount: z.number().positive('O valor recebido precisa ser maior que zero.').optional(),
   })
   // O erro vai para o campo do modo escolhido: com cliente manual, `clientId` não está na tela.
   .superRefine((d, ctx) => {
@@ -149,6 +151,9 @@ interface RawBooking extends Omit<Booking, 'kits' | 'equipments'> {
   // O15 e O1: as observações internas, os itens, o resumo de preço e a chave do histórico (só na ficha, GET /:id).
   internalNotes?: string | null;
   idempotencyKey?: string | null;
+  // A-02: o valor já recebido (pagamento Parcial). A-01: a hora da última gravação, que vai de volta no salvar.
+  paidAmount?: number | string | null;
+  updatedAt?: string | Date;
   items?: BookingItemLike[] | null;
   discountAmount?: number | string | null;
   coupon?: { code?: string | null } | null;
@@ -239,6 +244,8 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
   // O1: o valor de hoje e se o servidor recalcula; datas e endereço como abriram (para o aviso antes de salvar).
   const [valueInfo, setValueInfo] = useState<EditValueInfo | null>(null);
   const originalRef = useRef<{ eventDate: string; eventEndDate: string; address: string } | null>(null);
+  // A-01 (teste do painel de 25/11/2026): a hora da última gravação da reserva lida ao abrir a edição.
+  const versionRef = useRef<string | null>(null);
 
   const draftKey = `xp-draft-admin-booking-${initialData?.id || 'new'}`;
   const { save: saveDraft, load: loadDraft, clear: clearDraft } = useFormDraft<Omit<BookingFormData, 'paymentProof'>>(draftKey);
@@ -267,6 +274,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
       deliveryStatus: 'PENDING',
       finalValue: undefined,
       paymentStatus: '',
+      paidAmount: undefined,
     },
   });
 
@@ -416,7 +424,11 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
             // valor digitado a cada salvar e travava o recálculo das datas e do endereço).
             finalValue: undefined,
             paymentStatus: booking.paymentStatus || '',
+            paidAmount: details.paidAmount !== null && details.paidAmount !== undefined && Number(details.paidAmount) > 0 ? Number(details.paidAmount) : undefined,
           });
+          // Teste do painel de 25/11/2026 (A-01): a versão lida agora vai no salvar; se outra aba (ou outra pessoa, ou a
+          // lista) gravar a reserva antes, o servidor recusa e nada do que foi digitado aqui apaga a mudança dela.
+          versionRef.current = details.updatedAt ? new Date(details.updatedAt).toISOString() : null;
           originalRef.current = {
             eventDate: toLocalInput(eventDate),
             eventEndDate: toLocalInput(eventEndDate),
@@ -487,6 +499,8 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
           : data.internalNotes?.trim() ? data.internalNotes : undefined,
         status: isEditing ? undefined : data.status,
         deliveryStatus: data.deliveryStatus,
+        // A-01: a versão que esta edição leu (sem ela, o servidor grava como antes).
+        expectedUpdatedAt: isEditing && versionRef.current ? versionRef.current : undefined,
       };
 
       // Adicionar campos admin se for admin
@@ -500,6 +514,8 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
         if (data.paymentStatus || isEditing) {
           payload.paymentStatus = data.paymentStatus || null;
         }
+        // A-02: o valor recebido vale só com Parcial (em branco apaga); fora de Parcial, o servidor o apaga sozinho.
+        if (data.paymentStatus === 'PARTIAL') payload.paidAmount = data.paidAmount ?? null;
       }
       
       if (!isEditing && data.status === 'CONFIRMED') Object.assign(payload, notifyClientPayload(notifyClient));
@@ -772,6 +788,21 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ initialData,
                 options={paymentOptionsFor(watchedValues.paymentStatus)}
                 description={watchedValues.paymentStatus === 'REFUNDED' ? 'Reserva reembolsada. Para mudar, volte a reserva para Cancelada na lista.' : undefined}
               />
+              {/* Teste do painel de 25/11/2026 (A-02): "Parcial" sem o valor deixava o "a receber" do painel em R$ 0,00. */}
+              {watchedValues.paymentStatus === 'PARTIAL' && (
+                <Input
+                  label="Valor já recebido (R$)"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register('paidAmount', {
+                    setValueAs: (v: unknown) => (v === '' || v === null || v === undefined ? undefined : Number(v)),
+                  })}
+                  error={errors.paidAmount?.message}
+                  placeholder="Ex.: 500,00"
+                  description="Quanto já entrou (o sinal, por exemplo). O painel mostra o que falta receber: o total menos este valor."
+                />
+              )}
             </div>
           </FormSection>
         )}

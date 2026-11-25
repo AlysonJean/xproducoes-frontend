@@ -1,6 +1,6 @@
 import { useState, type Ref } from 'react';
 import axios from 'axios';
-import { Copy, MessageSquare, RefreshCw, Send } from 'lucide-react';
+import { Check, Copy, MessageSquare, RefreshCw, Send } from 'lucide-react';
 import { Alert, Button, ConfirmModal, Modal } from '@/components/ui/StandardComponents';
 import { bookingAPI } from '@/services/api';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -128,6 +128,8 @@ export function SendProposalPanel({ booking, onSent, sendButtonRef }: SendPropos
       })
     : '';
 
+  // Teste do painel de 25/11/2026 (A-21): além do aviso, o próprio botão diz "Link copiado" por alguns segundos.
+  const [copied, setCopied] = useState(false);
   const copyLink = () => {
     if (!result) return;
     const fail = () =>
@@ -138,7 +140,11 @@ export function SendProposalPanel({ booking, onSent, sendButtonRef }: SendPropos
     }
     navigator.clipboard
       .writeText(result.link)
-      .then(() => addNotification({ type: 'success', title: 'Link copiado', message: 'O link da proposta está na área de transferência.' }))
+      .then(() => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 3000);
+        addNotification({ type: 'success', title: 'Link copiado', message: 'O link da proposta está na área de transferência.' });
+      })
       .catch(fail);
   };
 
@@ -228,8 +234,8 @@ export function SendProposalPanel({ booking, onSent, sendButtonRef }: SendPropos
                 Abrir WhatsApp
               </Button>
               {!phone && <p className="text-xs text-muted-foreground">Sem telefone na reserva</p>}
-              <Button fullWidth size="sm" variant="outline" onClick={copyLink} leftIcon={<Copy className="h-4 w-4" />}>
-                Copiar link
+              <Button fullWidth size="sm" variant="outline" onClick={copyLink} leftIcon={copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} aria-live="polite">
+                {copied ? 'Link copiado' : 'Copiar link'}
               </Button>
               <Button fullWidth size="sm" variant="ghost" onClick={() => setConfirmRotate(true)} leftIcon={<RefreshCw className="h-4 w-4" />}>
                 Gerar novo link

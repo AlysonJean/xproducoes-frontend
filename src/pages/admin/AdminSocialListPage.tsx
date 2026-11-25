@@ -27,6 +27,7 @@ import {
 } from '../../components/ui/StandardComponents';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { logger } from '../../utils/logger';
+import { searchText } from '../../utils/string';
 
 interface SocialWall {
     id: string;
@@ -128,8 +129,8 @@ const AdminSocialListPage: React.FC = () => {
 
     const filteredWalls = useMemo(() => {
         return walls.filter(w =>
-            (w.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            w.hashtag.toLowerCase().includes(searchTerm.toLowerCase())
+            searchText(w.name).includes(searchText(searchTerm)) ||
+            searchText(w.hashtag).includes(searchText(searchTerm))
         );
     }, [walls, searchTerm]);
 

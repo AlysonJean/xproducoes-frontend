@@ -38,6 +38,7 @@ import { ItemStatus } from '../../types/types';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { useEquipmentPriceUnit } from '../../hooks/usePricingRules';
 import { equipmentUnitSuffix } from '../../utils/bookingPricing';
+import { searchText } from '../../utils/string';
 
 const PAGE_TITLE = 'Equipamentos';
 const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Equipamentos' }];
@@ -177,7 +178,9 @@ export const EquipmentListPage = () => {
   const filteredEquipments = useMemo(() => {
     return equipments.filter(e => {
                 const cat = typeof e.category === 'string' ? e.category : e.category?.name || '';
-        const matchesSearch = e.name.toLowerCase().includes(searchTerm.toLowerCase()) || cat.toLowerCase().includes(searchTerm.toLowerCase());
+        // A-14 (teste do painel de 25/11/2026): sem acento ("fumaca" acha "fumaça").
+        const q = searchText(searchTerm);
+        const matchesSearch = searchText(e.name).includes(q) || searchText(cat).includes(q);
         const matchesCategory = categoryFilter === 'all' || cat === categoryFilter;
         const matchesStatus = statusFilter === 'all' || e.status === statusFilter;
         return matchesSearch && matchesCategory && matchesStatus;

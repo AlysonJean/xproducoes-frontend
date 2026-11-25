@@ -36,6 +36,7 @@ import ServiceForm from '../../components/forms/ServiceFormPage';
 import { StatusSelect } from '../../components/admin/StatusSelect';
 import { ItemStatus } from '../../types/types';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { searchText } from '../../utils/string';
 
 const PAGE_TITLE = 'Serviços';
 const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Serviços' }];
@@ -160,7 +161,7 @@ export const AdminServiceListPage = () => {
 
   const filteredServices = useMemo(() => {
     return services.filter(s => {
-        const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || (s.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = searchText(s.name).includes(searchText(searchTerm)) || searchText(s.description).includes(searchText(searchTerm));
         const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
         return matchesSearch && matchesStatus;
     });

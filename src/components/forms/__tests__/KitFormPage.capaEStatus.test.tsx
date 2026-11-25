@@ -35,7 +35,7 @@ const preencherBasico = async () => {
 
 const capa = () => new File(['png'], 'capa.png', { type: 'image/png' });
 const status = () => screen.getByLabelText('Status Atual') as HTMLSelectElement;
-const salvar = () => fireEvent.click(screen.getByRole('button', { name: 'Salvar Alterações' }));
+const salvar = () => fireEvent.click(screen.getByRole('button', { name: /^(Salvar Alterações|Criar Kit)$/ }));
 
 // Conferência de 07/11/2026 (agente do navegador, em produção): "Criar kit" voltava 500 "Erro interno do servidor"
 // nas três tentativas. A capa é obrigatória no banco e o formulário deixava salvar sem ela. E o Status escolhido no
@@ -54,6 +54,9 @@ describe('Formulário do kit — capa obrigatória no kit novo e status enviado'
     expect(await screen.findByText('Escolha a imagem de capa do kit.')).toBeInTheDocument();
     expect(apiFetch.mock.calls.some((c) => c[1]?.method === 'POST')).toBe(false);
     expect(screen.getByText('Capa do kit (obrigatória).')).toBeInTheDocument();
+    // Teste do painel de 25/11/2026 (A-20): o botão do kit novo diz "Criar Kit" (dizia "Salvar Alterações").
+    expect(screen.getByRole('button', { name: 'Criar Kit' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Salvar Alterações' })).not.toBeInTheDocument();
   });
 
   it('kit novo com capa e "Inativo": envia a imagem e o status INACTIVE', async () => {

@@ -24,9 +24,11 @@ import { GOOGLE_ANALYTICS_TRANSFER_NOTICE, INSTAGRAM_PLAYER_NOTICE } from './coo
 // WhatsApp pelo painel (pedido de Alyson de 24/11/2026): as conversas do número de atendimento da empresa ficam num
 // banco do servidor no Render (Evolution API, serviço privado) por 12 meses; a rotina diária apaga as mais antigas
 // (backend/src/services/whatsapp/evolutionCleanup.ts). Versão de 24/11/2026.
+// Teste do painel de 25/11/2026 (A-03): o código das reservas novas não leva mais o nome do cliente; a seção do código e a
+// regra da exclusão dizem isso. Versão de 25/11/2026.
 
 /** Data da última revisão do texto (como LAST_UPDATED dos Termos). */
-export const PRIVACY_POLICY_UPDATED_AT = '24/11/2026';
+export const PRIVACY_POLICY_UPDATED_AT = '25/11/2026';
 
 export const PRIVACY_POLICY_TITLE = 'Política de Privacidade';
 
@@ -375,7 +377,7 @@ export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
         'Pedidos que nunca foram contratados são cancelados, e os anexos e as mensagens deles são apagados.',
         `Reservas contratadas ou pagas guardam só o que a contabilidade precisa: data, itens, valores, situação, cupom, comprovante de pagamento e o chat da reserva. Elas ficam por ${ACCOUNTING_TERM}, sem o nome, o e-mail e o telefone.`,
         'O contrato aceito pelo site e o registro do aceite, com os dados de quem contratou, ficam guardados por 10 anos depois do fim do contrato.',
-        'O código da reserva leva até 5 letras do início do nome do cliente e continua nesse registro.',
+        'O código das reservas feitas até 25/11/2026 leva até 5 letras do início do nome do cliente e continua nesse registro; o das reservas novas não leva o nome.',
         'As cópias de segurança somem em até 90 dias.',
         'O "Excluir cliente" do painel da administração segue a mesma regra.'
       ),
@@ -386,7 +388,10 @@ export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
     title: 'O código da reserva',
     blocks: [
       paragraph(
-        'Cada reserva tem um código como XP-BRUNO-20270110-1430-K7Q. Depois de "XP" vêm até 5 letras do início do nome do cliente e, em seguida, a data e a hora do pedido.'
+        'Cada reserva tem um código como XP-20270110-1430-K7QZ: depois de "XP" vêm a data e a hora do pedido e quatro caracteres sorteados. O código não leva o nome do cliente.'
+      ),
+      paragraph(
+        'As reservas feitas até 25/11/2026 têm um código mais antigo, como XP-BRUNO-20270110-1430-K7Q, com até 5 letras do início do nome do cliente depois de "XP". Esses códigos não mudam.'
       ),
       paragraph(
         'O código aparece nos e-mails, na página da reserva e no endereço dessa página. Ele não muda e continua no registro guardado da reserva, mesmo depois da exclusão da conta.'

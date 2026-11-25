@@ -10,6 +10,7 @@ import { RefundModal, type RefundInput } from '../../components/bookings/RefundM
 import { logger } from '../../utils/logger';
 import { formatBookingTotal, hasBookingTotal } from '../../utils/formatPrice';
 import { bookingMatchesSearch } from '../../utils/bookingSearch';
+import { upcomingFirst } from '../../utils/bookingListOrder';
 
 import { bookingEmail } from '../../utils/bookingContact';
 import { notifyClientPayload } from '../../utils/notifyClient';
@@ -103,6 +104,13 @@ const createdTime = (booking: BookingListItem) => {
   const time = booking.createdAt ? Date.parse(booking.createdAt) : Number.NaN;
   return Number.isNaN(time) ? Number.POSITIVE_INFINITY : time;
 };
+
+// Teste do painel de 25/11/2026 (A-16 e M-01): a lista abria com as 607 reservas, das mais antigas (2022) para as novas,
+// com ~1.800 seletores de status, pagamento e entrega de uma vez (3,9 s), e o evento da semana pedia rolar ou filtrar.
+// Agora a ordem padrão é "próximos eventos primeiro": de hoje em diante, o mais perto antes; depois os que já passaram,
+// o mais recente antes. E a tela mostra 50 linhas por vez ("Mostrar mais"); a busca, os filtros e a exportação continuam
+// valendo para a lista inteira.
+const BOOKING_LIST_PAGE = 50;
 
 const PAGE_TITLE = 'Gestão de Reservas';
 const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Reservas' }];
@@ -379,9 +387,11 @@ export const BookingListPage = () => {
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return 'Inválida';
+      // A-19 (teste do painel de 25/11/2026): "23 de nov. de 2026" virou 23/11/2026, no dia de Brasília, como o resto do painel.
       return date.toLocaleDateString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
         day: '2-digit',
-        month: 'short',
+        month: '2-digit',
         year: 'numeric',
       });
     } catch {
@@ -431,14 +441,21 @@ export const BookingListPage = () => {
 
       return matchesSearch && matchesStatus && matchesPayment && matchesDate && matchesOrigin && matchesPeriod && matchesProposal && matchesContract && matchesReceivable;
     });
-    // ordem=antigos: do pedido criado há mais tempo para o mais novo; sem ela, a ordem do servidor (data do evento).
-    if (urlFilters.ordem !== 'antigos') return list;
+    // ordem=antigos: do pedido criado há mais tempo para o mais novo; sem ela, os próximos eventos primeiro (A-16).
+    if (urlFilters.ordem !== 'antigos') return upcomingFirst(list, now);
     return [...list].sort((a, b) => {
       const ta = createdTime(a);
       const tb = createdTime(b);
       return ta === tb ? 0 : ta < tb ? -1 : 1;
     });
   }, [bookings, searchTerm, filterStatus, filterPayment, startDate, endDate, urlFilters]);
+
+  // A-16: 50 linhas por vez. A contagem volta a 50 quando a busca ou um filtro muda (a chave muda junto).
+  const listKey = JSON.stringify([searchTerm, filterStatus, filterPayment, startDate, endDate, urlFilters]);
+  const [shown, setShown] = useState<{ key: string; count: number }>({ key: '', count: BOOKING_LIST_PAGE });
+  const visibleCount = shown.key === listKey ? shown.count : BOOKING_LIST_PAGE;
+  const visibleBookings = filteredBookings.slice(0, visibleCount);
+  const showMore = () => setShown({ key: listKey, count: visibleCount + BOOKING_LIST_PAGE });
 
   // O botão "Exportar" existia sem ação. Exporta o que está filtrado na tela (período, status e
   // busca) — o período vira o recorte do fechamento mensal.
@@ -712,7 +729,7 @@ export const BookingListPage = () => {
                     </td>
                   </tr>
                 ) : (
-                  filteredBookings.map((booking) => (
+                  visibleBookings.map((booking) => (
                     <tr key={booking.id} className="hover:bg-muted/20 transition-colors group">
                       <td className="px-6 py-4">
                         <div className="min-w-0">
@@ -817,10 +834,17 @@ export const BookingListPage = () => {
           {/* Rodapé: a lista inteira já vem carregada e filtrada no navegador — os botões
               "Anterior/Próxima" que ficavam aqui eram enfeite (sempre desabilitados). */}
           {filteredBookings.length > 0 && (
-            <div className="px-6 py-4 bg-muted/10 border-t border-border">
-              <p className="text-sm text-muted-foreground">
-                Mostrando {filteredBookings.length} de {bookings.length} registros encontrados.
+            <div className="px-6 py-4 bg-muted/10 border-t border-border flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground" data-testid="booking-list-count">
+                {visibleBookings.length < filteredBookings.length
+                  ? `Mostrando ${visibleBookings.length} de ${filteredBookings.length} reservas (próximos eventos primeiro).`
+                  : `Mostrando ${filteredBookings.length} de ${bookings.length} registros encontrados.`}
               </p>
+              {visibleBookings.length < filteredBookings.length && (
+                <Button variant="outline" size="sm" onClick={showMore}>
+                  Mostrar mais {Math.min(BOOKING_LIST_PAGE, filteredBookings.length - visibleBookings.length)}
+                </Button>
+              )}
             </div>
           )}
         </Card>

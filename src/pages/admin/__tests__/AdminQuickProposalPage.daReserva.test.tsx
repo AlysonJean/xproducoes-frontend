@@ -82,7 +82,7 @@ describe('Proposta Rápida — orçamento de uma reserva (pedido do briefing)', 
     expect(screen.queryByLabelText('Origem do Cliente')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Nome Completo *')).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Observações Internas/)).not.toBeInTheDocument();
-    expect(screen.queryByText('A reserva já tem itens')).not.toBeInTheDocument();
+    expect(screen.queryByText('Os itens de hoje já estão na lista')).not.toBeInTheDocument();
   });
 
   it('salvar grava as linhas NA reserva (PUT, sem criar outra) e volta para a ficha pedindo o envio da proposta', async () => {
@@ -115,11 +115,79 @@ describe('Proposta Rápida — orçamento de uma reserva (pedido do briefing)', 
     expect(chamadas('PUT')).toHaveLength(0);
   });
 
-  it('reserva que já tem itens: avisa que salvar troca todos', async () => {
-    renderPage({ ...PEDIDO, items: [{ description: 'Kit antigo', totalPrice: 900 }, { description: 'Frete', totalPrice: 50 }] });
+  // Teste do painel de 25/11/2026 (A-06): "Refazer orçamento" abria vazio, e mudar 1 quantidade pedia refazer os 8 itens
+  // (o desconto do "Fechar no valor" se perdia). A tela abre com os itens gravados, com preço e desconto de hoje.
+  const COM_ITENS = {
+    ...PEDIDO,
+    items: [
+      { description: 'Kit Festa (até 5 h de evento)', itemType: 'KIT', kitId: 'kit-festa', quantity: 1, unitPrice: '1200.00', discount: '100.00', totalPrice: '1100.00' },
+      { description: 'Frete (até 15 km)', itemType: 'CUSTOM', quantity: 1, unitPrice: '50.00', discount: '0.00', totalPrice: '50.00' },
+    ],
+  };
 
-    expect(await screen.findByText('A reserva já tem itens')).toBeInTheDocument();
-    expect(screen.getByText(/Hoje ela tem 2 itens\. Salvar troca todos/)).toBeInTheDocument();
+  it('reserva que já tem itens: a lista abre com eles, o aviso diz isso, e salvar sem mudar grava os mesmos itens', async () => {
+    renderPage(COM_ITENS);
+
+    expect(await screen.findByText('Os itens de hoje já estão na lista')).toBeInTheDocument();
+    expect(screen.getByText(/Os 2 itens gravados já estão abaixo, com os preços e descontos de hoje/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByLabelText('Descrição do item').map((el) => (el as HTMLInputElement).value)).toEqual(['Kit Festa', 'Frete (até 15 km)']));
+    // O desconto gravado continua (a conta à vista: tabela, desconto e total).
+    expect(screen.getByTestId('qp-discount').textContent).toMatch(/100,00/);
+    expect(screen.getByTestId('qp-total').textContent).toMatch(/1\.150,00/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar na reserva' }));
+    await waitFor(() => expect(chamadas('PUT')).toHaveLength(1));
+    const corpo = JSON.parse(chamadas('PUT')[0][1].body as string);
+    expect(corpo.items).toEqual([
+      expect.objectContaining({ itemType: 'KIT', kitId: 'kit-festa', quantity: 1, unitPrice: 1200, discount: 100, totalPrice: 1100 }),
+      expect.objectContaining({ itemType: 'CUSTOM', description: 'Frete (até 15 km)', quantity: 1, unitPrice: 50, totalPrice: 50 }),
+    ]);
+  });
+
+  it('mudar só a quantidade de um item mantém os outros e o desconto', async () => {
+    renderPage({
+      ...COM_ITENS,
+      items: [
+        ...COM_ITENS.items,
+        { description: 'Microfone sem fio', itemType: 'CUSTOM', quantity: 1, unitPrice: '80.00', discount: '0.00', totalPrice: '80.00' },
+      ],
+    });
+    await waitFor(() => expect(screen.getAllByLabelText('Descrição do item')).toHaveLength(3));
+    const quantidades = screen.getAllByLabelText(/^Qtd/);
+    fireEvent.change(quantidades[2], { target: { value: '2' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar na reserva' }));
+    await waitFor(() => expect(chamadas('PUT')).toHaveLength(1));
+    const corpo = JSON.parse(chamadas('PUT')[0][1].body as string);
+    expect(corpo.items).toHaveLength(3);
+    expect(corpo.items[0]).toEqual(expect.objectContaining({ kitId: 'kit-festa', discount: 100, totalPrice: 1100 }));
+    expect(corpo.items[2]).toEqual(expect.objectContaining({ description: 'Microfone sem fio', quantity: 2, totalPrice: 160 }));
+  });
+
+  it('preço gravado diferente do catálogo (negociado): fica o gravado; item que saiu do catálogo entra como está', async () => {
+    renderPage({
+      ...PEDIDO,
+      items: [
+        { description: 'Kit Festa (até 5 h de evento)', itemType: 'KIT', kitId: 'kit-festa', quantity: 1, unitPrice: '1000.00', discount: '0', totalPrice: '1000.00' },
+        { description: 'Caixa antiga', itemType: 'EQUIPMENT', equipmentId: 'eq-apagado', quantity: 2, unitPrice: '40.00', discount: '0', totalPrice: '80.00' },
+      ],
+    });
+    await waitFor(() => expect(screen.getAllByLabelText('Descrição do item')).toHaveLength(2));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar na reserva' }));
+    await waitFor(() => expect(chamadas('PUT')).toHaveLength(1));
+    const corpo = JSON.parse(chamadas('PUT')[0][1].body as string);
+    expect(corpo.items).toEqual([
+      expect.objectContaining({ itemType: 'KIT', kitId: 'kit-festa', unitPrice: 1000, totalPrice: 1000 }),
+      expect.objectContaining({ itemType: 'CUSTOM', description: 'Caixa antiga', quantity: 2, unitPrice: 40, totalPrice: 80 }),
+    ]);
+  });
+
+  it('abrir com os itens e sair sem mudar nada não pergunta "Sair sem salvar?"', async () => {
+    renderPage(COM_ITENS);
+    await waitFor(() => expect(screen.getAllByLabelText('Descrição do item')).toHaveLength(2));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(screen.queryByText('Sair sem salvar?')).not.toBeInTheDocument();
   });
 
   it.each([

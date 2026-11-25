@@ -27,6 +27,7 @@ import {
 } from '../../components/ui/StandardComponents';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { logger } from '../../utils/logger';
+import { searchText } from '../../utils/string';
 
 const PAGE_TITLE = 'Anúncios do telão';
 const BREADCRUMBS = [
@@ -158,8 +159,8 @@ const AdminAnnouncementPage: React.FC = () => {
 
   const filteredAnnouncements = useMemo(() => {
     return announcements.filter(a =>
-      a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.message.toLowerCase().includes(searchTerm.toLowerCase())
+      searchText(a.title).includes(searchText(searchTerm)) ||
+      searchText(a.message).includes(searchText(searchTerm))
     );
   }, [announcements, searchTerm]);
 

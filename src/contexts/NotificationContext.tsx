@@ -49,8 +49,10 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
 
     setNotifications((prev) => [...prev, newNotification]);
 
-    // Auto-remove notification after duration (default 5 seconds)
-    const duration = notification.duration || 5000;
+    // Some sozinho depois do tempo do aviso. Teste do painel de 25/11/2026 (A-05, A-07, A-12): com 5 s para todos, o erro
+    // de uma gravação recusada sumia antes de ser lido, e a ação parecia "falhar calada". Erro fica 10 s, aviso 8 s, o
+    // resto 5 s (o X fecha antes).
+    const duration = notification.duration || (notification.type === 'error' ? 10000 : notification.type === 'warning' ? 8000 : 5000);
     setTimeout(() => {
       removeNotification(id);
     }, duration);

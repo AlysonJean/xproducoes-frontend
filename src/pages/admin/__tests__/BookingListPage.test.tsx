@@ -41,9 +41,16 @@ describe('BookingListPage — carrega todas as reservas', () => {
     });
   });
 
-  it('130 reservas no banco → a lista mostra as 130 (antes: só a 1ª página)', async () => {
+  // Teste do painel de 25/11/2026 (A-16): as 130 vêm, e a tela mostra 50 por vez ("Mostrar mais").
+  it('130 reservas no banco → a lista carrega as 130 e mostra 50 por vez (antes: só a 1ª página)', async () => {
     render(<MemoryRouter initialEntries={['/admin/reservas']}><BookingListPage /></MemoryRouter>);
+    expect(await screen.findByText(/Mostrando 50 de 130 reservas/)).toBeInTheDocument();
+    expect(screen.getAllByText(/^XP-\d+$/)).toHaveLength(50);
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar mais 50' }));
+    expect(await screen.findByText(/Mostrando 100 de 130 reservas/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar mais 30' }));
     expect(await screen.findByText(/Mostrando 130 de 130 registros/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Mostrar mais/ })).not.toBeInTheDocument();
   });
 
   it('período "01/10 a 31/10" pega o evento de 31/10 às 20h e não o de 30/09 às 22h (horário de Brasília)', async () => {

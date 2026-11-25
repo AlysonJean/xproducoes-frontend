@@ -83,10 +83,11 @@ describe('BookingDetailPage — Montar orçamento', () => {
     expect(await screen.findByText(`Destino: /admin/orcamentos/novo?reserva=${encodeURIComponent(CODIGO)}`)).toBeInTheDocument();
   });
 
-  it('reserva com itens e proposta em aberto: "Refazer orçamento", sem o texto de reserva vazia nem o botão do briefing', async () => {
+  // Teste do painel de 25/11/2026 (A-06 e A-20): o orçamento abre com os itens atuais, e o botão diz isso.
+  it('reserva com itens e proposta em aberto: "Editar itens do orçamento", sem o texto de reserva vazia nem o botão do briefing', async () => {
     await renderFicha(COM_ITENS);
 
-    expect(screen.getByRole('button', { name: 'Refazer orçamento' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Editar itens do orçamento' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Montar orçamento' })).not.toBeInTheDocument();
     expect(screen.queryByText(/Esta reserva ainda não tem itens/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Montar orçamento a partir do briefing' })).not.toBeInTheDocument();

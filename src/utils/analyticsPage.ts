@@ -1,7 +1,7 @@
 import { buildPageTitle } from '../data/site';
 
 // D7 (aprovada em 02/11/2026): "troco títulos e ids por textos genéricos nas páginas com dados". Estes endereços levam
-// o código da reserva (que tem 5 letras do nome do cliente, ex.: XP-BRUNO-20270110-1200-ABC) ou o nome do mural (que
+// o código da reserva (o anterior a 25/11/2026 tem 5 letras do nome do cliente, ex.: XP-BRUNO-20270110-1200-ABC) ou o nome do mural (que
 // pode ter o nome de alguém, ex.: /upload/casamento-ana). A página /depoimentos/:slug saiu na limpeza de 20/11/2026
 // (o servidor nunca gravou o slug da avaliação, então nenhum link para ela existia). O Google Analytics (hooks/useGoogleAnalytics)
 // e o Vercel Analytics (Providers.tsx) recebem só o modelo do endereço (ex.: /cliente/reservas/:id) e, no GA, um título

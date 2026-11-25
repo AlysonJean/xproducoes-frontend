@@ -36,6 +36,7 @@ import KitForm from '../../components/forms/KitFormPage';
 import { StatusSelect } from '../../components/admin/StatusSelect';
 import { ItemStatus } from '../../types/types';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { searchText } from '../../utils/string';
 
 const PAGE_TITLE = 'Kits';
 const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Kits' }];
@@ -155,7 +156,7 @@ export const AdminKitListPage = () => {
 
   const filteredKits = useMemo(() => {
     return kits.filter(k => {
-        const matchesSearch = k.name.toLowerCase().includes(searchTerm.toLowerCase()) || (k.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = searchText(k.name).includes(searchText(searchTerm)) || searchText(k.description).includes(searchText(searchTerm));
         const matchesStatus = statusFilter === 'all' || k.status === statusFilter;
         return matchesSearch && matchesStatus;
     });

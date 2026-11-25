@@ -288,7 +288,7 @@ describe('D8c — Política de Privacidade (src/data/privacyPolicy.ts)', () => {
       'Pedidos que nunca foram contratados são cancelados, e os anexos e as mensagens deles são apagados.',
       'Reservas contratadas ou pagas guardam só o que a contabilidade precisa: data, itens, valores, situação, cupom, comprovante de pagamento e o chat da reserva. Elas ficam por 5 anos contados de 1º de janeiro do ano seguinte ao evento, sem o nome, o e-mail e o telefone.',
       'O contrato aceito pelo site e o registro do aceite, com os dados de quem contratou, ficam guardados por 10 anos depois do fim do contrato.',
-      'O código da reserva leva até 5 letras do início do nome do cliente e continua nesse registro.',
+      'O código das reservas feitas até 25/11/2026 leva até 5 letras do início do nome do cliente e continua nesse registro; o das reservas novas não leva o nome.',
       'As cópias de segurança somem em até 90 dias.',
       'O "Excluir cliente" do painel da administração segue a mesma regra.',
     ]);
@@ -296,9 +296,12 @@ describe('D8c — Política de Privacidade (src/data/privacyPolicy.ts)', () => {
     expect(pageText().toLowerCase()).not.toContain('permanentemente');
   });
 
-  it('código da reserva: até 5 letras do início do nome, e continua no registro guardado', () => {
+  // Teste do painel de 25/11/2026 (A-03): o código novo não leva o nome; o antigo, com até 5 letras do nome, não muda.
+  it('código da reserva: o novo sem o nome, o antigo com até 5 letras do nome, e continua no registro guardado', () => {
     renderPage();
     const text = norm(document.getElementById('codigo-da-reserva')?.textContent ?? '');
+    expect(text).toContain('XP-20270110-1430-K7QZ');
+    expect(text).toContain('O código não leva o nome do cliente.');
     expect(text).toContain('XP-BRUNO-20270110-1430-K7Q');
     expect(text).toContain('até 5 letras do início do nome do cliente');
     expect(text).toContain('continua no registro guardado da reserva, mesmo depois da exclusão da conta');
@@ -306,15 +309,16 @@ describe('D8c — Política de Privacidade (src/data/privacyPolicy.ts)', () => {
 
   // Selo de assinatura (20/11/2026): a linha do jsDelivr mudou o texto, e a data mudou junto. WhatsApp pelo painel
   // (24/11/2026): entram as conversas do WhatsApp da empresa, e a data mudou de novo.
-  it('versão de 24/11/2026 e SEO: título da aba e descrição com a data', async () => {
-    expect(PRIVACY_POLICY_UPDATED_AT).toBe('24/11/2026');
+  // Teste do painel (25/11/2026): o código da reserva sem o nome, e a data mudou de novo.
+  it('versão de 25/11/2026 e SEO: título da aba e descrição com a data', async () => {
+    expect(PRIVACY_POLICY_UPDATED_AT).toBe('25/11/2026');
     renderPage();
-    expect(norm(document.getElementById('versao')?.textContent ?? '')).toContain('Versão de 24/11/2026.');
+    expect(norm(document.getElementById('versao')?.textContent ?? '')).toContain('Versão de 25/11/2026.');
     expect(screen.getByRole('heading', { level: 1, name: 'Política de Privacidade' })).toBeInTheDocument();
     await waitFor(() => expect(document.title).toBe('Política de Privacidade | X Produções'));
     await waitFor(() =>
       expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBe(
-        'Como a X Produções e Eventos trata seus dados: o que guarda, para quê, com quem e por quanto tempo. Atualizada em 24/11/2026.'
+        'Como a X Produções e Eventos trata seus dados: o que guarda, para quê, com quem e por quanto tempo. Atualizada em 25/11/2026.'
       )
     );
   });

@@ -69,7 +69,8 @@ export const BookingFinancialSummary: React.FC<BookingFinancialSummaryProps> = (
         {/* O3: sem valor da reserva ("Em preparação") não há margem a mostrar (antes, "Margem: 0.0%" em vermelho). */}
         {revenue > 0 && (
           <span className={`px-3 py-1 rounded-full text-sm font-bold border ${tone}`}>
-            Margem: {margin.toFixed(1)}%
+            {/* A-19 (teste do painel de 25/11/2026): "100.0%" com ponto virou "100,0%". */}
+            Margem: {margin.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
           </span>
         )}
       </div>

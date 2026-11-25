@@ -33,7 +33,9 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { BrandLoader } from '@/components/ui/BrandLoader';
 import { formatPrice } from '@/utils/formatPrice';
 import { toNumber } from '@/utils/typeSafeFormatters';
-import { equipmentUnits, equipmentUnitSuffix, equipmentUnitText, hoursBetween, kitPriceLine, priceUnitOf, serviceLine, type EquipmentPriceUnit, type KitPricingInput, type ServicePricingInput } from '@/utils/bookingPricing';
+import { fieldErrorsSummary, PROPOSAL_FIELD_ORDER, proposalFieldErrors, type ProposalField, type ProposalFieldErrors } from '@/utils/quickProposalFields';
+import { formatCep, isCompleteCep, lookupCep } from '@/utils/briefing';
+import { equipmentUnits, equipmentUnitSuffix, equipmentUnitText, hoursBetween, kitPriceLine, priceUnitOf, serviceLine, type BookingItemLike, type EquipmentPriceUnit, type KitPricingInput, type ServicePricingInput } from '@/utils/bookingPricing';
 import { isWholeEventService } from '@/utils/wholeEventService';
 import { KIT_FULFILLMENT_LABEL, kitFulfillment } from '@/utils/kitInfo';
 import { findSetupService } from '@/utils/cartCatalog';
@@ -226,6 +228,98 @@ const lineDescription = (item: ProposalItem, start: string, end: string): string
   return unit && n ? `${item.description} (${equipmentUnitText(n, unit)})` : item.description;
 };
 
+const catalogLine = (type: ProposalItem['type'], item: Equipment | Kit | Service): ProposalItem => {
+  // Kit: as "horas incluídas no preço" (minimumRentalDuration), a hora extra e o tipo vão para a conta do
+  // kit (kitPriceLine), que monta a descrição com as horas (decisões do dono de 06/11).
+  const catalogKit = item as Kit;
+  return {
+    id: Math.random().toString(36).substr(2, 9),
+    type,
+    sourceId: item.id,
+    description: item.name,
+    quantity: 1,
+    unitPrice: catalogPrice(type, item),
+    discount: 0,
+    totalPrice: catalogPrice(type, item),
+    imageUrl: item.imageUrl,
+    ...(type === 'EQUIPMENT'
+      ? {
+          ratePerUnit: catalogPrice(type, item),
+          minimumUnits: (item as Equipment & { minimumRentalDuration?: number | null }).minimumRentalDuration ?? undefined,
+          priceUnit: priceUnitOf(item),
+        }
+      : {}),
+    ...(type === 'KIT'
+      ? {
+          kit: {
+            name: item.name,
+            price: catalogPrice(type, item),
+            minimumRentalDuration: catalogKit.minimumRentalDuration ?? null,
+            extraHourPrice: catalogKit.extraHourPrice ?? null,
+            fulfillment: kitFulfillment(catalogKit),
+          },
+          includedServiceIds: (catalogKit.items ?? [])
+            .map((kitItem) => kitItem.serviceId ?? kitItem.service?.id)
+            .filter((id): id is string => !!id),
+        }
+      : {}),
+    ...(type === 'SERVICE' && (item as Service).coversWholeEvent === true
+      ? {
+          service: {
+            name: item.name,
+            price: catalogPrice(type, item),
+            duration: (item as Service).duration ?? null,
+            coversWholeEvent: true,
+          },
+        }
+      : {}),
+  };
+};
+
+// A-06: cada item gravado vira a linha da tela. Item do catálogo (kit, equipamento, serviço) entra como o da busca
+// (mesmas regras: horas, diárias, kit que traz serviço); se o preço de hoje do catálogo não bate com o gravado (preço
+// negociado, ou o catálogo mudou), fica o gravado, como um preço digitado à mão. O desconto gravado (o "Fechar no
+// valor") fica na linha. Item fora do catálogo (frete, pedágio, item à mão, ou do catálogo apagado) entra como está.
+const linesFromBookingItems = (
+  saved: BookingItemLike[],
+  catalog: { equipments: Equipment[]; kits: Kit[]; services: Service[] },
+  start: string,
+  end: string,
+): ProposalItem[] =>
+  saved.map((item) => {
+    const quantity = Math.max(1, Math.round(Number(item.quantity) || 1));
+    const unitPrice = Math.max(0, Number(item.unitPrice) || 0);
+    const discount = Math.max(0, Number(item.discount) || 0);
+    const totalPrice = Math.max(0, Number(item.totalPrice ?? unitPrice * quantity - discount) || 0);
+    const type = item.itemType;
+    const source =
+      type === 'KIT' && item.kitId ? catalog.kits.find((k) => k.id === item.kitId)
+      : type === 'EQUIPMENT' && item.equipmentId ? catalog.equipments.find((e) => e.id === item.equipmentId)
+      : type === 'SERVICE' && item.serviceId ? catalog.services.find((sv) => sv.id === item.serviceId)
+      : undefined;
+    if (source && (type === 'KIT' || type === 'EQUIPMENT' || type === 'SERVICE')) {
+      const line: ProposalItem = { ...catalogLine(type, source), quantity, discount };
+      const [priced] = priceItems([line], start, end);
+      if (Math.round(priced.unitPrice * 100) === Math.round(unitPrice * 100)) return priced;
+      return { ...line, unitPrice, totalPrice, priceEdited: true };
+    }
+    const description = item.description || 'Item';
+    return {
+      id: Math.random().toString(36).slice(2, 11),
+      type: 'CUSTOM' as const,
+      description,
+      quantity,
+      unitPrice,
+      discount,
+      totalPrice,
+      ...(/^(frete|pedagio)\b/.test(description.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()) ? { freight: true } : {}),
+    };
+  });
+
+// A-06: o que identifica a lista de itens (para saber se ela mudou depois de preenchida com os itens da reserva).
+const linesKey = (lines: ProposalItem[]): string =>
+  JSON.stringify(lines.map((l) => [l.type, l.sourceId ?? '', l.description, l.quantity, Math.round(l.unitPrice * 100), Math.round(l.discount * 100)]));
+
 const AdminQuickProposalPage = () => {
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
@@ -261,6 +355,12 @@ const AdminQuickProposalPage = () => {
   );
   const [baseBooking, setBaseBooking] = useState<ProposalBaseBooking | null>(null);
   const [bookingError, setBookingError] = useState<string | null>(null);
+  // Teste do painel de 25/11/2026 (A-06): "Refazer orçamento" abria a tela vazia, e mudar uma quantidade pedia refazer
+  // todos os itens (o desconto do "Fechar no valor" se perdia). Agora a tela abre com os itens gravados da reserva, com
+  // os preços e descontos de hoje; a chave deles diz se algo mudou (sair sem mudar nada não pergunta).
+  const baseItemsRef = useRef<BookingItemLike[]>([]);
+  const itemsPrefilledRef = useRef(false);
+  const [prefilledItemsKey, setPrefilledItemsKey] = useState<string | null>(null);
 
   // Form State - Cliente
   const [clientType, setClientType] = useState<'registered' | 'manual'>('manual');
@@ -283,11 +383,28 @@ const AdminQuickProposalPage = () => {
   const [state, setState] = useState('');
   const [zipCode, setZipCode] = useState('');
 
+  // Teste do painel de 25/11/2026 (A-09 e A-11): os erros de cada campo, ao lado dele (somem quando o campo muda).
+  const [fieldErrors, setFieldErrors] = useState<ProposalFieldErrors>({});
+  const clearFieldError = (field: ProposalField) =>
+    setFieldErrors((prev) => {
+      if (!(field in prev)) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  const onField = (field: ProposalField, setter: (value: string) => void) => (e: { target: { value: string } }) => {
+    setter(e.target.value);
+    clearFieldError(field);
+  };
+  // A-10: o CEP completo busca o endereço (ViaCEP, como o passo 1 do aceite do cliente) e preenche o que está vazio.
+  const [cepStatus, setCepStatus] = useState<'idle' | 'loading' | 'notFound'>('idle');
+  const cepAbortRef = useRef<AbortController | null>(null);
+
   // Items State
   const [items, setItems] = useState<ProposalItem[]>([]);
   // Teste de ponta a ponta (21/11/2026): sair sem salvar (Cancelar, menu, recarregar) perdia as linhas sem aviso. Com
   // linhas na proposta, pergunta antes; salvar navega pelo código e não passa pelo aviso (ver hooks/useLeaveGuard).
-  const hasUnsavedLines = items.length > 0;
+  const hasUnsavedLines = items.length > 0 && linesKey(items) !== prefilledItemsKey;
   const { guardClose, isConfirmOpen: leaveConfirmOpen, confirmDiscard: confirmLeave, cancelDiscard: cancelLeave } = useUnsavedChangesGuard(hasUnsavedLines);
   useLeaveGuard(hasUnsavedLines, (to) => guardClose(() => navigate(to)));
   const [clients, setClients] = useState<Client[]>([]);
@@ -310,13 +427,16 @@ const AdminQuickProposalPage = () => {
 
   // A reserva do "Montar orçamento" preenche a tela uma vez: o "Tentar de novo" do catálogo não desfaz o que foi digitado.
   const prefilledRef = useRef(false);
-  const loadBaseBooking = async (id: string) => {
+  const loadBaseBooking = async (id: string): Promise<ProposalBaseBooking | null> => {
     try {
       setBookingError(null);
       const raw = await apiFetch<BookingDetails>(`/bookings/${encodeURIComponent(id)}`);
       if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !raw.id) throw new Error('Reserva não encontrada.');
       const base = proposalBaseFromBooking(raw);
       setBaseBooking(base);
+      // A-06: os itens gravados, para preencher a tela depois que o catálogo chegar (uma vez só).
+      const savedItems = (raw as { items?: unknown }).items;
+      if (!itemsPrefilledRef.current) baseItemsRef.current = Array.isArray(savedItems) ? (savedItems as BookingItemLike[]) : [];
       if (!prefilledRef.current) {
         prefilledRef.current = true;
         setEventTitle(base.eventTitle);
@@ -330,9 +450,11 @@ const AdminQuickProposalPage = () => {
         setState(base.state);
         setZipCode(base.zipCode);
       }
+      return base;
     } catch (error: unknown) {
       setBaseBooking(null);
       setBookingError(error instanceof Error && error.message ? error.message : 'Não foi possível abrir a reserva.');
+      return null;
     }
   };
 
@@ -341,7 +463,7 @@ const AdminQuickProposalPage = () => {
       try {
         setLoading(true);
         setCatalogError(null);
-        if (bookingId) await loadBaseBooking(bookingId);
+        const base = bookingId ? await loadBaseBooking(bookingId) : null;
         const [clientsRes, equipsRes, kitsRes, servicesRes] = await Promise.all([
           // Onda 2 da auditoria de 19/11 (F6P1-04): todos os clientes, não só os 50 mais novos.
           fetchAllAdminClients<Client>(),
@@ -353,6 +475,22 @@ const AdminQuickProposalPage = () => {
         setEquipments(Array.isArray(equipsRes) ? equipsRes : []);
         setKits(Array.isArray(kitsRes) ? kitsRes : []);
         setServices(Array.isArray(servicesRes) ? servicesRes : []);
+        // A-06: os itens gravados da reserva entram na tela (com os itens liberados; travados, a tela nem salva).
+        if (base && !base.lockedReason && !itemsPrefilledRef.current && baseItemsRef.current.length > 0) {
+          itemsPrefilledRef.current = true;
+          const lines = linesFromBookingItems(
+            baseItemsRef.current,
+            {
+              equipments: Array.isArray(equipsRes) ? equipsRes : [],
+              kits: Array.isArray(kitsRes) ? kitsRes : [],
+              services: Array.isArray(servicesRes) ? servicesRes : [],
+            },
+            base.eventDate,
+            base.eventEndDate,
+          );
+          setItems(lines);
+          setPrefilledItemsKey(linesKey(lines));
+        }
       } catch (error: unknown) {
         const err = error as { message?: string } | null;
         setCatalogError(err?.message || 'Não foi possível carregar clientes e catálogo.');
@@ -372,6 +510,8 @@ const AdminQuickProposalPage = () => {
     return pricedItems.reduce((sum, item) => sum + toNumber(item.totalPrice), 0);
   }, [pricedItems]);
   const pendingNotes = pendingFreightNotes(pricedItems);
+  // M-08: a soma dos descontos das linhas (o "Fechar no valor" reparte o desconto entre elas).
+  const totalDiscount = Math.round(pricedItems.reduce((sum, item) => sum + Math.max(0, toNumber(item.discount)), 0) * 100) / 100;
 
   // Pedido de Alyson de 24/11/2026: "Fechar no valor". A equipe digita o total que quer cobrar e o desconto é dividido entre os itens
   // pelo preço de tabela (utils/proposalReview), com a soma batendo no centavo. Frete e pedágio ficam como estão.
@@ -437,54 +577,6 @@ const AdminQuickProposalPage = () => {
   const technicianServices = useMemo(() => services.filter(isWholeEventService), [services]);
   // E3/E5: o serviço de montagem do catálogo, para o atalho Montagem.
   const assemblyService = useMemo(() => findSetupService(services, kits), [services, kits]);
-
-  const catalogLine = (type: ProposalItem['type'], item: Equipment | Kit | Service): ProposalItem => {
-    // Kit: as "horas incluídas no preço" (minimumRentalDuration), a hora extra e o tipo vão para a conta do
-    // kit (kitPriceLine), que monta a descrição com as horas (decisões do dono de 06/11).
-    const catalogKit = item as Kit;
-    return {
-      id: Math.random().toString(36).substr(2, 9),
-      type,
-      sourceId: item.id,
-      description: item.name,
-      quantity: 1,
-      unitPrice: catalogPrice(type, item),
-      discount: 0,
-      totalPrice: catalogPrice(type, item),
-      imageUrl: item.imageUrl,
-      ...(type === 'EQUIPMENT'
-        ? {
-            ratePerUnit: catalogPrice(type, item),
-            minimumUnits: (item as Equipment & { minimumRentalDuration?: number | null }).minimumRentalDuration ?? undefined,
-            priceUnit: priceUnitOf(item),
-          }
-        : {}),
-      ...(type === 'KIT'
-        ? {
-            kit: {
-              name: item.name,
-              price: catalogPrice(type, item),
-              minimumRentalDuration: catalogKit.minimumRentalDuration ?? null,
-              extraHourPrice: catalogKit.extraHourPrice ?? null,
-              fulfillment: kitFulfillment(catalogKit),
-            },
-            includedServiceIds: (catalogKit.items ?? [])
-              .map((kitItem) => kitItem.serviceId ?? kitItem.service?.id)
-              .filter((id): id is string => !!id),
-          }
-        : {}),
-      ...(type === 'SERVICE' && (item as Service).coversWholeEvent === true
-        ? {
-            service: {
-              name: item.name,
-              price: catalogPrice(type, item),
-              duration: (item as Service).duration ?? null,
-              coversWholeEvent: true,
-            },
-          }
-        : {}),
-    };
-  };
 
   const addItemToProposal = (type: ProposalItem['type'], item: Equipment | Kit | Service) => {
     // E1/E3 (auditoria do orçamento, 12/11/2026): serviço que algum kit da proposta já traz não entra de novo.
@@ -774,6 +866,34 @@ const AdminQuickProposalPage = () => {
     dropQuantityDraft(id);
   };
 
+  const changeZipCode = (raw: string) => {
+    const formatted = formatCep(raw);
+    setZipCode(formatted);
+    clearFieldError('zipCode');
+    cepAbortRef.current?.abort();
+    if (!isCompleteCep(formatted)) {
+      setCepStatus('idle');
+      return;
+    }
+    const controller = new AbortController();
+    cepAbortRef.current = controller;
+    setCepStatus('loading');
+    void lookupCep(formatted, controller.signal).then((address) => {
+      if (controller.signal.aborted) return;
+      if (!address) {
+        setCepStatus('notFound');
+        return;
+      }
+      setCepStatus('idle');
+      // Só o que está vazio: o que a pessoa já digitou fica.
+      if (address.street) setStreet((current) => current.trim() ? current : address.street);
+      if (address.neighborhood) setNeighborhood((current) => current.trim() ? current : address.neighborhood);
+      if (address.city) setCity((current) => current.trim() ? current : address.city);
+      if (address.state) setState((current) => current.trim() ? current : address.state);
+      for (const field of ['street', 'neighborhood', 'city', 'state'] as const) clearFieldError(field);
+    });
+  };
+
   const validate = (): string | null => {
     // Orçamento de uma reserva: só com ela aberta e com os itens liberados (a mesma regra do servidor).
     if (bookingId && !baseBooking) return bookingError || 'A reserva ainda não foi carregada.';
@@ -783,21 +903,9 @@ const AdminQuickProposalPage = () => {
     // Auditoria do orçamento (12/11/2026), O31/C12 e O18/A4/C11.
     if (items.some((i) => quantityDrafts[i.id] !== undefined)) return 'A quantidade de cada item é um número inteiro, a partir de 1 (sem fração e sem deixar vazio).';
     if (items.some(missingPriceUnit)) return 'O servidor não informou se o preço do equipamento é por diária ou por hora. Recarregue a página e adicione o equipamento de novo, ou digite o preço da linha.';
-    if (!eventDate) return 'Informe a data de início do evento.';
-    if (!eventEndDate) return 'Informe a data de término do evento.';
-    if (new Date(eventEndDate) <= new Date(eventDate)) return 'A data de término deve ser posterior à data de início.';
-    if (!location.trim()) return 'Informe o local do evento.';
-    if (!street.trim()) return 'Informe a rua do evento.';
-    if (!addressNumber.trim()) return 'Informe o número do endereço.';
-    if (!neighborhood.trim()) return 'Informe o bairro.';
-    if (!city.trim()) return 'Informe a cidade.';
-    if (!state.trim()) return 'Informe o estado (UF).';
-    if (!zipCode.trim()) return 'Informe o CEP.';
-    // No orçamento de uma reserva, o cliente é o dela e não muda por aqui.
-    if (!bookingId && clientType === 'manual') {
-      if (!clientName.trim()) return 'Informe o nome do cliente.';
-      if (!clientContact.trim()) return 'Informe o contato (WhatsApp) do cliente.';
-    } else if (!bookingId && clientType === 'registered' && !selectedClientId) {
+    // A-09/A-11: datas, local, endereço e o cliente digitado são conferidos campo a campo (proposalFieldErrors, em
+    // handleSave). No orçamento de uma reserva, o cliente é o dela e não muda por aqui.
+    if (!bookingId && clientType === 'registered' && !selectedClientId) {
       return 'Selecione um cliente cadastrado.';
     }
     // Garantir que há pelo menos um item de catálogo (schema exige kitId ou equipmentIds ou serviceIds)
@@ -814,9 +922,21 @@ const AdminQuickProposalPage = () => {
   };
 
   const handleSave = async (status: 'PENDING', pendingFreightConfirmed = false) => {
+    // A-09/A-11: todos os campos de uma vez, cada erro ao lado do campo, e o foco no primeiro.
+    const errorsNow = proposalFieldErrors(
+      { clientName, clientContact, clientEmail, location, eventDate, eventEndDate, zipCode, street, addressNumber, neighborhood, city, state },
+      { manualClient: !bookingId && clientType === 'manual' },
+    );
+    setFieldErrors(errorsNow);
+    const firstField = PROPOSAL_FIELD_ORDER.find((field) => errorsNow[field]);
+    if (firstField) {
+      addNotification({ type: 'error', title: 'Confira o orçamento', message: fieldErrorsSummary(errorsNow) });
+      document.getElementById(`qp-${firstField}`)?.focus();
+      return;
+    }
     const validationError = validate();
     if (validationError) {
-      addNotification({ type: 'error', title: 'Campo obrigatório', message: validationError });
+      addNotification({ type: 'error', title: 'Confira o orçamento', message: validationError });
       return;
     }
     // Onda 2: linha "Frete a combinar"/"Pedágio à parte" sem valor: avisa e pede confirmação antes de gravar.
@@ -1027,8 +1147,8 @@ const AdminQuickProposalPage = () => {
         {baseBooking && !baseBooking.lockedReason && baseBooking.itemCount > 0 && (
           <Alert
             variant="info"
-            title="A reserva já tem itens"
-            description={`Hoje ela tem ${baseBooking.itemCount === 1 ? '1 item' : `${baseBooking.itemCount} itens`}. Salvar troca todos pelos itens desta tela, e o total é refeito por eles (com o frete e o pedágio).`}
+            title="Os itens de hoje já estão na lista"
+            description={`${baseBooking.itemCount === 1 ? 'O item gravado já está' : `Os ${baseBooking.itemCount} itens gravados já estão`} abaixo, com os preços e descontos de hoje. Mude o que precisar (quantidade, preço, item a mais ou a menos): salvar grava esta lista no lugar da atual, e o total é refeito por ela (com o frete e o pedágio).`}
           />
         )}
 
@@ -1071,9 +1191,9 @@ const AdminQuickProposalPage = () => {
                     />
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Input label="Nome Completo *" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Ex: João Silva" />
-                      <Input label="WhatsApp / Celular *" value={clientContact} onChange={e => setClientContact(e.target.value)} placeholder="(00) 00000-0000" />
-                      <Input label="E-mail" value={clientEmail} onChange={e => setClientEmail(e.target.value)} placeholder="Ex: joao@email.com" type="email" />
+                      <Input id="qp-clientName" label="Nome Completo *" value={clientName} onChange={onField('clientName', setClientName)} error={fieldErrors.clientName} placeholder="Ex: João Silva" />
+                      <Input id="qp-clientContact" label="WhatsApp / Celular *" value={clientContact} onChange={onField('clientContact', setClientContact)} error={fieldErrors.clientContact} placeholder="(31) 98888-7777" inputMode="tel" />
+                      <Input id="qp-clientEmail" label="E-mail" value={clientEmail} onChange={onField('clientEmail', setClientEmail)} error={fieldErrors.clientEmail} placeholder="Ex: joao@email.com" type="email" />
                     </div>
                   )}
                </div>
@@ -1278,9 +1398,23 @@ const AdminQuickProposalPage = () => {
                </div>
 
                <div className="mt-8 pt-6 border-t space-y-2">
+                  {/* M-08 (teste do painel de 25/11/2026): com desconto ("Fechar no valor" ou digitado), a conta aparece inteira:
+                      preço de tabela, desconto e o total, em vez de só o "Subtotal estimado" com o desconto escondido nas linhas. */}
+                  {totalDiscount > 0 && (
+                    <>
+                      <div className="flex justify-between items-center text-sm" data-testid="qp-gross">
+                        <span className="text-muted-foreground text-xs">Preço de tabela</span>
+                        <span className="font-mono">{formatPrice(subtotal + totalDiscount)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm" data-testid="qp-discount">
+                        <span className="text-muted-foreground text-xs">Desconto</span>
+                        <span className="font-mono">− {formatPrice(totalDiscount)}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground font-medium uppercase tracking-wider text-xs">Subtotal estimado</span>
-                    <span className="font-mono font-bold text-lg">{formatPrice(subtotal)}</span>
+                    <span className="text-muted-foreground font-medium uppercase tracking-wider text-xs">{totalDiscount > 0 ? 'Total' : 'Subtotal estimado'}</span>
+                    <span className="font-mono font-bold text-lg" data-testid="qp-total">{formatPrice(subtotal)}</span>
                   </div>
                   {pendingNotes.length > 0 && (
                     <p className="text-right text-xs font-medium text-foreground">+ {pendingNotes.join(' + ')}</p>
@@ -1331,9 +1465,9 @@ const AdminQuickProposalPage = () => {
                </h3>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <Input label="Título do Evento" value={eventTitle} onChange={e => setEventTitle(e.target.value)} placeholder="Ex: Casamento João & Maria" />
-                 <Input label="Local / Salão *" value={location} onChange={e => setLocation(e.target.value)} placeholder="Ex: Espaço VIP" />
-                 <Input label="Início Previsto *" type="datetime-local" value={eventDate} onChange={e => setEventDate(e.target.value)} />
-                 <Input label="Término Previsto *" type="datetime-local" value={eventEndDate} onChange={e => setEventEndDate(e.target.value)} />
+                 <Input id="qp-location" label="Local / Salão *" value={location} onChange={onField('location', setLocation)} error={fieldErrors.location} placeholder="Ex: Espaço VIP" />
+                 <Input id="qp-eventDate" label="Início Previsto *" type="datetime-local" value={eventDate} onChange={onField('eventDate', setEventDate)} error={fieldErrors.eventDate} />
+                 <Input id="qp-eventEndDate" label="Término Previsto *" type="datetime-local" value={eventEndDate} onChange={onField('eventEndDate', setEventEndDate)} error={fieldErrors.eventEndDate} />
                </div>
                {fromContact?.eventDate && (
                  <p className="mt-2 text-xs text-muted-foreground">
@@ -1346,14 +1480,24 @@ const AdminQuickProposalPage = () => {
                    <AlertCircle className="h-3 w-3" aria-hidden="true" /> Endereço do evento (obrigatório)
                  </h4>
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                   <Input label="CEP *" value={zipCode} onChange={e => setZipCode(e.target.value)} placeholder="00000-000" className="md:col-span-1" />
-                   <Input label="Rua *" value={street} onChange={e => setStreet(e.target.value)} placeholder="Ex: Av. Brasil" className="md:col-span-2" />
+                   <Input
+                     id="qp-zipCode"
+                     label="CEP *"
+                     value={zipCode}
+                     onChange={(e) => changeZipCode(e.target.value)}
+                     error={fieldErrors.zipCode}
+                     description={cepStatus === 'loading' ? 'Buscando o endereço…' : cepStatus === 'notFound' ? 'Não achamos o endereço deste CEP: preencha à mão.' : 'O endereço se completa pelo CEP.'}
+                     placeholder="00000-000"
+                     inputMode="numeric"
+                     className="md:col-span-1"
+                   />
+                   <Input id="qp-street" label="Rua *" value={street} onChange={onField('street', setStreet)} error={fieldErrors.street} placeholder="Ex: Av. Brasil" className="md:col-span-2" />
                  </div>
                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                   <Input label="Número *" value={addressNumber} onChange={e => setAddressNumber(e.target.value)} placeholder="Ex: 123" />
-                   <Input label="Bairro *" value={neighborhood} onChange={e => setNeighborhood(e.target.value)} placeholder="Ex: Centro" />
-                   <Input label="Cidade *" value={city} onChange={e => setCity(e.target.value)} placeholder="Ex: Belo Horizonte" />
-                   <Input label="UF *" value={state} onChange={e => setState(e.target.value)} placeholder="Ex: MG" maxLength={2} />
+                   <Input id="qp-addressNumber" label="Número *" value={addressNumber} onChange={onField('addressNumber', setAddressNumber)} error={fieldErrors.addressNumber} placeholder="Ex: 123" />
+                   <Input id="qp-neighborhood" label="Bairro *" value={neighborhood} onChange={onField('neighborhood', setNeighborhood)} error={fieldErrors.neighborhood} placeholder="Ex: Centro" />
+                   <Input id="qp-city" label="Cidade *" value={city} onChange={onField('city', setCity)} error={fieldErrors.city} placeholder="Ex: Belo Horizonte" />
+                   <Input id="qp-state" label="UF *" value={state} onChange={onField('state', (v) => setState(v.toUpperCase()))} error={fieldErrors.state} placeholder="Ex: MG" maxLength={2} />
                  </div>
                </div>
                {/* No orçamento de uma reserva, as observações internas dela mudam pelo Editar da ficha (não vão daqui). */}

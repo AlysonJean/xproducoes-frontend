@@ -26,6 +26,7 @@ import {
 } from '../../components/ui/StandardComponents';
 import FaqForm from '../../components/forms/FaqFormPage';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { searchText } from '../../utils/string';
 
 // Título e breadcrumb iguais no carregamento e com dados.
 const PAGE_TITLE = 'Perguntas frequentes';
@@ -106,8 +107,8 @@ export const FaqListPage = () => {
 
   const filteredFaqs = useMemo(() => {
     return faqs.filter(f =>
-      f.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      f.answer.toLowerCase().includes(searchTerm.toLowerCase())
+      searchText(f.question).includes(searchText(searchTerm)) ||
+      searchText(f.answer).includes(searchText(searchTerm))
     );
   }, [faqs, searchTerm]);
 

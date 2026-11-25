@@ -6,7 +6,7 @@ import type { BookingDetails } from '@/types/types';
 // Auditoria do orçamento (12/11/2026), O16 (exibição): "Alocar equipe e confirmar" manda valor por hora e horas, e os
 // valores chegam do banco como texto. Um totalPayment "0.00" (texto não vazio) contava como preenchido e escondia o
 // valor por hora × horas; a escala só com cachê fixo ficava fora do custo. E o total zero da reserva aparecia "R$ 0,00"
-// com "Margem: 0.0%" em vermelho, quando o resto da ficha diz "Em preparação".
+// com "Margem: 0,0%" em vermelho, quando o resto da ficha diz "Em preparação".
 const reserva = (totalPrice: string, eventCollaborators: object[]) =>
   ({ id: 'b1', totalPrice, eventCollaborators }) as unknown as BookingDetails;
 const valor = (rotulo: string) => {
@@ -29,7 +29,7 @@ describe('BookingFinancialSummary — custo da equipe e total sem valor', () => 
 
     expect(valor('Custo de equipe')).toMatch(/700,00/);
     expect(valor('Lucro estimado')).toMatch(/1\.300,00/);
-    expect(screen.getByText('Margem: 65.0%')).toBeInTheDocument();
+    expect(screen.getByText('Margem: 65,0%')).toBeInTheDocument();
     expect(screen.getByText('4 colaboradores')).toBeInTheDocument();
     expect(screen.getByText('1 sem valor definido (entra como R$ 0,00)')).toBeInTheDocument();
   });

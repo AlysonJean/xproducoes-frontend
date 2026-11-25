@@ -106,7 +106,7 @@ describe('Formulário do kit — "Descartar alterações?" só quando algo mudou
     expect(screen.queryByText('Platinum')).not.toBeInTheDocument();
     expect(screen.queryByDisplayValue('Nível do rascunho')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Salvar Alterações' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Salvar Alterações|Criar Kit)$/ }));
 
     await waitFor(() => expect(apiFetch.mock.calls.some((c) => c[1]?.method === 'PUT')).toBe(true));
     const body = apiFetch.mock.calls.find((c) => c[1]?.method === 'PUT')![1].body as FormData;

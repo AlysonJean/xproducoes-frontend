@@ -29,6 +29,9 @@ export interface DashboardReceivables {
   noPaymentTotal: number;
   partialCount: number;
   partialBalance: number;
+  // Teste do painel de 25/11/2026 (A-02): as parciais sem o valor recebido (nem contrato aceito), com o total delas.
+  partialUnknownCount?: number;
+  partialUnknownTotal?: number;
   overdueBalanceCount: number;
   total: number;
 }

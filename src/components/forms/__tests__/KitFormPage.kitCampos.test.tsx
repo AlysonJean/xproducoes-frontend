@@ -43,7 +43,7 @@ const campos = () => ({
   tipo: screen.getByLabelText('Tipo do kit') as HTMLSelectElement,
 });
 
-const salvar = () => fireEvent.click(screen.getByRole('button', { name: 'Salvar Alterações' }));
+const salvar = () => fireEvent.click(screen.getByRole('button', { name: /^(Salvar Alterações|Criar Kit)$/ }));
 
 // Lote 13, campos do kit (aprovados pelo dono em 06/11/2026: "eu ajusto as horas na criação do kit"; "horas
 // adicionais eu também configuro para cada kit"; "cada kit é de um tipo"). O formulário não tinha as horas

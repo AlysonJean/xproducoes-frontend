@@ -26,6 +26,7 @@ import { CollaboratorFunctionForm } from '@/components/forms/CollaboratorFunctio
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { CollaboratorFunction } from '@/types/types';
 import { logger } from '../../utils/logger';
+import { searchText } from '../../utils/string';
 
 const PAGE_TITLE = 'Funções';
 const BREADCRUMBS = [
@@ -116,8 +117,8 @@ export const AdminCollaboratorFunctionsPage: React.FC = () => {
 
   const filteredFunctions = useMemo(() => {
     return functions.filter(f =>
-      f.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (f.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+      searchText(f.name).includes(searchText(searchTerm)) ||
+      searchText(f.description).includes(searchText(searchTerm))
     );
   }, [functions, searchTerm]);
 
@@ -149,7 +150,15 @@ export const AdminCollaboratorFunctionsPage: React.FC = () => {
             </div>
             <div>
               <h2 className="text-xl font-bold text-foreground">Funções da equipe</h2>
-              <p className="text-sm text-muted-foreground">Defina e gerencie as especialidades técnicas da sua equipe.</p>
+              <p className="text-sm text-muted-foreground">Especialidades extras para o cadastro de cada colaborador.</p>
+              {/* Teste do painel de 25/11/2026 (A-08): a tela dizia "Nenhuma função" e a escala oferecia 12. São duas listas:
+                  as funções básicas da escala (Fotógrafo, DJ, Técnico de som…) vêm prontas; aqui ficam as especialidades
+                  que a empresa quiser acrescentar no cadastro do colaborador. */}
+              <p className="text-xs text-muted-foreground mt-1 max-w-2xl" data-testid="functions-explainer">
+                As funções básicas da escala (Fotógrafo, Cinegrafista, Técnico de som, Técnico de iluminação, DJ, Apresentador,
+                Coordenador, Assistente, Segurança, Transporte e Outro) já vêm prontas e não aparecem aqui. Cadastre aqui só uma
+                especialidade a mais, para marcar no cadastro de cada colaborador (por exemplo, "Operador de LED").
+              </p>
             </div>
           </div>
 
@@ -238,8 +247,10 @@ export const AdminCollaboratorFunctionsPage: React.FC = () => {
                       <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
                         <Briefcase className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <h3 className="text-lg font-bold text-foreground">Nenhuma função encontrada</h3>
-                      <p className="text-muted-foreground text-sm max-w-sm mx-auto mt-1">Ajuste a busca ou cadastre uma nova função para a equipe.</p>
+                      <h3 className="text-lg font-bold text-foreground">{searchTerm ? 'Nenhuma especialidade encontrada' : 'Nenhuma especialidade extra cadastrada'}</h3>
+                      <p className="text-muted-foreground text-sm max-w-sm mx-auto mt-1">
+                        {searchTerm ? 'Ajuste a busca.' : 'A escala já usa as funções básicas. Cadastre aqui só se precisar de uma especialidade a mais.'}
+                      </p>
                       <Button variant="outline" size="sm" className="mt-6" onClick={() => setSearchTerm('')}>
                         Limpar filtros
                       </Button>

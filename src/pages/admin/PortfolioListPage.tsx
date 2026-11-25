@@ -46,6 +46,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { logger } from '../../utils/logger';
+import { searchText } from '../../utils/string';
 
 const PAGE_TITLE = 'Portfólio';
 const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'Portfólio' }];
@@ -277,8 +278,8 @@ export const PortfolioListPage = () => {
 
   const filteredItems = useMemo(() => {
     return items.filter(it =>
-      it.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (it.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+      searchText(it.title).includes(searchText(searchTerm)) ||
+      searchText(it.description).includes(searchText(searchTerm))
     );
   }, [items, searchTerm]);
 

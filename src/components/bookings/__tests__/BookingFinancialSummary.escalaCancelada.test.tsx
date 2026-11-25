@@ -32,7 +32,7 @@ describe('BookingFinancialSummary — escala cancelada fora do custo (decisão d
     expect(valor('Custo de equipe')).toMatch(/1\.000,00/);
     expect(screen.getByText('4 colaboradores')).toBeInTheDocument();
     expect(valor('Lucro estimado')).toMatch(/1\.000,00/);
-    expect(screen.getByText('Margem: 50.0%')).toBeInTheDocument();
+    expect(screen.getByText('Margem: 50,0%')).toBeInTheDocument();
   });
 
   it('só com escala cancelada: custo zero e nenhum colaborador', () => {
@@ -40,7 +40,7 @@ describe('BookingFinancialSummary — escala cancelada fora do custo (decisão d
 
     expect(valor('Custo de equipe')).toMatch(/0,00/);
     expect(screen.getByText('0 colaboradores')).toBeInTheDocument();
-    expect(screen.getByText('Margem: 100.0%')).toBeInTheDocument();
+    expect(screen.getByText('Margem: 100,0%')).toBeInTheDocument();
   });
 
   it('sem escala cancelada: o mesmo resumo de antes', () => {
@@ -48,6 +48,6 @@ describe('BookingFinancialSummary — escala cancelada fora do custo (decisão d
 
     expect(valor('Custo de equipe')).toMatch(/500,00/);
     expect(screen.getByText('2 colaboradores')).toBeInTheDocument();
-    expect(screen.getByText('Margem: 75.0%')).toBeInTheDocument();
+    expect(screen.getByText('Margem: 75,0%')).toBeInTheDocument();
   });
 });

@@ -32,6 +32,7 @@ import {
   Grid,
   Alert
 } from '@/components/ui/StandardComponents';
+import { searchText } from '../../utils/string';
 
 // Título e breadcrumb iguais no carregamento e com dados (antes: "Mensagens de Contato" → "Mensagens").
 const PAGE_TITLE = 'Mensagens de contato';
@@ -136,9 +137,9 @@ export const ContactSubmissionsListPage = () => {
 
   const filteredSubmissions = submissions.filter(sub => {
     const matchesSearch = 
-      sub.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sub.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sub.message.toLowerCase().includes(searchTerm.toLowerCase());
+      searchText(sub.name).includes(searchText(searchTerm)) ||
+      searchText(sub.email).includes(searchText(searchTerm)) ||
+      searchText(sub.message).includes(searchText(searchTerm));
     
     const matchesStatus = filterStatus === 'all' || (filterStatus === 'unread' ? !sub.isRead : sub.isRead);
     

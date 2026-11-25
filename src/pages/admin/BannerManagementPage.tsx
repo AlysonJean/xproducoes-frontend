@@ -27,6 +27,7 @@ import {
 import { BannerForm } from '../../components/forms/BannerForm';
 import { logger } from '../../utils/logger';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { searchText } from '../../utils/string';
 
 // Título e breadcrumb iguais no carregamento e com dados (antes: "Vitrine Visual" → "Banners & Vitrines",
 // e o breadcrumb trocava para "Painel › Assets").
@@ -111,8 +112,8 @@ export const BannerManagementPage = () => {
 
   const filteredBanners = useMemo(() => {
     return banners.filter(b =>
-      b.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (b.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+      searchText(b.title).includes(searchText(searchTerm)) ||
+      searchText(b.description).includes(searchText(searchTerm))
     );
   }, [banners, searchTerm]);
 

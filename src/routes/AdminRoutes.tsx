@@ -39,7 +39,8 @@ const PortfolioListPage = lazy(() =>
 const AdminInstagramPage = lazy(() =>
   import('../pages/admin/AdminInstagramPage').then((m) => ({ default: m.AdminInstagramPage }))
 );
-// Pedido de Alyson de 24/11/2026: WhatsApp pelo painel (Evolution API num serviço privado do servidor), só com clientes.
+// Pedido de Alyson de 24/11/2026: WhatsApp pelo painel (Evolution API num serviço privado do servidor), com todas as
+// conversas do número de atendimento (correção do escopo de 25/11).
 const AdminWhatsAppPage = lazy(() =>
   import('../pages/admin/AdminWhatsAppPage').then((m) => ({ default: m.AdminWhatsAppPage }))
 );
@@ -88,6 +89,8 @@ const AdminBookingDetailPage = lazy(() =>
   import('../pages/admin/BookingDetailPage').then((m) => ({ default: m.BookingDetailPage }))
 );
 const AdminAnnouncementPage = lazy(() => import('../pages/admin/AdminAnnouncementPage'));
+// Teste do painel de 25/11/2026 (A-15): endereço do painel que não existe.
+const AdminNotFoundPage = lazy(() => import('../pages/admin/AdminNotFoundPage'));
 
 // Rotas relativas ao prefixo /admin (montado via <Route path="/admin/*"> em App.tsx).
 export default function AdminRoutes() {
@@ -104,7 +107,7 @@ export default function AdminRoutes() {
           }
         />
         {/* P14 parte 3: a automação antiga (whatsapp-web.js) saiu. Pedido de Alyson de 24/11/2026: o endereço volta com o
-            WhatsApp pela Evolution API, só com clientes cadastrados e envio um por vez. */}
+            WhatsApp pela Evolution API: todas as conversas do número de atendimento e envio um por vez. */}
         <Route
           path="whatsapp"
           element={
@@ -337,6 +340,14 @@ export default function AdminRoutes() {
           element={
             <ProtectedRoute adminOnly>
               <ReviewManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="*"
+          element={
+            <ProtectedRoute adminOnly>
+              <AdminNotFoundPage />
             </ProtectedRoute>
           }
         />

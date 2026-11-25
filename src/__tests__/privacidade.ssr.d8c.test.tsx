@@ -47,7 +47,7 @@ describe('D8c — /privacidade e /cookies no HTML do servidor', () => {
 
     expect(page.notFound).toBe(false);
     expect(page.head).toMatch(/<title[^>]*>Política de Privacidade \| X Produções<\/title>/);
-    expect(page.head).toMatch(/<meta[^>]* name="description" content="Como a X Produções e Eventos trata seus dados[^"]*Atualizada em 24\/11\/2026\."/);
+    expect(page.head).toMatch(/<meta[^>]* name="description" content="Como a X Produções e Eventos trata seus dados[^"]*Atualizada em 25\/11\/2026\."/);
     expect(page.body).toMatch(/<h1[^>]*>Política de Privacidade<\/h1>/);
     // Selo de assinatura (20/11/2026): a linha do jsDelivr vem no HTML do servidor, e o script do selo não vai no
     // <head> (quem pede é o rodapé, no navegador, com a hora no endereço: utils/seloAssinatura.ts).

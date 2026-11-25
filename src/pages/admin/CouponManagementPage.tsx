@@ -27,6 +27,7 @@ import { CouponForm } from '../../components/forms/CouponForm';
 import { formatPrice } from '../../utils/formatPrice';
 import { logger } from '../../utils/logger';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { searchText } from '../../utils/string';
 
 function formatDiscount(coupon: Coupon): string {
   return coupon.discountType === 'PERCENTAGE'
@@ -113,8 +114,8 @@ export const CouponManagementPage = () => {
 
   const filteredCoupons = useMemo(() => {
     return coupons.filter((c) =>
-      c.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (c.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+      searchText(c.code).includes(searchText(searchTerm)) ||
+      searchText(c.description).includes(searchText(searchTerm))
     );
   }, [coupons, searchTerm]);
 

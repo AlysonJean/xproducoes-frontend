@@ -406,7 +406,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ initialData, onSuc
             Cancelar
           </Button>
           <Button type="submit" isLoading={loading} disabled={loading}>
-            {loading ? 'Salvando...' : 'Salvar Alterações'}
+            {loading ? 'Salvando...' : isEditing ? 'Salvar Alterações' : 'Criar Projeto'}
           </Button>
         </FormActions>
       </Form>

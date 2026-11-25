@@ -62,7 +62,8 @@ const adicionarServicos = async () => {
   fireEvent.click(await screen.findByRole('button', { name: 'Adicionar DJ Profissional' }));
   fireEvent.click(screen.getByRole('button', { name: 'Adicionar Operador de Luz' }));
 };
-const subtotal = () => screen.getByText('Subtotal estimado').nextElementSibling?.textContent?.replace(/\s/g, ' ');
+// Teste do painel de 25/11/2026 (M-08): com desconto, a linha se chama "Total" (sem desconto, "Subtotal estimado").
+const subtotal = () => screen.getByTestId('qp-total').textContent?.replace(/\s/g, ' ');
 const fecharEm = (valor: string) => {
   fireEvent.change(screen.getByLabelText('Fechar no valor'), { target: { value: valor } });
   fireEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
@@ -85,6 +86,11 @@ describe('Proposta Rápida — "Fechar no valor"', { timeout: 20000 }, () => {
     expect(screen.getByText(/Desconto R\$\s*75,00 · item R\$\s*225,00/)).toBeInTheDocument();
     expect(screen.getByText(/Desconto R\$\s*175,00 · item R\$\s*525,00/)).toBeInTheDocument();
     expect(addNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'success', title: 'Total fechado' }));
+    // M-08: a conta inteira à vista: preço de tabela, desconto e total.
+    expect(screen.getByTestId('qp-gross').textContent).toMatch(/1\.000,00/);
+    expect(screen.getByTestId('qp-discount').textContent).toMatch(/250,00/);
+    expect(screen.getByText('Total')).toBeInTheDocument();
+    expect(screen.queryByText('Subtotal estimado')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Salvar na reserva' }));
     await waitFor(() => expect(apiFetch.mock.calls.some((c) => c[1]?.method === 'PUT')).toBe(true));
@@ -110,6 +116,8 @@ describe('Proposta Rápida — "Fechar no valor"', { timeout: 20000 }, () => {
     fireEvent.click(screen.getByRole('button', { name: 'Tirar desconto' }));
     await waitFor(() => expect(subtotal()).toMatch(/1\.000,00/));
     expect(screen.queryByText(/^Desconto R\$/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('qp-discount')).not.toBeInTheDocument();
+    expect(screen.getByText('Subtotal estimado')).toBeInTheDocument();
   });
 });
 

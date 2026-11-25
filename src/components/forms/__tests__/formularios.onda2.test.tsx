@@ -104,7 +104,8 @@ describe('F4-14: quantidade do item no kit', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Diminuir quantidade de Caixa Ativa' }));
     expect(screen.getByLabelText(/Quantidade/, { selector: 'input' })).toHaveValue(2);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Salvar Alterações' }));
+    // Teste do painel de 25/11/2026 (A-20): o kit novo diz "Criar Kit".
+    fireEvent.click(screen.getByRole('button', { name: 'Criar Kit' }));
     const [, init] = await chamada('POST');
     const items = JSON.parse((init.body as FormData).get('items') as string) as Array<{ quantity: number }>;
     expect(items[0].quantity).toBe(2);
