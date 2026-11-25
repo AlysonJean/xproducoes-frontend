@@ -111,14 +111,15 @@ describe('D8c — Política de Privacidade (src/data/privacyPolicy.ts)', () => {
       'Dados de colaboradores',
       'Registros de acesso e segurança',
       'Cookies e medição de visitas',
-      'Conversas pelo WhatsApp da empresa',
+      'Conversas pelo WhatsApp de atendimento da empresa',
     ]) {
       expect(rowHeaders.some((header) => header.startsWith(start))).toBe(true);
     }
-    // WhatsApp pelo painel (24/11/2026): só clientes cadastrados no painel, 12 meses, e o resto sai em até 1 dia.
-    const whatsappRow = within(table).getByRole('rowheader', { name: /^Conversas pelo WhatsApp da empresa/ }).closest('tr') as HTMLElement;
-    expect(norm(whatsappRow.textContent ?? '')).toContain('só as conversas com clientes cadastrados');
-    expect(norm(whatsappRow.textContent ?? '')).toContain('12 meses depois de cada mensagem. O que chega ao número de quem não é cliente cadastrado sai do nosso servidor em até 1 dia.');
+    // WhatsApp pelo painel (24/11/2026): o número é só de atendimento; a equipe responde pelo painel; 12 meses.
+    const whatsappRow = within(table).getByRole('rowheader', { name: /^Conversas pelo WhatsApp de atendimento da empresa/ }).closest('tr') as HTMLElement;
+    expect(norm(whatsappRow.textContent ?? '')).toContain('A equipe lê e responde pelo painel do site.');
+    expect(norm(whatsappRow.textContent ?? '')).toContain('legítimo interesse em responder quem nos procura (inciso IX)');
+    expect(norm(whatsappRow.textContent ?? '')).toContain('12 meses depois de cada mensagem.');
     // Revisão: o colaborador grava chave PIX e dados bancários (PUT /collaborators/me/settings); a linha tem de dizer.
     expect(rowHeaders.find((header) => header.startsWith('Dados de colaboradores'))).toContain('chave PIX e dados bancários');
     // Revisão: o gtag renova a validade dos cookies do GA a cada visita; "até 2 anos" prometia um teto que não existe.

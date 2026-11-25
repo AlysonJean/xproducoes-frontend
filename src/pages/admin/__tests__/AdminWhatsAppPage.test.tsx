@@ -29,13 +29,15 @@ const ana = {
   phone: '5531988887777',
   phoneLabel: '(31) 98888-7777',
   name: 'Ana Souza',
+  registered: true,
   bookingId: 'BK1',
   lastText: 'Oi, tudo certo para sábado?',
   lastFromMe: false,
   lastAt: NOW - 60_000,
   unread: 2,
 };
-const bia = { ...ana, phone: '5531977776666', phoneLabel: '(31) 97777-6666', name: 'Bia Lima', bookingId: null, lastText: 'Combinado', lastFromMe: true, unread: 0 };
+// Ainda não pediu orçamento: aparece do mesmo jeito (o número é só de atendimento), sem o selo "Cliente".
+const bia = { ...ana, phone: '5531977776666', phoneLabel: '(31) 97777-6666', name: 'Bia Lima', registered: false, bookingId: null, lastText: 'Combinado', lastFromMe: true, unread: 0 };
 const threadAna = {
   client: { digits: ana.phone, name: ana.name, bookingId: 'BK1' },
   messages: [
@@ -107,7 +109,7 @@ describe('WhatsApp do painel — conexão', () => {
     expect(await screen.findByText('O WhatsApp ainda não foi ligado no servidor')).toBeInTheDocument();
     expect(screen.getByText('Não configurado')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Conectar' })).toBeNull();
-    expect(screen.queryByText('Conversas com clientes')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Conversas' })).toBeNull();
     expect(callsTo('GET', '/admin/whatsapp/conversations')).toHaveLength(0);
   });
 
@@ -142,7 +144,7 @@ describe('WhatsApp do painel — conexão', () => {
     expect(screen.getByText(/Aparelhos conectados/)).toBeInTheDocument();
     expect(screen.getByText('Conectando…')).toBeInTheDocument();
     expect(callsTo('POST', '/admin/whatsapp/connect')).toHaveLength(1);
-    expect(screen.queryByText('Conversas com clientes')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Conversas' })).toBeNull();
 
     // O celular leu o QR: na próxima conferência (3 s) a tela troca para conectado e carrega as conversas.
     state = 'open';
@@ -212,7 +214,7 @@ describe('WhatsApp do painel — conexão', () => {
 });
 
 describe('WhatsApp do painel — conversas e envio', () => {
-  it('lista as conversas com clientes: nome, telefone, "Você:" na última que saiu daqui e as não lidas', async () => {
+  it('lista todas as conversas: nome, telefone, selo "Cliente" só para quem tem cadastro, "Você:" e as não lidas', async () => {
     mockApi({ 'GET /admin/whatsapp/status': OPEN, 'GET /admin/whatsapp/conversations': [ana, bia] });
     renderPage();
 
@@ -224,12 +226,14 @@ describe('WhatsApp do painel — conversas e envio', () => {
     expect(items[0]).toHaveTextContent('2 não lidas');
     expect(items[0]).not.toHaveTextContent('Você:');
     expect(items[1]).toHaveTextContent('Você: Combinado');
+    expect(within(items[0]).getByText('Cliente')).toBeInTheDocument();
+    expect(within(items[1]).queryByText('Cliente')).toBeNull();
   });
 
   it('sem conversas: explica quando elas aparecem', async () => {
     mockApi({ 'GET /admin/whatsapp/status': OPEN, 'GET /admin/whatsapp/conversations': [] });
     renderPage();
-    expect(await screen.findByText(/Nenhuma conversa com cliente ainda/)).toBeInTheDocument();
+    expect(await screen.findByText(/Nenhuma conversa ainda/)).toBeInTheDocument();
   });
 
   it('abre a conversa pelo corpo do pedido (o telefone nunca vai no endereço) e mostra as mensagens e a reserva', async () => {
@@ -308,7 +312,7 @@ describe('WhatsApp do painel — conversas e envio', () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: /Bia Lima/ }));
     const field = await screen.findByLabelText('Mensagem para Bia Lima');
-    expect(screen.getByText(/Nenhuma mensagem com este cliente/)).toBeInTheDocument();
+    expect(screen.getByText(/Nenhuma mensagem com este número/)).toBeInTheDocument();
     fireEvent.change(field, { target: { value: 'Oi, Bia' } });
 
     fireEvent.keyDown(field, { key: 'Enter' });
@@ -345,15 +349,15 @@ describe('WhatsApp do painel — conversas e envio', () => {
     await waitFor(() => expect(statusCalls).toBe(2));
   });
 
-  it('"Nova conversa": confere o telefone antes, e um número que não é de cliente mostra a resposta do servidor', async () => {
+  it('"Nova conversa": confere o telefone antes, e a recusa do servidor aparece na tela', async () => {
     mockApi({
       'GET /admin/whatsapp/status': OPEN,
       'GET /admin/whatsapp/conversations': [],
-      'POST /admin/whatsapp/conversation': () => Promise.reject(httpError('Esse telefone não é de um cliente cadastrado.', 404)),
+      'POST /admin/whatsapp/conversation': () => Promise.reject(httpError('Telefone inválido. Digite com o DDD, por exemplo (31) 98888-7777.', 400)),
     });
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Nova conversa' }));
-    const phone = screen.getByLabelText('Telefone do cliente');
+    const phone = screen.getByLabelText('Telefone');
 
     fireEvent.change(phone, { target: { value: '9888' } });
     fireEvent.click(screen.getByRole('button', { name: 'Abrir conversa' }));
@@ -362,7 +366,7 @@ describe('WhatsApp do painel — conversas e envio', () => {
 
     fireEvent.change(phone, { target: { value: '(31) 95555-4444' } });
     fireEvent.click(screen.getByRole('button', { name: 'Abrir conversa' }));
-    expect(await screen.findByText('Esse telefone não é de um cliente cadastrado.')).toBeInTheDocument();
+    expect(await screen.findByText('Telefone inválido. Digite com o DDD, por exemplo (31) 98888-7777.')).toBeInTheDocument();
     expect(bodyOf(callsTo('POST', '/admin/whatsapp/conversation')[0])).toEqual({ phone: '(31) 95555-4444' });
   });
 

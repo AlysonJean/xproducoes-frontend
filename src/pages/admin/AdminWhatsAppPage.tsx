@@ -9,12 +9,13 @@ import type { StandardVariant } from '@/components/ui/StandardTypes';
 import { useVisiblePolling } from '../../hooks/useVisiblePolling';
 import { MAX_MESSAGE_LENGTH, QR_MAX_REFRESHES, formatPhoneLabel, formatWhen } from '../../utils/whatsappPanel';
 
-// WhatsApp pelo painel (pedido de Alyson de 24/11/2026): o número da empresa fica no celular do pai dela, e ela também
-// precisa falar com os clientes. O servidor liga o número à Evolution API (serviço privado no Render, como o WhatsApp
-// Web); esta tela mostra o QR para conectar, as conversas e manda mensagens. Decisões de 24/11: só aparecem e só
-// recebem mensagem os telefones de clientes cadastrados (as conversas pessoais do celular ficam fora); as conversas
-// antigas não são importadas; cada envio é de uma pessoa, um por vez (limite de 30 por hora no servidor). O telefone
-// vai sempre no corpo do pedido, nunca no endereço (o registro de acessos do servidor grava o endereço).
+// WhatsApp pelo painel (pedido de Alyson de 24/11/2026): o número de atendimento da empresa fica no celular do pai
+// dela, e ela também precisa falar com os clientes. O servidor liga o número à Evolution API (serviço privado no
+// Render, como o WhatsApp Web); esta tela mostra o QR para conectar, as conversas e manda mensagens. Decisões de 24/11:
+// o número é só de atendimento, então aparecem todas as conversas com pessoas (sem grupos), com o selo "Cliente" para
+// quem tem cadastro; as conversas antigas não são importadas; cada envio é de uma pessoa, um por vez (limite de 30 por
+// hora no servidor). O telefone vai sempre no corpo do pedido, nunca no endereço (o registro de acessos do servidor
+// grava o endereço).
 
 const PAGE_TITLE = 'WhatsApp';
 const BREADCRUMBS = [{ name: 'Admin', href: '/admin/painel' }, { name: 'WhatsApp' }];
@@ -41,6 +42,7 @@ interface Conversation {
   phone: string;
   phoneLabel: string;
   name: string;
+  registered: boolean;
   bookingId: string | null;
   lastText: string;
   lastFromMe: boolean;
@@ -96,6 +98,7 @@ function readConversations(data: unknown): Conversation[] {
       phone: str(c.phone),
       phoneLabel: str(c.phoneLabel) || str(c.phone),
       name: str(c.name) || str(c.phoneLabel) || str(c.phone),
+      registered: c.registered === true,
       bookingId: str(c.bookingId) || null,
       lastText: str(c.lastText),
       lastFromMe: c.lastFromMe === true,
@@ -178,7 +181,7 @@ export const AdminWhatsAppPage = () => {
     }
   }, []);
 
-  /** Abre (ou atualiza, com `quiet`) a conversa com um telefone de cliente. */
+  /** Abre (ou atualiza, com `quiet`) a conversa com um telefone. */
   const openConversation = useCallback(async (phone: string, quiet = false) => {
     const seq = quiet ? openSeq.current : ++openSeq.current;
     const current = () => seq === openSeq.current;
@@ -248,7 +251,7 @@ export const AdminWhatsAppPage = () => {
     if (next?.state === 'open') {
       setQr(null);
       setQrNotice(null);
-      addNotification({ type: 'success', title: 'WhatsApp conectado', message: 'As conversas com clientes aparecem abaixo.' });
+      addNotification({ type: 'success', title: 'WhatsApp conectado', message: 'As conversas aparecem abaixo.' });
       void loadConversations();
     }
   }, [addNotification, loadConversations, loadStatus]);
@@ -393,7 +396,7 @@ export const AdminWhatsAppPage = () => {
               </div>
               <div>
                 <h2 className="text-lg font-bold text-foreground">WhatsApp da empresa</h2>
-                <p className="text-sm text-muted-foreground">Conversas com clientes cadastrados, pelo número do celular da empresa.</p>
+                <p className="text-sm text-muted-foreground">Conversas do número de atendimento, pelo painel.</p>
               </div>
             </div>
             <Badge variant={badge.variant} size="lg">
@@ -456,7 +459,7 @@ export const AdminWhatsAppPage = () => {
 
           {isOpen && (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground">O celular continua com o WhatsApp normal. As conversas pessoais não aparecem aqui.</p>
+              <p className="text-sm text-muted-foreground">O celular continua com o WhatsApp normal; o que for respondido lá também aparece aqui.</p>
               <Button variant="outline" size="sm" onClick={() => setConfirmDisconnect(true)} leftIcon={<Unplug className="h-4 w-4" aria-hidden="true" />}>
                 Desconectar
               </Button>
@@ -467,14 +470,14 @@ export const AdminWhatsAppPage = () => {
             <li className="flex gap-2">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
               <span>
-                Aparecem e recebem mensagem só os telefones de clientes cadastrados (perfil de cliente ou contato de uma reserva). As
-                conversas antigas, de antes de conectar, não são importadas.
+                Aparecem as conversas com pessoas (grupos ficam fora); quem tem cadastro ou pedido aparece com o selo
+                &quot;Cliente&quot; e o link da reserva. As conversas antigas, de antes de conectar, não são importadas.
               </span>
             </li>
             <li className="flex gap-2">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
               <span>
-                Mande uma mensagem por vez, escrita para aquele cliente. A mesma mensagem para muitos números pode fazer o WhatsApp
+                Mande uma mensagem por vez, escrita para aquela pessoa. A mesma mensagem para muitos números pode fazer o WhatsApp
                 bloquear o número. O painel aceita até 30 envios por hora.
               </span>
             </li>
@@ -486,7 +489,7 @@ export const AdminWhatsAppPage = () => {
             {/* Conversas */}
             <Card className={`space-y-4 p-4 sm:p-5 ${selected || threadLoading ? 'hidden lg:block' : ''}`}>
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-base font-bold text-foreground">Conversas com clientes</h2>
+                <h2 className="text-base font-bold text-foreground">Conversas</h2>
                 <div className="flex gap-1">
                   <Button
                     size="sm"
@@ -504,14 +507,13 @@ export const AdminWhatsAppPage = () => {
               {showNew && (
                 <form onSubmit={(e) => void handleNewConversation(e)} className="space-y-2">
                   <Input
-                    label="Telefone do cliente"
+                    label="Telefone"
                     inputMode="tel"
                     autoComplete="off"
                     placeholder="(31) 98888-7777"
                     value={newPhone}
                     onChange={(e) => setNewPhone(e.target.value)}
                     error={newPhoneError ?? undefined}
-                    description="Só abre se o telefone for de um cliente cadastrado."
                   />
                   <Button type="submit" size="sm" isLoading={threadLoading}>
                     Abrir conversa
@@ -533,8 +535,8 @@ export const AdminWhatsAppPage = () => {
                 <p className="text-sm text-muted-foreground">Carregando conversas…</p>
               ) : conversations.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Nenhuma conversa com cliente ainda. Elas aparecem aqui quando um cliente cadastrado manda mensagem, ou quando você
-                  começa uma em &quot;Nova conversa&quot;.
+                  Nenhuma conversa ainda. Elas aparecem aqui quando alguém manda mensagem para o número, ou quando você começa uma
+                  em &quot;Nova conversa&quot;.
                 </p>
               ) : (
                 <ul className="-mx-2 divide-y divide-border" aria-label="Conversas">
@@ -550,7 +552,14 @@ export const AdminWhatsAppPage = () => {
                       >
                         <span className="min-w-0 flex-1">
                           <span className="flex items-baseline justify-between gap-2">
-                            <span className="truncate font-semibold text-foreground">{c.name}</span>
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <span className="truncate font-semibold text-foreground">{c.name}</span>
+                              {c.registered && (
+                                <Badge variant="primary" size="sm">
+                                  Cliente
+                                </Badge>
+                              )}
+                            </span>
                             <span className="shrink-0 text-xs text-muted-foreground">{formatWhen(c.lastAt)}</span>
                           </span>
                           <span className="block text-xs text-muted-foreground">{c.phoneLabel}</span>
@@ -616,7 +625,7 @@ export const AdminWhatsAppPage = () => {
                   <div ref={chatRef} className="flex-1 space-y-2 overflow-y-auto py-4 lg:max-h-[55vh]" aria-label="Mensagens" role="log">
                     {messages.length === 0 ? (
                       <p className="text-center text-sm text-muted-foreground">
-                        Nenhuma mensagem com este cliente desde que o painel foi conectado.
+                        Nenhuma mensagem com este número desde que o painel foi conectado.
                       </p>
                     ) : (
                       messages.map((m) => (
