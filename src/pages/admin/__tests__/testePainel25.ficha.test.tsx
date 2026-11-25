@@ -9,13 +9,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
-const { bookingAPI, addNotification, formMock } = vi.hoisted(() => ({
+const { bookingAPI, addNotification, formMock, contractAPI, apiFetch } = vi.hoisted(() => ({
   bookingAPI: { getById: vi.fn(), updateStatus: vi.fn(), updateDeliveryStatus: vi.fn(), delete: vi.fn(), confirmWithDetails: vi.fn() },
   addNotification: vi.fn(),
   // O Editar de mentira: um botão que chama o onSuccess (a ficha relê a reserva), para simular uma leitura lenta.
   formMock: { render: (_props: { onSuccess?: () => void }) => null as unknown },
+  // O cartão do contrato (reserva com contrato aceito) lê o contrato ao abrir.
+  contractAPI: { forAdmin: vi.fn(async () => null), downloadForAdmin: vi.fn(), resend: vi.fn() },
+  // O resumo do painel (selo do menu) e o histórico da reserva: sem nada a mostrar.
+  apiFetch: vi.fn(async () => null),
 }));
-vi.mock('../../../services/api', () => ({ bookingAPI, api: { post: vi.fn(), delete: vi.fn() } }));
+vi.mock('../../../services/api', () => ({ bookingAPI, contractAPI, apiFetch, api: { post: vi.fn(), delete: vi.fn() } }));
 vi.mock('../../../contexts/NotificationContext', () => ({ useNotifications: () => ({ addNotification }) }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } }) }));
 vi.mock('@/hooks/useCollaborators', () => ({ useCollaborators: () => ({ collaborators: [], fetchCollaborators: vi.fn().mockResolvedValue(undefined) }) }));
