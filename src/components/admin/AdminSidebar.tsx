@@ -22,6 +22,7 @@ import {
   HelpCircle,
   Star,
   Mail,
+  MessageCircle,
   Menu,
   X,
   Search,
@@ -104,8 +105,9 @@ const menuGroups: MenuGroup[] = [
       { name: 'Contatos', href: '/admin/contatos', icon: Mail, description: 'Mensagens recebidas' },
       // Onda 4 da auditoria de 19/11 (decisão de Alyson de 24/11): saiu "Newsletter" (as inscrições antigas, sem envio
       // desde a D8c, são apagadas; a tela e a rota do servidor saíram).
-      // P14 (aprovada em 02/11/2026), parte 1: saiu "WhatsApp" (QR da automação não oficial, que pode banir o
-      // número da empresa). Na parte 3 a tela saiu de vez; o endereço /admin/whatsapp leva ao painel.
+      // P14 (aprovada em 02/11/2026): saiu o "WhatsApp" antigo (whatsapp-web.js, envio automático). Pedido de Alyson de
+      // 24/11/2026: volta pela Evolution API, só com clientes cadastrados e cada envio feito por uma pessoa no painel.
+      { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageCircle, description: 'Mensagens com clientes' },
     ],
   },
 ];

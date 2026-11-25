@@ -39,6 +39,10 @@ const PortfolioListPage = lazy(() =>
 const AdminInstagramPage = lazy(() =>
   import('../pages/admin/AdminInstagramPage').then((m) => ({ default: m.AdminInstagramPage }))
 );
+// Pedido de Alyson de 24/11/2026: WhatsApp pelo painel (Evolution API num serviço privado do servidor), só com clientes.
+const AdminWhatsAppPage = lazy(() =>
+  import('../pages/admin/AdminWhatsAppPage').then((m) => ({ default: m.AdminWhatsAppPage }))
+);
 const BannerManagementPage = lazy(() =>
   import('../pages/admin/BannerManagementPage').then((m) => ({ default: m.BannerManagementPage }))
 );
@@ -99,12 +103,13 @@ export default function AdminRoutes() {
             </ProtectedRoute>
           }
         />
-        {/* P14 parte 3: a tela do QR da automação não oficial do WhatsApp saiu com ela; o endereço antigo leva ao painel. */}
+        {/* P14 parte 3: a automação antiga (whatsapp-web.js) saiu. Pedido de Alyson de 24/11/2026: o endereço volta com o
+            WhatsApp pela Evolution API, só com clientes cadastrados e envio um por vez. */}
         <Route
           path="whatsapp"
           element={
             <ProtectedRoute adminOnly>
-              <Navigate to="/admin/painel" replace />
+              <AdminWhatsAppPage />
             </ProtectedRoute>
           }
         />

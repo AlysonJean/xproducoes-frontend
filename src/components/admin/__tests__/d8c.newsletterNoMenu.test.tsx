@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
-// Mesmo arranjo de p14.whatsappForaDoMenu.test.tsx: o menu de verdade, com a sessão de um admin.
+// Mesmo arranjo de whatsapp.menuERota.test.tsx: o menu de verdade, com a sessão de um admin.
 const { apiFetch } = vi.hoisted(() => ({ apiFetch: vi.fn() }));
 vi.mock('../../../services/api', () => ({ apiFetch }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'a1', name: 'Admin', role: 'ADMIN' } }) }));

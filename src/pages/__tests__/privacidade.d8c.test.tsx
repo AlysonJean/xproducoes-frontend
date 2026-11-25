@@ -111,9 +111,14 @@ describe('D8c — Política de Privacidade (src/data/privacyPolicy.ts)', () => {
       'Dados de colaboradores',
       'Registros de acesso e segurança',
       'Cookies e medição de visitas',
+      'Conversas pelo WhatsApp da empresa',
     ]) {
       expect(rowHeaders.some((header) => header.startsWith(start))).toBe(true);
     }
+    // WhatsApp pelo painel (24/11/2026): só clientes cadastrados no painel, 12 meses, e o resto sai em até 1 dia.
+    const whatsappRow = within(table).getByRole('rowheader', { name: /^Conversas pelo WhatsApp da empresa/ }).closest('tr') as HTMLElement;
+    expect(norm(whatsappRow.textContent ?? '')).toContain('só as conversas com clientes cadastrados');
+    expect(norm(whatsappRow.textContent ?? '')).toContain('12 meses depois de cada mensagem. O que chega ao número de quem não é cliente cadastrado sai do nosso servidor em até 1 dia.');
     // Revisão: o colaborador grava chave PIX e dados bancários (PUT /collaborators/me/settings); a linha tem de dizer.
     expect(rowHeaders.find((header) => header.startsWith('Dados de colaboradores'))).toContain('chave PIX e dados bancários');
     // Revisão: o gtag renova a validade dos cookies do GA a cada visita; "até 2 anos" prometia um teto que não existe.
@@ -298,16 +303,17 @@ describe('D8c — Política de Privacidade (src/data/privacyPolicy.ts)', () => {
     expect(text).toContain('continua no registro guardado da reserva, mesmo depois da exclusão da conta');
   });
 
-  // Selo de assinatura (20/11/2026): a linha do jsDelivr mudou o texto, e a data mudou junto.
-  it('versão de 20/11/2026 e SEO: título da aba e descrição com a data', async () => {
-    expect(PRIVACY_POLICY_UPDATED_AT).toBe('20/11/2026');
+  // Selo de assinatura (20/11/2026): a linha do jsDelivr mudou o texto, e a data mudou junto. WhatsApp pelo painel
+  // (24/11/2026): entram as conversas do WhatsApp da empresa, e a data mudou de novo.
+  it('versão de 24/11/2026 e SEO: título da aba e descrição com a data', async () => {
+    expect(PRIVACY_POLICY_UPDATED_AT).toBe('24/11/2026');
     renderPage();
-    expect(norm(document.getElementById('versao')?.textContent ?? '')).toContain('Versão de 20/11/2026.');
+    expect(norm(document.getElementById('versao')?.textContent ?? '')).toContain('Versão de 24/11/2026.');
     expect(screen.getByRole('heading', { level: 1, name: 'Política de Privacidade' })).toBeInTheDocument();
     await waitFor(() => expect(document.title).toBe('Política de Privacidade | X Produções'));
     await waitFor(() =>
       expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toBe(
-        'Como a X Produções e Eventos trata seus dados: o que guarda, para quê, com quem e por quanto tempo. Atualizada em 20/11/2026.'
+        'Como a X Produções e Eventos trata seus dados: o que guarda, para quê, com quem e por quanto tempo. Atualizada em 24/11/2026.'
       )
     );
   });

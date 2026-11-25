@@ -254,7 +254,9 @@ describe('ficha — onda 2 da auditoria do status', () => {
   });
 
   it('D5: "Iniciar evento" a partir do dia do evento, só na confirmada; pergunta antes e grava Em andamento', async () => {
-    const hoje = new Date(Date.now() + 60 * 60 * 1000);
+    // Começou há 1 hora e termina daqui a 3: o dia do evento já chegou a qualquer hora do dia (antes era "daqui a 1
+    // hora", que caía no dia seguinte entre 23:00 e 00:00 de Brasília e o botão não aparecia).
+    const hoje = new Date(Date.now() - 60 * 60 * 1000);
     await renderFicha({ ...base, status: 'CONFIRMED', eventDate: hoje.toISOString(), eventEndDate: new Date(hoje.getTime() + 4 * 3600 * 1000).toISOString() });
 
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar evento' }));

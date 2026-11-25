@@ -27,7 +27,8 @@ import {
   ShieldCheck,
   CreditCard,
   Paperclip,
-  Package
+  Package,
+  MessageCircle
 } from 'lucide-react';
 import { formatBookingTotal, formatPrice } from '@/utils/formatPrice';
 import { bookingPricing, formatPricingLineTotal, serviceMinutesText, toArrangeNote } from '@/utils/bookingPricing';
@@ -790,6 +791,13 @@ export const BookingDetailPage = () => {
             {canSendProposal && (
               <Button variant="outline" size="sm" onClick={triggerProposalSend} disabled={!toWhatsAppNumber(clientPhone)} leftIcon={<MessageSquare className="h-4 w-4" />} title="O mesmo envio do botão Enviar proposta: registra o envio, manda o e-mail (se a reserva tiver e-mail) e abre a janela com o WhatsApp.">
                 Enviar link pelo WhatsApp
+              </Button>
+            )}
+            {/* Pedido de Alyson de 24/11/2026: a conversa com o cliente no WhatsApp do painel. O telefone vai pelo estado da
+                navegação, nunca pelo endereço (o registro de acessos grava o endereço). */}
+            {toWhatsAppNumber(clientPhone) && (
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin/whatsapp', { state: { phone: clientPhone } })} leftIcon={<MessageCircle className="h-4 w-4" />}>
+                Conversar no painel
               </Button>
             )}
             <Button variant="outline" size="sm" onClick={handleExportBooking} leftIcon={<Download className="h-4 w-4" />}>

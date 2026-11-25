@@ -21,9 +21,12 @@ import { GOOGLE_ANALYTICS_TRANSFER_NOTICE, INSTAGRAM_PLAYER_NOTICE } from './coo
 // página inicial pelo Workers AI (sem guardar o texto nem treinar modelos com ele, pela página "Data usage" da
 // Cloudflare), e a linha dos pedidos ganha esse texto, que vai para o campo de detalhes do briefing. No mesmo dia, o
 // "Sugerir itens" da Proposta Rápida: a mesma IA lê as respostas do briefing e a cidade (sem nome, contato nem endereço).
+// WhatsApp pelo painel (pedido de Alyson de 24/11/2026): as conversas do WhatsApp da empresa com clientes cadastrados
+// ficam num banco do servidor no Render (Evolution API, serviço privado), por 12 meses; o que chega de quem não é
+// cliente sai desse banco na rotina diária (backend/src/services/whatsapp/evolutionCleanup.ts). Versão de 24/11/2026.
 
 /** Data da última revisão do texto (como LAST_UPDATED dos Termos). */
-export const PRIVACY_POLICY_UPDATED_AT = '20/11/2026';
+export const PRIVACY_POLICY_UPDATED_AT = '24/11/2026';
 
 export const PRIVACY_POLICY_TITLE = 'Política de Privacidade';
 
@@ -131,6 +134,12 @@ export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
             SAME_AS_BOOKING,
           ],
           [
+            'Conversas pelo WhatsApp da empresa: o seu número, o nome do seu perfil no WhatsApp e as mensagens trocadas com a equipe.',
+            'Atender você e combinar o pedido e o evento. A equipe lê e responde pelo painel do site só as conversas com clientes cadastrados (com conta ou com um pedido feito).',
+            'Execução de contrato e dos passos antes dele, a seu pedido (inciso V).',
+            '12 meses depois de cada mensagem. O que chega ao número de quem não é cliente cadastrado sai do nosso servidor em até 1 dia.',
+          ],
+          [
             'Avaliações: nota, comentário, fotos e notas por critério.',
             'Mostrar a opinião dos clientes no site. A avaliação aparece com o seu nome e a foto do seu perfil.',
             'Consentimento (inciso I): você escolhe avaliar e pode pedir para tirar.',
@@ -230,7 +239,7 @@ export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
           // mais no Redis Cloud (São Paulo).
           [
             'Render',
-            'Servidor que processa contas, pedidos e reservas e guarda os registros de acesso. Também guarda o armazenamento temporário do servidor: fila de e-mails, contagem de tentativas, sessões encerradas e respostas guardadas por pouco tempo.',
+            'Servidor que processa contas, pedidos e reservas e guarda os registros de acesso. Também guarda o armazenamento temporário do servidor: fila de e-mails, contagem de tentativas, sessões encerradas e respostas guardadas por pouco tempo. E, num banco só dele, as conversas do WhatsApp da empresa com clientes, para a equipe responder pelo painel.',
             'Estados Unidos (Oregon)',
           ],
           ['Neon', 'Banco de dados com as contas, os pedidos e as reservas.', 'Estados Unidos (Virgínia)'],
@@ -343,6 +352,7 @@ export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
         `Reservas contratadas ou pagas, com o comprovante e o chat: ${ACCOUNTING_TERM}. Exemplo: um evento de 2027 fica guardado até o fim de 2032.`,
         'Contrato aceito pelo site, com o registro do aceite e os dados de quem contratou: 10 anos depois do fim do contrato.',
         'Mensagens do formulário de contato: 12 meses depois do envio.',
+        'Conversas pelo WhatsApp da empresa: 12 meses depois de cada mensagem.',
         'Fotos do mural: 90 dias depois do evento.',
         'Cópias de segurança do banco de dados: somem em até 90 dias.'
       ),

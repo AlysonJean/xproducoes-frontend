@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 
 const { bookingAPI, addNotification, quotePdfAPI } = vi.hoisted(() => ({
   bookingAPI: { getById: vi.fn(), updateStatus: vi.fn(), updateDeliveryStatus: vi.fn(), delete: vi.fn(), confirmWithDetails: vi.fn() },
@@ -158,5 +158,39 @@ describe('BookingDetailPage — contato do cliente nos botões manuais', () => {
 
     await renderFicha(reservaDigitada);
     expect(screen.queryByRole('heading', { name: 'Briefing do cliente' })).not.toBeInTheDocument();
+  });
+});
+
+// Pedido de Alyson de 24/11/2026: "Conversar no painel" abre o WhatsApp do painel já na conversa do cliente. O telefone é
+// o da reserva (o mesmo dos outros botões) e vai pelo estado da navegação, nunca pelo endereço.
+describe('BookingDetailPage — "Conversar no painel"', () => {
+  const WhatsAppScreen = () => {
+    const location = useLocation();
+    return <p>Tela do WhatsApp: {String((location.state as { phone?: string } | null)?.phone)} {location.search}</p>;
+  };
+  const renderComPainel = async (reserva: object) => {
+    bookingAPI.getById.mockResolvedValue({ data: reserva });
+    render(
+      <MemoryRouter initialEntries={['/admin/reservas/XP']}>
+        <Routes>
+          <Route path="/admin/reservas/:id" element={<BookingDetailPage />} />
+          <Route path="/admin/whatsapp" element={<WhatsAppScreen />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: /^Reserva / });
+  };
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it('leva ao painel com o telefone desta reserva (não o do cadastro) no estado da navegação', async () => {
+    await renderComPainel(reservaNoCadastroDoAdmin);
+    fireEvent.click(screen.getByRole('button', { name: 'Conversar no painel' }));
+    expect(await screen.findByText('Tela do WhatsApp: (31) 98888-7777')).toBeInTheDocument();
+  });
+
+  it('sem telefone (contato é e-mail e não há cadastro), o botão não aparece', async () => {
+    await renderComPainel({ ...reservaDigitada, clientContact: 'bruno@cliente.test' });
+    expect(screen.queryByRole('button', { name: 'Conversar no painel' })).toBeNull();
   });
 });
