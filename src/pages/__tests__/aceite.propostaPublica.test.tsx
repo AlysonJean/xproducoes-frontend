@@ -367,7 +367,7 @@ describe('aceite online — fluxo completo', () => {
     expect(screen.getByText('Informe o CEP (8 números).')).toBeInTheDocument();
     expect(screen.getByText('Escolha o estado.')).toBeInTheDocument();
     expect(screen.getByText('Responda para quem é a contratação.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Nome completo')).toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText('Nome completo')).toHaveFocus());
     expect(screen.getByLabelText('Nome completo')).toHaveAttribute('aria-invalid', 'true');
     // Passo 1 também com 16 px ou mais (rótulos, dicas, erros e campos).
     const passo1 = screen.getByRole('heading', { name: 'Passo 1 de 3: seus dados' }).closest('section') as HTMLElement;
@@ -378,7 +378,8 @@ describe('aceite online — fluxo completo', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 
     expect(await screen.findByText('Informe um CPF válido.')).toBeInTheDocument();
-    expect(screen.getByLabelText('CPF')).toHaveFocus();
+    // O foco vai para o campo num efeito, depois do desenho com o erro (25/11/2026: no CI o teste às vezes conferia antes).
+    await waitFor(() => expect(screen.getByLabelText('CPF')).toHaveFocus());
     expect(screen.getByLabelText('CPF')).toHaveAccessibleDescription('Informe um CPF válido.');
     expect(contractAPI.prepare).not.toHaveBeenCalled();
   });
@@ -395,7 +396,8 @@ describe('aceite online — fluxo completo', () => {
 
     expect(await screen.findByText('CPF não confere com o nome informado.')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('Confira os campos destacados.');
-    expect(screen.getByLabelText('CPF')).toHaveFocus();
+    // O foco vai para o campo num efeito, depois do desenho com o erro (25/11/2026: no CI o teste às vezes conferia antes).
+    await waitFor(() => expect(screen.getByLabelText('CPF')).toHaveFocus());
 
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     await screen.findByRole('heading', { name: 'Passo 2 de 3: resumo, contrato e código' });
@@ -430,7 +432,7 @@ describe('aceite online — fluxo completo', () => {
 
     expect(await screen.findByText('Informe nome, CPF e cargo de quem aceita pela empresa.')).toBeInTheDocument();
     expect(screen.getByLabelText('CPF de quem aceita')).toHaveAccessibleDescription('CPF de quem aceita inválido.');
-    expect(screen.getByLabelText('Nome completo de quem aceita')).toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText('Nome completo de quem aceita')).toHaveFocus());
     // CNPJ alfanumérico: vai sem pontuação e em maiúsculas.
     expect(contractAPI.prepare).toHaveBeenCalledWith(CODIGO, expect.objectContaining({ personType: 'PJ', document: '12ABC34501DE35' }));
   });
@@ -918,7 +920,7 @@ describe('aceite online — passo 1 mais curto (revisão de 14/11/2026, teste de
     digitar('Cidade', '0');
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     expect(await screen.findByText('Informe a cidade.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Cidade')).toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText('Cidade')).toHaveFocus());
 
     // Com 2 ou mais caracteres, precisa de letra (o servidor confere igual).
     digitar('Cidade', '00');
