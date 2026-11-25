@@ -107,6 +107,54 @@ describe('Proposta rápida nova — teste do painel de 25/11/2026', { timeout: 2
     expect(fetchMock).toHaveBeenCalledWith('https://viacep.com.br/ws/30130010/json/', expect.anything());
   });
 
+  // Pedido de Alyson de 25/11/2026 ("não estou vendo o cálculo do frete automático"): com o que entregar e o endereço
+  // completo, o frete entra sozinho (sem clicar em Frete), uma vez por endereço; tirar a linha à mão vale.
+  it('frete automático: com equipamento e o endereço completo, o frete entra sozinho; tirar a linha não o põe de novo', async () => {
+    renderPage();
+    apiFetch.mockImplementation((url: string) => {
+      if (url === '/equipments') return Promise.resolve([mesa]);
+      if (url === '/admin/freight/quote') return Promise.resolve({ status: 'OK', items: [{ description: 'Frete (8 km por trecho)', unitPrice: 50 }] });
+      return Promise.resolve([]);
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Adicionar Mesa de Som' }));
+    preencher([
+      ['CEP *', '30130-010'],
+      ['Rua *', 'Av. Afonso Pena'],
+      ['Número *', '1000'],
+      ['Bairro *', 'Centro'],
+      ['Cidade *', 'Belo Horizonte'],
+      ['UF *', 'MG'],
+    ]);
+
+    await waitFor(() => expect(screen.getAllByLabelText('Descrição do item').map((el) => (el as HTMLInputElement).value)).toContain('Frete (8 km por trecho)'), { timeout: 4000 });
+    const cotacoes = () => apiFetch.mock.calls.filter((c) => c[0] === '/admin/freight/quote');
+    expect(cotacoes()).toHaveLength(1);
+    expect(JSON.parse(cotacoes()[0][1].body as string)).toEqual(expect.objectContaining({ mode: 'EQUIPMENT', city: 'Belo Horizonte', zipCode: '30130-010' }));
+
+    // Tirar a linha do frete à mão: o cálculo automático não a põe de novo para o mesmo endereço.
+    const linhas = screen.getAllByLabelText('Descrição do item');
+    const frete = linhas.find((el) => (el as HTMLInputElement).value === 'Frete (8 km por trecho)')!;
+    const remover = frete.closest('.group')!.querySelector('button[aria-label^="Remover"]') as HTMLButtonElement;
+    fireEvent.click(remover);
+    await new Promise((r) => setTimeout(r, 1200));
+    expect(cotacoes()).toHaveLength(1);
+  });
+
+  it('frete automático: sem o que entregar (só serviço), nada é calculado', async () => {
+    renderPage();
+    await screen.findByRole('button', { name: 'Adicionar Mesa de Som' });
+    preencher([
+      ['CEP *', '30130-010'],
+      ['Rua *', 'Av. Afonso Pena'],
+      ['Número *', '1000'],
+      ['Bairro *', 'Centro'],
+      ['Cidade *', 'Belo Horizonte'],
+      ['UF *', 'MG'],
+    ]);
+    await new Promise((r) => setTimeout(r, 1200));
+    expect(apiFetch.mock.calls.some((c) => c[0] === '/admin/freight/quote')).toBe(false);
+  });
+
   it('A-10: CEP que não existe: avisa e deixa preencher à mão', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ erro: true }) })));
     renderPage();

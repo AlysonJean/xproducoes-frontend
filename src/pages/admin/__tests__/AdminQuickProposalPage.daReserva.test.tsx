@@ -82,7 +82,7 @@ describe('Proposta Rápida — orçamento de uma reserva (pedido do briefing)', 
     expect(screen.queryByLabelText('Origem do Cliente')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Nome Completo *')).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Observações Internas/)).not.toBeInTheDocument();
-    expect(screen.queryByText('Os itens de hoje já estão na lista')).not.toBeInTheDocument();
+    expect(screen.queryByText('Os itens da reserva já estão na lista')).not.toBeInTheDocument();
   });
 
   it('salvar grava as linhas NA reserva (PUT, sem criar outra) e volta para a ficha pedindo o envio da proposta', async () => {
@@ -128,8 +128,10 @@ describe('Proposta Rápida — orçamento de uma reserva (pedido do briefing)', 
   it('reserva que já tem itens: a lista abre com eles, o aviso diz isso, e salvar sem mudar grava os mesmos itens', async () => {
     renderPage(COM_ITENS);
 
-    expect(await screen.findByText('Os itens de hoje já estão na lista')).toBeInTheDocument();
-    expect(screen.getByText(/Os 2 itens gravados já estão abaixo, com os preços e descontos de hoje/)).toBeInTheDocument();
+    expect(await screen.findByText('Os itens da reserva já estão na lista')).toBeInTheDocument();
+    expect(screen.getByText(/Os 2 itens gravados já estão abaixo, com os preços do catálogo de hoje e os descontos gravados/)).toBeInTheDocument();
+    // Preço gravado igual ao do catálogo: nada a avisar.
+    expect(screen.queryByText('Preços atualizados pelo catálogo')).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByLabelText('Descrição do item').map((el) => (el as HTMLInputElement).value)).toEqual(['Kit Festa', 'Frete (até 15 km)']));
     // O desconto gravado continua (a conta à vista: tabela, desconto e total).
     expect(screen.getByTestId('qp-discount').textContent).toMatch(/100,00/);
@@ -164,23 +166,55 @@ describe('Proposta Rápida — orçamento de uma reserva (pedido do briefing)', 
     expect(corpo.items[2]).toEqual(expect.objectContaining({ description: 'Microfone sem fio', quantity: 2, totalPrice: 160 }));
   });
 
-  it('preço gravado diferente do catálogo (negociado): fica o gravado; item que saiu do catálogo entra como está', async () => {
-    renderPage({
-      ...PEDIDO,
-      items: [
-        { description: 'Kit Festa (até 5 h de evento)', itemType: 'KIT', kitId: 'kit-festa', quantity: 1, unitPrice: '1000.00', discount: '0', totalPrice: '1000.00' },
-        { description: 'Caixa antiga', itemType: 'EQUIPMENT', equipmentId: 'eq-apagado', quantity: 2, unitPrice: '40.00', discount: '0', totalPrice: '80.00' },
-      ],
+  // Pedido de Alyson de 25/11/2026 ("esses campos têm que puxar o valor que eu estipulei para os serviços, não ter um preço
+  // fixo"): o item do catálogo vem com o preço de hoje do catálogo (o técnico e a logística gravados a R$ 0 ficavam
+  // "Incluso"); a tela diz o que mudou. O item que saiu do catálogo entra como está.
+  it('preço gravado diferente do catálogo (R$ 0, ou o catálogo mudou): vale o do catálogo, com o aviso; item que saiu do catálogo entra como está', async () => {
+    const TECNICO = { id: 'svc-tec', name: 'Técnico de Som', price: '300.00', duration: 180, coversWholeEvent: true, status: 'ACTIVE' };
+    const LOGISTICA = { id: 'svc-log', name: 'Logística de Entrega', price: '50.00', duration: 180, status: 'ACTIVE' };
+    apiFetch.mockImplementation((path: string, opts?: { method?: string }) => {
+      if (path === `/bookings/${encodeURIComponent(CODIGO)}` && !opts?.method) {
+        return Promise.resolve({
+          ...PEDIDO,
+          items: [
+            { description: 'Kit Festa (até 5 h de evento)', itemType: 'KIT', kitId: 'kit-festa', quantity: 1, unitPrice: '1000.00', discount: '0', totalPrice: '1000.00' },
+            { description: 'Logística de Entrega', itemType: 'SERVICE', serviceId: 'svc-log', quantity: 1, unitPrice: '0', discount: '0', totalPrice: '0' },
+            { description: 'Técnico de Som', itemType: 'SERVICE', serviceId: 'svc-tec', quantity: 1, unitPrice: '0', discount: '0', totalPrice: '0' },
+            { description: 'Caixa antiga', itemType: 'EQUIPMENT', equipmentId: 'eq-apagado', quantity: 2, unitPrice: '40.00', discount: '0', totalPrice: '80.00' },
+          ],
+        });
+      }
+      if (path === `/bookings/${encodeURIComponent(CODIGO)}` && opts?.method === 'PUT') return Promise.resolve({ id: CODIGO });
+      if (path === '/kits') return Promise.resolve([KIT]);
+      if (path === '/services') return Promise.resolve([TECNICO, LOGISTICA]);
+      return Promise.resolve([]);
     });
-    await waitFor(() => expect(screen.getAllByLabelText('Descrição do item')).toHaveLength(2));
+    render(
+      <MemoryRouter initialEntries={[`/admin/orcamentos/novo?reserva=${encodeURIComponent(CODIGO)}`]}>
+        <Routes>
+          <Route path="/admin/orcamentos/novo" element={<AdminQuickProposalPage />} />
+          <Route path="/admin/reservas/:id" element={<ReservaDestino />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getAllByLabelText('Descrição do item')).toHaveLength(4));
+
+    const aviso = screen.getByText('Preços atualizados pelo catálogo').closest('[role="alert"], div')!;
+    expect(aviso.textContent).toMatch(/Kit Festa \(gravado R\$\s1\.000,00, catálogo R\$\s1\.200,00\)/);
+    expect(aviso.textContent).toMatch(/Logística de Entrega \(gravado R\$\s0,00, catálogo R\$\s50,00\)/);
+    expect(aviso.textContent).toMatch(/Técnico de Som \(gravado R\$\s0,00, catálogo R\$\s/);
 
     fireEvent.click(screen.getByRole('button', { name: 'Salvar na reserva' }));
     await waitFor(() => expect(chamadas('PUT')).toHaveLength(1));
     const corpo = JSON.parse(chamadas('PUT')[0][1].body as string);
     expect(corpo.items).toEqual([
-      expect.objectContaining({ itemType: 'KIT', kitId: 'kit-festa', unitPrice: 1000, totalPrice: 1000 }),
+      expect.objectContaining({ itemType: 'KIT', kitId: 'kit-festa', unitPrice: 1200, totalPrice: 1200 }),
+      expect.objectContaining({ itemType: 'SERVICE', serviceId: 'svc-log', unitPrice: 50, totalPrice: 50 }),
+      expect.objectContaining({ itemType: 'SERVICE', serviceId: 'svc-tec' }),
       expect.objectContaining({ itemType: 'CUSTOM', description: 'Caixa antiga', quantity: 2, unitPrice: 40, totalPrice: 80 }),
     ]);
+    // O técnico do evento todo: o preço do cadastro pelas horas do evento (5 h, R$ 300 a cada 3 h), nunca R$ 0.
+    expect(corpo.items[2].totalPrice).toBeGreaterThan(0);
   });
 
   it('abrir com os itens e sair sem mudar nada não pergunta "Sair sem salvar?"', async () => {

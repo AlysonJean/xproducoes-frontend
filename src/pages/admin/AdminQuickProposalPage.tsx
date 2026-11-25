@@ -277,16 +277,25 @@ const catalogLine = (type: ProposalItem['type'], item: Equipment | Kit | Service
 };
 
 // A-06: cada item gravado vira a linha da tela. Item do catálogo (kit, equipamento, serviço) entra como o da busca
-// (mesmas regras: horas, diárias, kit que traz serviço); se o preço de hoje do catálogo não bate com o gravado (preço
-// negociado, ou o catálogo mudou), fica o gravado, como um preço digitado à mão. O desconto gravado (o "Fechar no
-// valor") fica na linha. Item fora do catálogo (frete, pedágio, item à mão, ou do catálogo apagado) entra como está.
+// (mesmas regras: horas, diárias, kit que traz serviço) e com o preço de hoje do catálogo. Pedido de Alyson de 25/11/2026
+// ("esses campos têm que puxar o valor que eu estipulei para os serviços, não ter um preço fixo"): antes, o preço
+// gravado vencia, e o técnico e a logística gravados a R$ 0 continuavam "Incluso". O que mudou em relação ao gravado
+// vai em `changes` (a tela mostra, e um preço combinado pode ser digitado de novo na linha). O desconto gravado (o
+// "Fechar no valor") fica, limitado ao preço da linha. Item fora do catálogo (frete, pedágio, item à mão, ou do catálogo
+// apagado) entra como está.
+interface PrefillChange {
+  name: string;
+  saved: number;
+  catalog: number;
+}
 const linesFromBookingItems = (
   saved: BookingItemLike[],
   catalog: { equipments: Equipment[]; kits: Kit[]; services: Service[] },
   start: string,
   end: string,
-): ProposalItem[] =>
-  saved.map((item) => {
+): { lines: ProposalItem[]; changes: PrefillChange[] } => {
+  const changes: PrefillChange[] = [];
+  const lines = saved.map((item): ProposalItem => {
     const quantity = Math.max(1, Math.round(Number(item.quantity) || 1));
     const unitPrice = Math.max(0, Number(item.unitPrice) || 0);
     const discount = Math.max(0, Number(item.discount) || 0);
@@ -298,10 +307,13 @@ const linesFromBookingItems = (
       : type === 'SERVICE' && item.serviceId ? catalog.services.find((sv) => sv.id === item.serviceId)
       : undefined;
     if (source && (type === 'KIT' || type === 'EQUIPMENT' || type === 'SERVICE')) {
-      const line: ProposalItem = { ...catalogLine(type, source), quantity, discount };
-      const [priced] = priceItems([line], start, end);
-      if (Math.round(priced.unitPrice * 100) === Math.round(unitPrice * 100)) return priced;
-      return { ...line, unitPrice, totalPrice, priceEdited: true };
+      const [priced] = priceItems([{ ...catalogLine(type, source), quantity, discount: 0 }], start, end);
+      const gross = Math.max(0, Math.round(priced.unitPrice * quantity * 100) / 100);
+      const keptDiscount = Math.min(discount, gross);
+      if (Math.round(priced.unitPrice * 100) !== Math.round(unitPrice * 100)) {
+        changes.push({ name: source.name, saved: unitPrice, catalog: priced.unitPrice });
+      }
+      return { ...priced, discount: keptDiscount, totalPrice: Math.max(0, Math.round((gross - keptDiscount) * 100) / 100) };
     }
     const description = item.description || 'Item';
     return {
@@ -315,6 +327,15 @@ const linesFromBookingItems = (
       ...(/^(frete|pedagio)\b/.test(description.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()) ? { freight: true } : {}),
     };
   });
+  return { lines, changes };
+};
+
+// 25/11/2026: o frete automático espera um instante depois da última mudança do endereço ou dos itens.
+const AUTO_FREIGHT_DELAY_MS = 900;
+const digitsOnly = (value: string) => value.replace(/\D/g, '');
+// Linha de frete ou pedágio: a do botão Frete (freight) ou a digitada com o mesmo começo (a regra do servidor, isFreightLine).
+const hasFreightLine = (lines: ProposalItem[]): boolean =>
+  lines.some((line) => line.freight || (line.type === 'CUSTOM' && /^(frete|pedagio)\b/.test(line.description.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase())));
 
 // A-06: o que identifica a lista de itens (para saber se ela mudou depois de preenchida com os itens da reserva).
 const linesKey = (lines: ProposalItem[]): string =>
@@ -361,6 +382,8 @@ const AdminQuickProposalPage = () => {
   const baseItemsRef = useRef<BookingItemLike[]>([]);
   const itemsPrefilledRef = useRef(false);
   const [prefilledItemsKey, setPrefilledItemsKey] = useState<string | null>(null);
+  // 25/11/2026: os preços que vieram do catálogo no lugar dos gravados (a tela mostra).
+  const [prefillChanges, setPrefillChanges] = useState<PrefillChange[]>([]);
 
   // Form State - Cliente
   const [clientType, setClientType] = useState<'registered' | 'manual'>('manual');
@@ -478,7 +501,7 @@ const AdminQuickProposalPage = () => {
         // A-06: os itens gravados da reserva entram na tela (com os itens liberados; travados, a tela nem salva).
         if (base && !base.lockedReason && !itemsPrefilledRef.current && baseItemsRef.current.length > 0) {
           itemsPrefilledRef.current = true;
-          const lines = linesFromBookingItems(
+          const { lines, changes } = linesFromBookingItems(
             baseItemsRef.current,
             {
               equipments: Array.isArray(equipsRes) ? equipsRes : [],
@@ -489,7 +512,9 @@ const AdminQuickProposalPage = () => {
             base.eventEndDate,
           );
           setItems(lines);
-          setPrefilledItemsKey(linesKey(lines));
+          setPrefillChanges(changes);
+          // Com preço mudado pelo catálogo, a lista já difere da gravada: sair sem salvar pergunta.
+          setPrefilledItemsKey(changes.length > 0 ? null : linesKey(lines));
         }
       } catch (error: unknown) {
         const err = error as { message?: string } | null;
@@ -821,9 +846,11 @@ const AdminQuickProposalPage = () => {
     setItems((prev) => [...prev.filter((item) => !item.freight), ...lines]);
   };
 
-  const quoteFreight = async () => {
+  const quoteFreight = async (options: { auto?: boolean } = {}): Promise<boolean> => {
     const address = freightAddress;
     const mode = freightMode;
+    // Automático (25/11/2026): só calcula quando há o que entregar e o endereço está completo, sem avisos.
+    if (options.auto && (!mode || Object.values(address).some((value) => !value.trim()))) return false;
     if (!mode) {
       // Sem o que entregar: não calcula e tira as linhas de um cálculo anterior, com o aviso.
       const hadLines = items.some((i) => i.freight);
@@ -832,11 +859,11 @@ const AdminQuickProposalPage = () => {
         ? `O kit "${pickupKit.kit?.name || pickupKit.description}" é de retirada e a proposta não tem equipamento avulso para entregar`
         : 'A proposta não tem equipamento nem kit de entrega (só serviços)';
       addNotification({ type: 'warning', title: 'Sem frete', message: `${reason}: não há frete.${hadLines ? ' As linhas do frete calculado antes saíram.' : ''}` });
-      return;
+      return false;
     }
     if (Object.values(address).some((value) => !value.trim())) {
       addNotification({ type: 'warning', title: 'Endereço incompleto', message: 'Preencha o endereço do evento (rua, número, bairro, cidade, UF e CEP) para calcular o frete.' });
-      return;
+      return false;
     }
     setQuotingFreight(true);
     try {
@@ -857,9 +884,34 @@ const AdminQuickProposalPage = () => {
       addNotification({ type: 'error', title: 'Frete não calculado', message: 'Não foi possível calcular o frete agora. Digite o valor na linha "Frete a combinar".' });
     } finally {
       setFreightQuotedKey(freightKey(address, mode));
+      setAutoFreightKey(freightKey(address, mode));
       setQuotingFreight(false);
     }
+    return true;
   };
+
+  // Pedido de Alyson de 25/11/2026 ("não estou vendo o cálculo do frete automático"): o frete só entrava com o clique em
+  // Frete, e a proposta de kit de entrega ou de equipamento saía sem frete (o orçamento dizia "frete incluso até 15 km e,
+  // acima disso, os km a mais" sem nenhum valor). Agora, com o que entregar e o endereço completo, o frete é calculado
+  // sozinho (um instante depois da última mudança, uma vez por endereço e regra), e o botão Frete recalcula. Tirar a
+  // linha à mão vale: o cálculo automático não a põe de novo para o mesmo endereço.
+  const [autoFreightKey, setAutoFreightKey] = useState<string | null>(null);
+  const currentFreightKey = freightKey(freightAddress, freightMode);
+  const addressComplete = Object.values(freightAddress).every((value) => value.trim()) && digitsOnly(zipCode).length === 8;
+  const autoFreightDue =
+    !loading && !saving && !quotingFreight && !baseBooking?.lockedReason && freightMode !== null && addressComplete &&
+    autoFreightKey !== currentFreightKey && (!hasFreightLine(items) || freightStale);
+  const quoteFreightRef = useRef(quoteFreight);
+  useEffect(() => {
+    quoteFreightRef.current = quoteFreight;
+  });
+  useEffect(() => {
+    if (!autoFreightDue) return;
+    const timer = window.setTimeout(() => {
+      void quoteFreightRef.current({ auto: true });
+    }, AUTO_FREIGHT_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [autoFreightDue, currentFreightKey]);
 
   const removeItem = (id: string) => {
     setItems(items.filter(i => i.id !== id));
@@ -1147,8 +1199,17 @@ const AdminQuickProposalPage = () => {
         {baseBooking && !baseBooking.lockedReason && baseBooking.itemCount > 0 && (
           <Alert
             variant="info"
-            title="Os itens de hoje já estão na lista"
-            description={`${baseBooking.itemCount === 1 ? 'O item gravado já está' : `Os ${baseBooking.itemCount} itens gravados já estão`} abaixo, com os preços e descontos de hoje. Mude o que precisar (quantidade, preço, item a mais ou a menos): salvar grava esta lista no lugar da atual, e o total é refeito por ela (com o frete e o pedágio).`}
+            title="Os itens da reserva já estão na lista"
+            description={`${baseBooking.itemCount === 1 ? 'O item gravado já está' : `Os ${baseBooking.itemCount} itens gravados já estão`} abaixo, com os preços do catálogo de hoje e os descontos gravados. Mude o que precisar (quantidade, preço, item a mais ou a menos): salvar grava esta lista no lugar da atual, e o total é refeito por ela (com o frete e o pedágio).`}
+          />
+        )}
+        {prefillChanges.length > 0 && (
+          <Alert
+            variant="warning"
+            title="Preços atualizados pelo catálogo"
+            description={`Estes itens estavam gravados com outro preço e agora usam o do catálogo: ${prefillChanges
+              .map((c) => `${c.name} (gravado ${formatPrice(c.saved)}, catálogo ${formatPrice(c.catalog)})`)
+              .join('; ')}. Se um preço foi combinado com o cliente, digite-o de novo na linha antes de salvar.`}
           />
         )}
 
@@ -1243,7 +1304,7 @@ const AdminQuickProposalPage = () => {
                    <Button
                      variant="outline"
                      size="xs"
-                     onClick={quoteFreight}
+                     onClick={() => void quoteFreight()}
                      isLoading={quotingFreight}
                      leftIcon={<Plus className="h-3 w-3" />}
                      aria-describedby={[pickupKit ? 'frete-kit-retirada' : '', freightStale ? 'frete-desatualizado' : ''].filter(Boolean).join(' ') || undefined}
@@ -1258,7 +1319,7 @@ const AdminQuickProposalPage = () => {
                    </Button>
                  </div>
                </div>
-               <p className="-mt-4 mb-6 text-xs text-muted-foreground">Técnico, montagem, frete e hora extra entram como itens (a hora extra do kit com valor cadastrado já entra na linha do kit, e serviço que o kit já traz não entra de novo). O botão Frete calcula pela distância até o endereço do evento (preencha o endereço antes), pela regra do servidor: equipamento avulso e kit de entrega têm contas diferentes, e só serviços ou só kit de retirada não têm frete. Pedágio estimado à parte. A reserva leva um kit só; para somar, use equipamentos e serviços avulsos.</p>
+               <p className="-mt-4 mb-6 text-xs text-muted-foreground">Técnico, montagem, frete e hora extra entram como itens (a hora extra do kit com valor cadastrado já entra na linha do kit, e serviço que o kit já traz não entra de novo). Com kit de entrega ou equipamento, o frete é calculado sozinho pela distância assim que o endereço do evento estiver completo (o botão Frete recalcula; se a proposta for salva sem frete, o servidor calcula; para não cobrar, ponha uma linha "Frete (cortesia)" de R$ 0), pela regra do servidor: equipamento avulso e kit de entrega têm contas diferentes, e só serviços ou só kit de retirada não têm frete. Pedágio estimado à parte. A reserva leva um kit só; para somar, use equipamentos e serviços avulsos.</p>
                {appliedSuggestion && (
                  <div role="note" aria-label="Sugestão da IA" className="-mt-2 mb-6 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
                    <div className="flex items-start justify-between gap-3">
